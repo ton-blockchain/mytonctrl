@@ -1,0 +1,66 @@
+{
+	"quick_setup_title_welcome": {
+		"en": "=== Quick Setup ===",
+		"ru": "=== Быстрая настройка ==="
+	},
+	"quick_setup_text_welcome": {
+		"en": "Welcome to Quick Setup. This setting assumes that you have already completed all the steps in this manual: 'https://test.ton.org/FullNode-HOWTO.txt'. Click 'Enter' to continue.",
+		"ru": "Добро пожаловать в Быструю настройку. Данная настройка предполагает, что вы уже проделали все шаги по данной инструкции: 'https://test.ton.org/FullNode-HOWTO.txt'. Нажмите 'Enter' чтобы продолжить."
+	},
+	"quick_setup_title_liteclient_config": {
+		"en": "=== Quick Setup -> 'Lite-client' config ===",
+		"ru": "=== Быстрая настройка -> Конфигурация 'lite-client' ==="
+	},
+	"quick_setup_text_liteclient_program_path": {
+		"en": "Enter the full path to the 'lite-client' program. Example: '/home/user/build/lite-client/lite-client'",
+		"ru": "Впишите полный путь до программы 'lite-client'. Пример: '/home/user/build/lite-client/lite-client'"
+	},
+	"quick_setup_text_liteclient_config_path": {
+		"en": "Enter the full path to the 'lite-client' configuration file. Example: '/home/user/build/lite-client/ton-lite-client-test1.config.json'",
+		"ru": "Впишите полный путь до конфигурационного файла 'lite-client'. Пример: '/home/user/build/lite-client/ton-lite-client-test1.config.json'"
+	},
+	"quick_setup_title_validator_engine_console": {
+		"en": "=== Quick Setup -> 'Validator-engine-console' config ===",
+		"ru": "=== Быстрая настройка -> Конфигурация 'validator-engine-console' ==="
+	},
+	"quick_setup_text_validator_engine_console_program_path": {
+		"en": "Enter the full path to the 'validator-engine-console' program. Example: '/home/user/build/validator-engine-console/validator-engine-console'",
+		"ru": "Впишите полный путь до программы 'validator-engine-console'. Пример: '/home/user/build/validator-engine-console/validator-engine-console'"
+	},
+	"quick_setup_text_validator_engine_console_privkey_path": {
+		"en": "Enter the full path to the client’s private key to connect to the 'validator-engine-console'. Example: '/home/user/build/validator-engine-console/client'",
+		"ru": "Впишите полный путь до приватного ключа клиента для подключения к 'validator-engine-console'. Пример: '/home/user/build/validator-engine-console/client'"
+	},
+	"quick_setup_text_validator_engine_console_pubkey_path": {
+		"en": "Enter the full path to the server's public key to connect to the 'validator-engine-console'. Example: '/home/user/build/validator-engine-console/server.pub'",
+		"ru": "Впишите полный путь до публичного ключа сервера для подключения к 'validator-engine-console'. Пример: '/home/user/build/validator-engine-console/server.pub'"
+	},
+	"quick_setup_text_validator_engine_console_server_addr": {
+		"en": "Enter the server address and port to connect to the 'validator-engine-console'. Example: '127.0.0.1:27001'",
+		"ru": "Впишите адрес и порт сервера для подключения к 'validator-engine-console'. Пример: '127.0.0.1:27001'"
+	},
+	"quick_setup_title_fift_config": {
+		"en": "=== Quick Setup -> 'Fift' config ===",
+		"ru": "=== Быстрая настройка -> Конфигурация 'fift' ==="
+	},
+	"quick_setup_title_text_app_path": {
+		"en": "Enter the full path to the 'fift' program. Example: '/home/user/build/crypto/fift'",
+		"ru": "Впишите полный путь до программы 'fift'. Пример: '/home/user/build/crypto/fift'"
+	},
+	"quick_setup_title_text_lib_path": {
+		"en": "Enter the full path to the library folder for the 'fift' program. Example: '/home/user/ton/crypto/fift/lib'",
+		"ru": "Впишите полный путь до папки с библиотеками для программы 'fift'. Пример: '/home/user/ton/crypto/fift/lib'"
+	},
+	"quick_setup_title_text_smartcont_path": {
+		"en": "Enter the full path to the smart contract folder for the 'fift' program. Example: '/home/user/ton/crypto/smartcont'",
+		"ru": "Впишите полный путь до папки со смартконтрактами для программы 'fift'. Пример: '/home/user/ton/crypto/smartcont'"
+	},
+	"find_file_to_path": {
+		"en":"Required path was found:",
+		"ru":"Был найден требуемый путь:"
+	},
+	"click_enter_to_apply": {
+		"en":"Click the 'Enter' to apply this path.",
+		"ru":"Нажмите 'Enter' что бы применить этот путь."
+	}
+}
