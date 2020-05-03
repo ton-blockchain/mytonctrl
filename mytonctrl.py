@@ -70,34 +70,37 @@ def PrintStatus(args):
 	fullConfigAddr = ton.GetFullConfigAddr()
 	fullElectorAddr = ton.GetFullElectorAddr()
 	startWorkTime = ton.GetActiveElectionId(fullElectorAddr)
+	validatorIndex = ton.GetValidatorIndex()
 	validatorWallet = ton.GetLocalWallet(ton.validatorWalletName)
 	dbSize = ton.GetDbSize()
-	offers = ton.GetOffers()
+	offersNumber = ton.GetOffersNumber()
 	if validatorWallet is not None:
 		validatorAccount = ton.GetAccount(validatorWallet.addr)
 	else:
 		validatorAccount = None
-	PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offers)
-	PrintLocalStatus(validatorWallet, validatorAccount, validatorStatus, dbSize)
+	PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offersNumber)
+	PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validatorStatus, dbSize)
 	PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17)
 	PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
 
-def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offers):
+def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offersNumber):
 	# Статус сети TON
 	tps1 = "n/a" # fix me
 	tps5 = "n/a" # fix me
 	tps15 = "n/a" # fix me
 	validators = totalValidators
 	onlineValidators = "n/a" # fix me
-	offersNumber = len(offers)
+	offers = offersNumber.get("all")
+	newOffers = offersNumber.get("new")
 
 	tps1_text = bcolors.Yellow(tps1)
 	tps5_text = bcolors.Yellow(tps5)
 	tps15_text = bcolors.Yellow(tps15)
-	validators_text = bcolors.Yellow(validators)
+	validators_text = bcolors.Green(validators)
 	shards_text = bcolors.Green(shardsNumber)
-	offers_text = bcolors.Green(offersNumber)
+	offers_text = bcolors.Green(offers)
+	newOffers_text = bcolors.Green(newOffers)
 	onlineValidators_text = bcolors.Yellow(onlineValidators)
 	if startWorkTime == 0:
 		electionStatus_text = bcolors.Yellow("close")
@@ -109,12 +112,12 @@ def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offers):
 	print("Количество валидаторов, прошедших выборы: " + validators_text)
 	print("Количество валидаторов в сети: " + onlineValidators_text)
 	print("Количесвто шардчейнов: " + shards_text)
-	print("Действующие предложения: " + offers_text)
+	print("Действующие предложения: {0}({1})".format(offers_text, newOffers_text))
 	print("Статус выборов: " + electionStatus_text)
 	print()
 #end define
 
-def PrintLocalStatus(validatorWallet, validatorAccount, validatorStatus, dbSize):
+def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validatorStatus, dbSize):
 	# Статус локального валидатора
 	if validatorWallet is None:
 		return
@@ -135,6 +138,7 @@ def PrintLocalStatus(validatorWallet, validatorAccount, validatorStatus, dbSize)
 	electionsThreadStatus_bool = True # fix me
 	validatorStatus_bool = validatorStatus.get("isWorking")
 
+	validatorIndex_text = bcolors.Green(validatorIndex)
 	adnlAddr_text = bcolors.Yellow(adnlAddr)
 	walletAddr_text = bcolors.Yellow(walletAddr)
 	walletBalance_text = bcolors.Green(walletBalance, " GRM")
@@ -158,6 +162,7 @@ def PrintLocalStatus(validatorWallet, validatorAccount, validatorStatus, dbSize)
 	dbSize_text = GetColorInt(dbSize, 1000, ending=" Gb")
 
 	ColorPrint("{cyan}===[ Статус локального валидатора ]==={endc}")
+	print("Индекс валидатора: " + validatorIndex_text)
 	print("ADNL адрес локального валидатора: " + adnlAddr_text)
 	print("Адрес кошелька локального валидатора: " + walletAddr_text)
 	print("Баланс кошелька локального валидатора: " + walletBalance_text)
@@ -518,11 +523,29 @@ def PrintDomainsList(args):
 #end define
 
 def ViewDomainStatus(args):
-	print("fix me")
+	try:
+		domainName = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} vd <domain-name>")
+		return
+	domain = ton.GetDomain(domainName)
+	endTime = domain.get("endTime")
+	endTime = Timestamp2Datetime(endTime, "%d.%m.%Y")
+	adnlAddr = domain.get("adnlAddr")
+	table = list()
+	table += [["Domain", "Expiration date", "ADNL address"]]
+	table += [[domainName, endTime, adnlAddr]]
+	PrintTable(table)
 #end define
 
 def DeleteDomain(args):
-	print("fix me")
+	try:
+		domainName = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} dd <domain-name>")
+		return
+	ton.DeleteDomain(domainName)
+	ColorPrint("DeleteDomain - {green}OK{endc}")
 #end define
 
 

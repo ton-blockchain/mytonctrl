@@ -269,6 +269,19 @@ class MyTonCore():
 		result = int(result)
 		return result
 	#end define
+	
+	def GetDomainAdnlAddr(self, domainName):
+		local.AddLog("start GetDomainAdnlAddr function", "debug")
+		cmd = "dnsresolve {domainName} 1".format(domainName=domainName)
+		result = self.liteClient.Run(cmd)
+		lines = result.split('\n')
+		for line in lines:
+			if "adnl address" in line:
+				adnlAddr = Pars(line, "=", "\n")
+				adnlAddr = adnlAddr.replace(' ', '')
+				adnlAddr = adnlAddr.lower()
+				return adnlAddr
+	#end define
 
 	def GetLocalWallet(self, walletName):
 		local.AddLog("start GetLocalWallet function", "debug")
@@ -1002,6 +1015,22 @@ class MyTonCore():
 		raise Exception("GetOffer error: offer not found.")
 	#end define
 	
+	def GetOffersNumber(self):
+		local.AddLog("start GetOffersNumber function", "debug")
+		result = dict()
+		offers = self.GetOffers()
+		saveOffers = self.GetSaveOffers()
+		buff = 0
+		for offer in offers:
+			offerHash = offer.get("hash")
+			if offerHash in saveOffers:
+				continue
+			buff += 1
+		result["all"] = len(offers)
+		result["new"] = buff
+		return result
+	#end define
+	
 	def GetValidatorIndex(self):
 		config34 = self.GetConfig34()
 		validators = config34.get("validators")
@@ -1107,6 +1136,24 @@ class MyTonCore():
 			domainName = domain.get("name")
 			domain["endTime"] = self.GetDomainEndTime(domainName)
 		return domains
+	#end define
+	
+	def GetDomain(self, domainName):
+		domain = dict()
+		domain["name"] = domainName
+		domain["adnlAddr"] = self.GetDomainAdnlAddr(domainName)
+		domain["endTime"] = self.GetDomainEndTime(domainName)
+		return domain
+	#end define
+	
+	def DeleteDomain(self, domainName):
+		domains = local.db.get("domains")
+		for domain in domains:
+			if (domainName == domain.get("name")):
+				domains.remove(domain)
+				local.dbSave()
+				return
+		raise Exception("DeleteDomain error: Domain not found")
 	#end define
 	
 	def AddRule(self, rule):
