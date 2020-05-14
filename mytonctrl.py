@@ -13,49 +13,41 @@ ton = MyTonCore()
 def Init():
 	# Create user console
 	console.name = "MyTonCtrl"
-	console.AddItem("status", PrintStatus, "Показать статус")
-	console.AddItem("seqno", Seqno, "Получить seqno кошелька")
+	console.AddItem("status", PrintStatus, "Показать статус TON / Show TON status")
+	console.AddItem("seqno", Seqno, "Получить seqno кошелька / Get seqno wallet")
 
-	console.AddItem("nw", CreatNewWallet, "Создать новый локальный кошелек")
-	console.AddItem("aw", ActivateWallet, "Активировать локальный кошелек")
-	console.AddItem("wl", PrintWalletsList, "Показать локальные кошельки")
-	console.AddItem("iw", ImportWalletFromFile, "Импортировать кошелек из файла")
-	console.AddItem("swa", SaveWalletAddressToFile, "Сохранить адрес кошелька в файл")
-	console.AddItem("dw", DeleteWallet, "Удалить локальный кошелек")
+	console.AddItem("nw", CreatNewWallet, "Создать новый локальный кошелек / Create a new local wallet")
+	console.AddItem("aw", ActivateWallet, "Активировать локальный кошелек / Activate local wallet")
+	console.AddItem("wl", PrintWalletsList, "Показать локальные кошельки / Show wallets list")
+	console.AddItem("iw", ImportWalletFromFile, "Импортировать кошелек из файла / Import wallet from files")
+	console.AddItem("swa", SaveWalletAddressToFile, "Сохранить адрес кошелька в файл / Save wallet address to file")
+	console.AddItem("dw", DeleteWallet, "Удалить локальный кошелек / Delete local wallet")
 
-	console.AddItem("vas", ViewAccountStatus, "Показать статус аккаунта")
-	console.AddItem("vah", ViewAccountHistory, "Показать историю аккаунта")
-	console.AddItem("mg", MoveGrams, "Перевод средств на кошелек")
+	console.AddItem("vas", ViewAccountStatus, "Показать статус аккаунта / View account status")
+	console.AddItem("vah", ViewAccountHistory, "Показать историю аккаунта / View account history")
+	console.AddItem("mg", MoveGrams, "Перевод средств на кошелек / Move grams to account")
 
-	console.AddItem("nb", CreatNewBookmark, "Добавить аккаунт в закладки")
-	console.AddItem("bl", PrintBookmarksList, "Показать закладки")
-	console.AddItem("db", DeleteBookmark, "Удалить закладку")
+	console.AddItem("nb", CreatNewBookmark, "Добавить аккаунт в закладки / Creat new bookmark")
+	console.AddItem("bl", PrintBookmarksList, "Показать закладки / Show bookmarks list")
+	console.AddItem("db", DeleteBookmark, "Удалить закладку / Delete bookmark")
 
-	console.AddItem("nr", CreatNewRule, "Добавить правило в расписание")
-	console.AddItem("rl", PrintRulesList, "Показать правила расписания")
-	console.AddItem("dr", DeleteRule, "Удалить правило из расписания")
-
+	console.AddItem("nr", CreatNewRule, "Добавить правило в расписание / Creat new rule")
+	console.AddItem("rl", PrintRulesList, "Показать правила расписания / Show rules list")
+	console.AddItem("dr", DeleteRule, "Удалить правило из расписания / Delete rule")
 	
 	#console.AddItem("w2m", MoveGramsFromMixer, "Пропустить средства через миксер")
 	
-	console.AddItem("nd", NewDomain, "Арендовать новый домен")
-	console.AddItem("dl", PrintDomainsList, "Показать арендованные домены")
-	console.AddItem("vd", ViewDomainStatus, "Показать статус домена")
-	console.AddItem("dd", DeleteDomain, "Удалить домен")
+	console.AddItem("nd", NewDomain, "Арендовать новый домен / New domain")
+	console.AddItem("dl", PrintDomainsList, "Показать арендованные домены / Show domains list")
+	console.AddItem("vd", ViewDomainStatus, "Показать статус домена / View domain status")
+	console.AddItem("dd", DeleteDomain, "Удалить домен / Delete domain")
 	
-	console.AddItem("ol", PrintOffersList, "Показать действующие предложения")
-	console.AddItem("vo", VoteOffer, "Голосовать за предложение")
+	console.AddItem("ol", PrintOffersList, "Показать действующие предложения / Show offers list")
+	console.AddItem("vo", VoteOffer, "Голосовать за предложение / Vote offer")
 
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isLocaldbSaving"] = True
 	local.Run()
-#end define
-
-def Seqno(args):
-	walletName = args[0]
-	wallet = ton.GetLocalWallet(walletName)
-	seqno = ton.GetSeqno(wallet)
-	print(walletName, "seqno:", seqno)
 #end define
 
 def PrintStatus(args):
@@ -271,6 +263,18 @@ def GetColorTime(datetime, timestamp):
 	return result
 #end define
 
+def Seqno(args):
+	try:
+		walletName = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} seqno <wallet-name>")
+		return
+	
+	wallet = ton.GetLocalWallet(walletName)
+	seqno = ton.GetSeqno(wallet)
+	print(walletName, "seqno:", seqno)
+#end define
+
 def CreatNewWallet(args):
 	try:
 		walletName = args[0]
@@ -376,15 +380,50 @@ def ViewAccountStatus(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} vas <account-addr>")
 		return
+	addr = ton.GetDestinationAddr(addr)
 	account = ton.GetAccount(addr)
-	table = list()
-	table += [["Address", "Status", "Balance"]]
-	table += [[addr, account.status, account.balance]]
-	PrintTable(table)
+	statusTable = list()
+	statusTable += [["Address", "Status", "Balance"]]
+	statusTable += [[addr, account.status, account.balance]]
+	historyTable = GetHistoryTable(addr, 10)
+	PrintTable(statusTable)
+	print()
+	PrintTable(historyTable)
 #end define
 
 def ViewAccountHistory(args):
-	print("fix me")
+	try:
+		addr = args[0]
+		limit = int(args[1])
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} vah <account-addr> <limit>")
+		return
+	table = GetHistoryTable(addr, limit)
+	PrintTable(table)
+#end define
+
+def GetHistoryTable(addr, limit):
+	addr = ton.GetDestinationAddr(addr)
+	account = ton.GetAccount(addr)
+	history = ton.GetAccountHistory(account, limit)
+	table = list()
+	typeText = ColorText("{red}{bold}{endc}")
+	table += [["Time", typeText, "Grams", "From/To"]]
+	for item in history:
+		time = item.get("time")
+		grams = item.get("value")
+		outmsg = item.get("outmsg")
+		if outmsg == 1:
+			type = ColorText("{red}{bold}>>>{endc}")
+			fromto = item.get("to")
+		else:
+			type = ColorText("{blue}{bold}<<<{endc}")
+			fromto = item.get("from")
+		fromto = ton.HexAddr2Base64Addr(fromto)
+		#datetime = Timestamp2Datetime(time, "%Y.%m.%d %H:%M:%S")
+		datetime = timeago(time)
+		table += [[datetime, type, grams, fromto]]
+	return table
 #end define
 
 def MoveGrams(args):
@@ -395,14 +434,7 @@ def MoveGrams(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <gram-amount>")
 		return
-	destinationType = ton.GetStrType(destination)
-	if destinationType != "account":
-		walletsNameList = ton.GetWalletsNameList()
-		if destination in walletsNameList:
-			wallet = ton.GetLocalWallet(destination)
-			destination = wallet.addr
-		else:
-			destination = ton.GetBookmarkAddr("account", destination)
+	destination = ton.GetDestinationAddr(destination)
 	ton.MoveGrams(walletName, destination, gram)
 	ColorPrint("MoveGrams - {green}OK{endc}")
 #end define

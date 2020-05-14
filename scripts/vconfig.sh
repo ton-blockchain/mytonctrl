@@ -47,6 +47,6 @@ su -l validator -s /bin/sh -c "${cmd} &"
 chown -R validator:validator /var/ton-work
 
 # Конец
-echo -e "${COLOR}[4/4]${ENDC} Перенастройка валидатора завершина"
+echo -e "${COLOR}[4/4]${ENDC} Перенастройка валидатора завершена"
 
 

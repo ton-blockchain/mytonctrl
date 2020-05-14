@@ -54,4 +54,4 @@ cronText="@reboot /bin/sleep 60 && ${cmd}"
 echo "${cronText}" > mycron && crontab -u validator mycron && rm mycron
 
 # Конец
-echo -e "${COLOR}[6/6]${ENDC} Настройка валидатора завершина"
+echo -e "${COLOR}[6/6]${ENDC} Настройка валидатора завершена"

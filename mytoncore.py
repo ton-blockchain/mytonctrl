@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-l
 
+import crc16
 from mypylib.mypylib import *
 
 local = MyPyClass(__file__)
@@ -115,8 +116,11 @@ class Wallet:
 
 class Account:
 	def __init__(self):
-		self.status = None
-		self.balance = None
+		self.addr = None
+		self.status = "empty"
+		self.balance = 0
+		self.lt = None
+		self.hash = None
 	#end define
 #end class
 
@@ -224,8 +228,6 @@ class MyTonCore():
 	def GetAccount(self, addr):
 		local.AddLog("start GetAccount function", "debug")
 		account = Account()
-		account.status = "empty"
-		account.balance = 0
 		cmd = "getaccount {addr}".format(addr=addr)
 		result = self.liteClient.Run(cmd)
 		storage = self.GetVarFromWorkerOutput(result, "storage")
@@ -236,9 +238,47 @@ class MyTonCore():
 		value = self.GetVarFromWorkerOutput(grams, "value")
 		state = self.GetVarFromWorkerOutput(storage, "state")
 		status = Pars(state, "account_", '\n')
+		account.addr = addr
 		account.status = status
 		account.balance = ng2g(value)
+		account.lt = Pars(result, "lt = ", ' ')
+		account.hash = Pars(result, "hash = ", '\n')
 		return account
+	#end define
+	
+	def GetAccountHistory(self, account, limit):
+		local.AddLog("start GetAccountHistory function", "debug")
+		lt=account.lt
+		hash=account.hash
+		history = list()
+		ready = 0
+		while True:
+			cmd = "lasttrans {addr} {lt} {hash}".format(addr=account.addr, lt=lt, hash=hash)
+			result = self.liteClient.Run(cmd)
+			buff =  Pars(result, "previous transaction has", '\n')
+			lt = Pars(buff, "lt ", ' ')
+			hash = Pars(buff, "hash ", ' ')
+			arr = result.split("transaction #0")
+			for item in arr:
+				if "from block" not in item:
+					continue
+				time = Pars(item, "time=", ' ')
+				time = int(time)
+				outmsg = Pars(item, "outmsg_cnt=", '\n')
+				outmsg = int(outmsg)
+				if outmsg == 1:
+					item = Pars(item, "outbound message")
+				buff = dict()
+				buff["time"] = time
+				buff["outmsg"] = outmsg
+				buff["from"] = Pars(item, "FROM: ", ' ')
+				buff["to"] = Pars(item, "TO: ", ' ')
+				value = Pars(item, "VALUE:", '\n')
+				buff["value"] = ng2g(value)
+				history.append(buff)
+				ready += 1
+				if ready >= limit:
+					return history
 	#end define
 	
 	def GetDomainAddr(self, domainName):
@@ -246,7 +286,7 @@ class MyTonCore():
 		result = self.liteClient.Run(cmd)
 		if "not found" in result:
 			raise Exception("GetDomainAddr error: domain \"{domainName}\" not found".format(domainName=domainName))
-		resolver = Pars(result, "next resolver", "\n")
+		resolver = Pars(result, "next resolver", '\n')
 		buff = resolver.replace(' ', '')
 		buffList = buff.split('=')
 		fullHexAddr = buffList[0]
@@ -263,7 +303,7 @@ class MyTonCore():
 		
 		cmd = "runmethod {addr} getexpiration \"{subdomain}\"".format(addr=dnsAddr, subdomain=subdomain)
 		result = self.liteClient.Run(cmd)
-		result = Pars(result, "result:", "\n")
+		result = Pars(result, "result:", '\n')
 		result = Pars(result, "[", "]")
 		result = result.replace(' ', '')
 		result = int(result)
@@ -306,18 +346,24 @@ class MyTonCore():
 
 		# Create wallet
 		wallet = Wallet()
-		args = ["show-addr.fif", filePath]
-		result = self.fift.Run(args)
+		wallet.path = filePath
 		if '/' in filePath:
 			wallet.name = filePath[filePath.rfind('/')+1:]
 		else:
 			wallet.name = filePath
-		wallet.path = filePath
+		args = ["show-addr.fif", filePath]
+		result = self.fift.Run(args)
 		wallet.fullAddr = Pars(result, "Source wallet address = ", '\n').replace(' ', '')
 		buff = self.GetVarFromWorkerOutput(result, "Bounceable address (for later access)")
 		wallet.addr = buff.replace(' ', '')
 		buff = self.GetVarFromWorkerOutput(result, "Non-bounceable address (for init only)")
 		wallet.addr_init = buff.replace(' ', '')
+		
+		#addrFilePath = filePath + ".addr"
+		#file = open(addrFilePath, "rb")
+		#data = file.read()
+		#addr_hex = data[:32].hex()
+		
 		wallet.Refresh()
 		return wallet
 	#end define
@@ -1270,6 +1316,36 @@ class MyTonCore():
 			result = "undefined"
 		return result
 	#end define
+	
+	def GetDestinationAddr(self, destination):
+		destinationType = self.GetStrType(destination)
+		if destinationType != "account":
+			walletsNameList = self.GetWalletsNameList()
+			if destination in walletsNameList:
+				wallet = self.GetLocalWallet(destination)
+				destination = wallet.addr
+			else:
+				destination = self.GetBookmarkAddr("account", destination)
+		return destination
+	#end define
+	
+	def HexAddr2Base64Addr(self, fullAddr, bounceable=True, testnet=True):
+		buff = fullAddr.split(':')
+		workchain = int(buff[0])
+		addr_hex = buff[1]
+		b = bytearray(36)
+		b[0] = 0x51 - bounceable * 0x40 + testnet * 0x80
+		b[1] = workchain % 256
+		b[2:34] = bytearray.fromhex(addr_hex)
+		buff = bytes(b[:34])
+		crc = crc16.crc16xmodem(buff)
+		b[34] = crc >> 8
+		b[35] = crc & 0xff
+		result = base64.b64encode(b)
+		result = result.decode()
+		result = result.replace('+', '-')
+		result = result.replace('/', '_')
+		return result
 #end class
 
 def ng2g(ng):
