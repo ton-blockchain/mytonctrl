@@ -262,6 +262,8 @@ class MyTonCore():
 			for item in arr:
 				if "from block" not in item:
 					continue
+				if "VALUE:" not in item:
+					continue
 				time = Pars(item, "time=", ' ')
 				time = int(time)
 				outmsg = Pars(item, "outmsg_cnt=", '\n')
@@ -277,8 +279,8 @@ class MyTonCore():
 				buff["value"] = ng2g(value)
 				history.append(buff)
 				ready += 1
-				if ready >= limit:
-					return history
+			if lt is None or ready >= limit:
+				return history
 	#end define
 	
 	def GetDomainAddr(self, domainName):

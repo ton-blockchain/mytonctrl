@@ -44,7 +44,7 @@ def Init():
 	
 	console.AddItem("ol", PrintOffersList, "Показать действующие предложения / Show offers list")
 	console.AddItem("vo", VoteOffer, "Голосовать за предложение / Vote offer")
-
+	
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isLocaldbSaving"] = True
 	local.Run()
