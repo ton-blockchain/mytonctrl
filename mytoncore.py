@@ -2,6 +2,7 @@
 # -*- coding: utf_8 -*-l
 
 import crc16
+import struct
 from mypylib.mypylib import *
 
 local = MyPyClass(__file__)
@@ -276,6 +277,8 @@ class MyTonCore():
 				buff["from"] = Pars(item, "FROM: ", ' ')
 				buff["to"] = Pars(item, "TO: ", ' ')
 				value = Pars(item, "VALUE:", '\n')
+				if '+' in value: # wtf?
+					value = value[:value.find('+')] # wtf? `-1:0000000000000000000000000000000000000000000000000000000000000000 1583059577 1200000000+extra`
 				buff["value"] = ng2g(value)
 				history.append(buff)
 				ready += 1
@@ -353,19 +356,22 @@ class MyTonCore():
 			wallet.name = filePath[filePath.rfind('/')+1:]
 		else:
 			wallet.name = filePath
-		args = ["show-addr.fif", filePath]
-		result = self.fift.Run(args)
-		wallet.fullAddr = Pars(result, "Source wallet address = ", '\n').replace(' ', '')
-		buff = self.GetVarFromWorkerOutput(result, "Bounceable address (for later access)")
-		wallet.addr = buff.replace(' ', '')
-		buff = self.GetVarFromWorkerOutput(result, "Non-bounceable address (for init only)")
-		wallet.addr_init = buff.replace(' ', '')
+		#args = ["show-addr.fif", filePath]
+		#result = self.fift.Run(args)
+		#wallet.fullAddr = Pars(result, "Source wallet address = ", '\n').replace(' ', '')
+		#buff = self.GetVarFromWorkerOutput(result, "Bounceable address (for later access)")
+		#wallet.addr = buff.replace(' ', '')
+		#buff = self.GetVarFromWorkerOutput(result, "Non-bounceable address (for init only)")
+		#wallet.addr_init = buff.replace(' ', '')
 		
-		#addrFilePath = filePath + ".addr"
-		#file = open(addrFilePath, "rb")
-		#data = file.read()
-		#addr_hex = data[:32].hex()
-		
+		addrFilePath = filePath + ".addr"
+		file = open(addrFilePath, "rb")
+		data = file.read()
+		addr_hex = data[:32].hex()
+		workchain = struct.unpack("i", data[32:])[0]
+		wallet.fullAddr = str(workchain) + ":" + addr_hex
+		wallet.addr = self.HexAddr2Base64Addr(wallet.fullAddr)
+		wallet.addr_init = self.HexAddr2Base64Addr(wallet.fullAddr, False)
 		wallet.Refresh()
 		return wallet
 	#end define

@@ -44,10 +44,52 @@ def Init():
 	
 	console.AddItem("ol", PrintOffersList, "Показать действующие предложения / Show offers list")
 	console.AddItem("vo", VoteOffer, "Голосовать за предложение / Vote offer")
+
+	console.AddItem("test", Test, "")
 	
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isLocaldbSaving"] = True
 	local.Run()
+#end define
+
+def Test(args):
+	start = "EQAuMmMD034cfrQgaqJqJ8q8xNA3byNn2Z2zGRQX5UN5y2pn"
+	ok_arr = list()
+	pending_arr = list()
+	pending_arr.append(start)
+	while True:
+		try:
+			TestWork(ok_arr, pending_arr)
+		except KeyboardInterrupt:
+			buff = ok_arr + pending_arr
+			data = json.dumps(buff)
+			file = open("testoutput.txt", "wt")
+			file.write(data)
+			file.close()
+			break
+		except:
+			buff = ok_arr + pending_arr
+			data = json.dumps(buff)
+			file = open("testoutput.txt", "wt")
+			file.write(data)
+			file.close()
+#end define
+
+def TestWork(ok_arr, pending_arr):
+	addr = pending_arr.pop(0)
+	account = ton.GetAccount(addr)
+	history = ton.GetAccountHistory(account, 1000)
+	for item in history:
+		outmsg = item.get("outmsg")
+		if outmsg == 1:
+			haddr = item.get("to")
+		else:
+			haddr = item.get("from")
+		haddr = ton.HexAddr2Base64Addr(haddr)
+		if haddr not in pending_arr and haddr not in ok_arr:
+			pending_arr.append(haddr)
+	ok_arr.append(addr)
+	print(addr, len(ok_arr), len(pending_arr))
 #end define
 
 def PrintStatus(args):
@@ -523,11 +565,11 @@ def VoteOffer(args):
 
 def NewDomain(args):
 	try:
-		walletName = args[0]
-		domainName = args[1]
+		domainName = args[0]
+		walletName = args[1]
 		adnlAddr = args[2]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} nd <wallet-name> <domain-name> <site-adnl-addr>")
+		ColorPrint("{red}Bad args. Usage:{endc} nd <domain-name> <wallet-name> <site-adnl-addr>")
 		return
 	domain = dict()
 	domain["name"] = domainName
