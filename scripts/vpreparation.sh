@@ -30,7 +30,7 @@ mkdir -p ${dbPath} &&
 
 # Создать пользователя
 echo -e "${COLOR}[3/6]${ENDC} Создаем нового пользователя 'validator' для работы валидатора"
-useradd -d /dev/null -s /dev/null validator &&
+/usr/sbin/useradd -d /dev/null -s /dev/null validator &&
 
 # Проверка первого запуска валидатора
 configPath=${dbPath}/config.json &&
