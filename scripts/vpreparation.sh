@@ -12,7 +12,7 @@ ENDC='\033[0m'
 
 # Генерация порта для валидатора
 ip=127.0.0.1 ### fix me
-echo -e "${COLOR}[1/6]${ENDC} Генерируем для валидатора порт подключения"
+echo -e "${COLOR}[1/6]${ENDC} Генерируем для валидатора порт подключения" &&
 port=$(shuf -i 2000-65000 -n 1) &&
 addr=${ip}:${port} &&
 echo "${port}" > /tmp/vport.txt &&
@@ -24,20 +24,20 @@ validatorAppPath=/usr/bin/ton/validator-engine/validator-engine &&
 validatorConfig=/usr/bin/ton/validator-engine/ton-global.config.json &&
 
 # Подготовить папки валидатора
-echo -e "${COLOR}[2/6]${ENDC} Подготавливаем папку валидатора"
+echo -e "${COLOR}[2/6]${ENDC} Подготавливаем папку валидатора" &&
 rm -rf ${dbPath} &&
 mkdir -p ${dbPath} &&
 
 # Создать пользователя
-echo -e "${COLOR}[3/6]${ENDC} Создаем нового пользователя 'validator' для работы валидатора"
-/usr/sbin/useradd -d /dev/null -s /dev/null validator &&
+echo -e "${COLOR}[3/6]${ENDC} Создаем нового пользователя 'validator' для работы валидатора" &&
+/usr/sbin/useradd -d /dev/null -s /dev/null validator
 
 # Проверка первого запуска валидатора
 configPath=${dbPath}/config.json &&
 rm -f ${configPath} &&
 
 # Первый запуск валидатора
-echo -e "${COLOR}[4/6]${ENDC} Создаем конфигурационный файл валидатора"
+echo -e "${COLOR}[4/6]${ENDC} Создаем конфигурационный файл валидатора" &&
 ${validatorAppPath} -C ${validatorConfig} --db ${dbPath} --ip ${addr} -l ${logPath} &&
 
 # Сменить права на нужные директории
@@ -48,7 +48,7 @@ cp -r ${configPath} /tmp/vconfig.json &&
 chmod 777 /tmp/vconfig.json &&
 
 # Прописать автозагрузку в cron
-echo -e "${COLOR}[5/6]${ENDC} Прописываем автозагрузку валидатора через cron от имени пользователя 'validator'"
+echo -e "${COLOR}[5/6]${ENDC} Прописываем автозагрузку валидатора через cron от имени пользователя 'validator'" &&
 cmd="${validatorAppPath} -d -C ${validatorConfig} --db ${dbPath} --ip ${addr} -l ${logPath}" &&
 cronText="@reboot /bin/sleep 60 && ${cmd}" &&
 echo "${cronText}" > mycron && crontab -u validator mycron && rm mycron &&

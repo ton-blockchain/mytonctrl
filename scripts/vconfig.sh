@@ -26,7 +26,7 @@ port=$(cat /tmp/vport.txt) &&
 addr=${ip}:${port} &&
 
 # Перемещаем наши ключи в нужную папку
-echo -e "${COLOR}[1/4]${ENDC} Перемещаем наши ключи в нужную папку"
+echo -e "${COLOR}[1/4]${ENDC} Перемещаем наши ключи в нужную папку" &&
 server_key_hex=${2} &&
 mv /tmp/vkeys/server ${dbPath}/keyring/${server_key_hex} &&
 mv /tmp/vkeys/server.pub /usr/bin/ton/validator-engine-console/server.pub &&
@@ -35,11 +35,11 @@ mv /tmp/vkeys/client.pub /usr/bin/ton/validator-engine-console/client.pub &&
 
 
 # Прописать наши ключи в конфигурационном файле валидатора
-echo -e "${COLOR}[2/4]${ENDC} Прописываем наши ключи в конфигурационном файле валидатора"
+echo -e "${COLOR}[2/4]${ENDC} Прописываем наши ключи в конфигурационном файле валидатора" &&
 cat /tmp/vconfig.json > ${dbPath}/config.json &&
 
 # Запустить валидатор
-echo -e "${COLOR}[3/4]${ENDC} Запускаем валидатор от имени пользователя 'validator'"
+echo -e "${COLOR}[3/4]${ENDC} Запускаем валидатор от имени пользователя 'validator'" &&
 cmd="${validatorAppPath} -d -C ${validatorConfig} --db ${dbPath} --ip ${addr} -l ${logPath}" &&
 su -l validator -s /bin/sh -c "${cmd} &" &&
 

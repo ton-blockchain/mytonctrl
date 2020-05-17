@@ -34,10 +34,7 @@ file3=/usr/bin/ton/validator-engine-console/validator-engine-console
 if [ -f "${file1}" ] && [ -f "${file2}" ] && [ -f "${file3}" ]; then
 	echo "TON exist"
 else
-	rm -f toninstaller.sh &&
-	wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/toninstaller.sh &&
-	sh toninstaller.sh &&
-	rm -f toninstaller.sh
+	sh /usr/src/ton/toninstaller.sh &&
 fi
 
 # Запускаю установщик mytoninstaller.py
