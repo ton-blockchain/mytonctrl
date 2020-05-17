@@ -295,7 +295,7 @@ def CreateVkeys():
 	output = process.stdout.decode("utf-8")
 	output_arr = output.split(' ')
 	server_key_hex = output_arr[0]
-	server_key_b64 = output_arr[1]
+	server_key_b64 = output_arr[1].replace('\n', '')
 
 	# Создание ключей клиента для console
 	args = ["/usr/bin/ton/utils/generate-random-id", "-m", "keys", "-n", "/tmp/vkeys/client"]
@@ -303,7 +303,7 @@ def CreateVkeys():
 	output = process.stdout.decode("utf-8")
 	output_arr = output.split(' ')
 	client_key_hex = output_arr[0]
-	client_key_b64 = output_arr[1]
+	client_key_b64 = output_arr[1].replace('\n', '')
 
 	# Прописать наши ключи во времянном конфигурационном файле валидатора
 	path = "/tmp/vconfig.json"
