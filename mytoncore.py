@@ -1095,7 +1095,8 @@ class MyTonCore():
 			if myValidatorAdnlAddr == validatorAdnlAddr:
 				return index
 			index += 1
-		raise Exception("GetValidatorIndex error: index not found.")
+		local.AddLog("GetValidatorIndex error: index not found.", "warning")
+		return -1
 	#end define
 	
 	def GetDbSize(self, exceptions="log"):
