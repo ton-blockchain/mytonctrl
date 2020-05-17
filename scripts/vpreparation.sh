@@ -12,7 +12,7 @@ COLOR='\033[93m'
 ENDC='\033[0m'
 
 # Генерация порта для валидатора
-ip=$(curl ifconfig.me)
+ip=$(curl --silent ifconfig.me)
 echo -e "${COLOR}[1/6]${ENDC} Генерируем для валидатора порт подключения"
 port=$(shuf -i 2000-65000 -n 1)
 addr=${ip}:${port}

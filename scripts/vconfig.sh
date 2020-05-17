@@ -18,7 +18,7 @@ COLOR='\033[94m'
 ENDC='\033[0m'
 
 # Создать переменные
-ip=$(curl ifconfig.me)
+ip=$(curl --silent ifconfig.me)
 dbPath=/var/ton-work/db
 logPath=/var/ton-work/log
 validatorAppPath=/usr/bin/ton/validator-engine/validator-engine

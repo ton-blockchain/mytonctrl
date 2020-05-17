@@ -269,7 +269,7 @@ def LoadSettings(mode):
 
 		# Создать новый кошелек для валидатора
 		ton = MyTonCore()
-		wallet = ton.CreateWallet("validator_wallet_001")
+		wallet = ton.CreateWallet("validator_wallet_001", -1)
 		arr["validatorWalletName"] = wallet.name
 
 		# Создать новый ADNL адрес для валидатора
