@@ -37,7 +37,7 @@ else
 	rm -f toninstaller.sh &&
 	wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/toninstaller.sh &&
 	sh toninstaller.sh &&
-	rm -f toninstaller.sh &&
+	rm -f toninstaller.sh
 fi
 
 # Запускаю установщик mytoninstaller.py
