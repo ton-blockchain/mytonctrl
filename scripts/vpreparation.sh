@@ -31,7 +31,12 @@ mkdir -p ${dbPath}
 
 # Создать пользователя
 echo -e "${COLOR}[3/6]${ENDC} Создаем нового пользователя 'validator' для работы валидатора"
-/usr/sbin/useradd -d /dev/null -s /dev/null validator
+result=$(cat /etc/passwd)
+if echo ${result} | grep 'validator'; then
+	echo "user 'validator' exists"
+else
+    /usr/sbin/useradd -d /dev/null -s /dev/null validator
+fi
 
 # Проверка первого запуска валидатора
 configPath=${dbPath}/config.json
