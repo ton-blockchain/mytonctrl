@@ -23,6 +23,7 @@ rm -rf /usr/src/ton
 rm -rf /usr/src/mytonctrl
 git clone --recursive https://github.com/ton-blockchain/ton.git
 git clone --recursive https://github.com/igroman787/mytonctrl.git
+cd ton && git checkout 16a45660911a53020d7f0ab0536101c901e6d721
 
 # Подготавливаем папки для компиляции
 echo -e "${COLOR}[3/7]${ENDC} Подготавливаем папки для компиляции"
@@ -35,7 +36,7 @@ cmake /usr/src/ton
 echo -e "${COLOR}[4/7]${ENDC} Компилируем из исходников"
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
-make
+make -j # use only `make` if some error
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/7]${ENDC} Скачиваем конфигурационные файлы"
