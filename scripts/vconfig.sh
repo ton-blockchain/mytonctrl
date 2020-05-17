@@ -18,7 +18,7 @@ COLOR='\033[94m'
 ENDC='\033[0m'
 
 # Создать переменные
-ip=127.0.0.1 ### fix me
+ip=$(curl ifconfig.me)
 dbPath=/var/ton-work/db
 logPath=/var/ton-work/log
 validatorAppPath=/usr/bin/ton/validator-engine/validator-engine
@@ -33,7 +33,6 @@ mv /tmp/vkeys/server ${dbPath}/keyring/${server_key_hex}
 mv /tmp/vkeys/server.pub /usr/bin/ton/validator-engine-console/server.pub
 mv /tmp/vkeys/client /usr/bin/ton/validator-engine-console/client
 mv /tmp/vkeys/client.pub /usr/bin/ton/validator-engine-console/client.pub
-
 
 # Прописать наши ключи в конфигурационном файле валидатора
 echo -e "${COLOR}[2/4]${ENDC} Прописываем наши ключи в конфигурационном файле валидатора"
