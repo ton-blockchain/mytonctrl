@@ -44,8 +44,11 @@ def Init():
 	
 	console.AddItem("ol", PrintOffersList, "Показать действующие предложения / Show offers list")
 	console.AddItem("vo", VoteOffer, "Голосовать за предложение / Vote offer")
-
+	console.AddItem("el", PrintElectionEntriesList, "Показать действующие выборы / Show election entries list")
+	console.AddItem("ve", VoteElectionEntry, "Голосовать в выборах / Vote election entry")
+	
 	console.AddItem("test", Test, "")
+	
 	
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isLocaldbSaving"] = True
@@ -53,7 +56,7 @@ def Init():
 #end define
 
 def Test(args):
-	start = "EQAuMmMD034cfrQgaqJqJ8q8xNA3byNn2Z2zGRQX5UN5y2pn"
+	start = "kf8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIue"
 	ok_arr = list()
 	pending_arr = list()
 	pending_arr.append(start)
@@ -622,6 +625,18 @@ def DeleteDomain(args):
 	ColorPrint("DeleteDomain - {green}OK{endc}")
 #end define
 
+def PrintElectionEntriesList(args):
+	entries = ton.GetElectionEntries()
+	print(json.dumps(entries, indent=4))
+#end define
+
+def VoteElectionEntry(args):
+	if ton.validatorWalletName is None:
+		ColorPrint("{red}You are not a validator, or this utility is not configured correctly.{endc}")
+	ton.ReturnStake()
+	ton.ElectionEntry()
+	ColorPrint("VoteElectionEntry - {green}OK{endc}")
+#end define
 
 
 

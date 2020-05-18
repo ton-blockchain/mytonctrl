@@ -995,17 +995,52 @@ class MyTonCore():
 		local.AddLog("TestReturnStake completed")
 	#end define
 	
+	def GetElectionEntries(self):
+		local.AddLog("start GetElectionEntries function", "debug")
+		fullConfigAddr = self.GetFullElectorAddr()
+		# Get raw data
+		cmd = "runmethod {fullConfigAddr} participant_list_extended".format(fullConfigAddr=fullConfigAddr)
+		result = self.liteClient.Run(cmd)
+		rawElectionEntries = self.Result2List(result)
+		
+		# Get json
+		# Parser by @skydev (https://github.com/skydev0h)
+		entries = list()
+		startWorkTime = rawElectionEntries[0]
+		endElectionsTime = rawElectionEntries[1]
+		minStake = rawElectionEntries[2]
+		allStakes = rawElectionEntries[3]
+		electionEntries = rawElectionEntries[4]
+		wtf1 = rawElectionEntries[5]
+		wtf2 = rawElectionEntries[6]
+		for entry in electionEntries:
+			if len(entry) == 0:
+				continue
+				
+			# Create dict
+			item = dict()
+			item["validatorPubkey"] = dec2hex(entry[0]).upper()
+			item["stake"] = ng2g(entry[1][0])
+			item["rate"] = round(entry[1][1] / 655.36) / 100.0
+			item["walletAddr_hex"] = dec2hex(entry[1][2]).upper()
+			item["walletAddr"] = self.HexAddr2Base64Addr("-1:"+item["walletAddr_hex"])
+			item["adnlAddr"] = dec2hex(entry[1][3]).upper()
+			entries.append(item)
+		return entries
+	#end define
+	
 	def GetOffers(self):
 		local.AddLog("start GetOffers function", "debug")
 		fullConfigAddr = self.GetFullConfigAddr()
 		# Get raw data
 		cmd = "runmethod {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
 		result = self.liteClient.Run(cmd)
-		rowOffers = self.Result2List(result)
+		rawOffers = self.Result2List(result)
+		rawOffers = rawOffers[0]
 
 		# Get json
 		offers = list()
-		for offer in rowOffers:
+		for offer in rawOffers:
 			if len(offer) == 0:
 				continue
 			hash = offer[0]
@@ -1147,7 +1182,6 @@ class MyTonCore():
 				output += item + ', '
 		#end for
 		data = json.loads(output)
-		data = data[0]
 		return data
 	#end define
 	
@@ -1355,6 +1389,7 @@ class MyTonCore():
 		result = result.replace('+', '-')
 		result = result.replace('/', '_')
 		return result
+	#end define
 #end class
 
 def ng2g(ng):
