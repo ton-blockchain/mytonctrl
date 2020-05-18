@@ -261,6 +261,7 @@ class MyTonCore():
 			hash = Pars(buff, "hash ", ' ')
 			arr = result.split("transaction #0")
 			for item in arr:
+				ready += 1
 				if "from block" not in item:
 					continue
 				if "VALUE:" not in item:
@@ -281,7 +282,6 @@ class MyTonCore():
 					value = value[:value.find('+')] # wtf? `-1:0000000000000000000000000000000000000000000000000000000000000000 1583059577 1200000000+extra`
 				buff["value"] = ng2g(value)
 				history.append(buff)
-				ready += 1
 			if lt is None or ready >= limit:
 				return history
 	#end define

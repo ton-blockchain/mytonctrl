@@ -39,13 +39,15 @@ def Init():
 	
 	console.AddItem("nd", NewDomain, "Арендовать новый домен / New domain")
 	console.AddItem("dl", PrintDomainsList, "Показать арендованные домены / Show domains list")
-	console.AddItem("vd", ViewDomainStatus, "Показать статус домена / View domain status")
+	console.AddItem("vds", ViewDomainStatus, "Показать статус домена / View domain status")
 	console.AddItem("dd", DeleteDomain, "Удалить домен / Delete domain")
 	
 	console.AddItem("ol", PrintOffersList, "Показать действующие предложения / Show offers list")
 	console.AddItem("vo", VoteOffer, "Голосовать за предложение / Vote offer")
 	console.AddItem("el", PrintElectionEntriesList, "Показать действующие выборы / Show election entries list")
 	console.AddItem("ve", VoteElectionEntry, "Голосовать в выборах / Vote election entry")
+	console.AddItem("vl", PrintValidatorList, "Показать действующие валидаторы / Show validators list")
+	
 	
 	console.AddItem("test", Test, "")
 	
@@ -603,7 +605,7 @@ def ViewDomainStatus(args):
 	try:
 		domainName = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} vd <domain-name>")
+		ColorPrint("{red}Bad args. Usage:{endc} vds <domain-name>")
 		return
 	domain = ton.GetDomain(domainName)
 	endTime = domain.get("endTime")
@@ -636,6 +638,12 @@ def VoteElectionEntry(args):
 	ton.ReturnStake()
 	ton.ElectionEntry()
 	ColorPrint("VoteElectionEntry - {green}OK{endc}")
+#end define
+
+def PrintValidatorList(args):
+	config34 = ton.GetConfig34()
+	validators = config34["validators"]
+	print(json.dumps(validators, indent=4))
 #end define
 
 
