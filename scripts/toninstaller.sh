@@ -43,12 +43,12 @@ make -j # use only `make` if some error
 echo -e "${COLOR}[5/7]${ENDC} Скачиваем конфигурационные файлы"
 cd /usr/bin/ton/lite-client
 #wget https://test.ton.org/ton-lite-client-test1.config.json
-wget -O ton-lite-client-test1.config.json https://raw.githubusercontent.com/newton-blockchain/newton-blockchain.github.io/master/newton.global.config.json
+wget -O ton-lite-client-test1.config.json https://newton-blockchain.github.io/newton-test.global.config.json
 
 # Скачиваем конфигурационные файлы validator-engine
 cd /usr/bin/ton/validator-engine
 #wget https://test.ton.org/ton-global.config.json
-wget -O ton-global.config.json https://raw.githubusercontent.com/newton-blockchain/newton-blockchain.github.io/master/newton.global.config.json
+wget -O ton-global.config.json https://newton-blockchain.github.io/newton-test.global.config.json
 
 # Создаем символические ссылки
 echo -e "${COLOR}[6/7]${ENDC} Создаем символические ссылки"
