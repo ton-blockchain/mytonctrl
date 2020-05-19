@@ -1431,6 +1431,7 @@ def Domains(ton):
 #end define
 
 def ReadNetworkData():
+	local.AddLog("start ReadNetworkData function", "debug")
 	interfaceName = GetInternetInterfaceName()
 	buff = psutil.net_io_counters(pernic=True)
 	data = buff[interfaceName]
@@ -1447,6 +1448,7 @@ def ReadNetworkData():
 #end define
 
 def SaveNetworStatistics(ton):
+	local.AddLog("start SaveNetworStatistics function", "debug")
 	data = local.buffer["network"]["all"]
 	data = data[::-1]
 	zerodata = data[0]
@@ -1486,6 +1488,7 @@ def SaveNetworStatistics(ton):
 #end define
 
 def GetNetworStatistics(ton):
+	local.AddLog("start GetNetworStatistics function", "debug")
 	filePath = ton.tempDir + "statistics.json"
 	with open(filePath) as file:
 		text = file.read()
