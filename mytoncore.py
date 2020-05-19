@@ -1488,7 +1488,6 @@ def SaveNetworStatistics(ton):
 #end define
 
 def GetNetworStatistics(ton):
-	local.AddLog("start GetNetworStatistics function", "debug")
 	filePath = ton.tempDir + "statistics.json"
 	with open(filePath) as file:
 		text = file.read()
