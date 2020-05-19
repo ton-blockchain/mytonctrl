@@ -37,7 +37,7 @@ cmake /usr/src/ton
 
 # Компилируем из исходников
 echo -e "${COLOR}[4/7]${ENDC} Компилируем из исходников"
-make -j # use only `make` if some error
+make # use only `make` if some error
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/7]${ENDC} Скачиваем конфигурационные файлы"

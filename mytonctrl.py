@@ -375,7 +375,6 @@ def ImportWalletFromFile(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} iw <wallet-path>")
 		return
-	walletsDir = local.buffer.get("walletsDir")
 	if (".addr" in filePath):
 		filePath = filePath.replace(".addr", '')
 	if (".pk" in filePath):
@@ -390,8 +389,8 @@ def ImportWalletFromFile(args):
 		walletName = filePath[filePath.rfind('/')+1:]
 	else:
 		walletName = filePath
-	copyfile(filePath + ".addr", walletsDir + walletName + ".addr")
-	copyfile(filePath + ".pk", walletsDir + walletName + ".pk")
+	copyfile(filePath + ".addr", ton.walletsDir + walletName + ".addr")
+	copyfile(filePath + ".pk", ton.walletsDir + walletName + ".pk")
 	ColorPrint("ImportWalletFromFile - {green}OK{endc}")
 #end define
 
