@@ -316,7 +316,6 @@ def Seqno(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} seqno <wallet-name>")
 		return
-	
 	wallet = ton.GetLocalWallet(walletName)
 	seqno = ton.GetSeqno(wallet)
 	print(walletName, "seqno:", seqno)
@@ -324,11 +323,15 @@ def Seqno(args):
 
 def CreatNewWallet(args):
 	try:
-		walletName = args[0]
-		workchain = args[1]
+		if len(args) == 0:
+			walletName = ton.GenerateWalletName()
+			workchain = 0
+		else:
+			workchain = args[0]
+			walletName = args[1]
 	except:
-		walletName = ton.GenerateWalletName()
-		workchain = 0
+		ColorPrint("{red}Bad args. Usage:{endc} nw <workchain-id> <wallet-name>")
+		return
 	wallet = ton.CreateWallet(walletName, workchain)
 	table = list()
 	table += [["Name", "Workchain", "Address"]]
