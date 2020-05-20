@@ -18,8 +18,8 @@ def Init():
 
 	console.AddItem("nw", CreatNewWallet, "Создать новый локальный кошелек / Create a new local wallet")
 	console.AddItem("aw", ActivateWallet, "Активировать локальный кошелек / Activate local wallet")
-	console.AddItem("wl", PrintWalletsList, "Показать локальные кошельки / Show wallets list")
-	console.AddItem("iw", ImportWalletFromFile, "Импортировать кошелек из файла / Import wallet from files")
+	console.AddItem("wl", PrintWalletsList, "Показать локальные кошельки / Show wallet list")
+	console.AddItem("iw", ImportWalletFromFile, "Импортировать кошелек из файла / Import wallet from file")
 	console.AddItem("swa", SaveWalletAddressToFile, "Сохранить адрес кошелька в файл / Save wallet address to file")
 	console.AddItem("dw", DeleteWallet, "Удалить локальный кошелек / Delete local wallet")
 
@@ -27,26 +27,26 @@ def Init():
 	console.AddItem("vah", ViewAccountHistory, "Показать историю аккаунта / View account history")
 	console.AddItem("mg", MoveGrams, "Перевод средств на кошелек / Move grams to account")
 
-	console.AddItem("nb", CreatNewBookmark, "Добавить аккаунт в закладки / Creat new bookmark")
-	console.AddItem("bl", PrintBookmarksList, "Показать закладки / Show bookmarks list")
+	console.AddItem("nb", CreatNewBookmark, "Добавить аккаунт в закладки / Create new bookmark")
+	console.AddItem("bl", PrintBookmarksList, "Показать закладки / Show bookmark list")
 	console.AddItem("db", DeleteBookmark, "Удалить закладку / Delete bookmark")
 
-	console.AddItem("nr", CreatNewRule, "Добавить правило в расписание / Creat new rule")
-	console.AddItem("rl", PrintRulesList, "Показать правила расписания / Show rules list")
+	console.AddItem("nr", CreatNewRule, "Добавить правило в расписание / Create new rule")
+	console.AddItem("rl", PrintRulesList, "Показать правила расписания / Show rule list")
 	console.AddItem("dr", DeleteRule, "Удалить правило из расписания / Delete rule")
 	
 	#console.AddItem("w2m", MoveGramsFromMixer, "Пропустить средства через миксер")
 	
 	console.AddItem("nd", NewDomain, "Арендовать новый домен / New domain")
-	console.AddItem("dl", PrintDomainsList, "Показать арендованные домены / Show domains list")
+	console.AddItem("dl", PrintDomainsList, "Показать арендованные домены / Show domain list")
 	console.AddItem("vds", ViewDomainStatus, "Показать статус домена / View domain status")
 	console.AddItem("dd", DeleteDomain, "Удалить домен / Delete domain")
 	
-	console.AddItem("ol", PrintOffersList, "Показать действующие предложения / Show offers list")
-	console.AddItem("vo", VoteOffer, "Голосовать за предложение / Vote offer")
+	console.AddItem("ol", PrintOffersList, "Показать действующие предложения / Show offer list")
+	console.AddItem("vo", VoteOffer, "Голосовать за предложение / Vote for offer")
 	console.AddItem("el", PrintElectionEntriesList, "Показать действующие выборы / Show election entries list")
 	console.AddItem("ve", VoteElectionEntry, "Голосовать в выборах / Vote election entry")
-	console.AddItem("vl", PrintValidatorList, "Показать действующие валидаторы / Show validators list")
+	console.AddItem("vl", PrintValidatorList, "Показать действующие валидаторы / Show active validators")
 	
 	
 	console.AddItem("test", Test, "")
@@ -252,7 +252,7 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	ColorPrint("{cyan}===[ Конфигурация сети TON ]==={endc}")
 	print("Адрес конфигуратора: {0}".format(fullConfigAddr_text))
 	print("Адрес электора: {0}".format(fullElectorAddr_text))
-	print("Периуд валидации: {0}, Длительность выборов: {1}-{2}, Периуд удержания ставки: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
+	print("Период валидации: {0}, Длительность выборов: {1}-{2}, Период удержания ставки: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
 	print("Минимальная ставка: {0}, Максимальная ставка: {1}".format(minStake_text, maxStake_text))
 	print()
 #end define
