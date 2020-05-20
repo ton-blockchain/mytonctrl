@@ -1500,9 +1500,9 @@ def General():
 	ton = MyTonCore()
 
 	# Запустить потоки
-	local.StartCycle(Elections, sec=3600, args=(ton, ))
+	local.StartCycle(Elections, sec=600, args=(ton, ))
 	local.StartCycle(Statistics, sec=10, args=(ton, ))
-	local.StartCycle(Offers, sec=3600, args=(ton, ))
+	local.StartCycle(Offers, sec=600, args=(ton, ))
 	Sleep()
 #end define
 
