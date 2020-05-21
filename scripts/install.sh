@@ -48,5 +48,5 @@ su -l ${user} -c "python3 /usr/src/mytonctrl/mytoninstaller.py -m ${mode}"
 
 # Выход из программы
 echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
-echo -e "Write 'mytonctrl' to start the console."
+echo  "Write 'mytonctrl' to start the console."
 exit 0
