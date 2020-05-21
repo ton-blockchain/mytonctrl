@@ -24,11 +24,11 @@ rm -rf /tmp/vport.txt
 rm -rf /tmp/vconfig.json
 
 # Начинаю установку mytonctrl
-echo -e "${COLOR}[1/4]${ENDC} Starting installation MyTonCtrl"
+echo "${COLOR}[1/4]${ENDC} Starting installation MyTonCtrl"
 mode=${2}
 
 # Проверяю наличие компонентов TON
-echo -e "${COLOR}[2/4]${ENDC} Checking for required TON components"
+echo "${COLOR}[2/4]${ENDC} Checking for required TON components"
 file1=/usr/bin/ton/crypto/fift
 file2=/usr/bin/ton/lite-client/lite-client
 file3=/usr/bin/ton/validator-engine-console/validator-engine-console
@@ -42,11 +42,11 @@ else
 fi
 
 # Запускаю установщик mytoninstaller.py
-echo -e "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
+echo "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
 user=$(ls -lh install.sh | cut -d ' ' -f 3)
 su -l ${user} -c "python3 /usr/src/mytonctrl/mytoninstaller.py -m ${mode}"
 
 # Выход из программы
-echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
+echo "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
 echo  "Write 'mytonctrl' to start the console."
 exit 0

@@ -13,7 +13,7 @@ ENDC='\033[0m'
 
 # Установка требуемых пакетов
 echo -e "${COLOR}[1/7]${ENDC} Installing required packages"
-apt-get install git make cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev  libmicrohttpd-dev python3 python3-pip python3-setuptools -y
+apt-get install git make cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev  libmicrohttpd-dev python3-dev python3-pip python3-setuptools -y
 pip3 install wheel psutil crc16
 
 # Клонирование репозиториев с github.com

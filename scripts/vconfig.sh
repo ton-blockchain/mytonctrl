@@ -27,7 +27,7 @@ port=$(cat /tmp/vport.txt)
 addr=${ip}:${port}
 
 # Перемещаем наши ключи в нужную папку
-echo -e "${COLOR}[1/4]${ENDC} Перемещаем наши ключи в нужную папку"
+echo -e "${COLOR}[1/4]${ENDC} Moving your keys to the desired folder"
 server_key_hex=${2}
 mv /tmp/vkeys/server ${dbPath}/keyring/${server_key_hex}
 mv /tmp/vkeys/server.pub /usr/bin/ton/validator-engine-console/server.pub
@@ -35,11 +35,11 @@ mv /tmp/vkeys/client /usr/bin/ton/validator-engine-console/client
 mv /tmp/vkeys/client.pub /usr/bin/ton/validator-engine-console/client.pub
 
 # Прописать наши ключи в конфигурационном файле валидатора
-echo -e "${COLOR}[2/4]${ENDC} Прописываем наши ключи в конфигурационном файле валидатора"
+echo -e "${COLOR}[2/4]${ENDC} Registering your keys in the validator configuration file"
 cat /tmp/vconfig.json > ${dbPath}/config.json
 
 # Запустить валидатор
-echo -e "${COLOR}[3/4]${ENDC} Запускаем валидатор от имени пользователя 'validator'"
+echo -e "${COLOR}[3/4]${ENDC} Starting valdiator from user 'validator'"
 cmd="${validatorAppPath} -d -C ${validatorConfig} --db ${dbPath} --ip ${addr} -l ${logPath}"
 su -l validator -s /bin/sh -c "${cmd} &"
 
@@ -47,6 +47,4 @@ su -l validator -s /bin/sh -c "${cmd} &"
 chown -R validator:validator /var/ton-work
 
 # Конец
-echo -e "${COLOR}[4/4]${ENDC} Перенастройка валидатора завершена"
-
-
+echo -e "${COLOR}[4/4]${ENDC} Validator migration complete"

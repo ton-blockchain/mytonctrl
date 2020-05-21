@@ -4,7 +4,6 @@
 from mypylib.mypylib import *
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore import *
-from subprocess import *
 
 local = MyPyClass(__file__)
 console = MyPyConsole()
@@ -100,9 +99,22 @@ def TestWork(ok_arr, pending_arr):
 	print(addr, len(ok_arr), len(pending_arr))
 #end define
 
-def RunUpdater(args):
-	subprocess.call(['./scripts/update.sh'])
+def RunAsRoot(args):
+	file = open("/etc/issue")
+	text = file.read()
+	file.close()
+	if "Ubuntu" in text:
+		args = ["sudo", "-S"] + args
+	else:
+		print("Введите пароль пользователя root / Enter root password")
+		args = ["su", "-c"] + [" ".join(args)]
+	subprocess.call(args)
 #end define
+
+def RunUpdater(args):
+	RunAsRoot(["sh", "/usr/src/mytonctrl/scripts/update.sh"])
+#end define
+
 
 def PrintStatus(args):
 	rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
