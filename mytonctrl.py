@@ -487,7 +487,6 @@ def MoveGrams(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <gram-amount>")
 		return
-	if flag == "-n"
 	destination = ton.GetDestinationAddr(destination)
 	ton.MoveGrams(walletName, destination, gram, flags)
 	ColorPrint("MoveGrams - {green}OK{endc}")
