@@ -13,8 +13,8 @@ ENDC='\033[0m'
 
 # Установка требуемых пакетов
 echo -e "${COLOR}[1/7]${ENDC} Installing required packages"
-apt-get install git make cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev python3-setuptools libmicrohttpd-dev python3 python3-pip -y
-pip3 install psutil crc16
+apt-get install git make cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev  libmicrohttpd-dev python3 python3-pip python3-setuptools -y
+pip3 install wheel psutil crc16
 
 # Клонирование репозиториев с github.com
 echo -e "${COLOR}[2/7]${ENDC} Cloning github repository"
