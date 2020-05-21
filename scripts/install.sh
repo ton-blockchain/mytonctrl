@@ -3,13 +3,13 @@ set -e
 
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
-	echo "Запустите скрипт от имени администратора"
+	echo "Please, run script as root"
 	exit 1
 fi
 
 # Проверка режима установки
 if [ "${1}" != "-m" ]; then
-	echo "Запустите скрипт в одном из двух режимов: '-m lite' или '-m full'"
+	echo "Run script with with flag '-m lite' or '-m full'"
 	exit 1
 fi
 
@@ -24,11 +24,11 @@ rm -rf /tmp/vport.txt
 rm -rf /tmp/vconfig.json
 
 # Начинаю установку mytonctrl
-echo -e "${COLOR}[1/4]${ENDC} Начинаю установку mytonctrl"
+echo -e "${COLOR}[1/4]${ENDC} Starting installation MyTonCtrl"
 mode=${2}
 
 # Проверяю наличие компонентов TON
-echo -e "${COLOR}[2/4]${ENDC} Проверяю наличие компонентов TON"
+echo -e "${COLOR}[2/4]${ENDC} Checking for required TON components"
 file1=/usr/bin/ton/crypto/fift
 file2=/usr/bin/ton/lite-client/lite-client
 file3=/usr/bin/ton/validator-engine-console/validator-engine-console
@@ -42,10 +42,11 @@ else
 fi
 
 # Запускаю установщик mytoninstaller.py
-echo -e "${COLOR}[3/4]${ENDC} Запускаю установщик mytoninstaller.py"
+echo -e "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
 user=$(ls -lh install.sh | cut -d ' ' -f 3)
 su -l ${user} -c "python3 /usr/src/mytonctrl/mytoninstaller.py -m ${mode}"
 
 # Выход из программы
-echo -e "${COLOR}[4/4]${ENDC} Установка mytonctrl завершена"
+echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
+echo -e "Write 'mytonctrl' to start the console."
 exit 0

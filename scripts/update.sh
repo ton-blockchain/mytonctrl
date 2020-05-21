@@ -3,7 +3,7 @@ set -e
 
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
-	echo "Запустите скрипт от имени администратора"
+	echo "Please, run script as root"
 	exit 1
 fi
 
@@ -20,4 +20,4 @@ cd /usr/src/mytonctrl && git pull --recurse-submodules
 
 
 # Конец
-echo -e "${COLOR}[6/6]${ENDC} Обновление компонентов завершена"
+echo -e "Upgrade complete"
