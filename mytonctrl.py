@@ -106,7 +106,7 @@ def RunAsRoot(args):
 	if "Ubuntu" in text:
 		args = ["sudo", "-S"] + args
 	else:
-		print("Введите пароль пользователя root / Enter root password")
+		print("Enter root password")
 		args = ["su", "-c"] + [" ".join(args)]
 	subprocess.call(args)
 #end define
@@ -269,10 +269,10 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	maxStake_text = bcolors.Yellow(maxStake)
 
 	ColorPrint("{cyan}=== [ TON network config ] ==={endc}")
-	print("Адрес конфигуратора: {0}".format(fullConfigAddr_text))
-	print("Адрес электора: {0}".format(fullElectorAddr_text))
-	print("Период валидации: {0}, Длительность выборов: {1}-{2}, Период удержания ставки: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
-	print("Минимальная ставка: {0}, Максимальная ставка: {1}".format(minStake_text, maxStake_text))
+	print("Configurator address: {0}".format(fullConfigAddr_text))
+	print("Elector address: {0}".format(fullElectorAddr_text))
+	print("Validation time period: {0}, Election duration: {1}-{2}, Tokens freeze period: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
+	print("Minimum stack: {0}, Maximum stack: {1}".format(minStake_text, maxStake_text))
 	print()
 #end define
 
@@ -309,15 +309,15 @@ def PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, co
 	startNextElectionTime_text = GetColorTime(startNextElectionTime, startNextElection)
 
 	# Временные метки TON
-	ColorPrint("{cyan}===[ Временные метки TON ]==={endc}")
-	print("TON сеть была запущена: " + rootWorkchainEnabledTime_text)
+	ColorPrint("{cyan}=== [ TON timestamps ] ==={endc}")
+	print("TON Network launched: " + rootWorkchainEnabledTime_text)
 	if startValidation < 0:
 		return
-	print("Начало цикла валидации: " + startValidationTime_text)
-	print("Конец цикла валидации: " + endValidationTime_text)
-	print("Начало выборов: " + startElectionTime_text)
-	print("Конец выборов: " + endElectionTime_text)
-	print("Начало следующих выборов: " + startNextElectionTime_text)
+	print("Validation cycle began: " + startValidationTime_text)
+	print("Validation cycle ends: " + endValidationTime_text)
+	print("Start of election: " + startElectionTime_text)
+	print("End of election: " + endElectionTime_text)
+	print("The beginning of the next election: " + startNextElectionTime_text)
 #end define
 
 def GetColorTime(datetime, timestamp):
