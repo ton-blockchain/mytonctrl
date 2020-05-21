@@ -480,11 +480,16 @@ def MoveGrams(args):
 		walletName = args[0]
 		destination = args[1]
 		gram = args[2]
+		if len(args) > 3:
+			flags = args[3:]
+		else:
+			flags = list()
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <gram-amount>")
 		return
+	if flag == "-n"
 	destination = ton.GetDestinationAddr(destination)
-	ton.MoveGrams(walletName, destination, gram)
+	ton.MoveGrams(walletName, destination, gram, flags)
 	ColorPrint("MoveGrams - {green}OK{endc}")
 #end define
 

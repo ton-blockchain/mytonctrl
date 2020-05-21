@@ -877,7 +877,7 @@ class MyTonCore():
 		return vconfig
 	#end define
 
-	def MoveGrams(self, walletName, destinationAddr, gram):
+	def MoveGrams(self, walletName, destinationAddr, gram, flags):
 		local.AddLog("start MoveGrams function", "debug")
 		if gram == "all":
 			mode = 130
@@ -891,6 +891,7 @@ class MyTonCore():
 		seqno = self.GetSeqno(wallet)
 		resultFilePath = local.buffer.get("myTempDir") + walletName + "_wallet-query"
 		args = ["wallet.fif", wallet.path, destinationAddr, seqno, gram, resultFilePath, "-m", mode]
+		args += flags
 		result = self.fift.Run(args)
 		resultFilePath = Pars(result, "Saved to file ", ")")
 		self.SendFile(resultFilePath, wallet)

@@ -35,7 +35,7 @@ result=$(cat /etc/passwd)
 if echo ${result} | grep 'validator'; then
 	echo "user 'validator' exists"
 else
-    /usr/sbin/useradd -d /dev/null -s /dev/null validator
+	/usr/sbin/useradd -d /dev/null -s /dev/null validator
 fi
 
 # Проверка первого запуска валидатора

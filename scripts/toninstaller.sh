@@ -63,5 +63,5 @@ chmod +x /usr/bin/liteclient
 chmod +x /usr/bin/validatorconsole
 
 # Выход из программы
-echo -e "${COLOR}[7/7]${ENDC} Установка пакетов программ TON завершина"
+echo -e "${COLOR}[7/7]${ENDC} Установка пакетов программ TON завершена"
 exit 0

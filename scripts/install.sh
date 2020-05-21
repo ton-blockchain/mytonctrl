@@ -47,5 +47,5 @@ user=$(ls -lh install.sh | cut -d ' ' -f 3)
 su -l ${user} -c "python3 /usr/src/mytonctrl/mytoninstaller.py -m ${mode}"
 
 # Выход из программы
-echo -e "${COLOR}[4/4]${ENDC} Установка mytonctrl завершина"
+echo -e "${COLOR}[4/4]${ENDC} Установка mytonctrl завершена"
 exit 0
