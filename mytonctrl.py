@@ -161,7 +161,7 @@ def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offersNumber):
 	newOffers_text = bcolors.Green(newOffers)
 	onlineValidators_text = bcolors.Yellow(onlineValidators)
 	if startWorkTime == 0:
-		electionStatus_text = bcolors.Yellow("close")
+		electionStatus_text = bcolors.Yellow("closed")
 	else:
 		electionStatus_text = bcolors.Green("open")
 
@@ -199,7 +199,7 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	validatorIndex_text = bcolors.Green(validatorIndex)
 	adnlAddr_text = bcolors.Yellow(adnlAddr)
 	walletAddr_text = bcolors.Yellow(walletAddr)
-	walletBalance_text = bcolors.Green(walletBalance, " GRM")
+	walletBalance_text = bcolors.Green(walletBalance, " SEC (lol)")
 
 	# CPU status
 	cpuNumber_text = bcolors.Yellow(cpuNumber)
@@ -271,7 +271,7 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	ColorPrint("{cyan}=== [ TON network config ] ==={endc}")
 	print("Configurator address: {0}".format(fullConfigAddr_text))
 	print("Elector address: {0}".format(fullElectorAddr_text))
-	print("Validation time period: {0}, Election duration: {1}-{2}, Tokens freeze period: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
+	print("Validation time period: {0}, Election duration: {1}-{2}, Tokens freeze period: {3}".format(sec_to_hours(validatorsElectedFor_text), electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
 	print("Minimum stack: {0}, Maximum stack: {1}".format(minStake_text, maxStake_text))
 	print()
 #end define
@@ -671,7 +671,13 @@ def PrintValidatorList(args):
 	print(json.dumps(validators, indent=4))
 #end define
 
-
+def sec_to_hours(seconds):
+    a=str(seconds//3600)
+    b=str((seconds%3600)//60)
+    c=str((seconds%3600)%60)
+    d=["{} hours {} mins {} seconds".format(a, b, c)]
+    return d
+#end define
 
 ###
 ### Start of the program

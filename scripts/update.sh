@@ -20,4 +20,4 @@ cd /usr/src/mytonctrl && git pull --recurse-submodules
 
 
 # Конец
-echo "Upgrade complete"
+echo "Upgrade complete. Please restart the console"
