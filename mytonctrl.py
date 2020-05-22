@@ -264,6 +264,8 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	validatorsElectedFor_text = bcolors.Yellow(validatorsElectedFor)
 	electionsStartBefore_text = bcolors.Yellow(electionsStartBefore)
 	electionsEndBefore_text = bcolors.Yellow(electionsEndBefore)
+	electionsDuration_text = secondsToText(electionsStartBefore-electionsEndBefore);
+
 	stakeHeldFor_text = bcolors.Yellow(stakeHeldFor)
 	minStake_text = bcolors.Yellow(minStake)
 	maxStake_text = bcolors.Yellow(maxStake)
@@ -271,7 +273,8 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	ColorPrint("{cyan}=== [ TON network config ] ==={endc}")
 	print("Configurator address: {0}".format(fullConfigAddr_text))
 	print("Elector address: {0}".format(fullElectorAddr_text))
-	print("Validation time period: {0}, Election duration: {1}-{2}, Tokens freeze period: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
+	print("Validation time period: {0}".format(validatorsElectedFor_text))
+	print("Election duration: {}, Tokens freeze period: {}".format( electionsDuration_text, stakeHeldFor_text))
 	print("Minimum stake: {0}, Maximum stake: {1}".format(minStake_text, maxStake_text))
 	print()
 #end define
