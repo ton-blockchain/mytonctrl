@@ -199,7 +199,7 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	validatorIndex_text = bcolors.Green(validatorIndex)
 	adnlAddr_text = bcolors.Yellow(adnlAddr)
 	walletAddr_text = bcolors.Yellow(walletAddr)
-	walletBalance_text = bcolors.Green(walletBalance, " SEC (lol)")
+	walletBalance_text = bcolors.Green(walletBalance, " GRM")
 
 	# CPU status
 	cpuNumber_text = bcolors.Yellow(cpuNumber)

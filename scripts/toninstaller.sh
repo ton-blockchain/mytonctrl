@@ -22,7 +22,7 @@ cd /usr/src
 rm -rf /usr/src/ton
 rm -rf /usr/src/mytonctrl
 git clone --recursive https://github.com/ton-blockchain/ton.git
-git clone --recursive https://github.com/dinamicby/mytonctrl.git
+git clone --recursive https://github.com/igroman787/mytonctrl.git
 
 # Подготавливаем папки для компиляции
 echo -e "${COLOR}[3/7]${ENDC} Preparing for compilation"
