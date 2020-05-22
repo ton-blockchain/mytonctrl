@@ -79,7 +79,7 @@ def Translate(text):
 # 	title = "quick_setup_title_liteclient_config"
 # 	appPath = local.buffer.get("liteClient").get("appPath")
 # 	configPath = local.buffer.get("liteClient").get("configPath")
-	
+
 # 	# Получить параметры от пользователя
 # 	appPath = GetVarFromUser(title, "quick_setup_text_liteclient_program_path", appPath)
 # 	configPath = GetVarFromUser(title, "quick_setup_text_liteclient_config_path", configPath)
@@ -118,7 +118,7 @@ def Translate(text):
 # 	appPath = local.buffer.get("validatorConsole").get("appPath")
 # 	privKeyPath = local.buffer.get("validatorConsole").get("privKeyPath")
 # 	pubKeyPath = local.buffer.get("validatorConsole").get("pubKeyPath")
-	
+
 # 	# Получить параметры от пользователя
 # 	appPath = GetVarFromUser(title, "quick_setup_text_validator_engine_console_program_path", appPath)
 # 	privKeyPath = GetVarFromUser(title, "quick_setup_text_validator_engine_console_privkey_path", privKeyPath)
@@ -160,7 +160,7 @@ def Translate(text):
 # 	appPath = local.buffer.get("fift").get("appPath")
 # 	libsPath = local.buffer.get("fift").get("libsPath")
 # 	smartcontsPath = local.buffer.get("fift").get("smartcontsPath")
-	
+
 # 	# Получить параметры от пользователя
 # 	appPath = GetVarFromUser(title, "quick_setup_title_text_app_path", appPath)
 # 	libsPath = GetVarFromUser(title, "quick_setup_title_text_lib_path", libsPath)
@@ -362,7 +362,7 @@ def General():
 	subprocess.call(["python3", "/usr/src/mytonctrl/mytoncore.py", "-d"])
 
 	# Конец
-	local.AddLog("MyTonCtrl успешно установлен")
+	local.AddLog("MyTonCtrl setup complete")
 #end define
 
 

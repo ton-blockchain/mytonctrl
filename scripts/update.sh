@@ -3,7 +3,7 @@ set -e
 
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
-	echo "Please, run script as root"
+	echo "Please run script as root"
 	exit 1
 fi
 
@@ -17,8 +17,6 @@ ENDC='\033[0m'
 #cd /usr/bin/ton && cmake /usr/src/ton && make -j
 
 cd /usr/src/mytonctrl && git pull --recurse-submodules
-exit 1
-mytonctrl
 
 # Конец
 echo "Upgrade complete. Please restart the console"

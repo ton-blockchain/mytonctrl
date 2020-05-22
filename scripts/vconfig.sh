@@ -3,13 +3,13 @@ set -e
 
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
-	echo "Запустите скрипт от имени администратора"
+	echo "Please run script as root"
 	exit 1
 fi
 
 # Проверка режима
 if [ "${1}" != "-kh" ]; then
-	echo "Запустите скрипт в режиме импорта ключа: '-kh <server_key_hex>'"
+	echo "Run the script in key import mode: '-kh <server_key_hex>'"
 	exit 1
 fi
 

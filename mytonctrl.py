@@ -274,7 +274,8 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	print("Configurator address: {0}".format(fullConfigAddr_text))
 	print("Elector address: {0}".format(fullElectorAddr_text))
 	print("Validation time period: {0}".format(validatorsElectedFor_text))
-	print("Election duration: {}, Tokens freeze period: {}".format( electionsDuration_text, stakeHeldFor_text))
+	print("Election duration: {}".format( electionsDuration_text))
+	print("Tokens freeze period: {}".format(stakeHeldFor_text))
 	print("Minimum stake: {0}, Maximum stake: {1}".format(minStake_text, maxStake_text))
 	print()
 #end define

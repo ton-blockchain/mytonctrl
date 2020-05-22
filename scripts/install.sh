@@ -3,7 +3,7 @@ set -e
 
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
-	echo "Please, run script as root"
+	echo "Please run script as root"
 	exit 1
 fi
 
