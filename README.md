@@ -2,13 +2,14 @@
 This console program is a wrapper over `fift`,` lite-client` and `validator-engine-console`. It was created to facilitate the management of wallets, domains, and validators on the Linux.
 Installing the TON validator through the MyTonCtrl console utility.
 The instructions and scripts below were verified on Ubuntu 18.04.
+
 ![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-status.png)
 
 ## System requirements
 
 To start a validator (full node) in testnet we recommend looking at these system requirements.
 
-| Configuration | CPU (cores) | RAM (GiB) | SSD/NVME (GiB) | Network (Mbit/s)|
+| Configuration | CPU (cores) | RAM (GB) | SSD/NVME (GB) | Network (Mbit/s)|
 |---|:---|:---|:---|:---|
 | Minimal |6|16|256|500|
 | Recommended |8|32|480-960|1000|
