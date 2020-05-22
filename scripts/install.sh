@@ -34,6 +34,9 @@ file2=/usr/bin/ton/lite-client/lite-client
 file3=/usr/bin/ton/validator-engine-console/validator-engine-console
 if [ -f "${file1}" ] && [ -f "${file2}" ] && [ -f "${file3}" ]; then
 	echo "TON exist"
+	cd /usr/src
+	rm -rf /usr/src/mytonctrl
+	git clone --recursive https://github.com/igroman787/mytonctrl.git
 else
 	rm -f toninstaller.sh
 	wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/toninstaller.sh
