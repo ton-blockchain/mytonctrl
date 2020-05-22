@@ -261,9 +261,9 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 
 	fullConfigAddr_text = bcolors.Yellow(fullConfigAddr)
 	fullElectorAddr_text = bcolors.Yellow(fullElectorAddr)
-	validatorsElectedFor_text = secondsToText(bcolors.Yellow(validatorsElectedFor))
-	electionsStartBefore_text = secondsToText(bcolors.Yellow(electionsStartBefore))
-	electionsEndBefore_text = secondsToText(bcolors.Yellow(electionsEndBefore))
+	validatorsElectedFor_text = bcolors.Yellow(secondsToText(validatorsElectedFor))
+	electionsStartBefore_text = bcolors.Yellow(secondsToText(electionsStartBefore))
+	electionsEndBefore_text = bcolors.Yellow(secondsToText(electionsEndBefore))
 	stakeHeldFor_text = secondsToText(bcolors.Yellow(stakeHeldFor))
 	minStake_text = bcolors.Yellow(minStake)
 	maxStake_text = bcolors.Yellow(maxStake)
