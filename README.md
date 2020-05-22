@@ -1,10 +1,7 @@
-## HOWTO
+## MyTonCtrl
 This console program is a wrapper over `fift`,` lite-client` and `validator-engine-console`. It was created to facilitate the management of wallets, domains, and validators on the Linux.
 
-Installing the TON validator through the MyTonCtrl console utility.
 The instructions and scripts below were verified on ```Ubuntu 18.04``` and ```Debian 10.3```.
-
-![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-status.png)
 
 ## System requirements
 
@@ -12,8 +9,8 @@ To start a validator (full node) in testnet we recommend looking at these system
 
 | Configuration | CPU (cores) | RAM (GB) | SSD/NVME (GB) | Network (Mbit/s)|
 |---|:---|:---|:---|:---|
-| Minimal |6|16|256|100|
-| Recommended |8|32|480-960|500|
+| Minimum |6|16|256|100|
+| Recommended |8|32|480|500|
 
 UP and DOWN traffic is symmetrical during the validator is working and equal to average 50 Mbit/s in both directions.
 
@@ -61,7 +58,7 @@ These minimum requirements were obtained based on our experience of raising vali
 
 
 ## Installation Modes
-There are two installation modes: `lite` and` full`. Both of them ** compile ** and install the `TON` components.
+There are two installation modes: `lite` and `full`. Both of them compile and install `TON` components.
 However, the `lite` version does not configure or launch the validator.
 `full` installation mode will compile and install all the necessary components for your node to participate in the election of validators.
 
@@ -75,15 +72,14 @@ wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/insta
 ```sh
 sudo sh install.sh -m full
 ```
-Or  
+or  install `lite` version of the client:
 ```sh
 sudo sh install.sh -m lite
 ```
-to install `lite` version of the client.
 
 If the installation was completed successfully, then you will receive the following response in the console:
 
-![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-inst.png)
+![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-inst.jpeg)
 
 
 3. Then you can run `MytonCtrl` with the command:
@@ -94,7 +90,7 @@ MyTonCtrl
 4. To learn more about the available commands type `help`
 
 
-## Установка (Debian)
+## Installation (Debian)
 1. Download and run the `install.sh` script with the installation mode you need. During installation, you will be asked for the superuser password several times.
 ```sh
 wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
@@ -103,25 +99,24 @@ wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/insta
 ```sh
 su root -c 'sh install.sh -m full'
 ```
-Or  
+or  install `lite` version of the client:
 ```sh
 su root -c 'sh install.sh -m lite'
 ```
-to install `lite` version of the client.
 
 If the installation was completed successfully, then you will receive the following response in the console:
 
 ![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-inst.jpeg)
 
-3. Then you can run `MytonCtrl` with the command:
+ 3. Then you can run `MytonCtrl` with the command:
 ```sh
 MyTonCtrl
 ```
 
-4. To learn more about the available commands type `help`.
+ 4. To learn more about the available commands type `help`.
 
 
-## How to become a validator (`full` mode)
+## How to become a validator
 
 TON network automatically turns on when MytonCtrl is installed.
 To view the logs type:
@@ -129,10 +124,10 @@ To view the logs type:
 ```sh
 tail -f ~/.local/share/mytoncore/mytoncore.log
 ```
-Go to the console, enter help and wait until the parameter "Time difference" is in the range from -1 to -10
+Go to the console, enter `help` and wait until the parameter "Time difference" will be in the range of -1 to -10.
 Now your node is synchronized!
 
-1. Creating and activating a wallet
+### Creating and activating a wallet
 
 `MytonCtrl` automatically creates a wallet for your validator during installation.
 Type `wl` to display a list of wallets.
@@ -147,4 +142,4 @@ After that, you will see that the wallet is activated:
 
 Now you need to fund the wallet balance by an amount sufficient for voting. (This parameter is opposite the column "Minimum stake")
 
-// Write to faucet bot take some tokens.
+// TODO: Write to faucet bot and take some tokens.
