@@ -262,9 +262,9 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	fullConfigAddr_text = bcolors.Yellow(fullConfigAddr)
 	fullElectorAddr_text = bcolors.Yellow(fullElectorAddr)
 	validatorsElectedFor_text = secondsToText(bcolors.Yellow(validatorsElectedFor))
-	electionsStartBefore_text = sec_to_hours(bcolors.Yellow(electionsStartBefore))
-	electionsEndBefore_text = bcolors.Yellow(electionsEndBefore)
-	stakeHeldFor_text = bcolors.Yellow(stakeHeldFor)
+	electionsStartBefore_text = secondsToText(bcolors.Yellow(electionsStartBefore))
+	electionsEndBefore_text = secondsToText(bcolors.Yellow(electionsEndBefore))
+	stakeHeldFor_text = secondsToText(bcolors.Yellow(stakeHeldFor))
 	minStake_text = bcolors.Yellow(minStake)
 	maxStake_text = bcolors.Yellow(maxStake)
 
@@ -671,13 +671,7 @@ def PrintValidatorList(args):
 	print(json.dumps(validators, indent=4))
 #end define
 
-def sec_to_hours(seconds):
-    a=str(seconds//3600)
-    b=str((seconds%3600)//60)
-    c=str((seconds%3600)%60)
-    d=["{} hours {} mins {} seconds".format(a, b, c)]
-    return d
-#end define
+
 
 def secondsToText(secs):
     days = secs//86400
