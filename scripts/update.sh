@@ -17,7 +17,8 @@ ENDC='\033[0m'
 #cd /usr/bin/ton && cmake /usr/src/ton && make -j
 
 cd /usr/src/mytonctrl && git pull --recurse-submodules
-
+exit 1
+mytonctrl
 
 # Конец
 echo "Upgrade complete. Please restart the console"
