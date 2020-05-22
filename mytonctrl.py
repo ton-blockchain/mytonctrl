@@ -261,8 +261,8 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 
 	fullConfigAddr_text = bcolors.Yellow(fullConfigAddr)
 	fullElectorAddr_text = bcolors.Yellow(fullElectorAddr)
-	validatorsElectedFor_text = bcolors.Yellow(validatorsElectedFor)
-	electionsStartBefore_text = bcolors.Yellow(electionsStartBefore)
+	validatorsElectedFor_text = secondsToText(bcolors.Yellow(validatorsElectedFor))
+	electionsStartBefore_text = sec_to_hours(bcolors.Yellow(electionsStartBefore))
 	electionsEndBefore_text = bcolors.Yellow(electionsEndBefore)
 	stakeHeldFor_text = bcolors.Yellow(stakeHeldFor)
 	minStake_text = bcolors.Yellow(minStake)
@@ -271,8 +271,8 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	ColorPrint("{cyan}=== [ TON network config ] ==={endc}")
 	print("Configurator address: {0}".format(fullConfigAddr_text))
 	print("Elector address: {0}".format(fullElectorAddr_text))
-	print("Validation time period: {0}, Election duration: {1}-{2}, Tokens freeze period: {3}".format(sec_to_hours(validatorsElectedFor_text), electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
-	print("Minimum stack: {0}, Maximum stack: {1}".format(minStake_text, maxStake_text))
+	print("Validation time period: {0}, Election duration: {1}-{2}, Tokens freeze period: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
+	print("Minimum stake: {0}, Maximum stake: {1}".format(minStake_text, maxStake_text))
 	print()
 #end define
 
@@ -679,6 +679,16 @@ def sec_to_hours(seconds):
     return d
 #end define
 
+def secondsToText(secs):
+    days = secs//86400
+    hours = (secs - days*86400)//3600
+    minutes = (secs - days*86400 - hours*3600)//60
+    seconds = secs - days*86400 - hours*3600 - minutes*60
+    result = ("{0} day{1}, ".format(days, "s" if days!=1 else "") if days else "") + \
+    ("{0} hour{1}, ".format(hours, "s" if hours!=1 else "") if hours else "") + \
+    ("{0} minute{1}, ".format(minutes, "s" if minutes!=1 else "") if minutes else "") + \
+    ("{0} second{1}, ".format(seconds, "s" if seconds!=1 else "") if seconds else "")
+    return result
 ###
 ### Start of the program
 ###
