@@ -740,13 +740,14 @@ class MyTonCore():
 
 		# Check if optional arguments have been passed to us
 		if args:
-			m = re.match(r"(\d+\.?\d?)\%", args[0])
+			desiredStake = args[0]
+			m = re.match(r"(\d+\.?\d?)\%", desiredStake)
 			if m:
 				# Stake was in percent
 				stake = round((account.balance / 100) * float(m.group(1)))
 			elif desiredStake.isnumeric():
 				# Stake was a number
-				stake = int(args[0])
+				stake = int(desiredStake)
 			else:
 				local.AddLog("Specified stake must be a percentage or whole number", "error")
 				return
