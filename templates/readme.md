@@ -1,5 +1,10 @@
 # Manual config of myTonCtrl super rapid guide
 
+## Prerequesites not covered by this mini guide
+* Compiled and installed binaries
+* Sources (for fift scripts)
+* Access to operational full node
+
 ## Create a wallet on masterchain 
 Manual way described in chapter 2 of https://test.ton.org/Validator-HOWTO.txt
 
