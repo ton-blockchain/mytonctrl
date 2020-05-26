@@ -101,7 +101,7 @@ def PrintStatus(args):
 	rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
 	config34 = ton.GetConfig34()
 	totalValidators = config34["totalValidators"]
-	oldStartWorkTime = config34["oldStartWorkTime"]
+	oldStartWorkTime = config34["startWorkTime"]
 	shardsNumber = ton.GetShardsNumber()
 	validatorStatus = ton.GetValidatorStatus()
 	config15 = ton.GetConfig15()
@@ -168,7 +168,7 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	cpuLoad1 = loadavg[0]
 	cpuLoad5 = loadavg[1]
 	cpuLoad15 = loadavg[2]
-	netLoadAvg = GetNetworStatistics(ton)
+	netLoadAvg = ton.GetNetworStatistics()
 	netLoad1 = netLoadAvg[0]
 	netLoad5 = netLoadAvg[1]
 	netLoad15 = netLoadAvg[2]
