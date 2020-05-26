@@ -4,6 +4,7 @@
 import crc16
 import struct
 import re
+import requests
 from mypylib.mypylib import *
 
 local = MyPyClass(__file__)
@@ -475,9 +476,29 @@ class MyTonCore():
 			validatorStatus["masterchainblocktime"] = int(Pars(result, "masterchainblocktime", '\n'))
 			validatorStatus["stateserializermasterchainseqno"] = int(Pars(result, "stateserializermasterchainseqno", '\n'))
 			validatorStatus["shardclientmasterchainseqno"] = int(Pars(result, "shardclientmasterchainseqno", '\n'))
+			buff = Pars(result, "masterchainblock", '\n')
+			validatorStatus["masterchainblock"] = self.GVS_GetItemFromBuff(buff)
+			buff = Pars(result, "gcmasterchainblock", '\n')
+			validatorStatus["gcmasterchainblock"] = self.GVS_GetItemFromBuff(buff)
+			buff = Pars(result, "keymasterchainblock", '\n')
+			validatorStatus["keymasterchainblock"] = self.GVS_GetItemFromBuff(buff)
+			buff = Pars(result, "rotatemasterchainblock", '\n')
+			validatorStatus["rotatemasterchainblock"] = self.GVS_GetItemFromBuff(buff)
 		except:
 			validatorStatus["isWorking"] = False
 		return validatorStatus
+	#end define
+	
+	def GVS_GetItemFromBuff(self, buff):
+		buffList = buff.split(':')
+		buff2 = buffList[0]
+		buff2 = buff2.replace(' ', '')
+		buff2 = buff2.replace('(', '')
+		buff2 = buff2.replace(')', '')
+		buffList2 = buff2.split(',')
+		item = buffList2[2]
+		item = int(item)
+		return item
 	#end define
 
 	def GetConfig12(self):
@@ -521,14 +542,15 @@ class MyTonCore():
 		config34 = dict()
 		result = self.liteClient.Run("getconfig 34")
 		config34["totalValidators"] = int(Pars(result, "total:", ' '))
-		config34["oldStartWorkTime"] = int(Pars(result, "utime_since:", ' '))
+		config34["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
+		config34["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
 		lines = result.split('\n')
 		validators = list()
 		for line in lines:
 			if "public_key:" in line:
 				validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
 				validatorPubkey = Pars(line, "pubkey:x", ')')
-				validatorWeight = Pars(line, "weight:", ' ')
+				validatorWeight = int(Pars(line, "weight:", ' '))
 				buff = dict()
 				buff["adnlAddr"] = validatorAdnlAddr
 				buff["pubkey"] = validatorPubkey
@@ -536,6 +558,32 @@ class MyTonCore():
 				validators.append(buff)
 		config34["validators"] = validators
 		return config34
+	#end define
+	
+	def GetConfig36(self):
+		local.AddLog("start GetConfig36 function", "debug")
+		config36 = dict()
+		result = self.liteClient.Run("getconfig 36")
+		try:
+			config36["totalValidators"] = int(Pars(result, "total:", ' '))
+			config36["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
+			config36["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
+			lines = result.split('\n')
+			validators = list()
+			for line in lines:
+				if "public_key:" in line:
+					validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
+					validatorPubkey = Pars(line, "pubkey:x", ')')
+					validatorWeight = Pars(line, "weight:", ' ')
+					buff = dict()
+					buff["adnlAddr"] = validatorAdnlAddr
+					buff["pubkey"] = validatorPubkey
+					buff["weight"] = validatorWeight
+					validators.append(buff)
+			config36["validators"] = validators
+		except:
+			pass
+		return config36
 	#end define
 
 	def CreatNewKey(self):
@@ -618,10 +666,10 @@ class MyTonCore():
 		return var1
 	#end define
 
-	def CreateElectionRequest(self, wallet, startWorkTime, adnlAddr, rate):
+	def CreateElectionRequest(self, wallet, startWorkTime, adnlAddr, maxFactor):
 		local.AddLog("start CreateElectionRequest function", "debug")
 		fileName = self.tempDir + str(startWorkTime) + "_validator-to-sign.bin"
-		args = ["validator-elect-req.fif", wallet.addr, startWorkTime, rate, adnlAddr, fileName]
+		args = ["validator-elect-req.fif", wallet.addr, startWorkTime, maxFactor, adnlAddr, fileName]
 		result = self.fift.Run(args)
 		fileName = Pars(result, "Saved to file ", '\n')
 		resultList = result.split('\n')
@@ -644,10 +692,10 @@ class MyTonCore():
 		return validatorSignature
 	#end define
 
-	def SignElectionRequestWithValidator(self, wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, rate):
+	def SignElectionRequestWithValidator(self, wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor):
 		local.AddLog("start SignElectionRequestWithValidator function", "debug")
 		fileName = self.tempDir + str(startWorkTime) + "_validator-query.boc"
-		args = ["validator-elect-signed.fif", wallet.addr, startWorkTime, rate, adnlAddr, validatorPubkey_b64, validatorSignature, fileName]
+		args = ["validator-elect-signed.fif", wallet.addr, startWorkTime, maxFactor, adnlAddr, validatorPubkey_b64, validatorSignature, fileName]
 		result = self.fift.Run(args)
 		validatorPubkey = Pars(result, "validator public key ", '\n')
 		fileName = Pars(result, "Saved to file ", '\n')
@@ -735,7 +783,7 @@ class MyTonCore():
 			local.AddLog("You don't have enough grams. Minimum stake: " + str(minStake), "debug")
 			return
 
-		# Default rate multiplier
+		# Default maxFactor multiplier
 		rateMultiplier = 1
 
 		# Check if optional arguments have been passed to us
@@ -787,17 +835,17 @@ class MyTonCore():
 		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
 
 		# Create fift's
-		rate = round((stake / minStake) * rateMultiplier, 1)
-		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, rate)
+		maxFactor = round((stake / minStake) * rateMultiplier, 1)
+		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, maxFactor)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, rate)
+		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor)
 
 		# Send boc file to TON
 		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, stake)
 		self.SendFile(resultFilePath, wallet)
 
 		# Save vars to json file
-		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, rate=rate, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
+		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
 
 		local.AddLog("ElectionEntry completed. Start work time: " + str(startWorkTime))
 	#end define
@@ -994,17 +1042,17 @@ class MyTonCore():
 		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
 
 		# Create fift's
-		rate = round(stake / minStake, 1)
-		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, rate)
+		maxFactor = round(stake / minStake, 1)
+		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, maxFactor)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, rate)
+		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor)
 
 		# Send boc file to TON
 		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, stake)
 		self.SendFile(resultFilePath, wallet)
 
 		# Save vars to json file
-		# self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, rate=rate, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
+		# self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
 		
 		self.validatorConsole.Run("delpermkey {validatorKey}".format(validatorKey=validatorKey))
 
@@ -1052,7 +1100,7 @@ class MyTonCore():
 			item = dict()
 			item["validatorPubkey"] = dec2hex(entry[0]).upper()
 			item["stake"] = ng2g(entry[1][0])
-			item["rate"] = round(entry[1][1] / 655.36) / 100.0
+			item["maxFactor"] = round(entry[1][1] / 655.36) / 100.0
 			item["walletAddr_hex"] = dec2hex(entry[1][2]).upper()
 			item["walletAddr"] = self.HexAddr2Base64Addr("-1:"+item["walletAddr_hex"])
 			item["adnlAddr"] = dec2hex(entry[1][3]).upper()
@@ -1421,6 +1469,14 @@ class MyTonCore():
 		result = result.replace('/', '_')
 		return result
 	#end define
+	
+	def GetNetworStatistics(self):
+		filePath = self.tempDir + "statistics.json"
+		with open(filePath) as file:
+			text = file.read()
+			data = json.loads(text)
+			return data
+	#end define
 #end class
 
 def ng2g(ng):
@@ -1459,6 +1515,29 @@ def Offers(ton):
 
 def Domains(ton):
 	pass
+#end define
+
+def Telemetry(ton):
+	data = dict()
+	data["adnlAddr"] = ton.adnlAddr
+	data["validatorStatus"] = ton.GetValidatorStatus()
+	data["cpuLoad"] = GetLoadAvg()
+	data["netLoad"] = ton.GetNetworStatistics()
+	url = "https://toncenter.com/api/newton_test/status/report_status"
+	output = json.dumps(data)
+	resp = requests.post(url, data=output, timeout=3)
+
+	if ton.adnlAddr != "660A8EC119287FE4B8E38D69045E0017EB5BFE1FBBEBE1AA26D492DA4F3A1D69":
+		return
+	data = dict()
+	config34 = ton.GetConfig34()
+	config36 = ton.GetConfig36()
+	data["currentValidators"] = config34["validators"]
+	if len(config36) > 0:
+		data["nextValidators"] = config36["validators"]
+	url = "https://toncenter.com/api/newton_test/status/report_validators"
+	output = json.dumps(data)
+	resp = requests.post(url, data=output, timeout=3)
 #end define
 
 def ReadNetworkData():
@@ -1518,14 +1597,6 @@ def SaveNetworStatistics(ton):
 		file.write(text)
 #end define
 
-def GetNetworStatistics(ton):
-	filePath = ton.tempDir + "statistics.json"
-	with open(filePath) as file:
-		text = file.read()
-		data = json.loads(text)
-		return data
-#end define
-
 def General():
 	local.AddLog("start General function", "debug")
 	ton = MyTonCore()
@@ -1534,6 +1605,8 @@ def General():
 	local.StartCycle(Elections, sec=600, args=(ton, ))
 	local.StartCycle(Statistics, sec=10, args=(ton, ))
 	local.StartCycle(Offers, sec=600, args=(ton, ))
+	local.StartCycle(Domains, sec=600, args=(ton, ))
+	local.StartCycle(Telemetry, sec=60, args=(ton, ))
 	Sleep()
 #end define
 
