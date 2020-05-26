@@ -3,6 +3,7 @@
 
 import crc16
 import struct
+import re
 from mypylib.mypylib import *
 
 local = MyPyClass(__file__)
@@ -701,7 +702,7 @@ class MyTonCore():
 		return resultFilePath
 	#end define
 
-	def ElectionEntry(self):
+	def ElectionEntry(self,args):
 		#self.TestElectionEntry()
 	
 		local.AddLog("start ElectionEntry function", "debug")
@@ -734,11 +735,38 @@ class MyTonCore():
 			local.AddLog("You don't have enough grams. Minimum stake: " + str(minStake), "debug")
 			return
 
-		# Calculate stake
-		if len(validators) == 0:
-			stake = int(account.balance*0.99/2)
-		if len(validators) > 0 or (stake is not None and stake < minStake):
-			stake = int(account.balance*0.99)
+		# Check if optional arguments have been passed to us
+		if args:
+			m = re.match(r"(\d+\.?\d?)\%", args[0])
+			if m:
+				# Stake was in percent
+				stake = round((account.balance / 100) * float(m.group(1)))
+			elif desiredStake.isnumeric():
+				# Stake was a number
+				stake = int(args[0])
+			else:
+				local.AddLog("Specified stake must be a percentage or whole number", "error")
+				return
+
+			# Limit stake to maximum available amount minus 10 (for transaction fees)
+			if stake > account.balance:
+				stake = account.balance - 10
+
+			if minStake > stake:
+				local.AddLog('Stake is smaller then Minimum stake: ' + str(minStake), "error")
+				return
+
+			# Get rateMultiplier
+			if len(args) > 1:
+				rateMultiplier = float(args[1])
+		else:
+			# Calculate stake
+			if len(validators) == 0:
+				stake = int(account.balance*0.99/2)
+			if len(validators) > 0 or (stake is not None and stake < minStake):
+				stake = int(account.balance*0.99)
+
+			rateMultiplier = 1
 
 		# Calculate endWorkTime
 		validatorsElectedFor = self.GetValidatorsElectedFor()
@@ -757,7 +785,7 @@ class MyTonCore():
 		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
 
 		# Create fift's
-		rate = round(stake / minStake, 1)
+		rate = round((stake / minStake) * rateMultiplier, 1)
 		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, rate)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, rate)
