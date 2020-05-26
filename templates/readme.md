@@ -6,9 +6,11 @@
 * Access to operational full node
 
 ## Create a wallet on masterchain 
+If you do not have a wallet on masterchain (-1) yet, then make one. 
 Manual way described in chapter 2 of https://test.ton.org/Validator-HOWTO.txt
 
 ## Create node `adnlAddr`
+Again, if you do not have this yet, make it.
 Use `validator-engine-console`, here is example of the commands
 ```
 > newkey
