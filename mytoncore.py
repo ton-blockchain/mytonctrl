@@ -749,7 +749,7 @@ class MyTonCore():
 				return
 
 			# Limit stake to maximum available amount minus 10 (for transaction fees)
-			if stake > account.balance:
+			if stake > account.balance - 10:
 				stake = account.balance - 10
 
 			if minStake > stake:
