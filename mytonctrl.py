@@ -4,6 +4,7 @@
 from mypylib.mypylib import *
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore import *
+import platform
 
 local = MyPyClass(__file__)
 console = MyPyConsole()
@@ -183,14 +184,23 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	walletAddr = validatorWallet.addr
 	walletBalance = validatorAccount.balance
 	cpuNumber = psutil.cpu_count()
-	loadavg = GetLoadAvg()
-	cpuLoad1 = loadavg[0]
-	cpuLoad5 = loadavg[1]
-	cpuLoad15 = loadavg[2]
-	netLoadAvg = GetNetworStatistics(ton)
-	netLoad1 = netLoadAvg[0]
-	netLoad5 = netLoadAvg[1]
-	netLoad15 = netLoadAvg[2]
+	if platform.system() in ['FreeBSD','Darwin']:
+		cpuLoad1 = 0.00
+		cpuLoad5 = 0.00
+		cpuLoad15 = 0.00
+		netLoad1 = 0.00
+		netLoad5 = 0.00
+		netLoad15 = 0.00
+	else:
+		loadavg = GetLoadAvg()
+		cpuLoad1 = loadavg[0]
+		cpuLoad5 = loadavg[1]
+		cpuLoad15 = loadavg[2]
+		netLoadAvg = GetNetworStatistics(ton)
+		netLoad1 = netLoadAvg[0]
+		netLoad5 = netLoadAvg[1]
+		netLoad15 = netLoadAvg[2]
+
 	validatorOutOfSync = validatorStatus.get("unixtime", GetTimestamp()) - validatorStatus.get("masterchainblocktime", 0)
 	statisticsStatus_text_bool = True # fix me
 	electionsThreadStatus_bool = True # fix me
