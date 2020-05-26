@@ -735,6 +735,9 @@ class MyTonCore():
 			local.AddLog("You don't have enough grams. Minimum stake: " + str(minStake), "debug")
 			return
 
+		# Default rate multiplier
+		rateMultiplier = 1
+
 		# Check if optional arguments have been passed to us
 		if args:
 			m = re.match(r"(\d+\.?\d?)\%", args[0])
@@ -765,8 +768,6 @@ class MyTonCore():
 				stake = int(account.balance*0.99/2)
 			if len(validators) > 0 or (stake is not None and stake < minStake):
 				stake = int(account.balance*0.99)
-
-			rateMultiplier = 1
 
 		# Calculate endWorkTime
 		validatorsElectedFor = self.GetValidatorsElectedFor()
