@@ -675,7 +675,7 @@ def VoteElectionEntry(args):
 	if ton.validatorWalletName is None:
 		ColorPrint("{red}You are not a validator, or this utility is not configured correctly.{endc}")
 	ton.ReturnStake()
-	ton.ElectionEntry()
+	ton.ElectionEntry(args)
 	ColorPrint("VoteElectionEntry - {green}OK{endc}")
 #end define
 
