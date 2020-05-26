@@ -14,10 +14,10 @@
     },
     "validatorConsole": {
         "appPath": "##ADJUST_TO_YOUR_SYSTEM##/bin/validator-engine-console",
-        "privKeyPath": "##FULL_PATH_TO_CLIENT_PRIVATE_KEY##/keys/client",
+        "privKeyPath": "##FULL_PATH_TO_CLIENT_PRIVATE_KEY##",
         "pubKeyPath": "##FULL_PATH_TO_SERVER_PUBLIC_KEY##",
-        "addr": "##VCONSOLE_IP##:##VCONSOLE_PORT##"
+        "addr": "##NODE_IP##:##NODE_CONSOLE_PORT##"
     },
-    "validatorWalletName": "##FILENAME_OF_WALLET##",
+    "validatorWalletName": "##NAME_AKA_FILENAME_OF_WALLET##",
     "adnlAddr": "##HEX_ADDRESS_OF_YOUR_NODE##"
 }
