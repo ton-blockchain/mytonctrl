@@ -4,6 +4,7 @@
 * Compiled and installed binaries
 * Sources (for fift scripts)
 * Access to operational full node
+* Python 3.x with different modules required by script. Python will tell you which ones.
 
 ## Create a wallet on masterchain 
 If you do not have a wallet on masterchain (-1) yet, then make one. 
