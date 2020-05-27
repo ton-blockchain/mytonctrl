@@ -1,0 +1,23 @@
+{
+    "config": {
+      "logLevel": "debug",
+      "isLocaldbSaving": true
+    },
+    "fift": {
+        "appPath": "##ADJUST_TO_YOUR_SYSTEM##/bin/fift",
+        "libsPath": "##ADJUST_TO_YOUR_SYSTEM##/crypto/fift/lib",
+        "smartcontsPath": "##ADJUST_TO_YOUR_SYSTEM##/crypto/smartcont"
+    },
+    "liteClient": {
+        "appPath": "##ADJUST_TO_YOUR_SYSTEM##/bin/lite-client",
+        "configPath": "##FULL_PATH_TO_NETWORK_GLOBAL_CONFIGURATION##"
+    },
+    "validatorConsole": {
+        "appPath": "##ADJUST_TO_YOUR_SYSTEM##/bin/validator-engine-console",
+        "privKeyPath": "##FULL_PATH_TO_CLIENT_PRIVATE_KEY##",
+        "pubKeyPath": "##FULL_PATH_TO_SERVER_PUBLIC_KEY##",
+        "addr": "##NODE_IP##:##NODE_CONSOLE_PORT##"
+    },
+    "validatorWalletName": "##NAME_AKA_FILENAME_OF_WALLET##",
+    "adnlAddr": "##HEX_ADDRESS_OF_YOUR_NODE##"
+}
