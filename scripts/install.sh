@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Проверить sudo
@@ -30,7 +30,7 @@ mydir=$(pwd)
 # На OSX нет такой директории по-умолчанию, поэтому создаем...
 SOURCES_DIR=/usr/src
 BIN_DIR=/usr/bin
-if [ "$OSTYPE" = "darwin"* ]; then
+if [ "$OSTYPE" == "darwin"* ]; then
 	SOURCES_DIR=/usr/local/src
 	BIN_DIR=/usr/local/bin
 	mkdir -p $SOURCES_DIR
@@ -50,7 +50,7 @@ if [ -f "${file1}" ] && [ -f "${file2}" ] && [ -f "${file3}" ]; then
 else
 	rm -f toninstaller.sh
 	wget https://raw.githubusercontent.com/igroman787/mytonctrl/original/scripts/toninstaller.sh
-	sh toninstaller.sh
+	bash toninstaller.sh
 	rm -f toninstaller.sh
 fi
 
