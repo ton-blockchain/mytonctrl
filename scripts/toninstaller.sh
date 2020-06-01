@@ -40,7 +40,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 		exit 1
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
-		apt update
+		apt-get update
 		apt-get install -y git make cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-pip
 	else
 		echo "Unknown Linux distribution."
@@ -81,6 +81,7 @@ rm -rf $SOURCES_DIR/ton
 rm -rf $SOURCES_DIR/mytonctrl
 git clone --recursive https://github.com/ton-blockchain/ton.git
 git clone --recursive https://github.com/igroman787/mytonctrl.git
+cd mytonctrl && git checkout original && git submodule update --init --recursive # fix me
 
 
 # Подготавливаем папки для компиляции
