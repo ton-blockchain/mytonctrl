@@ -249,7 +249,7 @@ def Vpreparation():
 		subprocess.run(args)
 	
 	# Проверка первого запуска валидатора
-	if not os.path.isfile(fname):
+	if not os.path.isfile(configPath):
 		args = [validatorAppPath, "-C", validatorConfig, "--db", dbPath, "--ip", addr, "-l", logPath]
 		subprocess.run(args)
 	
