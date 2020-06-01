@@ -24,7 +24,7 @@ rm -rf /tmp/vport.txt
 rm -rf /tmp/vconfig.json
 
 # Начинаю установку mytonctrl
-echo "${COLOR}[1/4]${ENDC} Starting installation MyTonCtrl"
+echo -e "${COLOR}[1/4]${ENDC} Starting installation MyTonCtrl"
 mydir=$(pwd)
 
 # На OSX нет такой директории по-умолчанию, поэтому создаем...
@@ -37,7 +37,7 @@ if [ "$OSTYPE" == "darwin"* ]; then
 fi
 
 # Проверяю наличие компонентов TON
-echo "${COLOR}[2/4]${ENDC} Checking for required TON components"
+echo -e "${COLOR}[2/4]${ENDC} Checking for required TON components"
 file1=$BIN_DIR/ton/crypto/fift
 file2=$BIN_DIR/ton/lite-client/lite-client
 file3=$BIN_DIR/ton/validator-engine-console/validator-engine-console
@@ -55,10 +55,10 @@ else
 fi
 
 # Запускаю установщик mytoninstaller.py
-echo "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
+echo -e "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
 user=$(ls -lh ${mydir}/${0} | cut -d ' ' -f 3)
 python3 $SOURCES_DIR/mytonctrl/mytoninstaller.py -m ${2} -u ${user}
 
 # Выход из программы
-echo "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
+echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
 exit 0

@@ -21,7 +21,7 @@ if [ "$OSTYPE" == "darwin"* ]; then
 fi
 
 # Установка требуемых пакетов
-echo "${COLOR}[1/6]${ENDC} Installing required packages"
+echo -e "${COLOR}[1/6]${ENDC} Installing required packages"
 if [ "$OSTYPE" == "linux-gnu" ]; then
 	if [ hash yum 2>/dev/null ]; then
 		echo "RHEL-based Linux detected."
@@ -75,7 +75,7 @@ fi
 pip3 install psutil crc16 requests
 
 # Клонирование репозиториев с github.com
-echo "${COLOR}[2/6]${ENDC} Cloning github repository"
+echo -e "${COLOR}[2/6]${ENDC} Cloning github repository"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
 rm -rf $SOURCES_DIR/mytonctrl
@@ -103,9 +103,10 @@ fi
 cmake $SOURCES_DIR/ton
 
 # Компилируем из исходников
-echo "${COLOR}[4/6]${ENDC} Source Compilation"
+echo -e "${COLOR}[4/6]${ENDC} Source Compilation"
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000"
+echo "use ${cpuNumber} cpus"
 make -j ${cpuNumber}
 
 # Скачиваем конфигурационные файлы lite-client
