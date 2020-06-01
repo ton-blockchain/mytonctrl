@@ -90,7 +90,7 @@ mkdir $BIN_DIR/ton
 cd $BIN_DIR/ton
 
 # Подготовиться к компиляции
-if [[ "$OSTYPE" = "darwin"* ]]; then
+if [ "$OSTYPE" = "darwin"* ]; then
 	export CMAKE_C_COMPILER=$(which clang)
 	export CMAKE_CXX_COMPILER=$(which clang++)
 else
