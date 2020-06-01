@@ -3,13 +3,13 @@ set -e
 
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
-	echo "Запустите скрипт от имени администратора"
+	echo "Please run script as root"
 	exit 1
 fi
 
 # Проверка режима установки
 if [ "${1}" != "-m" ]; then
-	echo "Запустите скрипт в одном из двух режимов: '-m lite' или '-m full'"
+	echo "Run script with with flag '-m lite' or '-m full'"
 	exit 1
 fi
 
@@ -24,16 +24,27 @@ rm -rf /tmp/vport.txt
 rm -rf /tmp/vconfig.json
 
 # Начинаю установку mytonctrl
-echo -e "${COLOR}[1/4]${ENDC} Начинаю установку mytonctrl"
-mode=${2}
+echo "${COLOR}[1/4]${ENDC} Starting installation MyTonCtrl"
+
+# На OSX нет такой директории по-умолчанию, поэтому создаем...
+SOURCES_DIR=/usr/src
+BIN_DIR=/usr/bin
+if [ "$OSTYPE" == "darwin"* ]; then
+	SOURCES_DIR=/usr/local/src
+	BIN_DIR=/usr/local/bin
+	mkdir -p $SOURCES_DIR
+fi
 
 # Проверяю наличие компонентов TON
-echo -e "${COLOR}[2/4]${ENDC} Проверяю наличие компонентов TON"
-file1=/usr/bin/ton/crypto/fift
-file2=/usr/bin/ton/lite-client/lite-client
-file3=/usr/bin/ton/validator-engine-console/validator-engine-console
+echo "${COLOR}[2/4]${ENDC} Checking for required TON components"
+file1=$BIN_DIR/ton/crypto/fift
+file2=$BIN_DIR/ton/lite-client/lite-client
+file3=$BIN_DIR/ton/validator-engine-console/validator-engine-console
 if [ -f "${file1}" ] && [ -f "${file2}" ] && [ -f "${file3}" ]; then
 	echo "TON exist"
+	cd $SOURCES_DIR
+	rm -rf $SOURCES_DIR/mytonctrl
+	git clone --recursive https://github.com/igroman787/mytonctrl.git
 else
 	rm -f toninstaller.sh
 	wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/toninstaller.sh
@@ -42,10 +53,10 @@ else
 fi
 
 # Запускаю установщик mytoninstaller.py
-echo -e "${COLOR}[3/4]${ENDC} Запускаю установщик mytoninstaller.py"
-user=$(ls -lh install.sh | cut -d ' ' -f 3)
-su -l ${user} -c "python3 /usr/src/mytonctrl/mytoninstaller.py -m ${mode}"
+echo "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
+user=$(ls -lh ${0} | cut -d ' ' -f 3)
+python3 $SOURCES_DIR/mytonctrl/mytoninstaller.py -m ${2} -u ${user}
 
 # Выход из программы
-echo -e "${COLOR}[4/4]${ENDC} Установка mytonctrl завершена"
+echo "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
 exit 0

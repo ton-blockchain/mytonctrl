@@ -13,6 +13,9 @@ ton = MyTonCore()
 def Init():
 	# Create user console
 	console.name = "MyTonCtrl"
+
+	console.AddItem("update", Update, "Подтянуть обновление mytonctrl / Pull mytonctrl update")
+	console.AddItem("upgrade", Upgrade, "Подтянуть исходный код и перекомпилировать компоненты TON / Pull up the source code and recompile the TON components")
 	console.AddItem("status", PrintStatus, "Показать статус TON / Show TON status")
 	console.AddItem("seqno", Seqno, "Получить seqno кошелька / Get seqno wallet")
 
@@ -34,27 +37,40 @@ def Init():
 	console.AddItem("nr", CreatNewRule, "Добавить правило в расписание / Create new rule")
 	console.AddItem("rl", PrintRulesList, "Показать правила расписания / Show rule list")
 	console.AddItem("dr", DeleteRule, "Удалить правило из расписания / Delete rule")
-	
+
 	#console.AddItem("w2m", MoveGramsFromMixer, "Пропустить средства через миксер")
-	
+
 	console.AddItem("nd", NewDomain, "Арендовать новый домен / New domain")
 	console.AddItem("dl", PrintDomainsList, "Показать арендованные домены / Show domain list")
 	console.AddItem("vds", ViewDomainStatus, "Показать статус домена / View domain status")
 	console.AddItem("dd", DeleteDomain, "Удалить домен / Delete domain")
-	
+
 	console.AddItem("ol", PrintOffersList, "Показать действующие предложения / Show offer list")
 	console.AddItem("vo", VoteOffer, "Голосовать за предложение / Vote for offer")
 	console.AddItem("el", PrintElectionEntriesList, "Показать действующие выборы / Show election entries list")
 	console.AddItem("ve", VoteElectionEntry, "Голосовать в выборах / Vote election entry")
 	console.AddItem("vl", PrintValidatorList, "Показать действующие валидаторы / Show active validators")
-	
-	
-	console.AddItem("test", Test, "")
-	
-	
+
+	console.AddItem("test", Test, "Test")
+	console.AddItem("pt", PrintTest, "PrintTest")
+
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isLocaldbSaving"] = True
 	local.Run()
+#end define
+
+def Update(args):
+	RunAsRoot(["sh", "/usr/src/mytonctrl/scripts/update.sh"])
+	ColorPrint("Update - {green}OK{endc}")
+#end define
+
+def Upgrade(args):
+	RunAsRoot(["sh", "/usr/src/mytonctrl/scripts/upgrade.sh"])
+	ColorPrint("Upgrade - {green}OK{endc}")
+#end define
+
+def PrintTest(args):
+	print(json.dumps(local.buffer, indent=4))
 #end define
 
 def Test(args):
@@ -142,7 +158,7 @@ def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offersNumber):
 	newOffers_text = bcolors.Green(newOffers)
 	onlineValidators_text = bcolors.Yellow(onlineValidators)
 	if startWorkTime == 0:
-		electionStatus_text = bcolors.Yellow("close")
+		electionStatus_text = bcolors.Yellow("closed")
 	else:
 		electionStatus_text = bcolors.Green("open")
 

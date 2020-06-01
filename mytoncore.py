@@ -748,6 +748,21 @@ class MyTonCore():
 		resultFilePath = Pars(result, "Saved to file ", '\n')
 		return resultFilePath
 	#end define
+	
+	def GetStake(self, account, validators):
+		stakePercent = local.db.get("stakePercent")
+		if stakePercent:
+			sp = stakePercent / 100
+			if sp > 1 or sp < 0:
+				local.AddLog("Wrong stakePercent value. Using default stake.", "warning")
+			elif len(validators) == 0:
+				stake = int(account.balance*sp/2)
+			elif len(validators) > 0:
+				stake = int(account.balance*sp)
+		if stake is None:
+			stake = local.db.get("stake", 20138)
+		return stake
+	#end define
 
 	def ElectionEntry(self):
 		#self.TestElectionEntry()
@@ -776,17 +791,14 @@ class MyTonCore():
 		# Get account balance and minimum stake
 		account = self.GetAccount(wallet.addr)
 		minStake = self.GetMinStake()
-
-		# Check if we have enough grams
-		if minStake > account.balance:
-			local.AddLog("You don't have enough grams. Minimum stake: " + str(minStake), "debug")
-			return
-
+		
 		# Calculate stake
-		if len(validators) == 0:
-			stake = int(account.balance*0.99/2)
-		if len(validators) > 0 or (stake is not None and stake < minStake):
-			stake = int(account.balance*0.99)
+		stake = GetStake(account, validators)
+		
+		# Check if we have enough grams
+		if minStake > stake:
+			local.AddLog("You don't have enough grams. Minimum stake: " + str(minStake), "error")
+			return
 
 		# Calculate endWorkTime
 		validatorsElectedFor = self.GetValidatorsElectedFor()
@@ -817,6 +829,9 @@ class MyTonCore():
 		# Save vars to json file
 		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
 
+		# Check is election entries successful and clear key if not ok
+		# self.validatorConsole.Run("delpermkey {validatorKey}".format(validatorKey=validatorKey))
+		
 		local.AddLog("ElectionEntry completed. Start work time: " + str(startWorkTime))
 	#end define
 
@@ -955,93 +970,6 @@ class MyTonCore():
 			timestamp = GetTimestamp()
 			if timestamp > validator["election_date"]:
 				return validatorKey
-	#end define
-	
-	def TestElectionEntry(self):
-		local.AddLog("start TestElectionEntry function", "debug")
-		walletName = "validator_wallet_002"
-		wallet = self.GetLocalWallet(walletName)
-
-		# Get startWorkTime and endWorkTime
-		fullElectorAddr = self.GetFullElectorAddr()
-		startWorkTime = self.GetActiveElectionId(fullElectorAddr)
-
-		# Check if elections started
-		if (startWorkTime == 0):
-			local.AddLog("Elections have not yet begun", "debug")
-			return
-
-		# Check if election entry is completed
-		vconfig = self.GetConfigFromValidator()
-		validators = vconfig.get("validators")
-		for item in validators:
-			if item.get("election_date") == startWorkTime:
-				local.AddLog("Elections entry already completed", "debug")
-				return
-
-		# Get account balance and minimum stake
-		account = self.GetAccount(wallet.addr)
-		minStake = self.GetMinStake()
-
-		# Check if we have enough grams
-		if minStake > account.balance:
-			local.AddLog("You don't have enough grams. Minimum stake: " + str(minStake), "debug")
-			return
-
-		# Calculate stake
-		if len(validators) == 0:
-			stake = int(account.balance*0.99/2)
-		if len(validators) > 0 or (stake is not None and stake < minStake):
-			stake = int(account.balance*0.99)
-
-		# Calculate endWorkTime
-		validatorsElectedFor = self.GetValidatorsElectedFor()
-		endWorkTime = startWorkTime + validatorsElectedFor + 300 # 300 sec - margin of seconds
-
-		# Create keys
-		validatorKey = self.CreatNewKey()
-		validatorPubkey_b64 = self.GetPubKeyBase64(validatorKey)
-
-		# Add key to validator
-		self.AddKeyToValidator(validatorKey, startWorkTime, endWorkTime)
-		self.AddKeyToTemp(validatorKey, endWorkTime)
-
-		# Get ADNL address
-		adnlAddr = self.CreatNewKey()
-		self.AddAdnlAddrToValidator(adnlAddr)
-		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
-
-		# Create fift's
-		maxFactor = round(stake / minStake, 1)
-		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, maxFactor)
-		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor)
-
-		# Send boc file to TON
-		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, stake)
-		self.SendFile(resultFilePath, wallet)
-
-		# Save vars to json file
-		# self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
-		
-		self.validatorConsole.Run("delpermkey {validatorKey}".format(validatorKey=validatorKey))
-
-		local.AddLog("TestElectionEntry completed. Start work time: " + str(startWorkTime))
-	#end define
-	
-	def TestReturnStake(self):
-		local.AddLog("start TestReturnStake function", "debug")
-		fullElectorAddr = self.GetFullElectorAddr()
-		walletName = "validator_wallet_002"
-		wallet = self.GetLocalWallet(walletName)
-		returnedStake = self.GetReturnedStake(fullElectorAddr, wallet)
-		if returnedStake == 0:
-			local.AddLog("You have nothing on the return stake", "debug")
-			return
-		resultFilePath = self.RecoverStake()
-		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, 1)
-		self.SendFile(resultFilePath, wallet)
-		local.AddLog("TestReturnStake completed")
 	#end define
 	
 	def GetElectionEntries(self):
@@ -1379,24 +1307,6 @@ class MyTonCore():
 	def GetSaveOffers(self):
 		saveOffers = local.db.get("saveOffers")
 		return saveOffers
-	#end define
-	
-	def IsAccountAddr(self, str):
-		type = GetStrType(str)
-		if type == "account":
-			result = True
-		else:
-			result = False
-		return result
-	#end define
-	
-	def IsDomainName(self, str):
-		type = GetStrType(str)
-		if type == "domain":
-			result = True
-		else:
-			result = False
-		return result
 	#end define
 	
 	def GetStrType(self, str):

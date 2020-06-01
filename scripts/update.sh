@@ -11,13 +11,9 @@ fi
 COLOR='\033[92m'
 ENDC='\033[0m'
 
-#cd /usr/src/ton && git pull --recurse-submodules
-#export CC=/usr/bin/clang
-#export CXX=/usr/bin/clang++
-#cd /usr/bin/ton && cmake /usr/src/ton && make -j
-
-cd /usr/src/mytonctrl && git pull --recurse-submodules
-
+cd /usr/src/mytonctrl
+git pull --recurse-submodules
+systemctl restart mytonctrl
 
 # Конец
-echo -e "${COLOR}[6/6]${ENDC} Обновление компонентов завершена"
+echo "${COLOR}[1/1]${ENDC} Обновление компонентов MyTonCtrl завершена"
