@@ -228,7 +228,7 @@ def Vpreparation():
 	response = requests.get("https://ifconfig.me")
 	ip = response.text
 	vport = random.randint(2000, 65000)
-	addr = ip + ':' + vport
+	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
 	
 	# Создать переменные
 	dbPath = "/var/ton-work/db"
