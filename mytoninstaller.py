@@ -212,18 +212,6 @@ def Translate(text):
 # 	TryFiftConfiguration()
 # #end define
 
-def RunAsRoot(args):
-	file = open("/etc/issue")
-	text = file.read()
-	file.close()
-	if "Ubuntu" in text:
-		args = ["sudo", "-S"] + args
-	else:
-		print("Введите пароль пользователя root / Enter root password")
-		args = ["su", "-c"] + [" ".join(args)]
-	subprocess.call(args)
-#end define
-
 def Vpreparation():
 	response = requests.get("https://ifconfig.me")
 	ip = response.text
@@ -259,6 +247,9 @@ def Vpreparation():
 	# Запустить валидатор
 	args = ["systemctl", "start", "ton-validator"]
 	subprocess.run(args)
+	
+	# Подождать загрузку валидатора
+	time.sleep(10)
 #end define
 
 def WriteSettingToFile(arr):
@@ -311,24 +302,23 @@ def LoadSettings(mode, user):
 		filePath = WriteSettingToFile(arr)
 
 		# Подтянуть настройки в mytoncore.py
-		subprocess.call(["python3", "/usr/src/mytonctrl/mytoncore.py", '-s', filePath])
+		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -s " + filePath]
+		subprocess.run(args)
+		
+		# Подтянуть событие в mytoncore.py
+		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -e \"mytoninstaller\""]
+		subprocess.run(args)
 
 		# Создать новый кошелек для валидатора
-		ton = MyTonCore()
-		wallet = ton.CreateWallet("validator_wallet_001", -1)
-		arr["validatorWalletName"] = wallet.name
+		#ton = MyTonCore()
+		#wallet = ton.CreateWallet("validator_wallet_001", -1)
+		#arr["validatorWalletName"] = wallet.name
 
 		# Создать новый ADNL адрес для валидатора
-		adnlAddr = ton.CreatNewKey()
-		ton.AddAdnlAddrToValidator(adnlAddr)
-		arr["adnlAddr"] = adnlAddr
+		#adnlAddr = ton.CreatNewKey()
+		#ton.AddAdnlAddrToValidator(adnlAddr)
+		#arr["adnlAddr"] = adnlAddr
 	#end if
-
-	# Записать настройки в файл
-	filePath = WriteSettingToFile(arr)
-
-	# Подтянуть настройки в mytoncore.py
-	subprocess.call(["python3", "/usr/src/mytonctrl/mytoncore.py", '-s', filePath])
 #end define
 
 def CreateVkeys(user):
@@ -385,7 +375,7 @@ def CreateVkeys(user):
 	allowed["permissions"] = 15
 	control["allowed"] = [allowed]
 	vjson["control"] = [control]
-	text = json.dumps(vjson, indent=3)
+	text = json.dumps(vjson, indent=4)
 	file = open(path, 'w')
 	file.write(text)
 	file.close()

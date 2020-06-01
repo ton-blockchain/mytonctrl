@@ -17,12 +17,6 @@ fi
 COLOR='\033[92m'
 ENDC='\033[0m'
 
-# Почистить папки
-rm -rf /tmp/vkeys/
-rm -rf /tmp/mytonsettings.json
-rm -rf /tmp/vport.txt
-rm -rf /tmp/vconfig.json
-
 # Начинаю установку mytonctrl
 echo -e "${COLOR}[1/4]${ENDC} Starting installation MyTonCtrl"
 mydir=$(pwd)
