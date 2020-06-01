@@ -25,6 +25,7 @@ rm -rf /tmp/vconfig.json
 
 # Начинаю установку mytonctrl
 echo "${COLOR}[1/4]${ENDC} Starting installation MyTonCtrl"
+mydir=$(pwd)
 
 # На OSX нет такой директории по-умолчанию, поэтому создаем...
 SOURCES_DIR=/usr/src
@@ -45,16 +46,17 @@ if [ -f "${file1}" ] && [ -f "${file2}" ] && [ -f "${file3}" ]; then
 	cd $SOURCES_DIR
 	rm -rf $SOURCES_DIR/mytonctrl
 	git clone --recursive https://github.com/igroman787/mytonctrl.git
+	cd mytonctrl && git checkout original
 else
 	rm -f toninstaller.sh
-	wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/toninstaller.sh
+	wget https://raw.githubusercontent.com/igroman787/mytonctrl/original/scripts/toninstaller.sh
 	sh toninstaller.sh
 	rm -f toninstaller.sh
 fi
 
 # Запускаю установщик mytoninstaller.py
 echo "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
-user=$(ls -lh ${0} | cut -d ' ' -f 3)
+user=$(ls -lh ${mydir}/${0} | cut -d ' ' -f 3)
 python3 $SOURCES_DIR/mytonctrl/mytoninstaller.py -m ${2} -u ${user}
 
 # Выход из программы
