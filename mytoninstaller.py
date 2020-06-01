@@ -245,7 +245,7 @@ def Vpreparation():
 	text = file.read()
 	file.close()
 	if "validator" not in text:
-		args = ["useradd", "-d", "/dev/null", "-s", "/dev/null", "validator"]
+		args = ["/usr/sbin/useradd", "-d", "/dev/null", "-s", "/dev/null", "validator"]
 		subprocess.run(args)
 	
 	# Проверка первого запуска валидатора
