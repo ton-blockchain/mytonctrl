@@ -14,7 +14,7 @@ ENDC='\033[0m'
 # На OSX нет такой директории по-умолчанию, поэтому создаем...
 SOURCES_DIR=/usr/src
 BIN_DIR=/usr/bin
-if [ "$OSTYPE" == "darwin"* ]; then
+if [ "$OSTYPE" = "darwin"* ]; then
 	SOURCES_DIR=/usr/local/src
 	BIN_DIR=/usr/local/bin
 	mkdir -p $SOURCES_DIR
@@ -22,7 +22,7 @@ fi
 
 # Установка требуемых пакетов
 echo "${COLOR}[1/6]${ENDC} Installing required packages"
-if [ "$OSTYPE" == "linux-gnu" ]; then
+if [ "$OSTYPE" = "linux-gnu" ]; then
 	if [ hash yum 2>/dev/null ]; then
 		echo "RHEL-based Linux detected."
 		yum install -y epel-release
@@ -48,7 +48,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 		echo "Please refer to https://github.com/igroman787/mytonctrl for setup information."
 		exit 1
 	fi
-elif [ "$OSTYPE" == "darwin"* ]; then
+elif [ "$OSTYPE" = "darwin"* ]; then
 	echo "Mac OS (Darwin) detected."
 	if [ ! which brew >/dev/null 2>&1 ]; then
 		$BIN_DIR/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -59,7 +59,7 @@ elif [ "$OSTYPE" == "darwin"* ]; then
 	
 	su $LOCAL_USERNAME -c "brew update"
 	su $LOCAL_USERNAME -c "brew install openssl cmake llvm"
-elif [ "$OSTYPE" == "freebsd"* ]; then
+elif [ "$OSTYPE" = "freebsd"* ]; then
 	echo "FreeBSD detected."
 	echo "This OS is not supported with this script at present. Sorry."
 	echo "Please refer to https://github.com/paritytech/substrate for setup information."
@@ -90,7 +90,7 @@ mkdir $BIN_DIR/ton
 cd $BIN_DIR/ton
 
 # Подготовиться к компиляции
-if [[ "$OSTYPE" == "darwin"* ]]; then
+if [[ "$OSTYPE" = "darwin"* ]]; then
 	export CMAKE_C_COMPILER=$(which clang)
 	export CMAKE_CXX_COMPILER=$(which clang++)
 else
