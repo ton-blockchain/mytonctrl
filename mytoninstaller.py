@@ -238,7 +238,7 @@ def Vpreparation():
 	configPath = dbPath + "/config.json"
 	
 	# Подготовить папки валидатора
-	os.makedirs(dbPath, exists_ok=True)
+	os.makedirs(dbPath, exist_ok=True)
 	
 	# Создать пользователя
 	file = open("/etc/passwd", 'rt')
