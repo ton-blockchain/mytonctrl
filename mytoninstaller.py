@@ -243,6 +243,10 @@ def Vpreparation():
 	
 	# Прописать автозагрузку авлидатора
 	Add2Systemd(name="validator", user="validator", start="/usr/bin/ton/validator-engine/validator-engine -d -C /usr/bin/ton/validator-engine/ton-global.config.json --db /var/ton-work/db -l /var/ton-work/log") # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
+
+	# Сменить права на нужные директории
+	args = ["chown", "-R", "validator:validator", "/var/ton-work"]
+	subprocess.run(args)
 	
 	# Запустить валидатор
 	args = ["systemctl", "start", "validator"]

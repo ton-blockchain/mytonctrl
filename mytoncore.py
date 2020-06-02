@@ -7,6 +7,7 @@ import requests
 from mypylib.mypylib import *
 
 local = MyPyClass(__file__)
+print(bcolors.Red(json.dumps(sys.argv)))
 
 
 class LiteClient:
