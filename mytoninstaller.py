@@ -5,7 +5,6 @@
 import random
 import requests
 from mypylib.mypylib import *
-from mytoncore import *
 
 local = MyPyClass(__file__)
 cport = random.randint(2000, 65000)
