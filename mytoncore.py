@@ -777,7 +777,7 @@ class MyTonCore():
 
 		# Check if elections started
 		if (startWorkTime == 0):
-			local.AddLog("Elections have not yet begun", "debug")
+			local.AddLog("Elections have not yet begun", "info")
 			return
 
 		# Check if election entry is completed
@@ -785,7 +785,7 @@ class MyTonCore():
 		validators = vconfig.get("validators")
 		for item in validators:
 			if item.get("election_date") == startWorkTime:
-				local.AddLog("Elections entry already completed", "debug")
+				local.AddLog("Elections entry already completed", "info")
 				return
 
 		# Get account balance and minimum stake
@@ -1370,6 +1370,26 @@ def Init():
 	local.buffer["network"]["in"] = [0]*15*6
 	local.buffer["network"]["out"] = [0]*15*6
 	local.buffer["network"]["all"] = [0]*15*6
+
+	if ("-e" in sys.argv):
+		x = sys.argv.index("-e")
+		eventName = sys.argv[x+1]
+		Event(eventName)
+#end define
+
+def Event(eventName):
+	if eventName == "toninstaller":
+		TonInstallerEvent()
+	elif eventName == "validator down":
+		ValidatorDownEvent()
+#end define
+
+def TonInstallerEvent():
+	local.AddLog("start TonInstallerEvent function", "debug")
+#end define
+
+def ValidatorDownEvent():
+	local.AddLog("start ValidatorDownEvent function", "debug")
 #end define
 
 def Elections(ton):
@@ -1407,6 +1427,7 @@ def Telemetry(ton):
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
 	
+	# fix me
 	if ton.adnlAddr != "660A8EC119287FE4B8E38D69045E0017EB5BFE1FBBEBE1AA26D492DA4F3A1D69":
 		return
 	data = dict()
@@ -1421,7 +1442,6 @@ def Telemetry(ton):
 #end define
 
 def ReadNetworkData():
-	local.AddLog("start ReadNetworkData function", "debug")
 	interfaceName = GetInternetInterfaceName()
 	buff = psutil.net_io_counters(pernic=True)
 	data = buff[interfaceName]
@@ -1438,7 +1458,6 @@ def ReadNetworkData():
 #end define
 
 def SaveNetworStatistics(ton):
-	local.AddLog("start SaveNetworStatistics function", "debug")
 	data = local.buffer["network"]["all"]
 	data = data[::-1]
 	zerodata = data[0]

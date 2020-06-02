@@ -267,7 +267,8 @@ def LoadSettings(mode, user):
 	local.AddLog("start LoadSettings fuction", "debug")
 	
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
-	if os.path.isfile(path):
+	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
+	if os.path.isfile(path) or os.path.isfile(path2):
 		return
 	#end if
 	
@@ -306,7 +307,7 @@ def LoadSettings(mode, user):
 		subprocess.run(args)
 		
 		# Подтянуть событие в mytoncore.py
-		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -e \"mytoninstaller\""]
+		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -e \"toninstaller\""]
 		subprocess.run(args)
 
 		# Создать новый кошелек для валидатора
@@ -325,7 +326,8 @@ def CreateVkeys(user):
 	local.AddLog("start CreateVkeys fuction", "debug")
 	
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
-	if os.path.isfile(path):
+	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
+	if os.path.isfile(path) or os.path.isfile(path2):
 		return
 	#end if
 	
