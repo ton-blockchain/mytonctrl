@@ -242,10 +242,10 @@ def Vpreparation():
 		subprocess.run(args)
 	
 	# Прописать автозагрузку авлидатора
-	Add2Systemd(name="ton-validator", user="validator", start="/usr/bin/ton/validator-engine/validator-engine -d -C /usr/bin/ton/validator-engine/ton-global.config.json --db /var/ton-work/db -l /var/ton-work/log", post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\"")
+	Add2Systemd(name="validator", user="validator", start="/usr/bin/ton/validator-engine/validator-engine -d -C /usr/bin/ton/validator-engine/ton-global.config.json --db /var/ton-work/db -l /var/ton-work/log") # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 	
 	# Запустить валидатор
-	args = ["systemctl", "start", "ton-validator"]
+	args = ["systemctl", "start", "validator"]
 	subprocess.run(args)
 	
 	# Подождать загрузку валидатора
@@ -406,10 +406,7 @@ def General():
 	LoadSettings(mode, user)
 
 	# Прописать mytoncore.py в автозагрузку
-	# local.AddLog("start mytoncore.py", "debug")
-	# subprocess.run(["python3", "/usr/src/mytonctrl/mytoncore.py", "--add2cron"])
-	# subprocess.run(["python3", "/usr/src/mytonctrl/mytoncore.py", "-d"])
-	Add2Systemd(name="mytonctrl", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")
+	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")
 	
 	
 	# Создаем символические ссылки

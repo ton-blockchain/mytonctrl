@@ -1382,6 +1382,7 @@ def Event(eventName):
 		TonInstallerEvent()
 	elif eventName == "validator down":
 		ValidatorDownEvent()
+	local.Exit()
 #end define
 
 def TonInstallerEvent():
@@ -1398,15 +1399,11 @@ def TonInstallerEvent():
 
 	# Сохранить
 	local.dbSave()
-
-	# Выход
-	local.Exit()
 #end define
 
 def ValidatorDownEvent():
 	local.AddLog("start ValidatorDownEvent function", "debug")
 	local.AddLog("Validator is down", "error")
-	local.Exit()
 #end define
 
 def Elections(ton):
