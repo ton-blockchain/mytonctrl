@@ -1386,10 +1386,27 @@ def Event(eventName):
 
 def TonInstallerEvent():
 	local.AddLog("start TonInstallerEvent function", "debug")
+	# Создать новый кошелек для валидатора
+	ton = MyTonCore()
+	wallet = ton.CreateWallet("validator_wallet_001", -1)
+	local.db["validatorWalletName"] = wallet.name
+
+	# Создать новый ADNL адрес для валидатора
+	adnlAddr = ton.CreatNewKey()
+	ton.AddAdnlAddrToValidator(adnlAddr)
+	local.db["adnlAddr"] = adnlAddr
+
+	# Сохранить
+	local.dbSave()
+
+	# Выход
+	local.Exit()
 #end define
 
 def ValidatorDownEvent():
 	local.AddLog("start ValidatorDownEvent function", "debug")
+	local.AddLog("Validator is down", "error")
+	local.Exit()
 #end define
 
 def Elections(ton):
