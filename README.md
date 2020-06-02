@@ -48,7 +48,9 @@
 
 ## Список проверенных операционных систем
 ```
-Ubuntu 18.04.2
+Ubuntu 16.04 LTS (Xenial Xerus)
+Ubuntu 18.04 LTS (Bionic Beaver)
+Ubuntu 20.04 LTS (Focal Fossa)
 Debian 10.3
 ```
 

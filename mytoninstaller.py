@@ -309,16 +309,6 @@ def LoadSettings(mode, user):
 		# Подтянуть событие в mytoncore.py
 		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -e \"toninstaller\""]
 		subprocess.run(args)
-
-		# Создать новый кошелек для валидатора
-		#ton = MyTonCore()
-		#wallet = ton.CreateWallet("validator_wallet_001", -1)
-		#arr["validatorWalletName"] = wallet.name
-
-		# Создать новый ADNL адрес для валидатора
-		#adnlAddr = ton.CreatNewKey()
-		#ton.AddAdnlAddrToValidator(adnlAddr)
-		#arr["adnlAddr"] = adnlAddr
 	#end if
 #end define
 
@@ -396,6 +386,8 @@ def General():
 	mode = sys.argv[mx+1]
 	user = sys.argv[ux+1]
 
+	local.AddLog("Using: user - {user}, mode - {mode}".format(user=user, mode=mode))
+
 	if mode == "full":
 		# Проверить настройки валидатора
 		vfile1 = "/var/ton-work/db/config.json"
@@ -439,9 +431,6 @@ def General():
 	file.close()
 	args = ["chmod", "+x", mytonctrl_file, fift_file, liteclient_file, validator_console_file]
 	subprocess.run(args)
-
-	# Конец
-	local.AddLog("MyTonCtrl успешно установлен")
 #end define
 
 
