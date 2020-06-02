@@ -9,6 +9,10 @@ from mypylib.mypylib import *
 local = MyPyClass(__file__)
 print(bcolors.Red(json.dumps(sys.argv)))
 
+import getpass
+username = getpass.getuser()
+print(bcolors.Red(username))
+
 
 class LiteClient:
 	def __init__(self):
