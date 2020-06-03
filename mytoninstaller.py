@@ -573,6 +573,7 @@ def MytoncoreSettings(user, mode):
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
 	if os.path.isfile(path) or os.path.isfile(path2):
+		local.AddLog("mytoncore.db already exist. Break MytoncoreSettings fuction", "debug")
 		return
 	#end if
 

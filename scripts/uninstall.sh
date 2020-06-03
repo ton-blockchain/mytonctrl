@@ -11,6 +11,15 @@ fi
 COLOR='\033[92m'
 ENDC='\033[0m'
 
+# Остановка служб
+systemctl stop validator
+systemctl stop mytoncore
+
+# Удаление служб
+rm -rf /etc/systemd/system/validator.service
+rm -rf /etc/systemd/system/mytoncore.service
+systemctl daemon-reload
+
 # Удаление файлов
 rm -rf /usr/src/ton
 rm -rf /usr/src/mytonctrl
