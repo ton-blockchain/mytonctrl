@@ -668,7 +668,7 @@ def CreateSymlink():
 
 	# env
 	fiftpath = "export FIFTPATH=$SOURCES_DIR/ton/crypto/fift/lib/:$SOURCES_DIR/ton/crypto/smartcont/"
-	file = open(env_file, 'at')
+	file = open(env_file, 'a+')
 	text = file.read()
 	if fiftpath not in text:
 		file.write(fiftpath + '\n')
