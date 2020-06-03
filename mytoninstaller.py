@@ -447,8 +447,10 @@ def ValidatorSetting(user):
 	# Прописать автозагрузку авлидатора
 	Add2Systemd(name="validator", user="validator", start="/usr/bin/ton/validator-engine/validator-engine -d -C /usr/bin/ton/validator-engine/ton-global.config.json --db /var/ton-work/db -l /var/ton-work/log") # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
+	# Проверить конфигурацию валидатора
 	path = "/var/ton-work/db/config.json"
 	if os.path.isfile(path):
+		local.AddLog("Validators config.json already exist. Break ValidatorSetting fuction", "debug")
 		return
 	#end if
 
@@ -457,6 +459,7 @@ def ValidatorSetting(user):
 	ip = response.text
 	vport = random.randint(2000, 65000)
 	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
+	local.AddLog("Usnig addr: " + addr, "debug")
 	
 	# Создать переменные
 	dbPath = "/var/ton-work/db"
@@ -473,12 +476,14 @@ def ValidatorSetting(user):
 	text = file.read()
 	file.close()
 	if "validator" not in text:
+		local.AddLog("Creating new user: validator", "debug")
 		args = ["/usr/sbin/useradd", "-d", "/dev/null", "-s", "/dev/null", "validator"]
 		subprocess.run(args)
 	#end if
 	
 	# Проверка первого запуска валидатора
 	if not os.path.isfile(configPath):
+		local.AddLog("First validator startup", "debug")
 		args = [validatorAppPath, "-C", validatorConfig, "--db", dbPath, "--ip", addr, "-l", logPath]
 		subprocess.run(args)
 	#end if
@@ -487,6 +492,7 @@ def ValidatorSetting(user):
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
 	if os.path.isfile(path) or os.path.isfile(path2):
+		local.AddLog("mytoncore.db already exist. Break ValidatorSetting fuction", "debug")
 		return
 	#end if
 	
@@ -498,6 +504,7 @@ def ValidatorSetting(user):
 	client_pubkey = client_key + ".pub"
 
 	# Создание ключей сервера для console
+	local.AddLog("Generating server key", "debug")
 	args = ["/usr/bin/ton/utils/generate-random-id", "-m", "keys", "-n", server_key]
 	process = subprocess.run(args, stdout=subprocess.PIPE)
 	output = process.stdout.decode("utf-8")
@@ -506,10 +513,12 @@ def ValidatorSetting(user):
 	server_key_b64 = output_arr[1].replace('\n', '')
 	
 	# Копировать ключ в папку валидатора
+	local.AddLog("Coping the key to the validator directory", "debug")
 	args = ["mv", server_key, dbPath + "/keyring/" + server_key_hex]
 	subprocess.run(args)
 
 	# Создание ключей клиента для console
+	local.AddLog("Generating client key", "debug")
 	args = [generate_random_id, "-m", "keys", "-n", client_key]
 	process = subprocess.run(args, stdout=subprocess.PIPE)
 	output = process.stdout.decode("utf-8")
@@ -522,6 +531,7 @@ def ValidatorSetting(user):
 	subprocess.run(args)
 
 	# Прописать наши ключи в конфигурационном файле валидатора
+	local.AddLog("Writing settings to validators config file", "debug")
 	path = dbPath + "/config.json"
 	file = open(path)
 	text = file.read()
@@ -545,6 +555,7 @@ def ValidatorSetting(user):
 	subprocess.run(args)
 
 	# Запустить валидатор
+	local.AddLog("Launching validator", "debug")
 	args = ["systemctl", "start", "validator"]
 	subprocess.run(args)
 	
