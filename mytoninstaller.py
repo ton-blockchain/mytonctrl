@@ -261,17 +261,6 @@ def Translate(text):
 # 	time.sleep(10)
 # #end define
 
-# def WriteSettingToFile(arr):
-# 	local.AddLog("start WriteSettingToFile fuction", "debug")
-# 	# Записать настройки в файл
-# 	filePath = "/tmp/mytonsettings.json"
-# 	settings = json.dumps(arr)
-# 	file = open(filePath, 'w')
-# 	file.write(settings)
-# 	file.close()
-# 	return filePath
-# #end define
-
 # def LoadSettings(mode, user):
 # 	local.AddLog("start LoadSettings fuction", "debug")
 	
@@ -591,6 +580,9 @@ def MytoncoreSettings(user, mode):
 	liteClient["configPath"] = "/usr/bin/ton/lite-client/ton-lite-client-test1.config.json"
 	arr["liteClient"] = liteClient
 
+	# Записать настройки в файл
+	filePath = WriteSettingToFile(arr)
+
 	# Подтянуть настройки в mytoncore.py
 	args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -s " + filePath]
 	subprocess.run(args)
@@ -606,11 +598,7 @@ def MytoncoreSettings(user, mode):
 		arr["validatorConsole"] = validatorConsole
 
 		# Записать настройки в файл
-		filePath = "/tmp/mytonsettings.json"
-		settings = json.dumps(arr)
-		file = open(filePath, 'w')
-		file.write(settings)
-		file.close()
+		filePath = WriteSettingToFile(arr)
 
 		# Подтянуть настройки в mytoncore.py
 		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -s " + filePath]
@@ -632,7 +620,18 @@ def MytoncoreSettings(user, mode):
 	subprocess.run(args)
 #end define
 
+def WriteSettingToFile(arr):
+	local.AddLog("start WriteSettingToFile fuction", "debug")
+	filePath = "/tmp/mytonsettings.json"
+	settings = json.dumps(arr)
+	file = open(filePath, 'w')
+	file.write(settings)
+	file.close()
+	return filePath
+#end define
+
 def CreateSymlink():
+	local.AddLog("start CreateSymlink fuction", "debug")
 	mytonctrl_file = "/usr/bin/mytonctrl"
 	fift_file = "/usr/bin/fift"
 	liteclient_file = "/usr/bin/liteclient"
