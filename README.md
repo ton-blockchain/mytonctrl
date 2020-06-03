@@ -51,7 +51,7 @@
 Ubuntu 16.04 LTS (Xenial Xerus) - Error: TON compilation error
 Ubuntu 18.04 LTS (Bionic Beaver) - OK
 Ubuntu 20.04 LTS (Focal Fossa) - OK
-Debian 10.3
+Debian 10 - OK
 ```
 
 ## Описание установочных скриптов
