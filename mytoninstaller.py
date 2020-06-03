@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-
-# su -l ${user} -c "cmd"
 
 import random
 import requests
