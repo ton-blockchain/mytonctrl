@@ -15,6 +15,10 @@ ENDC='\033[0m'
 systemctl stop validator
 systemctl stop mytoncore
 
+# Переменные
+str=$(systemctl cat mytoncore | grep User | cut -d '=' -f2)
+user=$(echo ${str})
+
 # Удаление служб
 rm -rf /etc/systemd/system/validator.service
 rm -rf /etc/systemd/system/mytoncore.service
@@ -27,8 +31,8 @@ rm -rf /usr/bin/ton
 rm -rf /var/ton-work
 rm -rf /tmp/myton*
 rm -rf /usr/loca/bin/myton*
-rm -rf ~/.local/share/mytonctrl
-rm -rf ~/.local/share/mytoncore/mytoncore.db
+rm -rf /home/${user}/.local/share/mytonctrl
+rm -rf /home/${user}/.local/share/mytoncore/mytoncore.db
 
 # Удаление ссылок
 rm -rf /usr/bin/fift
