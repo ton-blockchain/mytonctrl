@@ -492,6 +492,8 @@ def ValidatorSetting(user):
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
 	if os.path.isfile(path) or os.path.isfile(path2):
+		result = subprocess.call(["ls", "-lh", path])
+		result2 = subprocess.call(["ls", "-lh", path2])
 		local.AddLog("mytoncore.db already exist. Break ValidatorSetting fuction", "debug")
 		return
 	#end if
