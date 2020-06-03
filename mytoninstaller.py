@@ -650,6 +650,7 @@ def CreateSymlink():
 	fift_file = "/usr/bin/fift"
 	liteclient_file = "/usr/bin/liteclient"
 	validator_console_file = "/usr/bin/validator-console"
+	env_file = "/etc/environment"
 	file = open(mytonctrl_file, 'wt')
 	file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py")
 	file.close()
@@ -664,6 +665,14 @@ def CreateSymlink():
 	file.close()
 	args = ["chmod", "+x", mytonctrl_file, fift_file, liteclient_file, validator_console_file]
 	subprocess.run(args)
+
+	# env
+	fiftpath = "export FIFTPATH=$SOURCES_DIR/ton/crypto/fift/lib/:$SOURCES_DIR/ton/crypto/smartcont/"
+	file = open(env_file, 'at')
+	text = file.read()
+	if fiftpath not in text:
+		file.write(fiftpath + '\n')
+	file.close()
 #end define
 
 
