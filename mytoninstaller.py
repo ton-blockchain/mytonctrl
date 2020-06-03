@@ -632,6 +632,26 @@ def MytoncoreSettings(user, mode):
 	subprocess.run(args)
 #end define
 
+def CreateSymlink():
+	mytonctrl_file = "/usr/bin/mytonctrl"
+	fift_file = "/usr/bin/fift"
+	liteclient_file = "/usr/bin/liteclient"
+	validator_console_file = "/usr/bin/validator-console"
+	file = open(mytonctrl_file, 'wt')
+	file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py")
+	file.close()
+	file = open(fift_file, 'wt')
+	file.write("/usr/bin/ton/crypto/fift")
+	file.close()
+	file = open(liteclient_file, 'wt')
+	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/lite-client/ton-lite-client-test1.config.json \$@")
+	file.close()
+	file = open(validator_console_file, 'wt')
+	file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /usr/bin/ton/validator-engine-console/client -p /usr/bin/ton/validator-engine-console/server.pub -a 127.0.0.1:" + str(cport))
+	file.close()
+	args = ["chmod", "+x", mytonctrl_file, fift_file, liteclient_file, validator_console_file]
+	subprocess.run(args)
+#end define
 
 
 ###

@@ -48,9 +48,9 @@
 
 ## Список проверенных операционных систем
 ```
-Ubuntu 16.04 LTS (Xenial Xerus)
-Ubuntu 18.04 LTS (Bionic Beaver)
-Ubuntu 20.04 LTS (Focal Fossa)
+Ubuntu 16.04 LTS (Xenial Xerus) - Error: TON compilation error
+Ubuntu 18.04 LTS (Bionic Beaver) - OK
+Ubuntu 20.04 LTS (Focal Fossa) - OK
 Debian 10.3
 ```
 
