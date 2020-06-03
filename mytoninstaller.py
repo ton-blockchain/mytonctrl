@@ -667,7 +667,7 @@ def CreateSymlink():
 	subprocess.run(args)
 
 	# env
-	fiftpath = "export FIFTPATH=$SOURCES_DIR/ton/crypto/fift/lib/:$SOURCES_DIR/ton/crypto/smartcont/"
+	fiftpath = "export FIFTPATH=/usr/src/ton/crypto/fift/lib/:/usr/src/ton/crypto/smartcont/"
 	file = open(env_file, 'a+')
 	text = file.read()
 	if fiftpath not in text:
