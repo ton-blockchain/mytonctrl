@@ -444,6 +444,9 @@ def General():
 def ValidatorSetting(user):
 	local.AddLog("start ValidatorSetting fuction", "debug")
 
+	# Прописать автозагрузку авлидатора
+	Add2Systemd(name="validator", user="validator", start="/usr/bin/ton/validator-engine/validator-engine -d -C /usr/bin/ton/validator-engine/ton-global.config.json --db /var/ton-work/db -l /var/ton-work/log") # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
+
 	path = "/var/ton-work/db/config.json"
 	if os.path.isfile(path):
 		return
@@ -479,9 +482,6 @@ def ValidatorSetting(user):
 		args = [validatorAppPath, "-C", validatorConfig, "--db", dbPath, "--ip", addr, "-l", logPath]
 		subprocess.run(args)
 	#end if
-	
-	# Прописать автозагрузку авлидатора
-	Add2Systemd(name="validator", user="validator", start="/usr/bin/ton/validator-engine/validator-engine -d -C /usr/bin/ton/validator-engine/ton-global.config.json --db /var/ton-work/db -l /var/ton-work/log") # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Создать ключи доступа к валидатору
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
@@ -555,6 +555,9 @@ def ValidatorSetting(user):
 
 def MytoncoreSettings(user, mode):
 	local.AddLog("start MytoncoreSettings fuction", "debug")
+
+	# Прописать mytoncore.py в автозагрузку
+	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")
 	
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
@@ -611,9 +614,6 @@ def MytoncoreSettings(user, mode):
 		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -e \"toninstaller\""]
 		subprocess.run(args)
 	#end if
-
-	# Прописать mytoncore.py в автозагрузку
-	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")
 
 	# Запустить mytoncore.py
 	args = ["systemctl", "start", "mytoncore"]
