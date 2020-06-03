@@ -445,7 +445,7 @@ def ValidatorSetting(user):
 	local.AddLog("start ValidatorSetting fuction", "debug")
 
 	path = "/var/ton-work/db/config.json"
-	if not os.path.isfile(path):
+	if os.path.isfile(path):
 		return
 	#end if
 
