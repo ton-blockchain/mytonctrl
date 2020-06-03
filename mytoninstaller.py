@@ -211,7 +211,256 @@ def Translate(text):
 # 	TryFiftConfiguration()
 # #end define
 
-def Vpreparation():
+# def CheckSettings():
+#	if CheckLiteClient() != True or CheckValidatorConsole() != True or CheckFift() != True:
+#		QuickSetup()
+#		local.dbSave()
+# #end define
+
+# def Vpreparation():
+# 	response = requests.get("https://ifconfig.me")
+# 	ip = response.text
+# 	vport = random.randint(2000, 65000)
+# 	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
+	
+# 	# Создать переменные
+# 	dbPath = "/var/ton-work/db"
+# 	logPath = "/var/ton-work/log"
+# 	validatorAppPath = "/usr/bin/ton/validator-engine/validator-engine"
+# 	validatorConfig = "/usr/bin/ton/validator-engine/ton-global.config.json"
+# 	configPath = dbPath + "/config.json"
+	
+# 	# Подготовить папки валидатора
+# 	os.makedirs(dbPath, exist_ok=True)
+	
+# 	# Создать пользователя
+# 	file = open("/etc/passwd", 'rt')
+# 	text = file.read()
+# 	file.close()
+# 	if "validator" not in text:
+# 		args = ["/usr/sbin/useradd", "-d", "/dev/null", "-s", "/dev/null", "validator"]
+# 		subprocess.run(args)
+	
+# 	# Проверка первого запуска валидатора
+# 	if not os.path.isfile(configPath):
+# 		args = [validatorAppPath, "-C", validatorConfig, "--db", dbPath, "--ip", addr, "-l", logPath]
+# 		subprocess.run(args)
+	
+# 	# Прописать автозагрузку авлидатора
+# 	Add2Systemd(name="validator", user="validator", start="/usr/bin/ton/validator-engine/validator-engine -d -C /usr/bin/ton/validator-engine/ton-global.config.json --db /var/ton-work/db -l /var/ton-work/log") # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
+
+# 	# Сменить права на нужные директории
+# 	args = ["chown", "-R", "validator:validator", "/var/ton-work"]
+# 	subprocess.run(args)
+	
+# 	# Запустить валидатор
+# 	args = ["systemctl", "start", "validator"]
+# 	subprocess.run(args)
+	
+# 	# Подождать загрузку валидатора
+# 	time.sleep(10)
+# #end define
+
+# def WriteSettingToFile(arr):
+# 	local.AddLog("start WriteSettingToFile fuction", "debug")
+# 	# Записать настройки в файл
+# 	filePath = "/tmp/mytonsettings.json"
+# 	settings = json.dumps(arr)
+# 	file = open(filePath, 'w')
+# 	file.write(settings)
+# 	file.close()
+# 	return filePath
+# #end define
+
+# def LoadSettings(mode, user):
+# 	local.AddLog("start LoadSettings fuction", "debug")
+	
+# 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
+# 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
+# 	if os.path.isfile(path) or os.path.isfile(path2):
+# 		return
+# 	#end if
+	
+# 	arr = dict()
+# 	arr["config"] = dict()
+# 	arr["config"]["logLevel"] = "debug"
+# 	arr["config"]["isLocaldbSaving"] = True
+
+# 	# fift
+# 	fift = dict()
+# 	fift["appPath"] = "/usr/bin/ton/crypto/fift"
+# 	fift["libsPath"] = "/usr/src/ton/crypto/fift/lib"
+# 	fift["smartcontsPath"] = "/usr/src/ton/crypto/smartcont"
+# 	arr["fift"] = fift
+
+# 	# lite-client
+# 	liteClient = dict()
+# 	liteClient["appPath"] = "/usr/bin/ton/lite-client/lite-client"
+# 	liteClient["configPath"] = "/usr/bin/ton/lite-client/ton-lite-client-test1.config.json"
+# 	arr["liteClient"] = liteClient
+
+# 	if (mode == "full"):
+# 		# validator-engine-console
+# 		validatorConsole = dict()
+# 		validatorConsole["appPath"] = "/usr/bin/ton/validator-engine-console/validator-engine-console"
+# 		validatorConsole["privKeyPath"] = "/usr/bin/ton/validator-engine-console/client"
+# 		validatorConsole["pubKeyPath"] = "/usr/bin/ton/validator-engine-console/server.pub"
+# 		validatorConsole["addr"] = "127.0.0.1:{cport}".format(cport=cport)
+# 		arr["validatorConsole"] = validatorConsole
+
+# 		# Записать настройки в файл
+# 		filePath = WriteSettingToFile(arr)
+
+# 		# Подтянуть настройки в mytoncore.py
+# 		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -s " + filePath]
+# 		subprocess.run(args)
+		
+# 		# Подтянуть событие в mytoncore.py
+# 		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -e \"toninstaller\""]
+# 		subprocess.run(args)
+# 	#end if
+# #end define
+
+# def CreateVkeys(user):
+# 	local.AddLog("start CreateVkeys fuction", "debug")
+	
+# 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
+# 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
+# 	if os.path.isfile(path) or os.path.isfile(path2):
+# 		return
+# 	#end if
+	
+# 	# Переменые
+# 	dbPath = "/var/ton-work/db"
+# 	generate_random_id = "/usr/bin/ton/utils/generate-random-id"
+# 	server_key = "/usr/bin/ton/validator-engine-console/server"
+# 	server_pubkey = server_key + ".pub"
+# 	client_key = "/usr/bin/ton/validator-engine-console/client"
+# 	client_pubkey = client_key + ".pub"
+
+# 	# Создание ключей сервера для console
+# 	args = ["/usr/bin/ton/utils/generate-random-id", "-m", "keys", "-n", server_key]
+# 	process = subprocess.run(args, stdout=subprocess.PIPE)
+# 	output = process.stdout.decode("utf-8")
+# 	output_arr = output.split(' ')
+# 	server_key_hex = output_arr[0]
+# 	server_key_b64 = output_arr[1].replace('\n', '')
+	
+# 	# Копировать ключ в папку валидатора
+# 	args = ["mv", server_key, dbPath + "/keyring/" + server_key_hex]
+# 	subprocess.run(args)
+
+# 	# Создание ключей клиента для console
+# 	args = [generate_random_id, "-m", "keys", "-n", client_key]
+# 	process = subprocess.run(args, stdout=subprocess.PIPE)
+# 	output = process.stdout.decode("utf-8")
+# 	output_arr = output.split(' ')
+# 	client_key_hex = output_arr[0]
+# 	client_key_b64 = output_arr[1].replace('\n', '')
+	
+# 	# Сменить права на ключи
+# 	args = ["chown", "-R", user + ':' + user, server_pubkey, client_key, client_pubkey]
+# 	subprocess.run(args)
+
+# 	# Прописать наши ключи в конфигурационном файле валидатора
+# 	path = dbPath + "/config.json"
+# 	file = open(path)
+# 	text = file.read()
+# 	file.close()
+# 	vjson = json.loads(text)
+# 	control = dict()
+# 	control["id"] = server_key_b64
+# 	control["port"] = cport
+# 	allowed = dict()
+# 	allowed["id"] = client_key_b64
+# 	allowed["permissions"] = 15
+# 	control["allowed"] = [allowed]
+# 	vjson["control"] = [control]
+# 	text = json.dumps(vjson, indent=4)
+# 	file = open(path, 'w')
+# 	file.write(text)
+# 	file.close()
+# #end define
+
+# def OldGeneral():
+# 	# Получить режим установки
+# 	mx = sys.argv.index("-m")
+# 	ux = sys.argv.index("-u")
+# 	mode = sys.argv[mx+1]
+# 	user = sys.argv[ux+1]
+
+# 	local.AddLog("Using: user - {user}, mode - {mode}".format(user=user, mode=mode))
+
+# 	if mode == "full":
+# 		# Проверить настройки валидатора
+# 		vfile1 = "/var/ton-work/db/config.json"
+# 		if not os.path.isfile(vfile1):
+# 			Vpreparation()
+
+# 		# Создать ключи доступа к валидатору
+# 		CreateVkeys(user)
+		
+# 		# Сменить права на нужные директории
+# 		args = ["chown", "-R", "validator:validator", "/var/ton-work"]
+# 		subprocess.run(args)
+# 	#end if
+
+# 	# Создать настройки для mytoncore.py
+# 	LoadSettings(mode, user)
+
+# 	# Прописать mytoncore.py в автозагрузку
+# 	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")
+	
+	
+# 	# Создаем символические ссылки
+# 	mytonctrl_file = "/usr/bin/mytonctrl"
+# 	fift_file = "/usr/bin/fift"
+# 	liteclient_file = "/usr/bin/liteclient"
+# 	validator_console_file = "/usr/bin/validator-console"
+# 	file = open(mytonctrl_file, 'wt')
+# 	file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py")
+# 	file.close()
+# 	file = open(fift_file, 'wt')
+# 	file.write("/usr/bin/ton/crypto/fift")
+# 	file.close()
+# 	file = open(liteclient_file, 'wt')
+# 	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/lite-client/ton-lite-client-test1.config.json \$@")
+# 	file.close()
+# 	file = open(validator_console_file, 'wt')
+# 	file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /usr/bin/ton/validator-engine-console/client -p /usr/bin/ton/validator-engine-console/server.pub -a 127.0.0.1:" + str(cport))
+# 	file.close()
+# 	args = ["chmod", "+x", mytonctrl_file, fift_file, liteclient_file, validator_console_file]
+# 	subprocess.run(args)
+# #end define
+
+def General():
+	# Получить режим установки
+	mx = sys.argv.index("-m")
+	ux = sys.argv.index("-u")
+	mode = sys.argv[mx+1]
+	user = sys.argv[ux+1]
+
+	if mode == "full":
+		# Создать настройки для валидатора
+		ValidatorSetting(user)
+	#end if
+
+	# Создать настройки для mytoncore.py
+	MytoncoreSettings(user, mode)
+
+	# Создать символические ссылки
+	CreateSymlink()
+#end define
+
+def ValidatorSetting(user):
+	local.AddLog("start ValidatorSetting fuction", "debug")
+
+	path = "/var/ton-work/db/config.json"
+	if not os.path.isfile(path):
+		return
+	#end if
+
+	# Получить внешний ip адрес
 	response = requests.get("https://ifconfig.me")
 	ip = response.text
 	vport = random.randint(2000, 65000)
@@ -234,98 +483,25 @@ def Vpreparation():
 	if "validator" not in text:
 		args = ["/usr/sbin/useradd", "-d", "/dev/null", "-s", "/dev/null", "validator"]
 		subprocess.run(args)
+	#end if
 	
 	# Проверка первого запуска валидатора
 	if not os.path.isfile(configPath):
 		args = [validatorAppPath, "-C", validatorConfig, "--db", dbPath, "--ip", addr, "-l", logPath]
 		subprocess.run(args)
+	#end if
 	
 	# Прописать автозагрузку авлидатора
 	Add2Systemd(name="validator", user="validator", start="/usr/bin/ton/validator-engine/validator-engine -d -C /usr/bin/ton/validator-engine/ton-global.config.json --db /var/ton-work/db -l /var/ton-work/log") # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
-	# Сменить права на нужные директории
-	args = ["chown", "-R", "validator:validator", "/var/ton-work"]
-	subprocess.run(args)
-	
-	# Запустить валидатор
-	args = ["systemctl", "start", "validator"]
-	subprocess.run(args)
-	
-	# Подождать загрузку валидатора
-	time.sleep(10)
-#end define
-
-def WriteSettingToFile(arr):
-	local.AddLog("start WriteSettingToFile fuction", "debug")
-	# Записать настройки в файл
-	filePath = "/tmp/mytonsettings.json"
-	settings = json.dumps(arr)
-	file = open(filePath, 'w')
-	file.write(settings)
-	file.close()
-	return filePath
-#end define
-
-def LoadSettings(mode, user):
-	local.AddLog("start LoadSettings fuction", "debug")
-	
+	# Создать ключи доступа к валидатору
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
 	if os.path.isfile(path) or os.path.isfile(path2):
 		return
 	#end if
 	
-	arr = dict()
-	arr["config"] = dict()
-	arr["config"]["logLevel"] = "debug"
-	arr["config"]["isLocaldbSaving"] = True
-
-	# fift
-	fift = dict()
-	fift["appPath"] = "/usr/bin/ton/crypto/fift"
-	fift["libsPath"] = "/usr/src/ton/crypto/fift/lib"
-	fift["smartcontsPath"] = "/usr/src/ton/crypto/smartcont"
-	arr["fift"] = fift
-
-	# lite-client
-	liteClient = dict()
-	liteClient["appPath"] = "/usr/bin/ton/lite-client/lite-client"
-	liteClient["configPath"] = "/usr/bin/ton/lite-client/ton-lite-client-test1.config.json"
-	arr["liteClient"] = liteClient
-
-	if (mode == "full"):
-		# validator-engine-console
-		validatorConsole = dict()
-		validatorConsole["appPath"] = "/usr/bin/ton/validator-engine-console/validator-engine-console"
-		validatorConsole["privKeyPath"] = "/usr/bin/ton/validator-engine-console/client"
-		validatorConsole["pubKeyPath"] = "/usr/bin/ton/validator-engine-console/server.pub"
-		validatorConsole["addr"] = "127.0.0.1:{cport}".format(cport=cport)
-		arr["validatorConsole"] = validatorConsole
-
-		# Записать настройки в файл
-		filePath = WriteSettingToFile(arr)
-
-		# Подтянуть настройки в mytoncore.py
-		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -s " + filePath]
-		subprocess.run(args)
-		
-		# Подтянуть событие в mytoncore.py
-		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -e \"toninstaller\""]
-		subprocess.run(args)
-	#end if
-#end define
-
-def CreateVkeys(user):
-	local.AddLog("start CreateVkeys fuction", "debug")
-	
-	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
-	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
-	if os.path.isfile(path) or os.path.isfile(path2):
-		return
-	#end if
-	
-	# Переменые
-	dbPath = "/var/ton-work/db"
+	# Создать переменные
 	generate_random_id = "/usr/bin/ton/utils/generate-random-id"
 	server_key = "/usr/bin/ton/validator-engine-console/server"
 	server_pubkey = server_key + ".pub"
@@ -374,62 +550,85 @@ def CreateVkeys(user):
 	file = open(path, 'w')
 	file.write(text)
 	file.close()
+
+	# Сменить права на нужные директории
+	args = ["chown", "-R", "validator:validator", "/var/ton-work"]
+	subprocess.run(args)
+
+	# Запустить валидатор
+	args = ["systemctl", "start", "validator"]
+	subprocess.run(args)
+	
+	# Подождать загрузку валидатора
+	local.AddLog("Waiting for validator to load. Pause 10 seconds.")
+	time.sleep(10)
 #end define
 
-# def CheckSettings():
-#	if CheckLiteClient() != True or CheckValidatorConsole() != True or CheckFift() != True:
-#		QuickSetup()
-#		local.dbSave()
-# #end define
+def MytoncoreSettings(user, mode):
+	local.AddLog("start MytoncoreSettings fuction", "debug")
+	
+	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
+	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
+	if os.path.isfile(path) or os.path.isfile(path2):
+		return
+	#end if
 
-def General():
-	# Получить режим установки
-	mx = sys.argv.index("-m")
-	ux = sys.argv.index("-u")
-	mode = sys.argv[mx+1]
-	user = sys.argv[ux+1]
+	arr = dict()
+	arr["config"] = dict()
+	arr["config"]["logLevel"] = "debug"
+	arr["config"]["isLocaldbSaving"] = True
 
-	local.AddLog("Using: user - {user}, mode - {mode}".format(user=user, mode=mode))
+	# fift
+	fift = dict()
+	fift["appPath"] = "/usr/bin/ton/crypto/fift"
+	fift["libsPath"] = "/usr/src/ton/crypto/fift/lib"
+	fift["smartcontsPath"] = "/usr/src/ton/crypto/smartcont"
+	arr["fift"] = fift
 
-	if mode == "full":
-		# Проверить настройки валидатора
-		vfile1 = "/var/ton-work/db/config.json"
-		if not os.path.isfile(vfile1):
-			Vpreparation()
+	# lite-client
+	liteClient = dict()
+	liteClient["appPath"] = "/usr/bin/ton/lite-client/lite-client"
+	liteClient["configPath"] = "/usr/bin/ton/lite-client/ton-lite-client-test1.config.json"
+	arr["liteClient"] = liteClient
 
-		# Создать ключи доступа к валидатору
-		CreateVkeys(user)
-		
-		# Сменить права на нужные директории
-		args = ["chown", "-R", "validator:validator", "/var/ton-work"]
+	# Подтянуть настройки в mytoncore.py
+	args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -s " + filePath]
+	subprocess.run(args)
+
+
+	if (mode == "full"):
+		# validator-engine-console
+		validatorConsole = dict()
+		validatorConsole["appPath"] = "/usr/bin/ton/validator-engine-console/validator-engine-console"
+		validatorConsole["privKeyPath"] = "/usr/bin/ton/validator-engine-console/client"
+		validatorConsole["pubKeyPath"] = "/usr/bin/ton/validator-engine-console/server.pub"
+		validatorConsole["addr"] = "127.0.0.1:{cport}".format(cport=cport)
+		arr["validatorConsole"] = validatorConsole
+
+		# Записать настройки в файл
+		filePath = "/tmp/mytonsettings.json"
+		settings = json.dumps(arr)
+		file = open(filePath, 'w')
+		file.write(settings)
+		file.close()
+
+		# Подтянуть настройки в mytoncore.py
+		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -s " + filePath]
+		subprocess.run(args)
+
+		# Навсякий подождать, пока mytoncore подтянет настройки. Возможно это лишнее.
+		time.sleep(3)
+
+		# Подтянуть событие в mytoncore.py
+		args = ["su", "-l", user, "-c", "python3 /usr/src/mytonctrl/mytoncore.py -e \"toninstaller\""]
 		subprocess.run(args)
 	#end if
 
-	# Создать настройки для mytoncore.py
-	LoadSettings(mode, user)
-
 	# Прописать mytoncore.py в автозагрузку
 	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")
-	
-	
-	# Создаем символические ссылки
-	mytonctrl_file = "/usr/bin/mytonctrl"
-	fift_file = "/usr/bin/fift"
-	liteclient_file = "/usr/bin/liteclient"
-	validator_console_file = "/usr/bin/validator-console"
-	file = open(mytonctrl_file, 'wt')
-	file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py")
-	file.close()
-	file = open(fift_file, 'wt')
-	file.write("/usr/bin/ton/crypto/fift")
-	file.close()
-	file = open(liteclient_file, 'wt')
-	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/lite-client/ton-lite-client-test1.config.json \$@")
-	file.close()
-	file = open(validator_console_file, 'wt')
-	file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /usr/bin/ton/validator-engine-console/client -p /usr/bin/ton/validator-engine-console/server.pub -a 127.0.0.1:" + str(cport))
-	file.close()
-	args = ["chmod", "+x", mytonctrl_file, fift_file, liteclient_file, validator_console_file]
+
+	# Запустить mytoncore.py
+	args = ["systemctl", "start", "mytoncore"]
 	subprocess.run(args)
 #end define
 
