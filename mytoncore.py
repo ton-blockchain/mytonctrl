@@ -791,7 +791,7 @@ class MyTonCore():
 		minStake = self.GetMinStake()
 		
 		# Calculate stake
-		stake = GetStake(account, validators)
+		stake = self.GetStake(account, validators)
 		
 		# Check if we have enough grams
 		if minStake > stake:
