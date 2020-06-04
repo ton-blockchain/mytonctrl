@@ -64,7 +64,7 @@ Debian 10 - OK
 ## Установка (Ubuntu)
 1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки. Мы будем устанавливать в режиме `lite`. В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
 ```sh
-wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
+wget https://raw.githubusercontent.com/igroman787/mytonctrl/original/scripts/install.sh
 sudo bash install.sh -m lite
 ```
 
@@ -77,7 +77,7 @@ mytonctrl
 ## Установка (Debian)
 1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки. Мы будем устанавливать в режиме `lite`. В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
 ```sh
-wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
+wget https://raw.githubusercontent.com/igroman787/mytonctrl/original/scripts/install.sh
 su root -c 'bash install.sh -m lite'
 ```
 
