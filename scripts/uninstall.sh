@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
@@ -8,7 +7,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Цвета
-COLOR='\033[92m'
+COLOR='\033[34m'
 ENDC='\033[0m'
 
 # Остановка служб
@@ -30,7 +29,8 @@ systemctl daemon-reload
 #rm -rf /usr/bin/ton
 rm -rf /var/ton-work
 rm -rf /tmp/myton*
-rm -rf /usr/loca/bin/myton*
+rm -rf /usr/local/bin/mytoninstaller/
+rm -rf /usr/local/bin/mytoncore/mytoncore.db
 rm -rf /home/${user}/.local/share/mytonctrl
 rm -rf /home/${user}/.local/share/mytoncore/mytoncore.db
 
