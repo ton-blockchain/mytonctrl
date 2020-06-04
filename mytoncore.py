@@ -749,8 +749,9 @@ class MyTonCore():
 	#end define
 	
 	def GetStake(self, account, validators):
-		stakePercent = local.db.get("stakePercent")
-		if stakePercent:
+		stake = local.db.get("stake")
+		stakePercent = local.db.get("stakePercent", 99)
+		if stake is None:
 			sp = stakePercent / 100
 			if sp > 1 or sp < 0:
 				local.AddLog("Wrong stakePercent value. Using default stake.", "warning")
@@ -758,8 +759,6 @@ class MyTonCore():
 				stake = int(account.balance*sp/2)
 			elif len(validators) > 0:
 				stake = int(account.balance*sp)
-		if stake is None:
-			stake = local.db.get("stake", 20138)
 		return stake
 	#end define
 
