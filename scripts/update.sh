@@ -13,7 +13,7 @@ ENDC='\033[0m'
 
 cd /usr/src/mytonctrl
 git pull --recurse-submodules
-systemctl restart mytonctrl
+systemctl restart mytoncore
 
 # Конец
 echo "${COLOR}[1/1]${ENDC} Обновление компонентов MyTonCtrl завершена"
