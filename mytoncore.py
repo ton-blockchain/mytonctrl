@@ -142,6 +142,7 @@ class MyTonCore():
 		self.adnlAddr = None
 		self.tempDir = None
 		self.validatorWalletName = None
+		self.nodeName = None
 
 		self.liteClient = LiteClient()
 		self.validatorConsole = ValidatorConsole()
@@ -169,6 +170,9 @@ class MyTonCore():
 
 		self.adnlAddr = local.db.get("adnlAddr")
 		self.validatorWalletName = local.db.get("validatorWalletName")
+		self.nodeName = local.db.get("nodeName")
+		if self.nodeName is None:
+			self.nodeName=""
 
 		liteClient = local.db.get("liteClient")
 		if liteClient is not None:
@@ -660,7 +664,7 @@ class MyTonCore():
 	
 	def CreateConfigProposalRequest(self, offerHash, validatorIndex):
 		local.AddLog("start CreateConfigProposalRequest function", "debug")
-		fileName = self.tempDir + "_validator-to-sign.req"
+		fileName = self.tempDir + self.nodeName + "_validator-to-sign.req"
 		args = ["config-proposal-vote-req.fif", "-i", validatorIndex, offerHash]
 		result = self.fift.Run(args)
 		fileName = Pars(result, "Saved to file ", '\n')
@@ -678,7 +682,7 @@ class MyTonCore():
 
 	def CreateElectionRequest(self, wallet, startWorkTime, adnlAddr, maxFactor):
 		local.AddLog("start CreateElectionRequest function", "debug")
-		fileName = self.tempDir + str(startWorkTime) + "_validator-to-sign.bin"
+		fileName = self.tempDir + self.nodeName + str(startWorkTime) + "_validator-to-sign.bin"
 		args = ["validator-elect-req.fif", wallet.addr, startWorkTime, maxFactor, adnlAddr, fileName]
 		result = self.fift.Run(args)
 		fileName = Pars(result, "Saved to file ", '\n')
@@ -704,7 +708,7 @@ class MyTonCore():
 
 	def SignElectionRequestWithValidator(self, wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor):
 		local.AddLog("start SignElectionRequestWithValidator function", "debug")
-		fileName = self.tempDir + str(startWorkTime) + "_validator-query.boc"
+		fileName = self.tempDir + self.nodeName + str(startWorkTime) + "_validator-query.boc"
 		args = ["validator-elect-signed.fif", wallet.addr, startWorkTime, maxFactor, adnlAddr, validatorPubkey_b64, validatorSignature, fileName]
 		result = self.fift.Run(args)
 		validatorPubkey = Pars(result, "validator public key ", '\n')
@@ -715,7 +719,7 @@ class MyTonCore():
 	def SignFileWithWallet(self, wallet, filePath, addr, gram):
 		local.AddLog("start SignFileWithWallet function", "debug")
 		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.tempDir + wallet.name + "_wallet-query"
+		resultFilePath = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
 		args = ["wallet.fif", wallet.path, addr, seqno, gram, "-B", filePath, resultFilePath]
 		result = self.fift.Run(args)
 		resultFilePath = Pars(result, "Saved to file ", ")")
@@ -753,7 +757,7 @@ class MyTonCore():
 
 	def RecoverStake(self):
 		local.AddLog("start RecoverStake function", "debug")
-		resultFilePath = self.tempDir + "recover-query"
+		resultFilePath = self.tempDir + self.nodeName + "recover-query"
 		args = ["recover-stake.fif", resultFilePath]
 		result = self.fift.Run(args)
 		resultFilePath = Pars(result, "Saved to file ", '\n')
@@ -878,7 +882,7 @@ class MyTonCore():
 
 	def SaveElectionVarsToJsonFile(self, **kwargs):
 		local.AddLog("start SaveElectionVarsToJsonFile function", "debug")
-		fileName = self.tempDir + str(kwargs.get("startWorkTime")) + "_ElectionEntry.json"
+		fileName = self.tempDir + self.nodeName + str(kwargs.get("startWorkTime")) + "_ElectionEntry.json"
 		wallet = kwargs.get("wallet")
 		account = kwargs.get("account")
 		arr = {"wallet":wallet.__dict__, "account":account.__dict__}
@@ -1156,7 +1160,7 @@ class MyTonCore():
 	
 	def SignProposalVoteRequestWithValidator(self, offerHash, validatorIndex, validatorPubkey_b64, validatorSignature):
 		local.AddLog("start SignProposalVoteRequestWithValidator function", "debug")
-		fileName = self.tempDir + "_vote-msg-body.boc"
+		fileName = self.tempDir + self.nodeName + "_vote-msg-body.boc"
 		args = ["config-proposal-vote-signed.fif", "-i", validatorIndex, offerHash, validatorPubkey_b64, validatorSignature, fileName]
 		result = self.fift.Run(args)
 		fileName = Pars(result, "Saved to file ", '\n')
@@ -1291,7 +1295,7 @@ class MyTonCore():
 			raise Exception("NewDomain error: domain is busy")
 		#end if
 		
-		fileName = self.tempDir + "_dns-msg-body.boc"
+		fileName = self.tempDir + self.nodeName + "_dns-msg-body.boc"
 		args = ["auto-dns.fif", dnsAddr, "add", subdomain, expireInSec, "owner", wallet.addr, "cat", catId, "adnl", domain["adnlAddr"], "-o", fileName]
 		result = self.fift.Run(args)
 		resultFilePath = Pars(result, "Saved to file ", ')')
