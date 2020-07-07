@@ -173,6 +173,8 @@ class MyTonCore():
 		self.nodeName = local.db.get("nodeName")
 		if self.nodeName is None:
 			self.nodeName=""
+		else:
+			self.nodeName = self.nodeName + "_"
 
 		liteClient = local.db.get("liteClient")
 		if liteClient is not None:
