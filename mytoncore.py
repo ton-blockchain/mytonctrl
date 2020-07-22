@@ -1243,8 +1243,9 @@ class MyTonCore():
 	
 	def GetBookmarks(self):
 		bookmarks = local.db.get("bookmarks")
-		for bookmark in bookmarks:
-			self.WriteBookmarkData(bookmark)
+		if bookmarks is not None:
+			for bookmark in bookmarks:
+				self.WriteBookmarkData(bookmark)
 		return bookmarks
 	#end define
 	
