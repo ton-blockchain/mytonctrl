@@ -629,11 +629,11 @@ class MyTonCore():
 	def GetAdnlAddr(self):
 		local.AddLog("start GetAdnlAddr function", "debug")
 		adnlAddr = self.adnlAddr
-		if adnlAddr is None:
+		# if adnlAddr is None:
 			# Create ADNL address
-			adnlAddr = self.CreatNewKey()
-			self.AddAdnlAddrToValidator(adnlAddr)
-			self.adnlAddr = adnlAddr
+			# adnlAddr = self.CreatNewKey()
+			# self.AddAdnlAddrToValidator(adnlAddr)
+			# self.adnlAddr = adnlAddr
 		return adnlAddr
 	#end define
 
