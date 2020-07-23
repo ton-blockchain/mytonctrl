@@ -654,7 +654,7 @@ def CreateSymlink():
 	file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py")
 	file.close()
 	file = open(fift_file, 'wt')
-	file.write("/usr/bin/ton/crypto/fift")
+	file.write("/usr/bin/ton/crypto/fift \$@")
 	file.close()
 	file = open(liteclient_file, 'wt')
 	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/lite-client/ton-lite-client-test1.config.json \$@")

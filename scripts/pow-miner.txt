@@ -1,0 +1,31 @@
+Name       Type     Address / Domain                                  Balance / Exp. date  
+pow100_1   account  kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN  12413006.83136239    
+pow100_2   account  kf8SYc83pm5JkGt0p3TQRkuiM58O9Cr3waUtR9OoFq716lN-  12415609.09149575    
+pow100_3   account  kf-FV4QTxLl-7Ct3E6MqOtMt-RGXMxi27g4I645lw6MTWraV  12413006.83131689    
+pow100_4   account  kf_NSzfDJI1A3rOM0GQm7xsoUXHTgmdhN5-OrGD8uwL2JMvQ  12411505.527347859   
+pow100_5   account  kf8gf1PQy4u2kURl-Gz4LbS29eaN4sVdrVQkPO-JL80VhOe6  12404099.094616815   
+pow100_6   account  kf8kO6K6Qh6YM4ddjRYYlvVAK7IgyW8Zet-4ZvNrVsmQ4EOF  12402297.53016986    
+pow100_7   account  kf-P_TOdwcCh0AXHhBpICDMxStxHenWdLCDLNH5QcNpwMHJ8  12416609.960904717   
+pow100_8   account  kf91o4NNTryJ-Cw3sDGt9OTiafmETdVFUMvylQdFPoOxIsLm  12406200.92008303    
+pow100_9   account  kf9iWhwk9GwAXjtwKG-vN7rmXT3hLIT23RBY6KhVaynRrIK7  12406701.354808928   
+pow100_10  account  kf8JfFUEJhhpRW80_jqD7zzQteH6EBHOzxiOhygRhBdt4z2N  12410804.91885839    
+pow10k_1   account  kf8guqdIbY6kpMykR8WFeVGbZcP2iuBagXfnQuq0rGrxgE04  324099864.00006646   
+pow10k_2   account  kf9CxReRyaGj0vpSH0gRZkOAitm_yDHvgiMGtmvG-ZTirrMC  324399864.260822     
+pow10k_3   account  kf-WXA4CX4lqyVlN4qItlQSWPFIy00NvO2BAydgC4CTeIUme  312099853.56844664   
+pow10k_4   account  kf8yF4oXfIj7BZgkqXM6VsmDEgCqWVSKECO1pC0LXWl399Vx  314999856.09014076   
+pow10k_5   account  kf9nNY69S3_heBBSUtpHRhIzjjqY0ChugeqbWcQGtGj-gQxO  323599863.5655469    
+pow10k_6   account  kf_wUXx-l1Ehw0kfQRgFtWKO07B6WhSqcUQZNyh4Jmj8R4zL  319099859.6536181    
+pow10k_7   account  kf_6keW5RniwNQYeq3DNWGcohKOwI85p-V2MsPk4v23tyO3I  315199856.2633477    
+pow10k_8   account  kf_NSPpF4ZQ7mrPylwk-8XQQ1qFD5evLnx5_oZVNywzOjSfh  317599858.3496544    
+pow10k_9   account  kf-uNWj4JmTJefr7IfjBSYQhFbd3JqtQ6cxuNIsJqDQ8SiEA  318899859.47983295   
+pow10k_10  account  kf8mO4l6ZB_eaMn1OqjLRrrkiBcSt7kYTvJC_dzJLdpEDKxn  316899857.7413052    
+
+
+
+> runmethod kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN get_pow_params
+result:  [ 290654758487907751949376233055479468292 719712481031621425209468393577880020575432575272700909504830238907 100000000000 256 ]
+
+> /usr/bin/ton/crypto/pow-miner -vv -w<num-threads> -t<timeout-in-sec> <your-wallet-address> <seed> <complexity> <iterations> <pow-testgiver-address> <boc-filename>
+> /usr/bin/ton/crypto/pow-miner -vv -w10 -t100 kQBWkNKqzCAwA9vjMwRmg7aY75Rf8lByPA9zKXoqGkHi8SM7 290654758487907751949376233055479468292 719712481031621425209468393577880020575432575272700909504830238907 100000000000 kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN mined.boc
+
+
