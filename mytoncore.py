@@ -1509,6 +1509,50 @@ def SaveNetworStatistics(ton):
 		file.write(text)
 #end define
 
+def Mining(ton):
+	walletName = "mining_wallet"
+	wallet = ton.GetLocalWallet(walletName)
+	if wallet is None:
+		return
+	while True:
+		MiningWork(ton, wallet)
+#end define
+
+def MiningWork(ton, wallet): # fix me (ибо говнокод)
+	local.AddLog("start MiningWork function", "debug")
+
+	powAddr = "kf8guqdIbY6kpMykR8WFeVGbZcP2iuBagXfnQuq0rGrxgE04"
+	cmd = "runmethod  {addr} get_pow_params".format(addr=powAddr)
+	result = ton.liteClient.Run(cmd)
+	data = ton.Result2List(result)
+	seed = data[0]
+	complexity = data[1]
+	iterations = data[2]
+
+	fileName = ton.tempDir + "mined.boc"
+	appPath = "/usr/bin/ton/crypto/pow-miner"
+	cpus = psutil.cpu_count() - 1
+	numThreads = "-w{cpus}".format(cpus=cpus)
+	args = [appPath, "-vv", numThreads, "-t100", wallet.addr, seed, complexity, iterations, powAddr, fileName]
+	for i in range(len(args)):
+			args[i] = str(args[i])
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=110)
+	output = process.stdout.decode("utf-8")
+	err = process.stderr.decode("utf-8")
+
+	print("output:", output)
+	print("err:", err)
+
+	if "Saving" in err: # fix me (in output)
+		result = ton.liteClient.Run(cmd)
+		data = ton.Result2List(result)
+		if seed == data[0] and complexity == data[1]:
+			wallet = Wallet()
+			wallet.addr = powAddr
+			ton.SendFile(fileName, wallet)
+			local.AddLog("Yep!")
+#end define
+
 def General():
 	local.AddLog("start General function", "debug")
 	ton = MyTonCore()
@@ -1519,6 +1563,7 @@ def General():
 	local.StartCycle(Offers, sec=600, args=(ton, ))
 	local.StartCycle(Domains, sec=600, args=(ton, ))
 	local.StartCycle(Telemetry, sec=60, args=(ton, ))
+	local.StartThread(Mining, args=(ton, ))
 	Sleep()
 #end define
 
