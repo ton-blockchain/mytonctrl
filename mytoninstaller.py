@@ -574,7 +574,7 @@ def MytoncoreSettings(user, mode):
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
 	if os.path.isfile(path) or os.path.isfile(path2):
-		local.AddLog("mytoncore.db already exist. Break MytoncoreSettings fuction", "debug")
+		local.AddLog("mytoncore.db already exist. Break MytoncoreSettings fuction", "warning")
 		return
 	#end if
 
@@ -595,6 +595,11 @@ def MytoncoreSettings(user, mode):
 	liteClient["appPath"] = "/usr/bin/ton/lite-client/lite-client"
 	liteClient["configPath"] = "/usr/bin/ton/lite-client/ton-lite-client-test1.config.json"
 	arr["liteClient"] = liteClient
+
+	# miner
+	miner = dict()
+	miner["appPath"] = "/usr/bin/ton/crypto/pow-miner"
+	arr["miner"] = miner
 
 	# Записать настройки в файл
 	filePath = WriteSettingToFile(arr)

@@ -21,13 +21,6 @@ class LiteClient:
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
 			raise Exception("LiteClient error: {err}".format(err=err))
-		### debug on ###
-		filePath = local.buffer.get("myTempDir") + "LiteClient.log"
-		file = open(filePath, 'w')
-		file.write(output)
-		file.write(err)
-		file.close()
-		### debug off ###
 		return output
 	#end define
 #end class
@@ -47,13 +40,6 @@ class ValidatorConsole:
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
 			raise Exception("ValidatorConsole error: {err}".format(err=err))
-		### debug on ###
-		filePath = local.buffer.get("myTempDir") + "ValidatorConsole.log"
-		file = open(filePath, 'w')
-		file.write(output)
-		file.write(err)
-		file.close()
-		### debug off ###
 		return output
 	#end define
 #end class
@@ -75,14 +61,25 @@ class Fift:
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
 			raise Exception("Fift error: {err}".format(err=err))
-		### debug on ###
-		filePath = local.buffer.get("myTempDir") + "Fift.log"
-		file = open(filePath, 'w')
-		file.write(output)
-		file.write(err)
-		file.close()
-		### debug off ###
 		return output
+	#end define
+#end class
+
+class Miner:
+	def __init__(self):
+		self.appPath = None
+	#end define
+
+	def Run(self, args):
+		for i in range(len(args)):
+			args[i] = str(args[i])
+		args = [self.appPath] + args
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		output = process.stdout.decode("utf-8")
+		err = process.stderr.decode("utf-8")
+		# if len(err) > 0:
+		# 	raise Exception("Miner error: {err}".format(err=err))
+		return err
 	#end define
 #end class
 
@@ -143,6 +140,7 @@ class MyTonCore():
 		self.liteClient = LiteClient()
 		self.validatorConsole = ValidatorConsole()
 		self.fift = Fift()
+		self.miner = Miner()
 
 		local.dbLoad()
 		self.Refresh()
@@ -178,6 +176,13 @@ class MyTonCore():
 			self.fift.appPath = fift["appPath"]
 			self.fift.libsPath = fift["libsPath"]
 			self.fift.smartcontsPath = fift["smartcontsPath"]
+
+		miner = local.db.get("miner")
+		if miner is not None:
+			self.miner.appPath = miner["appPath"]
+			# set miner {"appPath":"/usr/bin/ton/crypto/pow-miner"}
+			# set powAddr kf8guqdIbY6kpMykR8WFeVGbZcP2iuBagXfnQuq0rGrxgE04
+			# set minerAddr kQAXRfNYUkFtecUg91zvbUkpy897CDcE2okhFxAlOLcM3_XD
 	#end define
 
 	def GetVarFromWorkerOutput(self, text, search):
@@ -582,6 +587,18 @@ class MyTonCore():
 		except:
 			pass
 		return config36
+	#end define
+
+	def GetPowParams(self, powAddr):
+		local.AddLog("start GetPowParams function", "debug")
+		params = dict()
+		cmd = "runmethod  {addr} get_pow_params".format(addr=powAddr)
+		result = self.liteClient.Run(cmd)
+		data = self.Result2List(result)
+		params["seed"] = data[0]
+		params["complexity"] = data[1]
+		params["iterations"] = data[2]
+		return params
 	#end define
 
 	def CreatNewKey(self):
@@ -1356,6 +1373,16 @@ class MyTonCore():
 			data = json.loads(text)
 			return data
 	#end define
+
+	def GetSettings(self, name):
+		result = local.db.get(name)
+		return result
+	#end define
+
+	def SetSettings(self, name, value):
+		local.db[name] = json.loads(value)
+		local.dbSave()
+	#end define
 #end class
 
 def ng2g(ng):
@@ -1363,17 +1390,19 @@ def ng2g(ng):
 #end define
 
 def Init():
+	# Event reaction
+	if ("-e" in sys.argv):
+		x = sys.argv.index("-e")
+		eventName = sys.argv[x+1]
+		Event(eventName)
+	#end if
+
 	local.Run()
 	local.buffer["network"] = dict()
 	local.buffer["network"]["type"] = "bytes"
 	local.buffer["network"]["in"] = [0]*15*6
 	local.buffer["network"]["out"] = [0]*15*6
 	local.buffer["network"]["all"] = [0]*15*6
-
-	if ("-e" in sys.argv):
-		x = sys.argv.index("-e")
-		eventName = sys.argv[x+1]
-		Event(eventName)
 #end define
 
 def Event(eventName):
@@ -1510,47 +1539,26 @@ def SaveNetworStatistics(ton):
 #end define
 
 def Mining(ton):
-	walletName = "mining_wallet"
-	wallet = ton.GetLocalWallet(walletName)
-	if wallet is None:
+	powAddr = local.db.get("powAddr")
+	minerAddr = local.db.get("minerAddr")
+	if powAddr is None or minerAddr is None:
 		return
-	while True:
-		MiningWork(ton, wallet)
-#end define
+	#end if
 
-def MiningWork(ton, wallet): # fix me (ибо говнокод)
-	local.AddLog("start MiningWork function", "debug")
-
-	powAddr = "kf8guqdIbY6kpMykR8WFeVGbZcP2iuBagXfnQuq0rGrxgE04"
-	cmd = "runmethod  {addr} get_pow_params".format(addr=powAddr)
-	result = ton.liteClient.Run(cmd)
-	data = ton.Result2List(result)
-	seed = data[0]
-	complexity = data[1]
-	iterations = data[2]
-
-	fileName = ton.tempDir + "mined.boc"
-	appPath = "/usr/bin/ton/crypto/pow-miner"
+	local.AddLog("start Mining function", "debug")
+	filePath = ton.tempDir + "mined.boc"
 	cpus = psutil.cpu_count() - 1
 	numThreads = "-w{cpus}".format(cpus=cpus)
-	args = [appPath, "-vv", numThreads, "-t100", wallet.addr, seed, complexity, iterations, powAddr, fileName]
-	for i in range(len(args)):
-			args[i] = str(args[i])
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=110)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
+	params = ton.GetPowParams(powAddr)
+	args = ["-vv", numThreads, "-t100", minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
+	result = ton.miner.Run(args)
 
-	print("output:", output)
-	print("err:", err)
-
-	if "Saving" in err: # fix me (in output)
-		result = ton.liteClient.Run(cmd)
-		data = ton.Result2List(result)
-		if seed == data[0] and complexity == data[1]:
-			wallet = Wallet()
-			wallet.addr = powAddr
-			ton.SendFile(fileName, wallet)
+	if "Saving" in result:
+		newParams = ton.GetPowParams(powAddr)
+		if params["seed"] == newParams["seed"] and params["complexity"] == newParams["complexity"]:
+			ton.liteClient.Run("sendfile " + filePath)
 			local.AddLog("Yep!")
+	#end if
 #end define
 
 def General():
@@ -1563,7 +1571,7 @@ def General():
 	local.StartCycle(Offers, sec=600, args=(ton, ))
 	local.StartCycle(Domains, sec=600, args=(ton, ))
 	local.StartCycle(Telemetry, sec=60, args=(ton, ))
-	local.StartThread(Mining, args=(ton, ))
+	local.StartCycle(Mining, sec=1, args=(ton, ))
 	Sleep()
 #end define
 

@@ -8,7 +8,6 @@ from mytoncore import *
 local = MyPyClass(__file__)
 console = MyPyConsole()
 ton = MyTonCore()
-# Must control: /var/ton-work/db/keyring/
 
 def Init():
 	# Create user console
@@ -51,6 +50,9 @@ def Init():
 	console.AddItem("ve", VoteElectionEntry, "Голосовать в выборах / Vote election entry")
 	console.AddItem("vl", PrintValidatorList, "Показать действующие валидаторы / Show active validators")
 
+	console.AddItem("get", GetSettings, "Посмотреть настройки / Get settings")
+	console.AddItem("set", SetSettings, "Задать настройки / Set settings")
+
 	console.AddItem("test", Test, "Test")
 	console.AddItem("pt", PrintTest, "PrintTest")
 
@@ -60,12 +62,12 @@ def Init():
 #end define
 
 def Update(args):
-	RunAsRoot(["sh", "/usr/src/mytonctrl/scripts/update.sh"])
+	RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/update.sh"])
 	ColorPrint("Update - {green}OK{endc}")
 #end define
 
 def Upgrade(args):
-	RunAsRoot(["sh", "/usr/src/mytonctrl/scripts/upgrade.sh"])
+	RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"])
 	ColorPrint("Upgrade - {green}OK{endc}")
 #end define
 
@@ -666,6 +668,27 @@ def PrintValidatorList(args):
 	config34 = ton.GetConfig34()
 	validators = config34["validators"]
 	print(json.dumps(validators, indent=4))
+#end define
+
+def GetSettings(args):
+	try:
+		name = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} get <settings-name>")
+		return
+	result = ton.GetSettings(name)
+	print(json.dumps(result, indent=4))
+#end define
+
+def SetSettings(args):
+	try:
+		name = args[0]
+		value = args[1]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} set <settings-name> <settings-value>")
+		return
+	result = ton.SetSettings(name, value)
+	ColorPrint("SetSettings - {green}OK{endc}")
 #end define
 
 
