@@ -21,22 +21,22 @@ def Init():
 	local.Run()
 #end define
 
-def Translate(text):
-	local.AddLog("start Translate", "debug")
-	lang = local.buffer.get("lang")
-	if lang == None:
-		lang = "en"
-	translate = local.db.get("translate")
-	textList = text.split(' ')
-	for item in textList:
-		sitem = translate.get(item)
-		if sitem is None:
-			continue
-		ritem = sitem.get(lang)
-		if ritem is not None:
-			text = text.replace(item, ritem)
-	return text
-#end define
+# def Translate(text):
+# 	local.AddLog("start Translate", "debug")
+# 	lang = local.buffer.get("lang")
+# 	if lang == None:
+# 		lang = "en"
+# 	translate = local.db.get("translate")
+# 	textList = text.split(' ')
+# 	for item in textList:
+# 		sitem = translate.get(item)
+# 		if sitem is None:
+# 			continue
+# 		ritem = sitem.get(lang)
+# 		if ritem is not None:
+# 			text = text.replace(item, ritem)
+# 	return text
+# #end define
 
 # def UserWorker(title, text, notice=None):
 # 	title = Translate(title)

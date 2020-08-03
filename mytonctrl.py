@@ -10,48 +10,49 @@ console = MyPyConsole()
 ton = MyTonCore()
 
 def Init():
+	# Load translate table
+	local.InitTranslator("/usr/src/mytonctrl/translate.json")
+
 	# Create user console
 	console.name = "MyTonCtrl"
 
-	console.AddItem("update", Update, "Подтянуть обновление mytonctrl / Pull mytonctrl update")
-	console.AddItem("upgrade", Upgrade, "Подтянуть исходный код и перекомпилировать компоненты TON / Pull up the source code and recompile the TON components")
-	console.AddItem("status", PrintStatus, "Показать статус TON / Show TON status")
-	console.AddItem("seqno", Seqno, "Получить seqno кошелька / Get seqno wallet")
+	console.AddItem("update", Update, local.Translate("update_cmd"))
+	console.AddItem("upgrade", Upgrade, local.Translate("upgrade_cmd"))
+	console.AddItem("status", PrintStatus, local.Translate("status_cmd"))
+	console.AddItem("seqno", Seqno, local.Translate("seqno_cmd"))
 
-	console.AddItem("nw", CreatNewWallet, "Создать новый локальный кошелек / Create a new local wallet")
-	console.AddItem("aw", ActivateWallet, "Активировать локальный кошелек / Activate local wallet")
-	console.AddItem("wl", PrintWalletsList, "Показать локальные кошельки / Show wallet list")
-	console.AddItem("iw", ImportWalletFromFile, "Импортировать кошелек из файла / Import wallet from file")
-	console.AddItem("swa", SaveWalletAddressToFile, "Сохранить адрес кошелька в файл / Save wallet address to file")
-	console.AddItem("dw", DeleteWallet, "Удалить локальный кошелек / Delete local wallet")
+	console.AddItem("nw", CreatNewWallet, local.Translate("nw_cmd"))
+	console.AddItem("aw", ActivateWallet, local.Translate("aw_cmd"))
+	console.AddItem("wl", PrintWalletsList, local.Translate("wl_cmd"))
+	console.AddItem("iw", ImportWalletFromFile, local.Translate("iw_cmd"))
+	console.AddItem("swa", SaveWalletAddressToFile, local.Translate("swa_cmd"))
+	console.AddItem("dw", DeleteWallet, local.Translate("dw_cmd"))
 
-	console.AddItem("vas", ViewAccountStatus, "Показать статус аккаунта / View account status")
-	console.AddItem("vah", ViewAccountHistory, "Показать историю аккаунта / View account history")
-	console.AddItem("mg", MoveGrams, "Перевод средств на кошелек / Move grams to account")
+	console.AddItem("vas", ViewAccountStatus, local.Translate("vas_cmd"))
+	console.AddItem("vah", ViewAccountHistory, local.Translate("vah_cmd"))
+	console.AddItem("mg", MoveGrams, local.Translate("mg_cmd"))
 
-	console.AddItem("nb", CreatNewBookmark, "Добавить аккаунт в закладки / Create new bookmark")
-	console.AddItem("bl", PrintBookmarksList, "Показать закладки / Show bookmark list")
-	console.AddItem("db", DeleteBookmark, "Удалить закладку / Delete bookmark")
+	console.AddItem("nb", CreatNewBookmark, local.Translate("nb_cmd"))
+	console.AddItem("bl", PrintBookmarksList, local.Translate("bl_cmd"))
+	console.AddItem("db", DeleteBookmark, local.Translate("db_cmd"))
 
-	console.AddItem("nr", CreatNewRule, "Добавить правило в расписание / Create new rule")
-	console.AddItem("rl", PrintRulesList, "Показать правила расписания / Show rule list")
-	console.AddItem("dr", DeleteRule, "Удалить правило из расписания / Delete rule")
+	# console.AddItem("nr", CreatNewRule, local.Translate("nr_cmd")) # "Добавить правило в расписание / Create new rule"
+	# console.AddItem("rl", PrintRulesList, local.Translate("rl_cmd")) # "Показать правила расписания / Show rule list"
+	# console.AddItem("dr", DeleteRule, local.Translate("dr_cmd")) # "Удалить правило из расписания / Delete rule"
 
-	#console.AddItem("w2m", MoveGramsFromMixer, "Пропустить средства через миксер")
+	console.AddItem("nd", NewDomain, local.Translate("nd_cmd"))
+	console.AddItem("dl", PrintDomainsList, local.Translate("dl_cmd"))
+	console.AddItem("vds", ViewDomainStatus, local.Translate("vds_cmd"))
+	console.AddItem("dd", DeleteDomain, local.Translate("dd_cmd"))
 
-	console.AddItem("nd", NewDomain, "Арендовать новый домен / New domain")
-	console.AddItem("dl", PrintDomainsList, "Показать арендованные домены / Show domain list")
-	console.AddItem("vds", ViewDomainStatus, "Показать статус домена / View domain status")
-	console.AddItem("dd", DeleteDomain, "Удалить домен / Delete domain")
+	console.AddItem("ol", PrintOffersList, local.Translate("ol_cmd"))
+	console.AddItem("vo", VoteOffer, local.Translate("vo_cmd"))
+	console.AddItem("el", PrintElectionEntriesList, local.Translate("el_cmd"))
+	console.AddItem("ve", VoteElectionEntry, local.Translate("ve_cmd"))
+	console.AddItem("vl", PrintValidatorList, local.Translate("vl_cmd"))
 
-	console.AddItem("ol", PrintOffersList, "Показать действующие предложения / Show offer list")
-	console.AddItem("vo", VoteOffer, "Голосовать за предложение / Vote for offer")
-	console.AddItem("el", PrintElectionEntriesList, "Показать действующие выборы / Show election entries list")
-	console.AddItem("ve", VoteElectionEntry, "Голосовать в выборах / Vote election entry")
-	console.AddItem("vl", PrintValidatorList, "Показать действующие валидаторы / Show active validators")
-
-	console.AddItem("get", GetSettings, "Посмотреть настройки / Get settings")
-	console.AddItem("set", SetSettings, "Задать настройки / Set settings")
+	console.AddItem("get", GetSettings, local.Translate("get_cmd"))
+	console.AddItem("set", SetSettings, local.Translate("set_cmd"))
 
 	console.AddItem("test", Test, "Test")
 	console.AddItem("pt", PrintTest, "PrintTest")
@@ -154,23 +155,35 @@ def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offersNumber):
 	tps1_text = bcolors.Yellow(tps1)
 	tps5_text = bcolors.Yellow(tps5)
 	tps15_text = bcolors.Yellow(tps15)
-	validators_text = bcolors.Green(validators)
-	shards_text = bcolors.Green(shardsNumber)
-	offers_text = bcolors.Green(offers)
+	tps_text = local.Translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
+	validators_text = local.Translate("ton_status_validators").format(bcolors.Green(validators))
+	onlineValidators_text = local.Translate("ton_status_online_validators").format(bcolors.Yellow(onlineValidators))
+	shards_text = local.Translate("ton_status_shards").format(bcolors.Green(shardsNumber))
+	allOffers_text = bcolors.Green(offers)
 	newOffers_text = bcolors.Green(newOffers)
-	onlineValidators_text = bcolors.Yellow(onlineValidators)
+	offers_text = local.Translate("ton_status_offers").format(allOffers_text, newOffers_text)
+	
 	if startWorkTime == 0:
-		electionStatus_text = bcolors.Yellow("closed")
+		election_text = bcolors.Yellow("closed")
 	else:
-		electionStatus_text = bcolors.Green("open")
+		election_text = bcolors.Green("open")
+	election_text = local.Translate("ton_status_election").format(election_text)
 
-	ColorPrint("{cyan}===[ Статус сети TON ]==={endc}")
-	print("Транзакций в секунду (TPS): {0}, {1}, {2}".format(tps1_text, tps5_text, tps15_text))
-	print("Количество валидаторов, прошедших выборы: " + validators_text)
-	print("Количество валидаторов в сети: " + onlineValidators_text)
-	print("Количесвто шардчейнов: " + shards_text)
-	print("Действующие предложения: {0}({1})".format(offers_text, newOffers_text))
-	print("Статус выборов: " + electionStatus_text)
+	# ColorPrint("{cyan}===[ Статус сети TON ]==={endc}")
+	# print("Транзакций в секунду (TPS): {0}, {1}, {2}".format(tps1_text, tps5_text, tps15_text))
+	# print("Количество валидаторов, прошедших выборы: " + validators_text)
+	# print("Количество валидаторов в сети: " + onlineValidators_text)
+	# print("Количесвто шардчейнов: " + shards_text)
+	# print("Действующие предложения: {0}({1})".format(offers_text, newOffers_text))
+	# print("Статус выборов: " + election_text)
+	# print()
+	ColorPrint(local.Translate("ton_status_head"))
+	print(tps_text)
+	print(validators_text)
+	print(onlineValidators_text)
+	print(shards_text)
+	print(offers_text)
+	print(election_text)
 	print()
 #end define
 
@@ -191,45 +204,56 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	netLoad5 = netLoadAvg[1]
 	netLoad15 = netLoadAvg[2]
 	validatorOutOfSync = validatorStatus.get("unixtime", GetTimestamp()) - validatorStatus.get("masterchainblocktime", 0)
-	statisticsStatus_text_bool = True # fix me
-	electionsThreadStatus_bool = True # fix me
+	mytoncoreStatus_bool = True # fix me
 	validatorStatus_bool = validatorStatus.get("isWorking")
 
-	validatorIndex_text = bcolors.Green(validatorIndex)
-	adnlAddr_text = bcolors.Yellow(adnlAddr)
-	walletAddr_text = bcolors.Yellow(walletAddr)
-	walletBalance_text = bcolors.Green(walletBalance, " GRM")
+	validatorIndex_text = local.Translate("local_status_validator_index").format(bcolors.Green(validatorIndex))
+	adnlAddr_text = local.Translate("local_status_adnl_addr").format(bcolors.Yellow(adnlAddr))
+	walletAddr_text = local.Translate("local_status_wallet_addr").format(bcolors.Yellow(walletAddr))
+	walletBalance_text = local.Translate("local_status_wallet_balance").format(bcolors.Green(walletBalance, " GRM"))
 
 	# CPU status
 	cpuNumber_text = bcolors.Yellow(cpuNumber)
 	cpuLoad1_text = GetColorInt(cpuLoad1, cpuNumber)
 	cpuLoad5_text = GetColorInt(cpuLoad5, cpuNumber)
 	cpuLoad15_text = GetColorInt(cpuLoad15, cpuNumber)
+	cpuLoad_text = local.Translate("local_status_cpu_load").format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text)
 
 	# Network status
 	netLoad1_text = GetColorInt(netLoad1, 300)
 	netLoad5_text = GetColorInt(netLoad5, 300)
 	netLoad15_text = GetColorInt(netLoad15, 300)
+	netLoad_text = local.Translate("local_status_net_load").format(netLoad1_text, netLoad5_text, netLoad15_text)
 
 	# Thread status
-	statisticsStatus_text = GetColorStatus(statisticsStatus_text_bool)
-	electionsThreadStatus_text = GetColorStatus(electionsThreadStatus_bool)
-	validatorStatus_text = GetColorStatus(validatorStatus_bool)
-	validatorSyncPercent_text = GetColorInt(validatorOutOfSync, 20, ending=" с")
-	dbSize_text = GetColorInt(dbSize, 1000, ending=" Gb")
+	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(GetColorStatus(mytoncoreStatus_bool))
+	validatorStatus_text = local.Translate("local_status_validator_status").format(GetColorStatus(validatorStatus_bool))
+	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, ending=" с"))
+	dbSize_text = local.Translate("local_status_db_size").format(GetColorInt(dbSize, 1000, ending=" Gb"))
 
-	ColorPrint("{cyan}===[ Статус локального валидатора ]==={endc}")
-	print("Индекс валидатора: " + validatorIndex_text)
-	print("ADNL адрес локального валидатора: " + adnlAddr_text)
-	print("Адрес кошелька локального валидатора: " + walletAddr_text)
-	print("Баланс кошелька локального валидатора: " + walletBalance_text)
-	print("Средняя нагрузка[{0}]: {1}, {2}, {3}".format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text))
-	print("Средняя нагрузка сети (Mbit/s): {0}, {1}, {2}".format(netLoad1_text, netLoad5_text, netLoad15_text))
-	print("Статус сбора статистики: " + statisticsStatus_text)
-	print("Статус участия в выборах: " + electionsThreadStatus_text)
-	print("Статус локального валидатора: " + validatorStatus_text)
-	print("Рассинхронизация локального валидатора: " + validatorSyncPercent_text)
-	print("Размер БД локального валидатора: " + dbSize_text)
+	# ColorPrint("{cyan}===[ Статус локального валидатора ]==={endc}")
+	# print("Индекс валидатора: " + validatorIndex_text)
+	# print("ADNL адрес локального валидатора: " + adnlAddr_text)
+	# print("Адрес кошелька локального валидатора: " + walletAddr_text)
+	# print("Баланс кошелька локального валидатора: " + walletBalance_text)
+	# print("Средняя нагрузка[{0}]: {1}, {2}, {3}".format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text))
+	# print("Средняя нагрузка сети (Mbit/s): {0}, {1}, {2}".format(netLoad1_text, netLoad5_text, netLoad15_text))
+	# print("Статус ядра mytoncore: " + mytoncoreStatus_text)
+	# print("Статус локального валидатора: " + validatorStatus_text)
+	# print("Рассинхронизация локального валидатора: " + validatorOutOfSync_text)
+	# print("Размер БД локального валидатора: " + dbSize_text)
+	# print()
+	ColorPrint(local.Translate("local_status_head"))
+	print(validatorIndex_text)
+	print(adnlAddr_text)
+	print(walletAddr_text)
+	print(walletBalance_text)
+	print(cpuLoad_text)
+	print(netLoad_text)
+	print(mytoncoreStatus_text)
+	print(validatorStatus_text)
+	print(validatorOutOfSync_text)
+	print(dbSize_text)
 	print()
 #end define
 
@@ -258,20 +282,28 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	minStake = config17["minStake"]
 	maxStake = config17["maxStake"]
 
-	fullConfigAddr_text = bcolors.Yellow(fullConfigAddr)
-	fullElectorAddr_text = bcolors.Yellow(fullElectorAddr)
+	fullConfigAddr_text = local.Translate("ton_config_configurator_addr").format(bcolors.Yellow(fullConfigAddr))
+	fullElectorAddr_text = local.Translate("ton_config_elector_addr").format(bcolors.Yellow(fullElectorAddr))
 	validatorsElectedFor_text = bcolors.Yellow(validatorsElectedFor)
 	electionsStartBefore_text = bcolors.Yellow(electionsStartBefore)
 	electionsEndBefore_text = bcolors.Yellow(electionsEndBefore)
 	stakeHeldFor_text = bcolors.Yellow(stakeHeldFor)
+	elections_text = local.Translate("ton_config_elections").format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text)
 	minStake_text = bcolors.Yellow(minStake)
 	maxStake_text = bcolors.Yellow(maxStake)
+	stake_text = local.Translate("ton_config_stake").format(minStake_text, maxStake_text)
 
-	ColorPrint("{cyan}===[ Конфигурация сети TON ]==={endc}")
-	print("Адрес конфигуратора: {0}".format(fullConfigAddr_text))
-	print("Адрес электора: {0}".format(fullElectorAddr_text))
-	print("Период валидации: {0}, Длительность выборов: {1}-{2}, Период удержания ставки: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
-	print("Минимальная ставка: {0}, Максимальная ставка: {1}".format(minStake_text, maxStake_text))
+	# ColorPrint("{cyan}===[ Конфигурация сети TON ]==={endc}")
+	# print("Адрес конфигуратора: {0}".format(fullConfigAddr_text))
+	# print("Адрес электора: {0}".format(fullElectorAddr_text))
+	# print("Период валидации: {0}, Длительность выборов: {1}-{2}, Период удержания ставки: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
+	# print("Минимальная ставка: {0}, Максимальная ставка: {1}".format(minStake_text, maxStake_text))
+	# print()
+	ColorPrint(local.Translate("ton_config_head"))
+	print(fullConfigAddr_text)
+	print(fullElectorAddr_text)
+	print(elections_text)
+	print(stake_text)
 	print()
 #end define
 
@@ -300,23 +332,28 @@ def PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, co
 	startNextElectionTime = Timestamp2Datetime(startNextElection)
 	
 	# datetime to color text
-	rootWorkchainEnabledTime_text = bcolors.Yellow(rootWorkchainEnabledTime)
-	startValidationTime_text = GetColorTime(startValidationTime, startValidation)
-	endValidationTime_text = GetColorTime(endValidationTime, endValidation)
-	startElectionTime_text = GetColorTime(startElectionTime, startElection)
-	endElectionTime_text = GetColorTime(endElectionTime, endElection)
-	startNextElectionTime_text = GetColorTime(startNextElectionTime, startNextElection)
+	rootWorkchainEnabledTime_text = local.Translate("times_root_workchain_enabled_time").format(bcolors.Yellow(rootWorkchainEnabledTime))
+	startValidationTime_text = local.Translate("times_start_validation_time").format(GetColorTime(startValidationTime, startValidation))
+	endValidationTime_text = local.Translate("times_end_validation_time").format(GetColorTime(endValidationTime, endValidation))
+	startElectionTime_text = local.Translate("times_start_election_time").format(GetColorTime(startElectionTime, startElection))
+	endElectionTime_text = local.Translate("times_end_election_time").format(GetColorTime(endElectionTime, endElection))
+	startNextElectionTime_text = local.Translate("times_start_next_election_time").format(GetColorTime(startNextElectionTime, startNextElection))
 
 	# Временные метки TON
-	ColorPrint("{cyan}===[ Временные метки TON ]==={endc}")
-	print("TON сеть была запущена: " + rootWorkchainEnabledTime_text)
-	if startValidation < 0:
-		return
-	print("Начало цикла валидации: " + startValidationTime_text)
-	print("Конец цикла валидации: " + endValidationTime_text)
-	print("Начало выборов: " + startElectionTime_text)
-	print("Конец выборов: " + endElectionTime_text)
-	print("Начало следующих выборов: " + startNextElectionTime_text)
+	# ColorPrint("{cyan}===[ Временные метки TON ]==={endc}")
+	# print("TON сеть была запущена: " + rootWorkchainEnabledTime_text)
+	# print("Начало цикла валидации: " + startValidationTime_text)
+	# print("Конец цикла валидации: " + endValidationTime_text)
+	# print("Начало выборов: " + startElectionTime_text)
+	# print("Конец выборов: " + endElectionTime_text)
+	# print("Начало следующих выборов: " + startNextElectionTime_text)
+	ColorPrint(local.Translate("times_head"))
+	print(rootWorkchainEnabledTime_text)
+	print(startValidationTime_text)
+	print(endValidationTime_text)
+	print(startElectionTime_text)
+	print(endElectionTime_text)
+	print(startNextElectionTime_text)
 #end define
 
 def GetColorTime(datetime, timestamp):
@@ -553,27 +590,23 @@ def DeleteBookmark(args):
 	ColorPrint("DeleteBookmark - {green}OK{endc}")
 #end define
 
-def CreatNewRule(args):
-	print("fix me")
-#end define
+# def CreatNewRule(args):
+# 	print("fix me")
+# #end define
 
-def PrintRulesList(args):
-	data = ton.GetRules()
-	if (data is None or len(data) == 0):
-		print("No data")
-		return
-	table = list()
-	table += [["Name", "fix me"]]
-	for item in data:
-		table += [[item.get("name"), item.get("fix me")]]
-	PrintTable(table)
-#end define
+# def PrintRulesList(args):
+# 	data = ton.GetRules()
+# 	if (data is None or len(data) == 0):
+# 		print("No data")
+# 		return
+# 	table = list()
+# 	table += [["Name", "fix me"]]
+# 	for item in data:
+# 		table += [[item.get("name"), item.get("fix me")]]
+# 	PrintTable(table)
+# #end define
 
-def DeleteRule(args):
-	print("fix me")
-#end define
-
-# def MoveGramsFromMixer(args):
+# def DeleteRule(args):
 # 	print("fix me")
 # #end define
 

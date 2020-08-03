@@ -181,8 +181,8 @@ class MyTonCore():
 		if miner is not None:
 			self.miner.appPath = miner["appPath"]
 			# set miner {"appPath":"/usr/bin/ton/crypto/pow-miner"}
-			# set powAddr kf8guqdIbY6kpMykR8WFeVGbZcP2iuBagXfnQuq0rGrxgE04
-			# set minerAddr kQAXRfNYUkFtecUg91zvbUkpy897CDcE2okhFxAlOLcM3_XD
+			# set powAddr "kf8guqdIbY6kpMykR8WFeVGbZcP2iuBagXfnQuq0rGrxgE04"
+			# set minerAddr "kQAXRfNYUkFtecUg91zvbUkpy897CDcE2okhFxAlOLcM3_XD"
 	#end define
 
 	def GetVarFromWorkerOutput(self, text, search):
