@@ -1463,6 +1463,10 @@ def Domains(ton):
 #end define
 
 def Telemetry(ton):
+	if (local.db.get("sendTelemetry") != True):
+		return
+	#end if
+	
 	data = dict()
 	data["adnlAddr"] = ton.adnlAddr
 	data["validatorStatus"] = ton.GetValidatorStatus()

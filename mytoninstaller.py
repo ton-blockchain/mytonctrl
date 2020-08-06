@@ -565,7 +565,7 @@ def ValidatorSetting(user):
 	time.sleep(10)
 #end define
 
-def MytoncoreSettings(user, mode):
+def MytoncoreSettings(user, mode, telemetry):
 	local.AddLog("start MytoncoreSettings fuction", "debug")
 
 	# Прописать mytoncore.py в автозагрузку
@@ -595,6 +595,13 @@ def MytoncoreSettings(user, mode):
 	liteClient["appPath"] = "/usr/bin/ton/lite-client/lite-client"
 	liteClient["configPath"] = "/usr/bin/ton/lite-client/ton-lite-client-test1.config.json"
 	arr["liteClient"] = liteClient
+
+	# Telemetry
+	if ("--no_send_telemetry" in sys.argv):
+		sendTelemetry = False
+	else:
+		sendTelemetry = True
+	arr["sendTelemetry"] = sendTelemetry
 
 	# miner
 	miner = dict()
