@@ -16,4 +16,5 @@ git pull --recurse-submodules
 systemctl restart mytoncore
 
 # Конец
-echo "${COLOR}[1/1]${ENDC} Обновление компонентов MyTonCtrl завершена"
+echo -e "${COLOR}[1/1]${ENDC} MyTonCtrl components update completed"
+exit 0

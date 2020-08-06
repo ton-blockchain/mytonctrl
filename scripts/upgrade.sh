@@ -25,4 +25,5 @@ systemctl start ton-validator
 
 
 # Конец
-echo "${COLOR}[1/1]${ENDC} Обновление компонентов TON завершена"
+echo -e "${COLOR}[1/1]${ENDC} TON components update completed"
+exit 0
