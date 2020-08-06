@@ -1,52 +1,48 @@
-## Что это
-Данная консольная программа является оберткой над `fift`, `lite-client` и `validator-engine-console`. Она была создана для облегчения управления кошельками, доменами и валидатором на операционной системе `Linux`.
-Проект находится в активной разработке, поэтому стабильность работы не гарантируется.
+[Данный текст доступен на русском языке.](https://github.com/igroman787/mytonctrl/blob/master/README.Ru.md)
+
+## What is it
+This console program is a wrapper over `fift`,`lite-client` and `validator-engine-console`. It was created to facilitate the management of wallets, domains and a validator on the Linux operating system.
 ![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-status.png)
 
-## Функционал
-- [x] Показать статус сети TON
-- [x] Управление локальными кошельками
-	- [x] Создать локальный кошелек
-	- [x] Активировать локальный кошелек
-	- [x] Показать локальные кошельки
-	- [x] Импортировать кошелек из файла (.pk)
-	- [x] Сохранить адрес кошелька в файл (.addr)
-	- [x] Удалить локальный кошелек
-- [x] Показать статус аккаунта
-	- [x] Показать баланс аккаунта
-	- [x] Показать историю аккаунта
-	- [x] Показать статус аккаунта из закладок
-- [x] Перевод средств на кошелек
-	- [x] Перевод фиксированной суммы
-	- [x] Перевод всей суммы (all)
-	- [x] Перевод всей суммы с диактивацией кошелька (alld)
-	- [x] Перевод средств на кошелек из закладок
-	- [ ] Пропустить средства через миксер
-- [x] Управление закладками
-	- [x] Добавить аккаунт в закладки
-	- [x] Показать закладки
-	- [x] Удалить закладку
-- [x] Управление предложениями
-	- [x] Показать предложения
-	- [x] Проголосовать за предложение
-	- [x] Автоматическое голосование за ранее проголосованные предложения
-- [x] Управление доменами
-	- [x] Арендовать новый домен
-	- [x] Показать арендованные домены
-	- [x] Показать статус домена
-	- [x] Удалить домен
-	- [ ] Автоматическое продление доменов
-- [ ] Автоматическая отправка средств по расписанию
-	- [ ] Добавить правило в расписание
-	- [ ] Показать правила расписания
-	- [ ] Удалить правило из расписания
-- [x] Управление валидатором
-	- [x] Участвовать в выборах валидатора
-	- [x] Возвращать ставку + вознаграждение
-	- [ ] Автозапуск валидатора при аварийном завершении (systemd)
-	- [x] Отправлять статистику валидатора на https://toncenter.com
+## Functional
+- [x] Show TON network status
+- [x] Management of local wallets
+	- [x] Create local wallet
+	- [x] Activate local wallet
+	- [x] Show local wallets
+	- [x] Import wallet from file (.pk)
+	- [x] Save wallet address to file (.addr)
+	- [x] Delete local wallet
+- [x] Show account status
+	- [x] Show account balance
+	- [x] Show account history
+	- [x] Show account status from bookmarks
+- [x] Transferring funds to the wallet
+	- [x] Transfer of a fixed amount
+	- [x] Transfer of the entire amount (all)
+	- [x] Transfer of the entire amount with wallet deactivation (alld)
+	- [x] Transferring funds to the wallet from bookmarks
+- [x] Manage bookmarks
+	- [x] Add account to bookmarks
+	- [x] Show bookmarks
+	- [x] Delete bookmark
+- [x] Offer management
+	- [x] Show offers
+	- [x] Vote for the proposal
+	- [x] Automatic voting for previously voted proposals
+- [x] Domain management
+	- [x] Rent a new domain
+	- [x] Show rented domains
+	- [x] Show domain status
+	- [x] Delete domain
+	- [ ] Automatic domain renewal
+- [x] Controlling the validator
+	- [x] Participate in the election of a validator
+	- [x] Return bet + reward
+	- [x] Autostart validator on abnormal termination (systemd)
+	- [x] Send validator statistics to https://toncenter.com
 
-## Список проверенных операционных систем
+## List of tested operating systems
 ```
 Ubuntu 16.04 LTS (Xenial Xerus) - Error: TON compilation error
 Ubuntu 18.04 LTS (Bionic Beaver) - OK
@@ -54,34 +50,43 @@ Ubuntu 20.04 LTS (Focal Fossa) - OK
 Debian 10 - OK
 ```
 
-## Описание установочных скриптов
-- `toninstaller.sh` - Данный скрипт клонирует исходники `TON` и `mytonctrl` в папки `/usr/src/ton` и `/usr/src/mytonctrl`, компилирует программы из исходников и прописывает их в `/usr/bin/`.
-- `mytoninstaller.py` - Данный скрипт производит настройку валидатора, `mytonctrl` и создание ключей для подключения к валидатору.
+## Description of installation scripts
+- `toninstaller.sh` - This script clones the sources of `TON` and` mytonctrl` in the folders `/usr/src/ton` and`/usr/src/mytonctrl`, compiles programs from sources and writes them to `/usr/bin/`.
+- `mytoninstaller.py` - This script configures the validator, `mytonctrl` and creates keys for connecting to the validator.
 
-## Режимы установки
-Есть два режима установки: `lite` и `full`. Оба они **компилируют** и устанавливают компоненты `TON`. Однако `lite` версия не настраивает и не запускает валидатор.
+## Installation modes
+There are two installation modes: `lite` and` full`. They both **compile** and install the `TON` components. However, the `lite` version does not configure or run the validator.
 
-## Установка (Ubuntu)
-1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки. Мы будем устанавливать в режиме `lite`. В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
+## Installation (Ubuntu)
+1. Download and execute the script `install.sh` with the desired installation mode. During installation, you will be prompted for the superuser password several times.
 ```sh
-wget https://raw.githubusercontent.com/igroman787/mytonctrl/original/scripts/install.sh
-sudo bash install.sh -m lite
+wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
+sudo bash install.sh -m <mode>
 ```
 
-2. Готово. Можете пробовать запустить программу `mytonctrl`.
+2. Done. You can try to run the program `mytonctrl`.
+```sh
+mytonctrl
+```
+
+
+## Installation (Debian)
+1. Download and execute the script `install.sh` with the desired installation mode. During installation, you will be prompted for the superuser password several times.
+```sh
+wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
+su root -c 'bash install.sh -m <mode>'
+```
+
+2. Done. You can try to run the program `mytonctrl`.
 ```sh
 mytonctrl
 ```
 
-
-## Установка (Debian)
-1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки. Мы будем устанавливать в режиме `lite`. В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
-```sh
-wget https://raw.githubusercontent.com/igroman787/mytonctrl/original/scripts/install.sh
-su root -c 'bash install.sh -m lite'
-```
-
-2. Готово. Можете пробовать запустить программу `mytonctrl`.
-```sh
-mytonctrl
-```
+## Useful links
+1. https://ton.org/README.txt
+2. https://ton.org/HOWTO.txt
+3. https://ton.org/FullNode-HOWTO.txt
+4. https://ton.org/Validator-HOWTO.txt
+5. https://ton.org/TonSites-HOWTO.txt
+6. https://ton.org/DNS-HOWTO.txt
+7. https://ton.org/ConfigParam-HOWTO.txt
