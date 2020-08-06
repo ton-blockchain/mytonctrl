@@ -134,6 +134,7 @@ class Domain(dict):
 class MyTonCore():
 	def __init__(self):
 		self.walletsDir = None
+		self.dbFile = None
 		self.adnlAddr = None
 		self.tempDir = None
 		self.validatorWalletName = None
@@ -143,7 +144,6 @@ class MyTonCore():
 		self.fift = Fift()
 		self.miner = Miner()
 
-		local.dbLoad()
 		self.Refresh()
 		self.Init()
 	#end define
@@ -154,7 +154,13 @@ class MyTonCore():
 	#end define
 
 	def Refresh(self):
-		self.walletsDir = dir(local.buffer.get("myWorkDir") + "wallets")
+		if self.dbFile:
+			local.dbLoad(self.dbFile)
+		else:
+			local.dbLoad()
+
+		if not self.walletsDir:
+			self.walletsDir = dir(local.buffer.get("myWorkDir") + "wallets")
 		self.tempDir = local.buffer.get("myTempDir")
 
 		self.adnlAddr = local.db.get("adnlAddr")
