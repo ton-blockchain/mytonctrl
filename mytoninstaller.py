@@ -565,7 +565,7 @@ def ValidatorSetting(user):
 	time.sleep(10)
 #end define
 
-def MytoncoreSettings(user, mode, telemetry):
+def MytoncoreSettings(user, mode):
 	local.AddLog("start MytoncoreSettings fuction", "debug")
 
 	# Прописать mytoncore.py в автозагрузку
