@@ -1,66 +1,258 @@
 {
-	"quick_setup_title_welcome": {
-		"en": "=== Quick Setup ===",
-		"ru": "=== Быстрая настройка ==="
+	"update_cmd": {
+		"en": "Pull mytonctrl update",
+		"ru": "Подтянуть обновление mytonctrl"
 	},
-	"quick_setup_text_welcome": {
-		"en": "Welcome to Quick Setup. This setting assumes that you have already completed all the steps in this manual: 'https://test.ton.org/FullNode-HOWTO.txt'. Click 'Enter' to continue.",
-		"ru": "Добро пожаловать в Быструю настройку. Данная настройка предполагает, что вы уже проделали все шаги по данной инструкции: 'https://test.ton.org/FullNode-HOWTO.txt'. Нажмите 'Enter' чтобы продолжить."
+	"upgrade_cmd": {
+		"en": "Pull up the source code and recompile the TON components",
+		"ru": "Подтянуть исходный код и перекомпилировать компоненты TON"
 	},
-	"quick_setup_title_liteclient_config": {
-		"en": "=== Quick Setup -> 'Lite-client' config ===",
-		"ru": "=== Быстрая настройка -> Конфигурация 'lite-client' ==="
+	"status_cmd": {
+		"en": "Show TON status",
+		"ru": "Показать статус TON"
 	},
-	"quick_setup_text_liteclient_program_path": {
-		"en": "Enter the full path to the 'lite-client' program. Example: '/home/user/build/lite-client/lite-client'",
-		"ru": "Впишите полный путь до программы 'lite-client'. Пример: '/home/user/build/lite-client/lite-client'"
+	"seqno_cmd": {
+		"en": "Get seqno wallet",
+		"ru": "Получить seqno кошелька"
 	},
-	"quick_setup_text_liteclient_config_path": {
-		"en": "Enter the full path to the 'lite-client' configuration file. Example: '/home/user/build/lite-client/ton-lite-client-test1.config.json'",
-		"ru": "Впишите полный путь до конфигурационного файла 'lite-client'. Пример: '/home/user/build/lite-client/ton-lite-client-test1.config.json'"
+	"nw_cmd": {
+		"en": "Create a new local wallet",
+		"ru": "Создать новый локальный кошелек"
 	},
-	"quick_setup_title_validator_engine_console": {
-		"en": "=== Quick Setup -> 'Validator-engine-console' config ===",
-		"ru": "=== Быстрая настройка -> Конфигурация 'validator-engine-console' ==="
+	"aw_cmd": {
+		"en": "Activate local wallet",
+		"ru": "Активировать локальный кошелек"
 	},
-	"quick_setup_text_validator_engine_console_program_path": {
-		"en": "Enter the full path to the 'validator-engine-console' program. Example: '/home/user/build/validator-engine-console/validator-engine-console'",
-		"ru": "Впишите полный путь до программы 'validator-engine-console'. Пример: '/home/user/build/validator-engine-console/validator-engine-console'"
+	"wl_cmd": {
+		"en": "Show wallet list",
+		"ru": "Показать локальные кошельки"
 	},
-	"quick_setup_text_validator_engine_console_privkey_path": {
-		"en": "Enter the full path to the client’s private key to connect to the 'validator-engine-console'. Example: '/home/user/build/validator-engine-console/client'",
-		"ru": "Впишите полный путь до приватного ключа клиента для подключения к 'validator-engine-console'. Пример: '/home/user/build/validator-engine-console/client'"
+	"iw_cmd": {
+		"en": "Import wallet from file",
+		"ru": "Импортировать кошелек из файла"
 	},
-	"quick_setup_text_validator_engine_console_pubkey_path": {
-		"en": "Enter the full path to the server's public key to connect to the 'validator-engine-console'. Example: '/home/user/build/validator-engine-console/server.pub'",
-		"ru": "Впишите полный путь до публичного ключа сервера для подключения к 'validator-engine-console'. Пример: '/home/user/build/validator-engine-console/server.pub'"
+	"swa_cmd": {
+		"en": "Save wallet address to file",
+		"ru": "Сохранить адрес кошелька в файл"
 	},
-	"quick_setup_text_validator_engine_console_server_addr": {
-		"en": "Enter the server address and port to connect to the 'validator-engine-console'. Example: '127.0.0.1:27001'",
-		"ru": "Впишите адрес и порт сервера для подключения к 'validator-engine-console'. Пример: '127.0.0.1:27001'"
+	"dw_cmd": {
+		"en": "Delete local wallet",
+		"ru": "Удалить локальный кошелек"
 	},
-	"quick_setup_title_fift_config": {
-		"en": "=== Quick Setup -> 'Fift' config ===",
-		"ru": "=== Быстрая настройка -> Конфигурация 'fift' ==="
+	"vas_cmd": {
+		"en": "View account status",
+		"ru": "Показать статус аккаунта"
 	},
-	"quick_setup_title_text_app_path": {
-		"en": "Enter the full path to the 'fift' program. Example: '/home/user/build/crypto/fift'",
-		"ru": "Впишите полный путь до программы 'fift'. Пример: '/home/user/build/crypto/fift'"
+	"vah_cmd": {
+		"en": "View account history",
+		"ru": "Показать историю аккаунта"
 	},
-	"quick_setup_title_text_lib_path": {
-		"en": "Enter the full path to the library folder for the 'fift' program. Example: '/home/user/ton/crypto/fift/lib'",
-		"ru": "Впишите полный путь до папки с библиотеками для программы 'fift'. Пример: '/home/user/ton/crypto/fift/lib'"
+	"mg_cmd": {
+		"en": "Move grams to account",
+		"ru": "Перевод средств на кошелек"
 	},
-	"quick_setup_title_text_smartcont_path": {
-		"en": "Enter the full path to the smart contract folder for the 'fift' program. Example: '/home/user/ton/crypto/smartcont'",
-		"ru": "Впишите полный путь до папки со смартконтрактами для программы 'fift'. Пример: '/home/user/ton/crypto/smartcont'"
+	"nb_cmd": {
+		"en": "Create new bookmark",
+		"ru": "Добавить аккаунт в закладки"
 	},
-	"find_file_to_path": {
-		"en":"Required path was found:",
-		"ru":"Был найден требуемый путь:"
+	"bl_cmd": {
+		"en": "Show bookmark list",
+		"ru": "Показать закладки"
 	},
-	"click_enter_to_apply": {
-		"en":"Click the 'Enter' to apply this path.",
-		"ru":"Нажмите 'Enter' что бы применить этот путь."
+	"db_cmd": {
+		"en": "Delete bookmark",
+		"ru": "Удалить закладку"
+	},
+	"nd_cmd": {
+		"en": "New domain",
+		"ru": "Арендовать новый домен"
+	},
+	"dl_cmd": {
+		"en": "Show domain list",
+		"ru": "Показать арендованные домены"
+	},
+	"vds_cmd": {
+		"en": "View domain status",
+		"ru": "Показать статус домена"
+	},
+	"dd_cmd": {
+		"en": "Delete domain",
+		"ru": "Удалить домен"
+	},
+	"ol_cmd": {
+		"en": "Show offer list",
+		"ru": "Показать действующие предложения"
+	},
+	"vo_cmd": {
+		"en": "Vote for offer",
+		"ru": "Голосовать за предложение"
+	},
+	"el_cmd": {
+		"en": "Show election entries list",
+		"ru": "Показать действующие выборы"
+	},
+	"ve_cmd": {
+		"en": "Vote election entry",
+		"ru": "Голосовать в выборах"
+	},
+	"vl_cmd": {
+		"en": "Show active validators",
+		"ru": "Показать действующие валидаторы"
+	},
+	"get_cmd": {
+		"en": "Get settings",
+		"ru": "Посмотреть настройки"
+	},
+	"set_cmd": {
+		"en": "Set settings",
+		"ru": "Задать настройки"
+	},
+	"ton_status_head": {
+		"en": "{cyan}===[ TON network status ]==={endc}",
+		"ru": "{cyan}===[ Статус сети TON ]==={endc}"
+	},
+	"ton_status_tps": {
+		"en": "Transactions per second (TPS): {0}, {1}, {2}",
+		"ru": "Транзакций в секунду (TPS): {0}, {1}, {2}"
+	},
+	"ton_status_validators": {
+		"en": "Number of validators: {0}",
+		"ru": "Количество валидаторов, прошедших выборы: {0}"
+	},
+	"ton_status_online_validators": {
+		"en": "Number of online validators: {0}",
+		"ru": "Количество валидаторов в сети: {0}"
+	},
+	"ton_status_shards": {
+		"en": "Number of shardchains: {0}",
+		"ru": "Количесвто шардчейнов: {0}"
+	},
+	"ton_status_offers": {
+		"en": "Number of offers: {0}({1})",
+		"ru": "Действующие предложения: {0}({1})"
+	},
+	"ton_status_election": {
+		"en": "Election status: {0}",
+		"ru": "Статус выборов: {0}"
+	},
+	"local_status_head": {
+		"en": "{cyan}===[ Local validator status ]==={endc}",
+		"ru": "{cyan}===[ Статус локального валидатора ]==={endc}"
+	},
+	"local_status_validator_index": {
+		"en": "Validator index: {0}",
+		"ru": "Индекс валидатора: {0}"
+	},
+	"local_status_adnl_addr": {
+		"en": "ADNL address of local validator: {0}",
+		"ru": "ADNL адрес локального валидатора: {0}"
+	},
+	"local_status_wallet_addr": {
+		"en": "Local validator wallet address: {0}",
+		"ru": "Адрес кошелька локального валидатора: {0}"
+	},
+	"local_status_wallet_balance": {
+		"en": "Local validator wallet balance: {0}",
+		"ru": "Баланс кошелька локального валидатора: {0}"
+	},
+	"local_status_cpu_load": {
+		"en": "Load average[{0}]: {1}, {2}, {3}",
+		"ru": "Средняя нагрузка[{0}]: {1}, {2}, {3}"
+	},
+	"local_status_net_load": {
+		"en": "Network load average (Mbit/s): {0}, {1}, {2}",
+		"ru": "Средняя нагрузка сети (Mbit/s): {0}, {1}, {2}"
+	},
+	"local_status_mytoncore_status": {
+		"en": "Mytoncore status: {0}",
+		"ru": "Статус ядра mytoncore: {0}"
+	},
+	"local_status_validator_status": {
+		"en": "Local validator status: {0}",
+		"ru": "Статус локального валидатора: {0}"
+	},
+	"local_status_validator_out_of_sync": {
+		"en": "Local validator out of sync: {0}",
+		"ru": "Рассинхронизация локального валидатора: {0}"
+	},
+	"local_status_db_size": {
+		"en": "Local validator database size: {0}",
+		"ru": "Размер БД локального валидатора: {0}"
+	},
+	"ton_config_head": {
+		"en": "{cyan}===[ TON network configuration ]==={endc}",
+		"ru": "{cyan}===[ Конфигурация сети TON ]==={endc}"
+	},
+	"ton_config_configurator_addr": {
+		"en": "Configurator address: {0}",
+		"ru": "Адрес конфигуратора: {0}"
+	},
+	"ton_config_elector_addr": {
+		"en": "Elector address: {0}",
+		"ru": "Адрес электора: {0}"
+	},
+	"ton_config_elections": {
+		"en": "Validation period: {0}, Duration of elections: {1}-{2}, Hold period: {3}",
+		"ru": "Период валидации: {0}, Длительность выборов: {1}-{2}, Период удержания ставки: {3}"
+	},
+	"ton_config_stake": {
+		"en": "Minimum stake: {0}, Maximum stake: {1}",
+		"ru": "Минимальная ставка: {0}, Максимальная ставка: {1}"
+	},
+	"times_head": {
+		"en": "{cyan}===[ TON timestamps ]==={endc}",
+		"ru": "{cyan}===[ Временные метки TON ]==={endc}"
+	},
+	"times_root_workchain_enabled_time": {
+		"en": "TON network was launched: {0}",
+		"ru": "TON сеть была запущена: {0}"
+	},
+	"times_start_validation_time": {
+		"en": "Start of the validation cycle: {0}",
+		"ru": "Начало цикла валидации: {0}"
+	},
+	"times_end_validation_time": {
+		"en": "End of the validation cycle: {0}",
+		"ru": "Конец цикла валидации: {0}"
+	},
+	"times_start_election_time": {
+		"en": "Start of elections: {0}",
+		"ru": "Начало выборов: {0}"
+	},
+	"times_end_election_time": {
+		"en": "End of elections: {0}",
+		"ru": "Конец выборов: {0}"
+	},
+	"times_start_next_election_time": {
+		"en": "Beginning of the next elections: {0}",
+		"ru": "Начало следующих выборов: {0}"
+	},
+	"000": {
+		"en": "001",
+		"ru": "002"
+	},
+	"000": {
+		"en": "001",
+		"ru": "002"
+	},
+	"000": {
+		"en": "001",
+		"ru": "002"
+	},
+	"000": {
+		"en": "001",
+		"ru": "002"
+	},
+	"000": {
+		"en": "001",
+		"ru": "002"
+	},
+	"000": {
+		"en": "001",
+		"ru": "002"
+	},
+	"000": {
+		"en": "001",
+		"ru": "002"
 	}
 }

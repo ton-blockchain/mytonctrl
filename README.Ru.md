@@ -1,6 +1,9 @@
 ## Что это
 Данная консольная программа является оберткой над `fift`, `lite-client` и `validator-engine-console`. Она была создана для облегчения управления кошельками, доменами и валидатором на операционной системе `Linux`.
+<<<<<<< HEAD
 Проект находится в активной разработке, поэтому стабильность работы не гарантируется.
+=======
+>>>>>>> dev
 ![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-status.png)
 
 ## Функционал
@@ -21,7 +24,10 @@
 	- [x] Перевод всей суммы (all)
 	- [x] Перевод всей суммы с диактивацией кошелька (alld)
 	- [x] Перевод средств на кошелек из закладок
+<<<<<<< HEAD
 	- [ ] Пропустить средства через миксер
+=======
+>>>>>>> dev
 - [x] Управление закладками
 	- [x] Добавить аккаунт в закладки
 	- [x] Показать закладки
@@ -36,6 +42,7 @@
 	- [x] Показать статус домена
 	- [x] Удалить домен
 	- [ ] Автоматическое продление доменов
+<<<<<<< HEAD
 - [ ] Автоматическая отправка средств по расписанию
 	- [ ] Добавить правило в расписание
 	- [ ] Показать правила расписания
@@ -50,10 +57,25 @@
 ```
 Ubuntu 18.04.2
 Debian 10.3
+=======
+- [x] Управление валидатором
+	- [x] Участвовать в выборах валидатора
+	- [x] Возвращать ставку + вознаграждение
+	- [x] Автозапуск валидатора при аварийном завершении (systemd)
+	- [x] Отправлять статистику валидатора на https://toncenter.com
+
+## Список проверенных операционных систем
+```
+Ubuntu 16.04 LTS (Xenial Xerus) - Error: TON compilation error
+Ubuntu 18.04 LTS (Bionic Beaver) - OK
+Ubuntu 20.04 LTS (Focal Fossa) - OK
+Debian 10 - OK
+>>>>>>> dev
 ```
 
 ## Описание установочных скриптов
 - `toninstaller.sh` - Данный скрипт клонирует исходники `TON` и `mytonctrl` в папки `/usr/src/ton` и `/usr/src/mytonctrl`, компилирует программы из исходников и прописывает их в `/usr/bin/`.
+<<<<<<< HEAD
 - `vpreparation.sh` - Данный скрипт создает пользователя `validator` для работы валидатора и пропишет его в автозагрузку через крон.
 - `mytoninstaller.py` - Данный скрипт производит настройку `mytonctrl` и создание ключей для подключения к валидатору.
 - `vconfig.sh` - Данный скрипт настроит доступ для подключения к валидатору `lite-client` и `validator-engine-console`.
@@ -66,6 +88,18 @@ Debian 10.3
 ```sh
 wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
 sudo sh install.sh -m lite
+=======
+- `mytoninstaller.py` - Данный скрипт производит настройку валидатора, `mytonctrl` и создание ключей для подключения к валидатору.
+
+## Режимы установки
+Есть два режима установки: `lite` и `full`. Оба они **компилируют** и устанавливают компоненты `TON`. Однако `lite` версия не настраивает и не запускает валидатор.
+
+## Установка (Ubuntu)
+1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки (`<mode>`). В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
+```sh
+wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
+sudo bash install.sh -m <mode>
+>>>>>>> dev
 ```
 
 2. Готово. Можете пробовать запустить программу `mytonctrl`.
@@ -75,13 +109,32 @@ mytonctrl
 
 
 ## Установка (Debian)
+<<<<<<< HEAD
 1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки. Мы будем устанавливать в режиме `lite`. В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
 ```sh
 wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
 su root -c 'sh install.sh -m lite'
+=======
+1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки. В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
+```sh
+wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
+su root -c 'bash install.sh -m <mode>'
+>>>>>>> dev
 ```
 
 2. Готово. Можете пробовать запустить программу `mytonctrl`.
 ```sh
 mytonctrl
 ```
+<<<<<<< HEAD
+=======
+
+## Полезные ссылки
+1. https://ton.org/README.txt
+2. https://ton.org/HOWTO.txt
+3. https://ton.org/FullNode-HOWTO.txt
+4. https://ton.org/Validator-HOWTO.txt
+5. https://ton.org/TonSites-HOWTO.txt
+6. https://ton.org/DNS-HOWTO.txt
+7. https://ton.org/ConfigParam-HOWTO.txt
+>>>>>>> dev
