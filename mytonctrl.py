@@ -197,8 +197,8 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	netLoad5 = netLoadAvg[1]
 	netLoad15 = netLoadAvg[2]
 	validatorOutOfSync = validatorStatus.get("unixtime", GetTimestamp()) - validatorStatus.get("masterchainblocktime", 0)
-	mytoncoreStatus_bool = True # fix me
-	validatorStatus_bool = validatorStatus.get("isWorking")
+	mytoncoreStatus_bool = GetServiceStatus("mytoncore")
+	validatorStatus_bool = GetServiceStatus("validator")
 
 	validatorIndex_text = local.Translate("local_status_validator_index").format(bcolors.Green(validatorIndex))
 	adnlAddr_text = local.Translate("local_status_adnl_addr").format(bcolors.Yellow(adnlAddr))
