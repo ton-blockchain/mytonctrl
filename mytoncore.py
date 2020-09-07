@@ -15,7 +15,7 @@ class LiteClient:
 	#end define
 
 	def Run(self, cmd):
-		args = [self.appPath, "-C", self.configPath, "-v", "0", "--cmd", cmd]
+		args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
@@ -462,11 +462,67 @@ class MyTonCore():
 		return result
 	#end define
 
-	def GetShardsNumber(self):
-		local.AddLog("start GetShardsNumber function", "debug")
-		result = self.liteClient.Run("allshards")
-		shardsNumber = result.count("shard #")
-		return shardsNumber
+	def GetLastBlock(self):
+		block = None
+		cmd = "last"
+		result = self.liteClient.Run(cmd)
+		lines = result.split('\n')
+		for line in lines:
+			if "latest masterchain block" in line:
+				buff = line.split(' ')
+				block = buff[7]
+				break
+		return block
+	#end define
+
+	def GetTransactions(self, block):
+		transactions = list()
+		cmd = "listblocktrans {block} 999".format(block=block)
+		result = self.liteClient.Run(cmd)
+		lines = result.split('\n')
+		for line in lines:
+			if "transaction #" in line:
+				buff = line.split(' ')
+				trans_id = buff[1]
+				trans_id = trans_id.replace('#', '')
+				trans_id = trans_id.replace(':', '')
+				trans_account = buff[3]
+				trans_lt = buff[5]
+				trans_hash = buff[7]
+				trans = {"id": trans_id, "account": trans_account, "lt": trans_lt, "hash": trans_hash}
+				transactions.append(trans)
+		return transactions
+	#end define
+
+	def GetTransactionsNumber(self, block):
+		transactions = self.GetTransactions(block)
+		transNum = len(transactions)
+		return transNum
+	#end define
+
+	def GetShards(self, block=None):
+		shards = list()
+		if block:
+			cmd = "allshards {block}".format(block=block)
+		else:
+			cmd = "allshards"
+		result = self.liteClient.Run(cmd)
+		lines = result.split('\n')
+		for line in lines:
+			if "shard #" in line:
+				buff = line.split(' ')
+				shard_id = buff[1]
+				shard_id = shard_id.replace('#', '')
+				shard_block = buff[3]
+				shard = {"id": shard_id, "block": shard_block}
+				shards.append(shard)
+		return shards
+	#end define
+
+	def GetShardsNumber(self, block=None):
+		shards = self.GetShards(block)
+		shardsNum = len(shards)
+		return shardsNum
 	#end define
 
 	def GetValidatorStatus(self):
@@ -1328,10 +1384,12 @@ class MyTonCore():
 		return saveOffers
 	#end define
 	
-	def GetStrType(self, str):
-		if len(str) == 48 and '.' not in str:
+	def GetStrType(self, inputStr):
+		if len(inputStr) == 48 and '.' not in inputStr:
 			result = "account"
-		elif '.' in str:
+		elif ':' in inputStr:
+			result = "account_hex"
+		elif '.' in inputStr:
 			result = "domain"
 		else:
 			result = "undefined"
@@ -1340,13 +1398,15 @@ class MyTonCore():
 	
 	def GetDestinationAddr(self, destination):
 		destinationType = self.GetStrType(destination)
-		if destinationType != "account":
+		if destinationType == "undefined":
 			walletsNameList = self.GetWalletsNameList()
 			if destination in walletsNameList:
 				wallet = self.GetLocalWallet(destination)
 				destination = wallet.addr
 			else:
 				destination = self.GetBookmarkAddr("account", destination)
+		elif destinationType == "account_hex":
+			destination = self.HexAddr2Base64Addr(destination)
 		return destination
 	#end define
 	
@@ -1369,21 +1429,28 @@ class MyTonCore():
 		return result
 	#end define
 	
-	def GetNetworStatistics(self):
-		filePath = self.tempDir + "statistics.json"
-		with open(filePath) as file:
-			text = file.read()
-			data = json.loads(text)
-			return data
+	def GetNetLoadAvg(self):
+		statistics = self.GetSettings("statistics")
+		netLoadAvg = statistics.get("netLoadAvg")
+		return netLoadAvg
+	#end define
+
+	def GetTpsAvg(self):
+		statistics = self.GetSettings("statistics")
+		tpsAvg = statistics.get("tpsAvg")
+		return tpsAvg
 	#end define
 
 	def GetSettings(self, name):
+		local.dbLoad()
 		result = local.db.get(name)
 		return result
 	#end define
 
-	def SetSettings(self, name, value):
-		local.db[name] = json.loads(value)
+	def SetSettings(self, name, data):
+		if type(data) == str:
+			data = json.loads(data)
+		local.db[name] = data
 		local.dbSave()
 	#end define
 #end class
@@ -1406,6 +1473,11 @@ def Init():
 	local.buffer["network"]["in"] = [0]*15*6
 	local.buffer["network"]["out"] = [0]*15*6
 	local.buffer["network"]["all"] = [0]*15*6
+
+	local.buffer["oldBlock"] = None
+	local.buffer["blocks"] = list()
+	local.buffer["transNum"] = 0
+	local.buffer["transNumList"] = [0]*15*6
 #end define
 
 def Event(eventName):
@@ -1447,47 +1519,8 @@ def Elections(ton):
 def Statistics(ton):
 	ReadNetworkData()
 	SaveNetworStatistics(ton)
-#end define
-
-def Offers(ton):
-	saveOffers = ton.GetSaveOffers()
-	offers = ton.GetOffers()
-	for offer in offers:
-		offerHash = offer.get("hash")
-		if offerHash in saveOffers:
-			ton.VoteOffer(offerHash)
-#end define
-
-def Domains(ton):
-	pass
-#end define
-
-def Telemetry(ton):
-	if (local.db.get("sendTelemetry") != True):
-		return
-	#end if
-	
-	data = dict()
-	data["adnlAddr"] = ton.adnlAddr
-	data["validatorStatus"] = ton.GetValidatorStatus()
-	data["cpuLoad"] = GetLoadAvg()
-	data["netLoad"] = ton.GetNetworStatistics()
-	url = "https://toncenter.com/api/newton_test/status/report_status"
-	output = json.dumps(data)
-	resp = requests.post(url, data=output, timeout=3)
-	
-	# fix me
-	if ton.adnlAddr != "660A8EC119287FE4B8E38D69045E0017EB5BFE1FBBEBE1AA26D492DA4F3A1D69":
-		return
-	data = dict()
-	config34 = ton.GetConfig34()
-	config36 = ton.GetConfig36()
-	data["currentValidators"] = config34["validators"]
-	if len(config36) > 0:
-		data["nextValidators"] = config36["validators"]
-	url = "https://toncenter.com/api/newton_test/status/report_validators"
-	output = json.dumps(data)
-	resp = requests.post(url, data=output, timeout=3)
+	ReadTransNumData()
+	SaveTransNumStatistics(ton)
 #end define
 
 def ReadNetworkData():
@@ -1538,11 +1571,92 @@ def SaveNetworStatistics(ton):
 	netLoad15 = b2mb(buff15)
 
 	# save statistics
-	filePath = ton.tempDir + "statistics.json"
-	data = [netLoad1, netLoad5, netLoad15]
-	text = json.dumps(data)
-	with open(filePath, 'w') as file:
-		file.write(text)
+	statistics = ton.GetSettings("statistics")
+	if statistics is None:
+		statistics = dict()
+	statistics["netLoadAvg"] = [netLoad1, netLoad5, netLoad15]
+	ton.SetSettings("statistics", statistics)
+#end define
+
+def ReadTransNumData():
+	transNum = local.buffer["transNum"]
+	local.buffer["transNumList"].pop(0)
+	local.buffer["transNumList"].append(transNum)
+#end define
+
+def SaveTransNumStatistics(ton):
+	data = local.buffer["transNumList"]
+	data = data[::-1]
+	zerodata = data[0]
+	buff1 = data[1*6-1]
+	buff5 = data[5*6-1]
+	buff15 = data[15*6-1]
+
+	# get avg
+	if buff1 != 0:
+		buff1 = zerodata - buff1
+	if buff5 != 0:
+		buff5 = zerodata - buff5
+	if buff15 != 0:
+		buff15 = zerodata - buff15
+
+	# trans -> trans per sec (TPS)
+	buff1 = buff1 / (1*60)
+	buff5 = buff5 / (5*60)
+	buff15 = buff15 / (15*60)
+
+	# round
+	tps1 = round(buff1, 2)
+	tps5 = round(buff5, 2)
+	tps15 = round(buff15, 2)
+
+	# save statistics
+	statistics = ton.GetSettings("statistics")
+	if statistics is None:
+		statistics = dict()
+	statistics["tpsAvg"] = [tps1, tps5, tps15]
+	ton.SetSettings("statistics", statistics)
+#end define
+
+def Offers(ton):
+	saveOffers = ton.GetSaveOffers()
+	offers = ton.GetOffers()
+	for offer in offers:
+		offerHash = offer.get("hash")
+		if offerHash in saveOffers:
+			ton.VoteOffer(offerHash)
+#end define
+
+def Domains(ton):
+	pass
+#end define
+
+def Telemetry(ton):
+	if (local.db.get("sendTelemetry") != True):
+		return
+	#end if
+	
+	data = dict()
+	data["adnlAddr"] = ton.adnlAddr
+	data["validatorStatus"] = ton.GetValidatorStatus()
+	data["cpuLoad"] = GetLoadAvg()
+	data["netLoad"] = ton.GetNetLoadAvg()
+	url = "https://toncenter.com/api/newton_test/status/report_status"
+	output = json.dumps(data)
+	resp = requests.post(url, data=output, timeout=3)
+	
+	# fix me
+	if ton.adnlAddr != "660A8EC119287FE4B8E38D69045E0017EB5BFE1FBBEBE1AA26D492DA4F3A1D69":
+		return
+	data = dict()
+	config34 = ton.GetConfig34()
+	config36 = ton.GetConfig36()
+	data["currentValidators"] = config34["validators"]
+	if len(config36) > 0:
+		data["nextValidators"] = config36["validators"]
+	url = "https://toncenter.com/api/newton_test/status/report_validators"
+	output = json.dumps(data)
+	resp = requests.post(url, data=output, timeout=3)
 #end define
 
 def Mining(ton):
@@ -1568,6 +1682,60 @@ def Mining(ton):
 	#end if
 #end define
 
+def ScanBlocks(ton):
+	block = ton.GetLastBlock()
+	if block != local.buffer["oldBlock"]:
+		local.buffer["oldBlock"] = block
+		local.buffer["blocks"].append(block)
+#end define
+
+def ReadBlocks(ton):
+	blocks = local.buffer["blocks"]
+	if len(blocks) == 0:
+		return
+	block = blocks.pop(0)
+
+	# Разделить 
+	buff1 = {"transNum": 0}
+	t1 = threading.Thread(target=SaveTransNumFromBlock, args=(ton, block, buff1), daemon=True)
+	t2 = threading.Thread(target=SaveShardsFromBlock, args=(ton, block, buff1), daemon=True)
+	t1.start()
+	t2.start()
+	t1.join()
+	t2.join()
+
+	# Собрать
+	transNum = buff1["transNum"]
+	shards = buff1["shards"]
+
+	# Разделить
+	buff2 = dict()
+	for shard in shards:
+		threading.Thread(target=SaveTransNumFromShard, args=(ton, shard, buff2), daemon=True).start()
+	while len(buff2) < len(shards):
+		time.sleep(0.3)
+
+	# Собрать
+	for shard in shards:
+		shard_id = shard["id"]
+		transNum += buff2[shard_id]
+	local.buffer["transNum"] += transNum
+#end define
+
+def SaveTransNumFromBlock(ton, block, buff):
+	buff["transNum"] = ton.GetTransactionsNumber(block)
+#end define
+
+def SaveShardsFromBlock(ton, block, buff):
+	buff["shards"] = ton.GetShards(block)
+#end define
+
+def SaveTransNumFromShard(ton, shard, buff):
+	shard_id = shard["id"]
+	shard_block = shard["block"]
+	buff[shard_id] = ton.GetTransactionsNumber(shard_block)
+#end define
+
 def General():
 	local.AddLog("start General function", "debug")
 	ton = MyTonCore()
@@ -1579,6 +1747,8 @@ def General():
 	local.StartCycle(Domains, sec=600, args=(ton, ))
 	local.StartCycle(Telemetry, sec=60, args=(ton, ))
 	local.StartCycle(Mining, sec=1, args=(ton, ))
+	local.StartCycle(ScanBlocks, sec=1, args=(ton,))
+	local.StartCycle(ReadBlocks, sec=0.3, args=(ton,))
 	Sleep()
 #end define
 

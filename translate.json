@@ -116,12 +116,8 @@
 		"ru": "Транзакций в секунду (TPS): {0}, {1}, {2}"
 	},
 	"ton_status_validators": {
-		"en": "Number of validators: {0}",
-		"ru": "Количество валидаторов, прошедших выборы: {0}"
-	},
-	"ton_status_online_validators": {
-		"en": "Number of online validators: {0}",
-		"ru": "Количество валидаторов в сети: {0}"
+		"en": "Number of validators: {0}({1})",
+		"ru": "Количество валидаторов: {0}({1})"
 	},
 	"ton_status_shards": {
 		"en": "Number of shardchains: {0}",

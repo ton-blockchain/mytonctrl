@@ -144,20 +144,22 @@ def PrintStatus(args):
 
 def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offersNumber):
 	# Статус сети TON
-	tps1 = "n/a" # fix me
-	tps5 = "n/a" # fix me
-	tps15 = "n/a" # fix me
-	validators = totalValidators
+	tpsAvg = ton.GetTpsAvg()
+	tps1 = tpsAvg[0]
+	tps5 = tpsAvg[1]
+	tps15 = tpsAvg[2]
+	allValidators = totalValidators
 	onlineValidators = "n/a" # fix me
 	offers = offersNumber.get("all")
 	newOffers = offersNumber.get("new")
 
-	tps1_text = bcolors.Yellow(tps1)
-	tps5_text = bcolors.Yellow(tps5)
-	tps15_text = bcolors.Yellow(tps15)
+	tps1_text = bcolors.Green(tps1)
+	tps5_text = bcolors.Green(tps5)
+	tps15_text = bcolors.Green(tps15)
 	tps_text = local.Translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
-	validators_text = local.Translate("ton_status_validators").format(bcolors.Green(validators))
-	onlineValidators_text = local.Translate("ton_status_online_validators").format(bcolors.Yellow(onlineValidators))
+	onlineValidators_text = bcolors.Green(onlineValidators)
+	allValidators_text = bcolors.Yellow(allValidators)
+	validators_text = local.Translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
 	shards_text = local.Translate("ton_status_shards").format(bcolors.Green(shardsNumber))
 	allOffers_text = bcolors.Green(offers)
 	newOffers_text = bcolors.Green(newOffers)
@@ -169,18 +171,9 @@ def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offersNumber):
 		election_text = bcolors.Green("open")
 	election_text = local.Translate("ton_status_election").format(election_text)
 
-	# ColorPrint("{cyan}===[ Статус сети TON ]==={endc}")
-	# print("Транзакций в секунду (TPS): {0}, {1}, {2}".format(tps1_text, tps5_text, tps15_text))
-	# print("Количество валидаторов, прошедших выборы: " + validators_text)
-	# print("Количество валидаторов в сети: " + onlineValidators_text)
-	# print("Количесвто шардчейнов: " + shards_text)
-	# print("Действующие предложения: {0}({1})".format(offers_text, newOffers_text))
-	# print("Статус выборов: " + election_text)
-	# print()
 	ColorPrint(local.Translate("ton_status_head"))
 	print(tps_text)
 	print(validators_text)
-	print(onlineValidators_text)
 	print(shards_text)
 	print(offers_text)
 	print(election_text)
@@ -199,7 +192,7 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	cpuLoad1 = loadavg[0]
 	cpuLoad5 = loadavg[1]
 	cpuLoad15 = loadavg[2]
-	netLoadAvg = ton.GetNetworStatistics()
+	netLoadAvg = ton.GetNetLoadAvg()
 	netLoad1 = netLoadAvg[0]
 	netLoad5 = netLoadAvg[1]
 	netLoad15 = netLoadAvg[2]
@@ -231,18 +224,6 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, ending=" с"))
 	dbSize_text = local.Translate("local_status_db_size").format(GetColorInt(dbSize, 1000, ending=" Gb"))
 
-	# ColorPrint("{cyan}===[ Статус локального валидатора ]==={endc}")
-	# print("Индекс валидатора: " + validatorIndex_text)
-	# print("ADNL адрес локального валидатора: " + adnlAddr_text)
-	# print("Адрес кошелька локального валидатора: " + walletAddr_text)
-	# print("Баланс кошелька локального валидатора: " + walletBalance_text)
-	# print("Средняя нагрузка[{0}]: {1}, {2}, {3}".format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text))
-	# print("Средняя нагрузка сети (Mbit/s): {0}, {1}, {2}".format(netLoad1_text, netLoad5_text, netLoad15_text))
-	# print("Статус ядра mytoncore: " + mytoncoreStatus_text)
-	# print("Статус локального валидатора: " + validatorStatus_text)
-	# print("Рассинхронизация локального валидатора: " + validatorOutOfSync_text)
-	# print("Размер БД локального валидатора: " + dbSize_text)
-	# print()
 	ColorPrint(local.Translate("local_status_head"))
 	print(validatorIndex_text)
 	print(adnlAddr_text)
@@ -293,12 +274,6 @@ def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
 	maxStake_text = bcolors.Yellow(maxStake)
 	stake_text = local.Translate("ton_config_stake").format(minStake_text, maxStake_text)
 
-	# ColorPrint("{cyan}===[ Конфигурация сети TON ]==={endc}")
-	# print("Адрес конфигуратора: {0}".format(fullConfigAddr_text))
-	# print("Адрес электора: {0}".format(fullElectorAddr_text))
-	# print("Период валидации: {0}, Длительность выборов: {1}-{2}, Период удержания ставки: {3}".format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text))
-	# print("Минимальная ставка: {0}, Максимальная ставка: {1}".format(minStake_text, maxStake_text))
-	# print()
 	ColorPrint(local.Translate("ton_config_head"))
 	print(fullConfigAddr_text)
 	print(fullElectorAddr_text)
@@ -339,14 +314,6 @@ def PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, co
 	endElectionTime_text = local.Translate("times_end_election_time").format(GetColorTime(endElectionTime, endElection))
 	startNextElectionTime_text = local.Translate("times_start_next_election_time").format(GetColorTime(startNextElectionTime, startNextElection))
 
-	# Временные метки TON
-	# ColorPrint("{cyan}===[ Временные метки TON ]==={endc}")
-	# print("TON сеть была запущена: " + rootWorkchainEnabledTime_text)
-	# print("Начало цикла валидации: " + startValidationTime_text)
-	# print("Конец цикла валидации: " + endValidationTime_text)
-	# print("Начало выборов: " + startElectionTime_text)
-	# print("Конец выборов: " + endElectionTime_text)
-	# print("Начало следующих выборов: " + startNextElectionTime_text)
 	ColorPrint(local.Translate("times_head"))
 	print(rootWorkchainEnabledTime_text)
 	print(startValidationTime_text)
