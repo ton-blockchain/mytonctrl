@@ -943,15 +943,16 @@ class MyTonCore():
 	def CreateWallet(self, walletName, workchain=0):
 		local.AddLog("start CreateWallet function", "debug")
 		walletPath = self.walletsDir + walletName
-		# if os.path.isfile(walletPath + ".pk"):
-		# 	local.AddLog("CreateWallet error: Wallet already exists: " + walletName, "warning")
-		# 	return
-		args = ["new-wallet.fif", workchain, walletPath]
-		result = self.fift.Run(args)
-		if "Creating new wallet" not in result:
-			raise Exception("CreateWallet error")
+		if os.path.isfile(walletPath + ".pk"):
+			local.AddLog("CreateWallet error: Wallet already exists: " + walletName, "warning")
+		else:
+			args = ["new-wallet.fif", workchain, walletPath]
+			result = self.fift.Run(args)
+			if "Creating new wallet" not in result:
+				raise Exception("CreateWallet error")
+			#end if
 		wallet = self.GetLocalWallet(walletName)
-		account = self.GetAccount(wallet.addr)
+		# account = self.GetAccount(wallet.addr)
 		return wallet
 	#end define
 
@@ -1181,7 +1182,7 @@ class MyTonCore():
 			if myValidatorAdnlAddr == validatorAdnlAddr:
 				return index
 			index += 1
-		local.AddLog("GetValidatorIndex error: index not found.", "warning")
+		local.AddLog("GetValidatorIndex warning: index not found.", "warning")
 		return -1
 	#end define
 	
@@ -1271,7 +1272,7 @@ class MyTonCore():
 	#end define
 	
 	def GetDomains(self):
-		domains = local.db.get("domains")
+		domains = local.db.get("domains", list()) 
 		for domain in domains:
 			domainName = domain.get("name")
 			domain["endTime"] = self.GetDomainEndTime(domainName)
@@ -1326,7 +1327,7 @@ class MyTonCore():
 	#end define
 	
 	def GetBookmarkAddr(self, type, name):
-		bookmarks = local.db.get("bookmarks")
+		bookmarks = local.db.get("bookmarks", list())
 		for bookmark in bookmarks:
 			bookmarkType = bookmark.get("type")
 			bookmarkName = bookmark.get("name")

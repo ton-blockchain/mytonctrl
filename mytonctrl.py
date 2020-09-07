@@ -11,7 +11,7 @@ ton = MyTonCore()
 
 def Init():
 	# Load translate table
-	local.InitTranslator("/usr/src/mytonctrl/translate.json")
+	local.InitTranslator(local.buffer.get("myDir") + "translate.json")
 
 	# Create user console
 	console.name = "MyTonCtrl"
@@ -149,8 +149,8 @@ def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offersNumber):
 	tps5 = tpsAvg[1]
 	tps15 = tpsAvg[2]
 	allValidators = totalValidators
-	onlineValidators = "n/a" # fix me
-	offers = offersNumber.get("all")
+	onlineValidators = 0 # fix me
+	allOffers = offersNumber.get("all")
 	newOffers = offersNumber.get("new")
 
 	tps1_text = bcolors.Green(tps1)
@@ -161,9 +161,9 @@ def PrintTonStatus(startWorkTime, totalValidators, shardsNumber, offersNumber):
 	allValidators_text = bcolors.Yellow(allValidators)
 	validators_text = local.Translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
 	shards_text = local.Translate("ton_status_shards").format(bcolors.Green(shardsNumber))
-	allOffers_text = bcolors.Green(offers)
 	newOffers_text = bcolors.Green(newOffers)
-	offers_text = local.Translate("ton_status_offers").format(allOffers_text, newOffers_text)
+	allOffers_text = bcolors.Yellow(allOffers)
+	offers_text = local.Translate("ton_status_offers").format(newOffers_text, allOffers_text)
 	
 	if startWorkTime == 0:
 		election_text = bcolors.Yellow("closed")
