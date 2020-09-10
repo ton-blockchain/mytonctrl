@@ -107,6 +107,10 @@
 		"en": "Set settings",
 		"ru": "Задать настройки"
 	},
+	"installer_cmd": {
+		"en": "Run the installer of TON modules",
+		"ru": "Запустить установщик модулей TON"
+	},
 	"ton_status_head": {
 		"en": "{cyan}===[ TON network status ]==={endc}",
 		"ru": "{cyan}===[ Статус сети TON ]==={endc}"

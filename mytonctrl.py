@@ -2,7 +2,7 @@
 # -*- coding: utf_8 -*-
 
 from mypylib.mypylib import *
-from mypyconsole.mypyconsole import MyPyConsole
+from mypyconsole.mypyconsole import *
 from mytoncore import *
 
 local = MyPyClass(__file__)
@@ -18,6 +18,7 @@ def Init():
 
 	console.AddItem("update", Update, local.Translate("update_cmd"))
 	console.AddItem("upgrade", Upgrade, local.Translate("upgrade_cmd"))
+	console.AddItem("installer", Installer, local.Translate("installer_cmd"))
 	console.AddItem("status", PrintStatus, local.Translate("status_cmd"))
 	console.AddItem("seqno", Seqno, local.Translate("seqno_cmd"))
 
@@ -60,6 +61,11 @@ def Init():
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isLocaldbSaving"] = True
 	local.Run()
+#end define
+
+def Installer(args):
+	args= ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
+	subprocess.run(args)
 #end define
 
 def Update(args):
@@ -196,7 +202,7 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	netLoad1 = netLoadAvg[0]
 	netLoad5 = netLoadAvg[1]
 	netLoad15 = netLoadAvg[2]
-	validatorOutOfSync = validatorStatus.get("unixtime", GetTimestamp()) - validatorStatus.get("masterchainblocktime", 0)
+	validatorOutOfSync = validatorStatus.get("outOfSync")
 	mytoncoreStatus_bool = GetServiceStatus("mytoncore")
 	validatorStatus_bool = GetServiceStatus("validator")
 

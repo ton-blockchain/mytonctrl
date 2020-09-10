@@ -12,10 +12,21 @@ class LiteClient:
 	def __init__(self):
 		self.appPath = None
 		self.configPath = None
+		self.pubkeyPath = None
+		self.addr = None
+		self.ton = None # magic
 	#end define
 
 	def Run(self, cmd):
-		args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
+		ready = False
+		if self.pubkeyPath:
+			validatorStatus = self.ton.GetValidatorStatus()
+			validatorOutOfSync = validatorStatus.get("outOfSync")
+			if validatorOutOfSync < 20:
+				args = [self.appPath, "--addr", self.addr, "--pub", self.pubkeyPath, "--verbosity", "0", "--cmd", cmd]
+				ready = True
+		if ready == False:
+			args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
@@ -161,8 +172,13 @@ class MyTonCore():
 
 		liteClient = local.db.get("liteClient")
 		if liteClient is not None:
+			self.liteClient.ton = self # magic
 			self.liteClient.appPath = liteClient["appPath"]
 			self.liteClient.configPath = liteClient["configPath"]
+			liteServer = liteClient.get("liteServer")
+			if liteServer is not None:
+				self.liteClient.pubkeyPath = liteServer["pubkeyPath"]
+				self.liteClient.addr = "{0}:{1}".format(liteServer["ip"], liteServer["port"])
 
 		validatorConsole = local.db.get("validatorConsole")
 		if validatorConsole is not None:
@@ -251,7 +267,7 @@ class MyTonCore():
 		account.hash = Pars(result, "hash = ", '\n')
 		return account
 	#end define
-	
+
 	def GetAccountHistory(self, account, limit):
 		local.AddLog("start GetAccountHistory function", "debug")
 		lt=account.lt
@@ -290,7 +306,7 @@ class MyTonCore():
 			if lt is None or ready >= limit:
 				return history
 	#end define
-	
+
 	def GetDomainAddr(self, domainName):
 		cmd = "dnsresolve {domainName} -1".format(domainName=domainName)
 		result = self.liteClient.Run(cmd)
@@ -303,7 +319,7 @@ class MyTonCore():
 		addr = buffList[1]
 		return addr
 	#end define
-	
+
 	def GetDomainEndTime(self, domainName):
 		local.AddLog("start GetDomainEndTime function", "debug")
 		buff = domainName.split('.')
@@ -319,7 +335,7 @@ class MyTonCore():
 		result = int(result)
 		return result
 	#end define
-	
+
 	def GetDomainAdnlAddr(self, domainName):
 		local.AddLog("start GetDomainAdnlAddr function", "debug")
 		cmd = "dnsresolve {domainName} 1".format(domainName=domainName)
@@ -368,7 +384,7 @@ class MyTonCore():
 		#wallet.addr = buff.replace(' ', '')
 		#buff = self.GetVarFromWorkerOutput(result, "Non-bounceable address (for init only)")
 		#wallet.addr_init = buff.replace(' ', '')
-		
+
 		addrFilePath = filePath + ".addr"
 		file = open(addrFilePath, "rb")
 		data = file.read()
@@ -380,48 +396,84 @@ class MyTonCore():
 		wallet.Refresh()
 		return wallet
 	#end define
-	
+
 	def GetFullConfigAddr(self):
-		local.AddLog("start GetFullConfigAddr function", "debug")
+		# get buffer
+		timestamp = GetTimestamp()
 		fullConfigAddr = local.buffer.get("fullConfigAddr")
-		if fullConfigAddr is None:
-			result = self.liteClient.Run("getconfig 0")
-			configAddr_hex = self.GetVarFromWorkerOutput(result, "config_addr:x")
-			fullConfigAddr = "-1:{configAddr_hex}".format(configAddr_hex=configAddr_hex)
-			local.buffer["fullConfigAddr"] = fullConfigAddr
+		fullConfigAddr_time = local.buffer.get("fullConfigAddr_time")
+		if fullConfigAddr:
+			diffTime = timestamp - fullConfigAddr_time
+			if diffTime < 10:
+				return fullConfigAddr
+		#end if
+
+		local.AddLog("start GetFullConfigAddr function", "debug")
+		result = self.liteClient.Run("getconfig 0")
+		configAddr_hex = self.GetVarFromWorkerOutput(result, "config_addr:x")
+		fullConfigAddr = "-1:{configAddr_hex}".format(configAddr_hex=configAddr_hex)
+		local.buffer["fullConfigAddr"] = fullConfigAddr
+		local.buffer["fullConfigAddr_time"] = timestamp
 		return fullConfigAddr
 	#end define
 
 	def GetFullElectorAddr(self):
-		local.AddLog("start GetFullElectorAddr function", "debug")
+		# get buffer
+		timestamp = GetTimestamp()
 		fullElectorAddr = local.buffer.get("fullElectorAddr")
-		if fullElectorAddr is None:
-			result = self.liteClient.Run("getconfig 1")
-			electorAddr_hex = self.GetVarFromWorkerOutput(result, "elector_addr:x")
-			fullElectorAddr = "-1:{electorAddr_hex}".format(electorAddr_hex=electorAddr_hex)
-			local.buffer["fullElectorAddr"] = fullElectorAddr
+		fullElectorAddr_time = local.buffer.get("fullElectorAddr_time")
+		if fullElectorAddr:
+			diffTime = timestamp - fullElectorAddr_time
+			if diffTime < 10:
+				return fullElectorAddr
+		#end if
+
+		local.AddLog("start GetFullElectorAddr function", "debug")
+		result = self.liteClient.Run("getconfig 1")
+		electorAddr_hex = self.GetVarFromWorkerOutput(result, "elector_addr:x")
+		fullElectorAddr = "-1:{electorAddr_hex}".format(electorAddr_hex=electorAddr_hex)
+		local.buffer["fullElectorAddr"] = fullElectorAddr
+		local.buffer["fullElectorAddr_time"] = timestamp
 		return fullElectorAddr
 	#end define
-	
+
 	def GetFullMinterAddr(self):
-		local.AddLog("start GetFullMinterAddr function", "debug")
+		# get buffer
+		timestamp = GetTimestamp()
 		fullMinterAddr = local.buffer.get("fullMinterAddr")
-		if fullMinterAddr is None:
-			result = self.liteClient.Run("getconfig 2")
-			minterAddr_hex = self.GetVarFromWorkerOutput(result, "minter_addr:x")
-			fullMinterAddr = "-1:{minterAddr_hex}".format(minterAddr_hex=minterAddr_hex)
-			local.buffer["fullMinterAddr"] = fullMinterAddr
+		fullMinterAddr_time = local.buffer.get("fullMinterAddr_time")
+		if fullMinterAddr:
+			diffTime = timestamp - fullMinterAddr_time
+			if diffTime < 10:
+				return fullMinterAddr
+		#end if
+
+		local.AddLog("start GetFullMinterAddr function", "debug")
+		result = self.liteClient.Run("getconfig 2")
+		minterAddr_hex = self.GetVarFromWorkerOutput(result, "minter_addr:x")
+		fullMinterAddr = "-1:{minterAddr_hex}".format(minterAddr_hex=minterAddr_hex)
+		local.buffer["fullMinterAddr"] = fullMinterAddr
+		local.buffer["fullMinterAddr_time"] = timestamp
 		return fullMinterAddr
 	#end define
-	
+
 	def GetFullDnsRootAddr(self):
-		local.AddLog("start GetFullDnsRootAddr function", "debug")
+		# get buffer
+		timestamp = GetTimestamp()
 		fullDnsRootAddr = local.buffer.get("fullDnsRootAddr")
-		if fullDnsRootAddr is None:
-			result = self.liteClient.Run("getconfig 4")
-			dnsRootAddr_hex = self.GetVarFromWorkerOutput(result, "dns_root_addr:x")
-			fullDnsRootAddr = "-1:{dnsRootAddr_hex}".format(dnsRootAddr_hex=dnsRootAddr_hex)
-			local.buffer["fullDnsRootAddr"] = fullDnsRootAddr
+		fullDnsRootAddr_time = local.buffer.get("fullDnsRootAddr_time")
+		if fullDnsRootAddr:
+			diffTime = timestamp - fullDnsRootAddr_time
+			if diffTime < 10:
+				return fullDnsRootAddr
+		#end if
+
+		local.AddLog("start GetFullDnsRootAddr function", "debug")
+		result = self.liteClient.Run("getconfig 4")
+		dnsRootAddr_hex = self.GetVarFromWorkerOutput(result, "dns_root_addr:x")
+		fullDnsRootAddr = "-1:{dnsRootAddr_hex}".format(dnsRootAddr_hex=dnsRootAddr_hex)
+		local.buffer["fullDnsRootAddr"] = fullDnsRootAddr
+		local.buffer["fullDnsRootAddr_time"] = timestamp
 		return fullDnsRootAddr
 	#end define
 
@@ -526,6 +578,15 @@ class MyTonCore():
 	#end define
 
 	def GetValidatorStatus(self):
+		# get buffer
+		timestamp = GetTimestamp()
+		validatorStatus = local.buffer.get("validatorStatus")
+		if validatorStatus:
+			diffTime = timestamp - validatorStatus.get("unixtime")
+			if diffTime < 10:
+				return validatorStatus
+		#end if
+
 		local.AddLog("start GetValidatorStatus function", "debug")
 		validatorStatus = dict()
 		try:
@@ -545,6 +606,10 @@ class MyTonCore():
 			validatorStatus["rotatemasterchainblock"] = self.GVS_GetItemFromBuff(buff)
 		except:
 			validatorStatus["isWorking"] = False
+			validatorStatus["unixtime"] = timestamp
+			validatorStatus["masterchainblocktime"] = 0
+		validatorStatus["outOfSync"] = validatorStatus["unixtime"] - validatorStatus["masterchainblocktime"]
+		local.buffer["validatorStatus"] = validatorStatus # set buffer
 		return validatorStatus
 	#end define
 	
@@ -561,31 +626,63 @@ class MyTonCore():
 	#end define
 
 	def GetConfig12(self):
+		# get buffer
+		timestamp = GetTimestamp()
+		config12 = local.buffer.get("config12")
+		if config12:
+			diffTime = timestamp - config12.get("timestamp")
+			if diffTime < 10:
+				return config12
+		#end if
+
 		local.AddLog("start GetConfig12 function", "debug")
 		config12 = dict()
+		config12["timestamp"] = timestamp
 		config12["workchains"] = dict()
 		config12["workchains"]["root"] = dict()
 		result = self.liteClient.Run("getconfig 12")
 		workchains = self.GetVarFromWorkerOutput(result, "workchains")
 		workchain_root = self.GetVarFromWorkerOutput(workchains, "root")
 		config12["workchains"]["root"]["enabledSince"] = int(Pars(workchain_root, "enabled_since:", ' '))
+		local.buffer["config12"] = config12 # set buffer
 		return config12
 	#end define
 
 	def GetConfig15(self):
+		# get buffer
+		timestamp = GetTimestamp()
+		config15 = local.buffer.get("config15")
+		if config15:
+			diffTime = timestamp - config15.get("timestamp")
+			if diffTime < 10:
+				return config15
+		#end if
+
 		local.AddLog("start GetConfig15 function", "debug")
 		config15 = dict()
+		config15["timestamp"] = timestamp
 		result = self.liteClient.Run("getconfig 15")
 		config15["validatorsElectedFor"] = int(Pars(result, "validators_elected_for:", ' '))
 		config15["electionsStartBefore"] = int(Pars(result, "elections_start_before:", ' '))
 		config15["electionsEndBefore"] = int(Pars(result, "elections_end_before:", ' '))
 		config15["stakeHeldFor"] = int(Pars(result, "stake_held_for:", ')'))
+		local.buffer["config15"] = config15 # set buffer
 		return config15
 	#end define
 
 	def GetConfig17(self):
+		# get buffer
+		timestamp = GetTimestamp()
+		config17 = local.buffer.get("config17")
+		if config17:
+			diffTime = timestamp - config17.get("timestamp")
+			if diffTime < 10:
+				return config17
+		#end if
+
 		local.AddLog("start GetConfig17 function", "debug")
 		config17 = dict()
+		config17["timestamp"] = timestamp
 		result = self.liteClient.Run("getconfig 17")
 		minStake = self.GetVarFromWorkerOutput(result, "min_stake")
 		minStake = self.GetVarFromWorkerOutput(minStake, "value")
@@ -593,12 +690,23 @@ class MyTonCore():
 		maxStake = self.GetVarFromWorkerOutput(result, "max_stake")
 		maxStake = self.GetVarFromWorkerOutput(maxStake, "value")
 		config17["maxStake"] = ng2g(maxStake)
+		local.buffer["config17"] = config17 # set buffer
 		return config17
 	#end define
 
 	def GetConfig34(self):
+		# get buffer
+		timestamp = GetTimestamp()
+		config34 = local.buffer.get("config34")
+		if config34:
+			diffTime = timestamp - config34.get("timestamp")
+			if diffTime < 10:
+				return config34
+		#end if
+
 		local.AddLog("start GetConfig34 function", "debug")
 		config34 = dict()
+		config34["timestamp"] = timestamp
 		result = self.liteClient.Run("getconfig 34")
 		config34["totalValidators"] = int(Pars(result, "total:", ' '))
 		config34["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
@@ -619,32 +727,41 @@ class MyTonCore():
 				buff["weight"] = validatorWeight
 				validators.append(buff)
 		config34["validators"] = validators
+		local.buffer["config34"] = config34 # set buffer
 		return config34
 	#end define
 	
 	def GetConfig36(self):
+		# get buffer
+		timestamp = GetTimestamp()
+		config36 = local.buffer.get("config36")
+		if config36:
+			diffTime = timestamp - config36.get("timestamp")
+			if diffTime < 10:
+				return config36
+		#end if
+
 		local.AddLog("start GetConfig36 function", "debug")
 		config36 = dict()
+		config36["timestamp"] = timestamp
 		result = self.liteClient.Run("getconfig 36")
-		try:
-			config36["totalValidators"] = int(Pars(result, "total:", ' '))
-			config36["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
-			config36["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
-			lines = result.split('\n')
-			validators = list()
-			for line in lines:
-				if "public_key:" in line:
-					validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
-					validatorPubkey = Pars(line, "pubkey:x", ')')
-					validatorWeight = Pars(line, "weight:", ' ')
-					buff = dict()
-					buff["adnlAddr"] = validatorAdnlAddr
-					buff["pubkey"] = validatorPubkey
-					buff["weight"] = validatorWeight
-					validators.append(buff)
-			config36["validators"] = validators
-		except:
-			pass
+		config36["totalValidators"] = int(Pars(result, "total:", ' '))
+		config36["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
+		config36["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
+		lines = result.split('\n')
+		validators = list()
+		for line in lines:
+			if "public_key:" in line:
+				validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
+				validatorPubkey = Pars(line, "pubkey:x", ')')
+				validatorWeight = Pars(line, "weight:", ' ')
+				buff = dict()
+				buff["adnlAddr"] = validatorAdnlAddr
+				buff["pubkey"] = validatorPubkey
+				buff["weight"] = validatorWeight
+				validators.append(buff)
+		config36["validators"] = validators
+		local.buffer["config36"] = config36 # set buffer
 		return config36
 	#end define
 
@@ -705,11 +822,6 @@ class MyTonCore():
 	def GetAdnlAddr(self):
 		local.AddLog("start GetAdnlAddr function", "debug")
 		adnlAddr = self.adnlAddr
-		# if adnlAddr is None:
-			# Create ADNL address
-			# adnlAddr = self.CreatNewKey()
-			# self.AddAdnlAddrToValidator(adnlAddr)
-			# self.adnlAddr = adnlAddr
 		return adnlAddr
 	#end define
 
@@ -1432,13 +1544,19 @@ class MyTonCore():
 	
 	def GetNetLoadAvg(self):
 		statistics = self.GetSettings("statistics")
-		netLoadAvg = statistics.get("netLoadAvg")
+		if statistics:
+			netLoadAvg = statistics.get("netLoadAvg")
+		else:
+			netLoadAvg = [-1, -1, -1]
 		return netLoadAvg
 	#end define
 
 	def GetTpsAvg(self):
 		statistics = self.GetSettings("statistics")
-		tpsAvg = statistics.get("tpsAvg")
+		if statistics:
+			tpsAvg = statistics.get("tpsAvg")
+		else:
+			tpsAvg = [-1, -1, -1]
 		return tpsAvg
 	#end define
 
@@ -1482,15 +1600,15 @@ def Init():
 #end define
 
 def Event(eventName):
-	if eventName == "toninstaller":
-		TonInstallerEvent()
+	if eventName == "enableVC":
+		EnableVcEvent()
 	elif eventName == "validator down":
 		ValidatorDownEvent()
 	local.Exit()
 #end define
 
-def TonInstallerEvent():
-	local.AddLog("start TonInstallerEvent function", "debug")
+def EnableVcEvent():
+	local.AddLog("start EnableVcEvent function", "debug")
 	# Создать новый кошелек для валидатора
 	ton = MyTonCore()
 	wallet = ton.CreateWallet("validator_wallet_001", -1)
@@ -1684,6 +1802,16 @@ def Mining(ton):
 #end define
 
 def ScanBlocks(ton):
+	liteserver = local.db.get("liteClient").get("liteserver")
+	if liteserver is None:
+		local.AddLog("ScanBlocks warning: local liteserver is not configured, stop thread", "warning")
+		exit()
+	validatorStatus = ton.GetValidatorStatus()
+	validatorOutOfSync = validatorStatus.get("outOfSync")
+	if validatorOutOfSync > 20:
+		local.AddLog("ScanBlocks warning: local validator out of sync, sleep 60 sec", "warning")
+		sleep(60)
+		return
 	block = ton.GetLastBlock()
 	if block != local.buffer["oldBlock"]:
 		local.buffer["oldBlock"] = block
@@ -1696,7 +1824,7 @@ def ReadBlocks(ton):
 		return
 	block = blocks.pop(0)
 
-	# Разделить 
+	# Разделить
 	buff1 = {"transNum": 0}
 	t1 = threading.Thread(target=SaveTransNumFromBlock, args=(ton, block, buff1), daemon=True)
 	t2 = threading.Thread(target=SaveShardsFromBlock, args=(ton, block, buff1), daemon=True)
