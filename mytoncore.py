@@ -763,7 +763,7 @@ class MyTonCore():
 					validators.append(buff)
 			config36["validators"] = validators
 		except:
-			pass
+			config36["validators"] = list()
 		local.buffer["config36"] = config36 # set buffer
 		return config36
 	#end define
@@ -1763,19 +1763,19 @@ def Telemetry(ton):
 	data["validatorStatus"] = ton.GetValidatorStatus()
 	data["cpuLoad"] = GetLoadAvg()
 	data["netLoad"] = ton.GetNetLoadAvg()
+	data["tpsAvg"] = ton.GetTpsAvg()
 	url = "https://toncenter.com/api/newton_test/status/report_status"
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
 	
 	# fix me
-	if ton.adnlAddr != "660A8EC119287FE4B8E38D69045E0017EB5BFE1FBBEBE1AA26D492DA4F3A1D69":
+	if ton.adnlAddr != "8F6B69A49F6AED54A5B92623699AA44E6F801CDD5BA8B89519AA0DDEA7E9A618":
 		return
 	data = dict()
 	config34 = ton.GetConfig34()
 	config36 = ton.GetConfig36()
-	data["currentValidators"] = config34["validators"]
-	if len(config36) > 0:
-		data["nextValidators"] = config36["validators"]
+	data["currentValidators"] = config34.get("validators")
+	data["nextValidators"] = config36.get("validators")
 	url = "https://toncenter.com/api/newton_test/status/report_validators"
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
