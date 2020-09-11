@@ -587,7 +587,7 @@ class MyTonCore():
 				return validatorStatus
 		#end if
 
-		local.AddLog("start GetValidatorStatus function", "debug")
+		# local.AddLog("start GetValidatorStatus function", "debug")
 		validatorStatus = dict()
 		try:
 			validatorStatus["isWorking"] = True
@@ -744,23 +744,26 @@ class MyTonCore():
 		local.AddLog("start GetConfig36 function", "debug")
 		config36 = dict()
 		config36["timestamp"] = timestamp
-		result = self.liteClient.Run("getconfig 36")
-		config36["totalValidators"] = int(Pars(result, "total:", ' '))
-		config36["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
-		config36["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
-		lines = result.split('\n')
-		validators = list()
-		for line in lines:
-			if "public_key:" in line:
-				validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
-				validatorPubkey = Pars(line, "pubkey:x", ')')
-				validatorWeight = Pars(line, "weight:", ' ')
-				buff = dict()
-				buff["adnlAddr"] = validatorAdnlAddr
-				buff["pubkey"] = validatorPubkey
-				buff["weight"] = validatorWeight
-				validators.append(buff)
-		config36["validators"] = validators
+		try:
+			result = self.liteClient.Run("getconfig 36")
+			config36["totalValidators"] = int(Pars(result, "total:", ' '))
+			config36["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
+			config36["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
+			lines = result.split('\n')
+			validators = list()
+			for line in lines:
+				if "public_key:" in line:
+					validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
+					validatorPubkey = Pars(line, "pubkey:x", ')')
+					validatorWeight = Pars(line, "weight:", ' ')
+					buff = dict()
+					buff["adnlAddr"] = validatorAdnlAddr
+					buff["pubkey"] = validatorPubkey
+					buff["weight"] = validatorWeight
+					validators.append(buff)
+			config36["validators"] = validators
+		except:
+			pass
 		local.buffer["config36"] = config36 # set buffer
 		return config36
 	#end define
@@ -1802,8 +1805,7 @@ def Mining(ton):
 #end define
 
 def ScanBlocks(ton):
-	liteserver = local.db.get("liteClient").get("liteserver")
-	if liteserver is None:
+	if ton.liteClient.pubkeyPath is None:
 		local.AddLog("ScanBlocks warning: local liteserver is not configured, stop thread", "warning")
 		exit()
 	validatorStatus = ton.GetValidatorStatus()
