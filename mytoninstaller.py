@@ -249,7 +249,7 @@ def FirstMytoncoreSettings():
 	args = ["chown", user + ':' + user, mconfigPath]
 	subprocess.run(args)
 
-	# Запустить mytoncore.py
+	# start mytoncore
 	local.AddLog("Start mytoncore service", "debug")
 	args = ["systemctl", "start", "mytoncore"]
 	subprocess.run(args)
@@ -307,7 +307,7 @@ def EnableValidatorConsole():
 	args = ["chown", user + ':' + user, server_pubkey, client_key, client_pubkey]
 	subprocess.run(args)
 
-	# read config
+	# read vconfig
 	vconfig = GetConfig(path=vconfigPath)
 
 	# prepare config
@@ -320,10 +320,10 @@ def EnableValidatorConsole():
 	control["allowed"] = [allowed] # fix me
 	vconfig["control"].append(control)
 
-	# write config
+	# write vconfig
 	SetConfig(path=vconfigPath, data=vconfig)
 
-	# start validator
+	# restart validator
 	local.AddLog("Start validator service", "debug")
 	args = ["systemctl", "restart", "validator"]
 	subprocess.run(args)
@@ -341,12 +341,17 @@ def EnableValidatorConsole():
 	validatorConsole["addr"] = "127.0.0.1:{cport}".format(cport=cport)
 	mconfig["validatorConsole"] = validatorConsole
 
-	# Записать настройки в файл
+	# write mconfig
 	SetConfig(path=mconfigPath, data=mconfig)
 
 	# Подтянуть событие в mytoncore.py
 	cmd = "python3 {srcDir}mytonctrl/mytoncore.py -e \"enableVC\"".format(srcDir=srcDir)
 	args = ["su", "-l", user, "-c", cmd]
+	subprocess.run(args)
+	
+	# restart mytoncore
+	local.AddLog("Start validator service", "debug")
+	args = ["systemctl", "restart", "mytoncore"]
 	subprocess.run(args)
 #end define
 
@@ -430,14 +435,14 @@ def EnableLiteServer():
 	liteServer["port"] = lport
 	mconfig["liteClient"]["liteServer"] = liteServer
 
-	# Записать настройки в файл
+	# write mconfig
 	local.AddLog("write mconfig", "debug")
 	SetConfig(path=mconfigPath, data=mconfig)
-
-	# Подтянуть настройки в mytoncore.py
-	# cmd = "python3 {srcDir}mytonctrl/mytoncore.py -s {mconfigPath}".format(srcDir=srcDir, mconfigPath=mconfigPath)
-	# args = ["su", "-l", user, "-c", cmd]
-	# subprocess.run(args)
+	
+	# restart mytoncore
+	local.AddLog("Start validator service", "debug")
+	args = ["systemctl", "restart", "mytoncore"]
+	subprocess.run(args)
 #end define
 
 def GetConfig(**kwargs):
