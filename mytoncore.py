@@ -1763,7 +1763,7 @@ def Telemetry(ton):
 	data["validatorStatus"] = ton.GetValidatorStatus()
 	data["cpuLoad"] = GetLoadAvg()
 	data["netLoad"] = ton.GetNetLoadAvg()
-	data["tpsAvg"] = ton.GetTpsAvg()
+	data["tps"] = ton.GetTpsAvg()
 	url = "https://toncenter.com/api/newton_test/status/report_status"
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
