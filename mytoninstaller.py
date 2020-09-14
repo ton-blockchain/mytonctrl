@@ -11,6 +11,7 @@ console = MyPyConsole()
 
 
 def Init():
+	local.db["config"]["isStartOnlyOneProcess"] = False
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isIgnorLogWarning"] = True # disable warning
 	local.Run()
@@ -23,6 +24,12 @@ def Init():
 	local.buffer["vuser"] = "validator"
 	local.buffer["cport"] = random.randint(2000, 65000)
 	local.buffer["lport"] = random.randint(2000, 65000)
+
+	# Create user console
+	console.name = "MyTonInstaller"
+	console.color = console.RED
+	console.AddItem("status", Status, "Print TON component status")
+	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver. Example: 'enable FN'")
 
 	Refresh()
 #end define
@@ -51,12 +58,6 @@ def Refresh():
 	local.buffer["validatorAppPath"] = tonBinDir + "validator-engine/validator-engine"
 	local.buffer["globalConfigPath"] = tonBinDir + "validator-engine/ton-global.config.json"
 	local.buffer["vconfigPath"] = tonDbDir + "config.json"
-
-	# Create user console
-	console.name = "MyTonInstaller"
-	
-	console.AddItem("status", Status, "Print TON component status")
-	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver. Example: 'enable FN'")
 #end define
 
 def Status(args):
