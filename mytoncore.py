@@ -604,6 +604,9 @@ class MyTonCore():
 			validatorStatus["keymasterchainblock"] = self.GVS_GetItemFromBuff(buff)
 			buff = Pars(result, "rotatemasterchainblock", '\n')
 			validatorStatus["rotatemasterchainblock"] = self.GVS_GetItemFromBuff(buff)
+			validatorStatus["transNum"] = local.buffer.get("transNum", -1)
+			validatorStatus["blocksNum"] = local.buffer.get("blocksNum", -1)
+			validatorStatus["masterBlocksNum"] = local.buffer.get("masterBlocksNum", -1)
 		except:
 			validatorStatus["isWorking"] = False
 			validatorStatus["unixtime"] = timestamp
@@ -1599,6 +1602,8 @@ def Init():
 	local.buffer["oldBlock"] = None
 	local.buffer["blocks"] = list()
 	local.buffer["transNum"] = 0
+	local.buffer["blocksNum"] = 0
+	local.buffer["masterBlocksNum"] = 0
 	local.buffer["transNumList"] = [0]*15*6
 #end define
 
@@ -1693,11 +1698,9 @@ def SaveNetworStatistics(ton):
 	netLoad15 = b2mb(buff15)
 
 	# save statistics
-	statistics = ton.GetSettings("statistics")
-	if statistics is None:
-		statistics = dict()
+	statistics = local.db.get("statistics", dict())
 	statistics["netLoadAvg"] = [netLoad1, netLoad5, netLoad15]
-	ton.SetSettings("statistics", statistics)
+	local.db["statistics"] = statistics
 #end define
 
 def ReadTransNumData():
@@ -1732,12 +1735,18 @@ def SaveTransNumStatistics(ton):
 	tps5 = round(buff5, 2)
 	tps15 = round(buff15, 2)
 
+	# if ScanBlocks thread not working
+	diffTime = GetTimestamp() - local.buffer.get("scanBlocks_time", -1)
+	if diffTime > 60:
+		tps1 = -1
+		tps5 = -1
+		tps15 = -1
+	#end if
+
 	# save statistics
-	statistics = ton.GetSettings("statistics")
-	if statistics is None:
-		statistics = dict()
+	statistics = local.db.get("statistics", dict())
 	statistics["tpsAvg"] = [tps1, tps5, tps15]
-	ton.SetSettings("statistics", statistics)
+	local.db["statistics"] = statistics
 #end define
 
 def Offers(ton):
@@ -1815,9 +1824,12 @@ def ScanBlocks(ton):
 		sleep(60)
 		return
 	block = ton.GetLastBlock()
+	local.buffer["scanBlocks_time"] = GetTimestamp()
 	if block != local.buffer["oldBlock"]:
 		local.buffer["oldBlock"] = block
 		local.buffer["blocks"].append(block)
+		local.buffer["blocksNum"] += 1
+		local.buffer["masterBlocksNum"] += 1
 #end define
 
 def ReadBlocks(ton):
@@ -1842,6 +1854,7 @@ def ReadBlocks(ton):
 	# Разделить
 	buff2 = dict()
 	for shard in shards:
+		local.buffer["blocksNum"] += 1
 		threading.Thread(target=SaveTransNumFromShard, args=(ton, shard, buff2), daemon=True).start()
 	while len(buff2) < len(shards):
 		time.sleep(0.3)
