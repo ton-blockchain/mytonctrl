@@ -1821,7 +1821,7 @@ def ScanBlocks(ton):
 	validatorOutOfSync = validatorStatus.get("outOfSync")
 	if validatorOutOfSync > 20:
 		local.AddLog("ScanBlocks warning: local validator out of sync, sleep 60 sec", "warning")
-		sleep(60)
+		time.sleep(60)
 		return
 	block = ton.GetLastBlock()
 	local.buffer["scanBlocks_time"] = GetTimestamp()
