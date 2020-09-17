@@ -1,6 +1,6 @@
 ## Что это
 Данная консольная программа является оберткой над `fift`, `lite-client` и `validator-engine-console`. Она была создана для облегчения управления кошельками, доменами и валидатором на операционной системе `Linux`.
-![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-status.png)
+![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-status_ru.png)
 
 ## Функционал
 - [x] Показать статус сети TON
