@@ -4,12 +4,13 @@
 from mypylib.mypylib import *
 from mypyconsole.mypyconsole import *
 from mytoncore import *
+import sys, getopt, os
 
 local = MyPyClass(__file__)
 console = MyPyConsole()
 ton = MyTonCore()
 
-def Init():
+def Init(argv):
 	# Load translate table
 	local.InitTranslator(local.buffer.get("myDir") + "translate.json")
 
@@ -57,6 +58,31 @@ def Init():
 
 	console.AddItem("test", Test, "Test")
 	console.AddItem("pt", PrintTest, "PrintTest")
+	
+	# Process input parameters
+	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
+	for opt, arg in opts:
+		if opt == '-h':
+			print ('mytonctrl.py -c <configfile> -w <wallets>')
+			sys.exit()
+		elif opt in ("-c", "--config"):
+			configfile = arg
+			if not os.access(configfile, os.R_OK):
+				print ("Configuration file " + configfile + " could not be opened")
+				sys.exit()
+
+			ton.dbFile = configfile
+			ton.Refresh()
+		elif opt in ("-w", "--wallets"):
+			wallets = arg
+			if not os.access(wallets, os.R_OK):
+				print ("Wallets path " + wallets  + " could not be opened")
+				sys.exit()
+			elif not os.path.isdir(wallets):
+				print ("Wallets path " + wallets  + " is not a directory")
+				sys.exit()
+			ton.walletsDir = wallets
+	#end for
 
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isLocaldbSaving"] = True
@@ -704,6 +730,6 @@ def SetSettings(args):
 ###
 
 if __name__ == "__main__":
-	Init()
+	Init(sys.argv[1:])
 	console.Run()
 #end if
