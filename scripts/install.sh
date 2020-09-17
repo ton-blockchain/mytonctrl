@@ -51,7 +51,12 @@ fi
 # Запускаю установщик mytoninstaller.py
 echo -e "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
 user=$(ls -lh ${mydir}/${0} | cut -d ' ' -f 3)
-python3 $SOURCES_DIR/mytonctrl/mytoninstaller.py -m ${2} -u ${user}
+
+if [ "${2}" == "--no_send_telemetry" ]; then
+	python3 $SOURCES_DIR/mytonctrl/mytoninstaller.py -m ${2} -u ${user} --no_send_telemetry
+else
+	python3 $SOURCES_DIR/mytonctrl/mytoninstaller.py -m ${2} -u ${user}
+fi
 
 # Выход из программы
 echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"

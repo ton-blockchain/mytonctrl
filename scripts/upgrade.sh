@@ -17,11 +17,11 @@ export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
 
 cd /usr/bin/ton
-systemctl stop ton-validator && sleep 5
+systemctl stop validator && sleep 5
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000"
 cmake /usr/src/ton && make -j ${cpuNumber}
-systemctl start ton-validator
+systemctl restart validator
 
 
 # Конец
