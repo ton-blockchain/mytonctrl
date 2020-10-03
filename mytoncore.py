@@ -993,7 +993,7 @@ class MyTonCore():
 		return stake
 	#end define
 
-	def ElectionEntry(self, args):
+	def ElectionEntry(self, args=None):
 		#self.TestElectionEntry()
 	
 		local.AddLog("start ElectionEntry function", "debug")
