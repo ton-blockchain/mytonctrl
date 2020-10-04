@@ -1026,7 +1026,7 @@ class MyTonCore():
 
 		# Get rateMultiplier
 		rateMultiplier = 1
-		if len(args) > 1:
+		if args and len(args) > 1:
 			rateMultiplier = float(args[1])
 		
 		# Check if we have enough grams
