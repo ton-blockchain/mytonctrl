@@ -79,7 +79,7 @@ echo -e "${COLOR}[2/6]${ENDC} Cloning github repository"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
 rm -rf $SOURCES_DIR/mytonctrl
-git clone --recursive https://github.com/ton-blockchain/ton.git
+git clone --recursive https://github.com/newton-blockchain/ton.git
 git clone --recursive https://github.com/igroman787/mytonctrl.git
 
 
@@ -111,13 +111,11 @@ make -j ${cpuNumber}
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
 cd $BIN_DIR/ton/lite-client
-wget https://test.ton.org/ton-lite-client-test1.config.json
-# wget -O ton-lite-client-test1.config.json https://newton-blockchain.github.io/newton-test.global.config.json
+wget https://newton-blockchain.github.io/ton-lite-client-test1.config.json
 
 # Скачиваем конфигурационные файлы validator-engine
 cd $BIN_DIR/ton/validator-engine
-wget https://test.ton.org/ton-global.config.json
-# wget -O ton-global.config.json https://newton-blockchain.github.io/newton-test.global.config.json
+wget https://newton-blockchain.github.io/ton-global.config.json
 
 # Выход из программы
 echo -e "${COLOR}[6/6]${ENDC} TON software installation complete"
