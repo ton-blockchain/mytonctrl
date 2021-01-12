@@ -251,7 +251,7 @@ def FirstMytoncoreSettings():
 	SetConfig(path=mconfigPath, data=mconfig)
 
 	# chown 1
-	args = ["chown", user + ':' + user, mconfigPath]
+	args = ["chown", user + ':' + user, mconfigDir, mconfigPath]
 	subprocess.run(args)
 
 	# start mytoncore
