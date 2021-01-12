@@ -205,6 +205,11 @@ def FirstMytoncoreSettings():
 		local.AddLog("mytoncore.db already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
 	#end if
+	
+	# Подготовить папку mytoncore
+	mconfigPath = local.buffer["mconfigPath"]
+	mconfigDir = GetDirFromPath(mconfigPath)
+	os.makedirs(mconfigDir, exist_ok=True)
 
 	# create variables
 	srcDir = local.buffer["srcDir"]
@@ -243,7 +248,6 @@ def FirstMytoncoreSettings():
 	mconfig["sendTelemetry"] = sendTelemetry
 
 	# Записать настройки в файл
-	mconfigPath = local.buffer["mconfigPath"]
 	SetConfig(path=mconfigPath, data=mconfig)
 
 	# chown 1
