@@ -1,0 +1,40 @@
+Instructions on how to become a validator using mytonctrl (v0.1, OS Ubuntu)
+1. Install mytonctrl:
+Download the installation script on behalf of the user on whose name mytonctrl will be installed. I strongly advise against installing mytoncore as root. In our case, on behalf of user:
+`wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh`
+(download screen + ls)
+
+Run the installation script as administrator:
+`sudo bash install.sh -m full`
+
+This is how a successful installation of mytonctrl looks like
+(screen)
+
+2. Checking that everything was installed correctly:
+Run mytonctrl as the user on whose name it was installed:
+`mytonctrl`
+(screen mytonctrl)
+
+We look at the status of mytonctrl. Here we are interested in the field status:
+1. The status of the mytoncore core. Should be green.
+2. The status of the local validator. Should be green.
+3. Dissynchronization of the local validator. There will be a huge number in the beginning. After the validator contacts the rest of the validators, the number will be around 250k. Then, as the validator synchronizes, the number will decrease. As soon as the number becomes less than 20, then the validator is synchronized.
+(status screen)
+
+We look at the available wallets. The validator_wallet_001 wallet was created when mytonctrl was installed:
+(screen of wallets)
+
+3. We drop the required number of coins on the validator's wallet and activate the wallet: (On the screen, the vas command displays the transfer history, and the aw command activates the wallet)
+(screen vas + aw)
+
+4. At this stage, everything is ready for the validator to work. mytoncore will automatically participate in the elections. will divide the balance of the wallet into two parts and will use them as a bet to participate in the elections. You can manually set the size of the steak yourself:
+`set stake 200000` - set the size of the stake to 200k coins. If the bet was accepted and we became a validator, then we will be able to withdraw our bet only at the second election - these are the rules of the electorate.
+(steak installation screen)
+
+The mytoncre logs can be viewed here:
+`~ /.local/share/mytoncore/mytoncore.log`
+
+5. Bonus.
+If you run the validator on a testnet, then you can mine some coins from PoW givers. To do this, you need to set several parameters:
+`set powAddr" kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN "` - set the PoW giver's address, the list can be taken from here https://test.ton.org/TestGrams-HOWTO.txt
+`set minerAddr" EQB1eouuAYyQogT7Sd4KzzBLBoSdLm77wVL10CrHjJON8w7E "` - set the address of your wallet to which the reward will be credited.
