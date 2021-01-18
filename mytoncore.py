@@ -361,7 +361,7 @@ class MyTonCore():
 			if "adnl address" in line:
 				adnlAddr = Pars(line, "=", "\n")
 				adnlAddr = adnlAddr.replace(' ', '')
-				adnlAddr = adnlAddr.lower()
+				adnlAddr = adnlAddr
 				return adnlAddr
 	#end define
 
@@ -848,6 +848,43 @@ class MyTonCore():
 		config17["maxStake"] = ng2g(maxStake)
 		local.buffer["config17"] = config17 # set buffer
 		return config17
+	#end define
+
+	def GetConfig32(self):
+		# get buffer
+		timestamp = GetTimestamp()
+		config32 = local.buffer.get("config32")
+		if config32:
+			diffTime = timestamp - config32.get("timestamp")
+			if diffTime < 10:
+				return config32
+		#end if
+
+		local.AddLog("start GetConfig32 function", "debug")
+		config32 = dict()
+		config32["timestamp"] = timestamp
+		result = self.liteClient.Run("getconfig 32")
+		config32["totalValidators"] = int(Pars(result, "total:", ' '))
+		config32["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
+		config32["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
+		lines = result.split('\n')
+		validators = list()
+		for line in lines:
+			if "public_key:" in line:
+				validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
+				validatorPubkey = Pars(line, "pubkey:x", ')')
+				if config32["totalValidators"] > 1:
+					validatorWeight = int(Pars(line, "weight:", ' '))
+				else:
+					validatorWeight = int(Pars(line, "weight:", ')'))
+				buff = dict()
+				buff["adnlAddr"] = validatorAdnlAddr
+				buff["pubkey"] = validatorPubkey
+				buff["weight"] = validatorWeight
+				validators.append(buff)
+		config32["validators"] = validators
+		local.buffer["config32"] = config32 # set buffer
+		return config32
 	#end define
 
 	def GetConfig34(self):
@@ -1459,7 +1496,7 @@ class MyTonCore():
 			item["config"]["id"] = subdata[2][0] # *param_id*
 			item["config"]["value"] = subdata[2][1] # *param_val*
 			item["config"]["oldValueHash"] = subdata[2][2] # *param_hash*
-			item["vsetId"] = subdata[3] # *vset_id*
+			# item["vsetId"] = subdata[3] # *vset_id*
 			item["votedValidators"] = subdata[4] # *voters_list*
 			item["weightRemaining"] = subdata[5] # *weight_remaining*
 			item["roundsRemaining"] = subdata[6] # *rounds_remaining*
@@ -1483,27 +1520,30 @@ class MyTonCore():
 
 		# Get json
 		complaints = list()
-		for  complaint in rawComplaints:
+		for complaint in rawComplaints:
 			if len(complaint) == 0:
 				continue
-			hash = complaint[0]
+			chash = complaint[0]
 			subdata = complaint[1]
 			
 			# Create dict
 			# parser from: https://github.com/ton-blockchain/ton/blob/dab7ee3f9794db5a6d32c895dbc2564f681d9126/crypto/smartcont/elector-code.fc#L1149
 			item = dict()
 			buff = subdata[0] # *complaint*
-			item["hash"] = hash
-			item["validatorPubkey"] = buff[0] # *validator_pubkey*
-			item["description"] = buff[1] # *description*
+			item["hash"] = chash
+			item["validatorPubkey"] = dec2hex(buff[0]).upper() # *validator_pubkey*
+			# item["description"] = buff[1] # *description*
 			item["createdTime"] = buff[2] # *created_at*
 			item["severity"] = buff[3] # *severity*
-			item["rewardAddr"] = buff[4] # *reward_addr*
-			item["paid"] = buff[5] # *paid*
-			item["suggestedFine"] = buff[6] # *suggested_fine*
-			item["suggestedFinePart"] = buff[7] # *suggested_fine_part*
+			rewardAddr = buff[4]
+			rewardAddr = "-1:" + dec2hex(rewardAddr)
+			rewardAddr = self.HexAddr2Base64Addr(rewardAddr)
+			item["rewardAddr"] = rewardAddr # *reward_addr*
+			# item["paid"] = buff[5] # *paid*
+			# item["suggestedFine"] = buff[6] # *suggested_fine*
+			# item["suggestedFinePart"] = buff[7] # *suggested_fine_part*
 			item["votedValidators"] = subdata[1] # *voters_list*
-			item["vsetId"] = subdata[2] # *vset_id*
+			# item["vsetId"] = subdata[2] # *vset_id*
 			item["weightRemaining"] = subdata[3] # *weight_remaining*
 			complaints.append(item)
 		#end for
@@ -1587,7 +1627,13 @@ class MyTonCore():
 		if validatorIndex in complaint.get("votedValidators"):
 			local.AddLog("Complaint already has been voted", "debug")
 			return
-		var1 = self.CreateComplaintRequest(electionId , complaintHash, validatorIndex)
+		config34 = self.GetConfig34()
+		electionId = config34.get("startWorkTime")
+		createdTime = complaint.get("createdTime")
+		if electionId > createdTime:
+			config32 = self.GetConfig32()
+			electionId = config32.get("startWorkTime")
+		var1 = self.CreateComplaintRequest(electionId, complaintHash, validatorIndex)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 		resultFilePath = self.SignComplaintVoteRequestWithValidator(complaintHash, electionId, validatorIndex, validatorPubkey_b64, validatorSignature)
 		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, 1.5)
@@ -1643,7 +1689,8 @@ class MyTonCore():
 				workBlocksExpected = float(blocksExpected_buff[1])
 				mr = masterBlocksCreated / masterBlocksExpected
 				wr = workBlocksCreated / workBlocksExpected
-				if mr > 0.6 and wr > 0.6:
+				r = (mr + wr) / 2
+				if r > 0.7:
 					online = True
 				else:
 					online = False
@@ -1664,13 +1711,12 @@ class MyTonCore():
 	def CheckValidators(self):
 		local.AddLog("start CheckValidators function", "debug")
 		vdata, compFiles = self.GetValidatorsLoad()
-		if len(compFiles) > 0:
-			fullElectorAddr = self.GetFullElectorAddr()
-			config34 = self.GetConfig34()
-			electionId = config34.get("startWorkTime")
-			walletName = self.validatorWalletName
-			wallet = self.GetLocalWallet(walletName)
-			account = self.GetAccount(wallet.addr)
+		fullElectorAddr = self.GetFullElectorAddr()
+		config34 = self.GetConfig34()
+		electionId = config34.get("startWorkTime")
+		walletName = self.validatorWalletName
+		wallet = self.GetLocalWallet(walletName)
+		account = self.GetAccount(wallet.addr)
 		if wallet is None:
 			raise Exception("Validator wallet not fond")
 		if account.balance < 100:

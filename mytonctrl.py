@@ -50,7 +50,7 @@ def Init():
 	console.AddItem("vo", VoteOffer, local.Translate("vo_cmd"))
 	console.AddItem("el", PrintElectionEntriesList, local.Translate("el_cmd"))
 	console.AddItem("ve", VoteElectionEntry, local.Translate("ve_cmd"))
-	console.AddItem("vl", PrintValidatorList, local.Translate("vl_cmd")) # fixme (add online validator to validator list)
+	console.AddItem("vl", PrintValidatorList, local.Translate("vl_cmd"))
 	console.AddItem("cl", PrintComplaintsList, local.Translate("cl_cmd"))
 	console.AddItem("vc", VoteComplaint, local.Translate("vc_cmd"))
 
@@ -60,7 +60,6 @@ def Init():
 
 	console.AddItem("test", Test, "Test")
 	console.AddItem("test2", Test2, "Test")
-	console.AddItem("test3", Test3, "Test")
 	console.AddItem("pt", PrintTest, "PrintTest")
 
 	local.db["config"]["logLevel"] = "debug"
@@ -111,10 +110,6 @@ def Test(args):
 #end define
 
 def Test2(args):
-	ton.CheckValidators()
-#end define
-
-def Test3(args):
 	ton.CheckValidators()
 #end define
 
@@ -709,11 +704,8 @@ def VoteElectionEntry(args):
 
 def PrintValidatorList(args):
 	config34 = ton.GetConfig34()
-	
 	vdata, compFiles = ton.GetValidatorsLoad()
 	validators = config34["validators"]
-	print("validators:", validators)
-	print("vdata:", vdata)
 	for vid in range(len(validators)):
 		validator = validators[vid]
 		validator["mr"] = vdata[vid]["mr"]

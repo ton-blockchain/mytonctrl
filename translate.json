@@ -80,12 +80,20 @@
 		"ru": "Удалить домен"
 	},
 	"ol_cmd": {
-		"en": "Show offer list",
+		"en": "Show offers list",
 		"ru": "Показать действующие предложения"
 	},
 	"vo_cmd": {
 		"en": "Vote for offer",
 		"ru": "Голосовать за предложение"
+	},
+	"cl_cmd": {
+		"en": "Show complaints list",
+		"ru": "Показать действующие жалобы"
+	},
+	"vc_cmd": {
+		"en": "Vote for complaint",
+		"ru": "Голосовать за жалобу"
 	},
 	"el_cmd": {
 		"en": "Show election entries list",
