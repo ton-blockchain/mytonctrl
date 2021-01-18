@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
-	echo "Запустите скрипт от имени администратора"
+	echo "Please run script as root"
 	exit 1
 fi
 

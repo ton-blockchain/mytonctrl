@@ -131,6 +131,10 @@
 		"en": "Number of offers: {0}({1})",
 		"ru": "Действующие предложения: {0}({1})"
 	},
+	"ton_status_complaints": {
+		"en": "Number of complaints: {0}({1})",
+		"ru": "Действующие жалобы: {0}({1})"
+	},
 	"ton_status_election": {
 		"en": "Election status: {0}",
 		"ru": "Статус выборов: {0}"
