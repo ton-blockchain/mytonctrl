@@ -51,9 +51,8 @@ def Init():
 	console.AddItem("el", PrintElectionEntriesList, local.Translate("el_cmd"))
 	console.AddItem("ve", VoteElectionEntry, local.Translate("ve_cmd"))
 	console.AddItem("vl", PrintValidatorList, local.Translate("vl_cmd")) # fixme (add online validator to validator list)
-
-	console.AddItem("cl", PrintComplaintsList, local.Translate("cl_cmd")) # fixme
-	console.AddItem("vc", VoteComplaint, local.Translate("vc_cmd")) # fixme
+	console.AddItem("cl", PrintComplaintsList, local.Translate("cl_cmd"))
+	console.AddItem("vc", VoteComplaint, local.Translate("vc_cmd"))
 
 
 	console.AddItem("get", GetSettings, local.Translate("get_cmd"))
@@ -710,7 +709,16 @@ def VoteElectionEntry(args):
 
 def PrintValidatorList(args):
 	config34 = ton.GetConfig34()
+	
+	vdata, compFiles = ton.GetValidatorsLoad()
 	validators = config34["validators"]
+	print("validators:", validators)
+	print("vdata:", vdata)
+	for vid in range(len(validators)):
+		validator = validators[vid]
+		validator["mr"] = vdata[vid]["mr"]
+		validator["wr"] = vdata[vid]["wr"]
+		validator["online"] = vdata[vid]["online"]
 	print(json.dumps(validators, indent=4))
 #end define
 

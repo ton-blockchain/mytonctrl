@@ -46,9 +46,7 @@ class ValidatorConsole:
 	#end define
 
 	def Run(self, cmd):
-		if self.appPath is None 
-		or self.privKeyPath is None 
-		or self.pubKeyPath is None:
+		if self.appPath is None or self.privKeyPath is None or self.pubKeyPath is None:
 			raise Exception("ValidatorConsole error: Validator console is not settings")
 		args = [self.appPath, "-k", self.privKeyPath, "-p", self.pubKeyPath, "-a", self.addr, "-v", "0", "--cmd", cmd]
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
@@ -1601,9 +1599,8 @@ class MyTonCore():
 		onlineValidators = list()
 		vdata, compFiles = self.GetValidatorsLoad()
 		for key, item in vdata.items():
-			mr = item.get("mr")
-			wr = item.get("wr")
-			if mr > 0.7 and wr > 0.7:
+			online = item.get("online")
+			if online is True:
 				onlineValidators.append(item)
 		return onlineValidators
 	#end define
@@ -1627,8 +1624,10 @@ class MyTonCore():
 				compFiles.append(fileName)
 			elif "val" in line and "pubkey" in line:
 				buff = line.split(' ')
-				id_buff = buff[1]
-				id = id_buff.replace('#', '')
+				vid = buff[1]
+				vid = vid.replace('#', '')
+				vid = vid.replace(':', '')
+				vid = int(vid)
 				pubkey = buff[3]
 				blocksCreated_buff = buff[6]
 				blocksCreated_buff = blocksCreated_buff.replace('(', '')
@@ -1644,8 +1643,12 @@ class MyTonCore():
 				workBlocksExpected = float(blocksExpected_buff[1])
 				mr = masterBlocksCreated / masterBlocksExpected
 				wr = workBlocksCreated / workBlocksExpected
+				if mr > 0.6 and wr > 0.6:
+					online = True
+				else:
+					online = False
 				item = dict()
-				item["id"] = id
+				item["id"] = vid
 				item["pubkey"] = pubkey
 				item["masterBlocksCreated"] = masterBlocksCreated
 				item["workBlocksCreated"] = workBlocksCreated
@@ -1653,7 +1656,8 @@ class MyTonCore():
 				item["workBlocksExpected"] = workBlocksExpected
 				item["mr"] = mr
 				item["wr"] = wr
-				vdata[id] = item
+				item["online"] = online
+				vdata[vid] = item
 		return vdata, compFiles
 	#end define
 
@@ -1702,14 +1706,15 @@ class MyTonCore():
 		return result
 	#end define
 	
-	def GetValidatorIndex(self):
+	def GetValidatorIndex(self, adnlAddr=None):
 		config34 = self.GetConfig34()
 		validators = config34.get("validators")
-		myValidatorAdnlAddr = self.GetAdnlAddr()
+		if adnlAddr is None:
+			adnlAddr = self.GetAdnlAddr()
 		index = 0
 		for validator in validators:
-			validatorAdnlAddr = validator.get("adnlAddr")
-			if myValidatorAdnlAddr == validatorAdnlAddr:
+			searchAdnlAddr = validator.get("adnlAddr")
+			if adnlAddr == searchAdnlAddr:
 				return index
 			index += 1
 		local.AddLog("GetValidatorIndex warning: index not found.", "warning")
