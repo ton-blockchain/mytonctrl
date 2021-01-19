@@ -19,7 +19,7 @@ def Init():
 
 
 	# create variables
-	user = os.environ["USER"]
+	user = os.environ.get("USER", "root")
 	local.buffer["user"] = user
 	local.buffer["vuser"] = "validator"
 	local.buffer["cport"] = random.randint(2000, 65000)
