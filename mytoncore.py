@@ -1349,9 +1349,11 @@ class MyTonCore():
 		if walletName in walletsNameList:
 			for item in walletsNameList:
 				if item.startswith(walletPrefix):
-					index = item[item.rfind('_')+1:]
-					index = int(index)
-					indexList.append(index)
+					try:
+						index = item[item.rfind('_')+1:]
+						index = int(index)
+						indexList.append(index)
+					except: pass
 			index = max(indexList) + 1
 			index_str = str(index).rjust(3, '0')
 			walletName = walletPrefix + index_str
@@ -1643,6 +1645,44 @@ class MyTonCore():
 		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, 1.5)
 		self.SendFile(resultFilePath, wallet)
 		self.AddSaveComplaint(complaintHash)
+	#end define
+
+	def CheckComplaints(self):
+		local.AddLog("start CheckComplaints function", "debug")
+		config34 = self.GetConfig34()
+		electionId = config34.get("startWorkTime")
+		filePrefix = self.tempDir + "scheck_"
+		cmd = "savecomplaints {electionId} {filePrefix}".format(electionId=electionId, filePrefix=filePrefix)
+		result = self.liteClient.Run(cmd)
+		lines = result.split('\n')
+		checkComplaints = list()
+		for line in lines:
+			if "SAVE_COMPLAINT" in line:
+				buff = line.split('\t')
+				chash = buff[2]
+				validatorPubkey = buff[3]
+				createdTime = buff[4]
+				filePath = buff[5]
+				ok = self.CheckComplaint(filePath)
+				if ok is True:
+					checkComplaints.append(chash)
+		return checkComplaints
+	#end define
+
+	def CheckComplaint(self, filePath):
+		local.AddLog("start CheckComplaint function", "debug")
+		cmd = "loadproofcheck {filePath}".format(filePath=filePath)
+		result = self.liteClient.Run(cmd)
+		lines = result.split('\n')
+		ok = False
+		for line in lines:
+			if "COMPLAINT_VOTE_FOR" in line:
+				buff = line.split('\t')
+				chash = buff[1]
+				ok_buff = buff[2]
+				if ok_buff == "YES":
+					ok = True
+		return ok
 	#end define
 
 	def GetOnlineValidators(self):
@@ -1986,7 +2026,9 @@ class MyTonCore():
 	#end define
 	
 	def GetStrType(self, inputStr):
-		if len(inputStr) == 48 and '.' not in inputStr:
+		if type(inputStr) is not str:
+			result = None
+		elif len(inputStr) == 48 and '.' not in inputStr:
 			result = "account"
 		elif ':' in inputStr:
 			result = "account_hex"
@@ -2364,10 +2406,12 @@ def SaveTransNumFromShard(ton, shard, buff):
 
 def Complaints(ton):
 	saveComplaints = ton.GetSaveComplaints()
+	checkComplaints = ton.CheckComplaints()
 	complaints = ton.GetComplaints()
-	for offer in complaints:
-		complaintHash = offer.get("hash")
-		if complaintHash in saveComplaints:
+	for complaint in complaints:
+		complaintHash = complaint.get("hash")
+		complaintHash_hex = dec2hex(complaintHash).upper()
+		if complaintHash_hex in checkComplaints and complaintHash not in saveComplaints:
 			ton.VoteComplaint(complaintHash)
 #end define
 
@@ -2379,6 +2423,7 @@ def General():
 	local.StartCycle(Elections, sec=600, args=(ton, ))
 	local.StartCycle(Statistics, sec=10, args=(ton, ))
 	local.StartCycle(Offers, sec=600, args=(ton, ))
+	local.StartCycle(Complaints, sec=600, args=(ton, ))
 	local.StartCycle(Domains, sec=600, args=(ton, ))
 	local.StartCycle(Telemetry, sec=60, args=(ton, ))
 	local.StartCycle(Mining, sec=1, args=(ton, ))

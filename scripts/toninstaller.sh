@@ -94,9 +94,11 @@ cd $BIN_DIR/ton
 if [ "$OSTYPE" == "darwin"* ]; then
 	export CMAKE_C_COMPILER=$(which clang)
 	export CMAKE_CXX_COMPILER=$(which clang++)
+	export CCACHE_DISABLE=1
 else
 	export CC=$(which clang)
 	export CXX=$(which clang++)
+	export CCACHE_DISABLE=1
 fi
 
 # Подготовиться к компиляции

@@ -121,6 +121,7 @@ def General():
 			FirstNodeSettings()
 			EnableValidatorConsole()
 			EnableLiteServer()
+			BackupVconfig()
 		#end if
 
 		# Создать символические ссылки
@@ -470,6 +471,14 @@ def SetConfig(**kwargs):
 	file = open(path, 'wt')
 	file.write(text)
 	file.close()
+#end define
+
+def BackupVconfig():
+	local.AddLog("Backup validator config file 'config.json' to 'config.json.backup'", "debug")
+	vconfigPath = local.buffer["vconfigPath"]
+	backupPath = vconfigPath + ".backup"
+	args = ["cp", vconfigPath, backupPath]
+	subprocess.run(args)
 #end define
 
 def CreateSymlinks():

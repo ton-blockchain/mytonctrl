@@ -60,6 +60,7 @@ def Init():
 
 	console.AddItem("test", Test, "Test")
 	console.AddItem("test2", Test2, "Test")
+	console.AddItem("test3", Test3, "Test")
 	console.AddItem("pt", PrintTest, "PrintTest")
 
 	local.db["config"]["logLevel"] = "debug"
@@ -111,6 +112,10 @@ def Test(args):
 
 def Test2(args):
 	ton.CheckValidators()
+#end define
+
+def Test3(args):
+	Complaints(ton)
 #end define
 
 def TestWork(ok_arr, pending_arr):
@@ -706,7 +711,7 @@ def PrintValidatorList(args):
 	config34 = ton.GetConfig34()
 	vdata, compFiles = ton.GetValidatorsLoad()
 	validators = config34["validators"]
-	for vid in range(len(validators)):
+	for vid in range(len(vdata)):
 		validator = validators[vid]
 		validator["mr"] = vdata[vid]["mr"]
 		validator["wr"] = vdata[vid]["wr"]
