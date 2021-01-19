@@ -603,9 +603,6 @@ class MyTonCore():
 		if "transaction is" not in result:
 			return None
 		#end if
-		
-		# print("cmd:", cmd)
-		# print("result:", result)
 
 		in_msg = self.GetVarFromWorkerOutput(result, "in_msg")
 		ihr_disabled = Pars(in_msg, "ihr_disabled:", ' ')
@@ -654,27 +651,6 @@ class MyTonCore():
 		vm_final_state_hash = xhex2hex(vm_final_state_hash_buff)
 		action_list_hash_buff = Pars(result, "action_list_hash:", '\n')
 		action_list_hash = xhex2hex(action_list_hash_buff)
-
-		# print(f"in_msg: `{in_msg}`")
-		# print(f"ihr_disabled: `{ihr_disabled}`")
-		# print(f"bounce: `{bounce}`")
-		# print(f"bounced: `{bounced}`")
-		# print(f"src: `{src}`")
-		# print(f"dest: `{dest}`")
-		# print(f"value: `{grams}`")
-		# print(f"body: `{body}`")
-		# print(f"comment: `{comment}`")
-		# print(f"ihr_fee: `{ihr_fee}`")
-		# print(f"fwd_fee: `{fwd_fee}`")
-
-		# print(f"total_fees: `{total_fees}`")
-		# print(f"storage_ph: `{storage_ph}`")
-		# print(f"credit_ph: `{credit_ph}`")
-		# print(f"compute_ph: `{compute_ph}`")
-		# print(f"gas_used: `{gas_used}`")
-		# print(f"vm_init_state_hash: `{vm_init_state_hash}`")
-		# print(f"vm_final_state_hash: `{vm_final_state_hash}`")
-		# print(f"action_list_hash: `{action_list_hash}`")
 
 		output = dict()
 		output["ihr_disabled"] = ihr_disabled
@@ -1439,6 +1415,7 @@ class MyTonCore():
 			timestamp = GetTimestamp()
 			if timestamp > validator["election_date"]:
 				return validatorKey
+		raise Exception("GetValidatorKey error: validator key not found. Are you sure you are a validator?")
 	#end define
 	
 	def GetElectionEntries(self):
