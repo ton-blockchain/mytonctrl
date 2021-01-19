@@ -1211,7 +1211,7 @@ class MyTonCore():
 		balance = account.balance
 		if minStake > stake:
 			text = "You don't have enough grams. Minimum stake: {minStake}".format(minStake=minStake)
-			local.AddLog(, "error")
+			local.AddLog(text, "error")
 			return
 		if stake > balance:
 			text = "You don't have enough grams. stake: {stake}, wallet balance: {balance}".format(stake=stake, balance=balance)
