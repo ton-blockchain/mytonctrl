@@ -114,13 +114,19 @@ make -j ${cpuNumber}
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
 cd $BIN_DIR/ton/lite-client
-wget https://test.ton.org/ton-lite-client-test1.config.json
-# wget -O ton-lite-client-test1.config.json https://newton-blockchain.github.io/newton-test.global.config.json
+if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
+	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-lite-client-test1.config.json
+else:
+	wget https://test.ton.org/ton-lite-client-test1.config.json
+fi
 
 # Скачиваем конфигурационные файлы validator-engine
 cd $BIN_DIR/ton/validator-engine
-wget https://test.ton.org/ton-global.config.json
-# wget -O ton-global.config.json https://newton-blockchain.github.io/newton-test.global.config.json
+if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
+	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-global.config.json
+else:
+	wget https://test.ton.org/ton-global.config.json
+fi
 
 # Выход из программы
 echo -e "${COLOR}[6/6]${ENDC} TON software installation complete"
