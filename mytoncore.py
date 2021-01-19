@@ -210,7 +210,6 @@ class MyTonCore():
 		miner = local.db.get("miner")
 		if miner is not None:
 			self.miner.appPath = miner["appPath"]
-			# set miner {"appPath":"/usr/bin/ton/crypto/pow-miner"}
 			# set powAddr "kf8guqdIbY6kpMykR8WFeVGbZcP2iuBagXfnQuq0rGrxgE04"
 			# set minerAddr "kQAXRfNYUkFtecUg91zvbUkpy897CDcE2okhFxAlOLcM3_XD"
 	#end define
@@ -1180,8 +1179,6 @@ class MyTonCore():
 	#end define
 
 	def ElectionEntry(self):
-		#self.TestElectionEntry()
-	
 		local.AddLog("start ElectionEntry function", "debug")
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)
@@ -1211,9 +1208,16 @@ class MyTonCore():
 		stake = self.GetStake(account, validators)
 		
 		# Check if we have enough grams
+		balance = account.balance
 		if minStake > stake:
-			local.AddLog("You don't have enough grams. Minimum stake: " + str(minStake), "error")
+			text = "You don't have enough grams. Minimum stake: {minStake}".format(minStake=minStake)
+			local.AddLog(, "error")
 			return
+		if stake > balance:
+			text = "You don't have enough grams. stake: {stake}, wallet balance: {balance}".format(stake=stake, balance=balance)
+			local.AddLog(text, "error")
+			return
+		#end if
 
 		# Calculate endWorkTime
 		validatorsElectedFor = self.GetValidatorsElectedFor()

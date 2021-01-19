@@ -182,13 +182,7 @@ def FirstNodeSettings():
 	subprocess.run(args)
 
 	# start validator
-	local.AddLog("Start validator service", "debug")
-	args = ["systemctl", "start", "validator"]
-	subprocess.run(args)
-
-	# sleep 10 sec
-	local.AddLog("sleep 10 sec", "debug")
-	time.sleep(10)
+	StartValidator()
 #end define
 
 def FirstMytoncoreSettings():
@@ -256,9 +250,7 @@ def FirstMytoncoreSettings():
 	subprocess.run(args)
 
 	# start mytoncore
-	local.AddLog("Start mytoncore service", "debug")
-	args = ["systemctl", "start", "mytoncore"]
-	subprocess.run(args)
+	StartMytoncore()
 #end define
 
 def EnableValidatorConsole():
@@ -330,11 +322,8 @@ def EnableValidatorConsole():
 	SetConfig(path=vconfigPath, data=vconfig)
 
 	# restart validator
-	local.AddLog("Start validator service", "debug")
-	args = ["systemctl", "restart", "validator"]
-	subprocess.run(args)
+	StartValidator()
 
-	# edit mytoncore config file
 	# read mconfig
 	mconfigPath = local.buffer["mconfigPath"]
 	mconfig = GetConfig(path=mconfigPath)
@@ -356,9 +345,7 @@ def EnableValidatorConsole():
 	subprocess.run(args)
 	
 	# restart mytoncore
-	local.AddLog("Start validator service", "debug")
-	args = ["systemctl", "restart", "mytoncore"]
-	subprocess.run(args)
+	StartMytoncore()
 #end define
 
 def EnableLiteServer():
@@ -423,9 +410,7 @@ def EnableLiteServer():
 	SetConfig(path=vconfigPath, data=vconfig)
 
 	# restart validator
-	local.AddLog("restart validator", "debug")
-	args = ["systemctl", "restart", "validator"]
-	subprocess.run(args)
+	StartValidator()
 
 	# edit mytoncore config file
 	# read mconfig
@@ -446,7 +431,23 @@ def EnableLiteServer():
 	SetConfig(path=mconfigPath, data=mconfig)
 	
 	# restart mytoncore
-	local.AddLog("Start validator service", "debug")
+	StartMytoncore()
+#end define
+
+def StartValidator():
+	# restart validator
+	local.AddLog("Start/restart validator service", "debug")
+	args = ["systemctl", "restart", "validator"]
+	subprocess.run(args)
+
+	# sleep 10 sec
+	local.AddLog("sleep 10 sec", "debug")
+	time.sleep(10)
+#end define
+
+def StartMytoncore():
+	# restart mytoncore
+	local.AddLog("Start/restart mytoncore service", "debug")
 	args = ["systemctl", "restart", "mytoncore"]
 	subprocess.run(args)
 #end define
