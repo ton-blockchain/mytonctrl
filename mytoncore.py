@@ -1026,7 +1026,7 @@ class MyTonCore():
 	def CreateComplaintRequest(self, electionId , complaintHash, validatorIndex):
 		local.AddLog("start CreateComplaintRequest function", "debug")
 		fileName = self.tempDir + "complaint_validator-to-sign.req"
-		args = ["complaint-vote-req.fif", validatorIndex, electionId, complaintHash]
+		args = ["complaint-vote-req.fif", validatorIndex, electionId, complaintHash, fileName]
 		result = self.fift.Run(args)
 		fileName = Pars(result, "Saved to file ", '\n')
 		resultList = result.split('\n')
