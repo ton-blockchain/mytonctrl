@@ -80,12 +80,20 @@
 		"ru": "Удалить домен"
 	},
 	"ol_cmd": {
-		"en": "Show offer list",
+		"en": "Show offers list",
 		"ru": "Показать действующие предложения"
 	},
 	"vo_cmd": {
 		"en": "Vote for offer",
 		"ru": "Голосовать за предложение"
+	},
+	"cl_cmd": {
+		"en": "Show complaints list",
+		"ru": "Показать действующие жалобы"
+	},
+	"vc_cmd": {
+		"en": "Vote for complaint",
+		"ru": "Голосовать за жалобу"
 	},
 	"el_cmd": {
 		"en": "Show election entries list",
@@ -130,6 +138,10 @@
 	"ton_status_offers": {
 		"en": "Number of offers: {0}({1})",
 		"ru": "Действующие предложения: {0}({1})"
+	},
+	"ton_status_complaints": {
+		"en": "Number of complaints: {0}({1})",
+		"ru": "Действующие жалобы: {0}({1})"
 	},
 	"ton_status_election": {
 		"en": "Election status: {0}",

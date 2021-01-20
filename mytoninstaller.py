@@ -19,7 +19,7 @@ def Init():
 
 
 	# create variables
-	user = os.environ["USER"]
+	user = os.environ.get("USER", "root")
 	local.buffer["user"] = user
 	local.buffer["vuser"] = "validator"
 	local.buffer["cport"] = random.randint(2000, 65000)
@@ -121,6 +121,7 @@ def General():
 			FirstNodeSettings()
 			EnableValidatorConsole()
 			EnableLiteServer()
+			BackupVconfig()
 		#end if
 
 		# Создать символические ссылки
@@ -182,13 +183,7 @@ def FirstNodeSettings():
 	subprocess.run(args)
 
 	# start validator
-	local.AddLog("Start validator service", "debug")
-	args = ["systemctl", "start", "validator"]
-	subprocess.run(args)
-
-	# sleep 10 sec
-	local.AddLog("sleep 10 sec", "debug")
-	time.sleep(10)
+	StartValidator()
 #end define
 
 def FirstMytoncoreSettings():
@@ -206,6 +201,11 @@ def FirstMytoncoreSettings():
 		return
 	#end if
 	
+	# Подготовить папку mytoncore
+	mconfigPath = local.buffer["mconfigPath"]
+	mconfigDir = GetDirFromPath(mconfigPath)
+	os.makedirs(mconfigDir, exist_ok=True)
+
 	# Подготовить папку mytoncore
 	mconfigPath = local.buffer["mconfigPath"]
 	mconfigDir = GetDirFromPath(mconfigPath)
@@ -255,9 +255,7 @@ def FirstMytoncoreSettings():
 	subprocess.run(args)
 
 	# start mytoncore
-	local.AddLog("Start mytoncore service", "debug")
-	args = ["systemctl", "start", "mytoncore"]
-	subprocess.run(args)
+	StartMytoncore()
 #end define
 
 def EnableValidatorConsole():
@@ -329,11 +327,8 @@ def EnableValidatorConsole():
 	SetConfig(path=vconfigPath, data=vconfig)
 
 	# restart validator
-	local.AddLog("Start validator service", "debug")
-	args = ["systemctl", "restart", "validator"]
-	subprocess.run(args)
+	StartValidator()
 
-	# edit mytoncore config file
 	# read mconfig
 	mconfigPath = local.buffer["mconfigPath"]
 	mconfig = GetConfig(path=mconfigPath)
@@ -355,9 +350,7 @@ def EnableValidatorConsole():
 	subprocess.run(args)
 	
 	# restart mytoncore
-	local.AddLog("Start validator service", "debug")
-	args = ["systemctl", "restart", "mytoncore"]
-	subprocess.run(args)
+	StartMytoncore()
 #end define
 
 def EnableLiteServer():
@@ -422,9 +415,7 @@ def EnableLiteServer():
 	SetConfig(path=vconfigPath, data=vconfig)
 
 	# restart validator
-	local.AddLog("restart validator", "debug")
-	args = ["systemctl", "restart", "validator"]
-	subprocess.run(args)
+	StartValidator()
 
 	# edit mytoncore config file
 	# read mconfig
@@ -445,7 +436,23 @@ def EnableLiteServer():
 	SetConfig(path=mconfigPath, data=mconfig)
 	
 	# restart mytoncore
-	local.AddLog("Start validator service", "debug")
+	StartMytoncore()
+#end define
+
+def StartValidator():
+	# restart validator
+	local.AddLog("Start/restart validator service", "debug")
+	args = ["systemctl", "restart", "validator"]
+	subprocess.run(args)
+
+	# sleep 10 sec
+	local.AddLog("sleep 10 sec", "debug")
+	time.sleep(10)
+#end define
+
+def StartMytoncore():
+	# restart mytoncore
+	local.AddLog("Start/restart mytoncore service", "debug")
 	args = ["systemctl", "restart", "mytoncore"]
 	subprocess.run(args)
 #end define
@@ -468,6 +475,14 @@ def SetConfig(**kwargs):
 	file = open(path, 'wt')
 	file.write(text)
 	file.close()
+#end define
+
+def BackupVconfig():
+	local.AddLog("Backup validator config file 'config.json' to 'config.json.backup'", "debug")
+	vconfigPath = local.buffer["vconfigPath"]
+	backupPath = vconfigPath + ".backup"
+	args = ["cp", vconfigPath, backupPath]
+	subprocess.run(args)
 #end define
 
 def CreateSymlinks():

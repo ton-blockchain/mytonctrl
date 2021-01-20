@@ -24,9 +24,9 @@ rm -rf /etc/systemd/system/mytoncore.service
 systemctl daemon-reload
 
 # Удаление файлов
-#rm -rf /usr/src/ton
-#rm -rf /usr/src/mytonctrl
-#rm -rf /usr/bin/ton
+rm -rf /usr/src/ton
+rm -rf /usr/src/mytonctrl
+rm -rf /usr/bin/ton
 rm -rf /var/ton-work
 rm -rf /tmp/myton*
 rm -rf /usr/local/bin/mytoninstaller/

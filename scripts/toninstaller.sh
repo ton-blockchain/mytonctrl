@@ -93,9 +93,11 @@ cd $BIN_DIR/ton
 if [ "$OSTYPE" == "darwin"* ]; then
 	export CMAKE_C_COMPILER=$(which clang)
 	export CMAKE_CXX_COMPILER=$(which clang++)
+	export CCACHE_DISABLE=1
 else
 	export CC=$(which clang)
 	export CXX=$(which clang++)
+	export CCACHE_DISABLE=1
 fi
 
 # Подготовиться к компиляции
@@ -111,11 +113,19 @@ make -j ${cpuNumber}
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
 cd $BIN_DIR/ton/lite-client
-wget https://newton-blockchain.github.io/ton-lite-client-test1.config.json
+if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
+	wget https://newton-blockchain.github.io/ton-lite-client-test1.config.json
+else
+	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-lite-client-test1.config.json
+fi
 
 # Скачиваем конфигурационные файлы validator-engine
 cd $BIN_DIR/ton/validator-engine
-wget https://newton-blockchain.github.io/ton-global.config.json
+if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
+	wget https://newton-blockchain.github.io/ton-global.config.json
+else
+	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-global.config.json
+fi
 
 # Выход из программы
 echo -e "${COLOR}[6/6]${ENDC} TON software installation complete"
