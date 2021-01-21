@@ -18,7 +18,8 @@ class LiteClient:
 		self.ton = None # magic
 	#end define
 
-	def Run(self, cmd):
+	def Run(self, cmd, **kwargs):
+		timeout = kwargs.get("timeout", 3)
 		ready = False
 		if self.pubkeyPath:
 			validatorStatus = self.ton.GetValidatorStatus()
@@ -28,7 +29,7 @@ class LiteClient:
 				ready = True
 		if ready == False:
 			args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
@@ -46,11 +47,12 @@ class ValidatorConsole:
 		self.addr = None
 	#end define
 
-	def Run(self, cmd):
+	def Run(self, cmd, **kwargs):
+		timeout = kwargs.get("timeout", 3)
 		if self.appPath is None or self.privKeyPath is None or self.pubKeyPath is None:
 			raise Exception("ValidatorConsole error: Validator console is not settings")
 		args = [self.appPath, "-k", self.privKeyPath, "-p", self.pubKeyPath, "-a", self.addr, "-v", "0", "--cmd", cmd]
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
@@ -67,12 +69,13 @@ class Fift:
 		self.smartcontsPath = None
 	#end define
 
-	def Run(self, args):
+	def Run(self, args, **kwargs):
+		timeout = kwargs.get("timeout", 3)
 		for i in range(len(args)):
 			args[i] = str(args[i])
 		includePath = self.libsPath + ':' + self.smartcontsPath
 		args = [self.appPath, "-I", includePath, "-s"] + args
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
@@ -1721,7 +1724,7 @@ class MyTonCore():
 		time2 = timeNow - 2000
 		filePrefix = self.tempDir + "check_{timeNow}".format(timeNow=timeNow)
 		cmd = "checkloadall {time2} {timeNow} {filePrefix}".format(timeNow=timeNow, time2=time2, filePrefix=filePrefix)
-		result = self.liteClient.Run(cmd)
+		result = self.liteClient.Run(cmd, timeout=10)
 		lines = result.split('\n')
 		vdata = dict()
 		compFiles = list()
