@@ -2438,20 +2438,38 @@ def Complaints(ton):
 			ton.VoteComplaint(complaintHash)
 #end define
 
+def EnsurePeriodParams():
+	default_periods = {
+			"elections": 600,
+			"statistics": 10,
+			"offers": 600,
+			"complaints": 600,
+			"domains": 600,
+			"telemetry": 60,
+			"mining": 1,
+			"scanBlocks": 1,
+			"readBlocks": 0.3
+		};
+	if "periods" not in local.db:
+		local.db["periods"] = default_periods
+	else:
+		for periodType in default_periods:
+			if not periodType in local.db["periods"]:
+				local.db["periods"][periodType] = default_periods[periodType]
+	local.dbSave()
+
 def General():
 	local.AddLog("start General function", "debug")
 	ton = MyTonCore()
-
+	EnsurePeriodParams()
 	# Запустить потоки
-	local.StartCycle(Elections, sec=600, args=(ton, ))
-	local.StartCycle(Statistics, sec=10, args=(ton, ))
-	local.StartCycle(Offers, sec=600, args=(ton, ))
-	local.StartCycle(Complaints, sec=600, args=(ton, ))
-	local.StartCycle(Domains, sec=600, args=(ton, ))
-	local.StartCycle(Telemetry, sec=60, args=(ton, ))
-	local.StartCycle(Mining, sec=1, args=(ton, ))
-	local.StartCycle(ScanBlocks, sec=1, args=(ton,))
-	local.StartCycle(ReadBlocks, sec=0.3, args=(ton,))
+	for subprocess in [Elections, Statistics, Offers, Complaints
+			   Domains, Telemetry, Mining, ScanBlocks,
+			   ReadBlocks]:
+		# period names in camelCase
+		periodName = subprocess.__name__[:1].lower() + subprocess.__name__[1:]
+		period = local.db["periods"][periodName]
+		local.StartCycle(subprocess, sec=period, args=(ton, ))
 	Sleep()
 #end define
 
