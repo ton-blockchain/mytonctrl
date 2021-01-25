@@ -1196,7 +1196,7 @@ class MyTonCore():
 		return stake
 	#end define
 
-	def ElectionEntry(self):
+	def ElectionEntry(self, args=None):
 		local.AddLog("start ElectionEntry function", "debug")
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)
