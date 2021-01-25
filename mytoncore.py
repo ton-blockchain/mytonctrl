@@ -5,6 +5,7 @@ import crc16
 import struct
 import requests
 import re
+import time
 from mypylib.mypylib import *
 
 local = MyPyClass(__file__)
@@ -1208,6 +1209,12 @@ class MyTonCore():
 		if (startWorkTime == 0):
 			local.AddLog("Elections have not yet begun", "info")
 			return
+		# Check wether it is too early to participate
+		if "participateBeforeEnd" in local.db:
+			now = time.time()
+			if (startWorkTime - now) > local.db["participateBeforeEnd"] and \
+			   (now + local.db["periods"]["elections"]) < startWorkTime:
+				return;
 
 		# Check if election entry is completed
 		vconfig = self.GetConfigFromValidator()
@@ -2463,7 +2470,7 @@ def General():
 	ton = MyTonCore()
 	EnsurePeriodParams()
 	# Запустить потоки
-	for subprocess in [Elections, Statistics, Offers, Complaints
+	for subprocess in [Elections, Statistics, Offers, Complaints,
 			   Domains, Telemetry, Mining, ScanBlocks,
 			   ReadBlocks]:
 		# period names in camelCase
