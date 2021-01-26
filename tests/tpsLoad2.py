@@ -97,7 +97,7 @@ Local.Run()
 
 ton = MyTonCore()
 local.db["config"]["logLevel"] = "info"
-load = 3
+load = 10
 
 Local.StartCycle(General, sec=1)
 Sleep()

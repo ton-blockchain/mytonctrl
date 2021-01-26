@@ -62,7 +62,10 @@ def Init(argv):
 	console.AddItem("test", Test, "Test")
 	console.AddItem("test2", Test2, "Test")
 	console.AddItem("test3", Test3, "Test")
+	console.AddItem("r1", r1, "Switch to the first validator (newton-blockchain)")
+	console.AddItem("r2", r2, "Switch to the second validator (ton-blockchain)")
 	console.AddItem("pt", PrintTest, "PrintTest")
+
 	
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -88,30 +91,6 @@ def Init(argv):
 				sys.exit()
 			ton.walletsDir = wallets
 	#end for
-
-	# Process input parameters
-	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
-	for opt, arg in opts:
-		if opt == '-h':
-			print ('mytonctrl.py -c <configfile> -w <wallets>')
-			sys.exit()
-		elif opt in ("-c", "--config"):
-			configfile = arg
-			if not os.access(configfile, os.R_OK):
-				print ("Configuration file " + configfile + " could not be opened")
-				sys.exit()
-
-			ton.dbFile = configfile
-			ton.Refresh()
-		elif opt in ("-w", "--wallets"):
-			wallets = arg
-			if not os.access(wallets, os.R_OK):
-				print ("Wallets path " + wallets  + " could not be opened")
-				sys.exit()
-			elif not os.path.isdir(wallets):
-				print ("Wallets path " + wallets  + " is not a directory")
-				sys.exit()
-			ton.walletsDir = wallets
 
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isLocaldbSaving"] = True
@@ -166,6 +145,22 @@ def Test2(args):
 
 def Test3(args):
 	Complaints(ton)
+#end define
+
+def r1():
+	args = ["systemctl", "stop", "validator2"]
+	subprocess.run(args)
+
+	args = ["systemctl", "start", "validator"]
+	subprocess.run(args)
+#end define
+
+def r2():
+	args = ["systemctl", "stop", "validator"]
+	subprocess.run(args)
+
+	args = ["systemctl", "start", "validator2"]
+	subprocess.run(args)
 #end define
 
 def TestWork(ok_arr, pending_arr):
