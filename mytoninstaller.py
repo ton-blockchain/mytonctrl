@@ -169,6 +169,8 @@ def FirstNodeSettings():
 	validatorAppPath = "/usr/bin/ton2/validator-engine/validator-engine"
 	cmd = "{validatorAppPath} -d -C {globalConfigPath} --db {tonDbDir} -l {tonLogPath} -v 1".format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath)
 	Add2Systemd(name="validator2", user=vuser, start=cmd)
+	args = ["systemctl", "disable", "validator2"]
+	subprocess.run(args)
 
 	# Получить внешний ip адрес
 	response = requests.get("https://ifconfig.me")

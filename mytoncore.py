@@ -1201,6 +1201,14 @@ class MyTonCore():
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)
 
+		# Check if validator is not synchronized
+		validatorStatus = self.GetValidatorStatus()
+		validatorOutOfSync = validatorStatus.get("outOfSync")
+		if validatorOutOfSync > 60:
+			local.AddLog("Validator is not synchronized", "error")
+			return
+		#end if
+
 		# Get startWorkTime and endWorkTime
 		fullElectorAddr = self.GetFullElectorAddr()
 		startWorkTime = self.GetActiveElectionId(fullElectorAddr)
@@ -1214,7 +1222,8 @@ class MyTonCore():
 			now = time.time()
 			if (startWorkTime - now) > local.db["participateBeforeEnd"] and \
 			   (now + local.db["periods"]["elections"]) < startWorkTime:
-				return;
+				return
+		#end if
 
 		# Check if election entry is completed
 		vconfig = self.GetConfigFromValidator()
@@ -1223,6 +1232,7 @@ class MyTonCore():
 			if item.get("election_date") == startWorkTime:
 				local.AddLog("Elections entry already completed", "info")
 				return
+		#end for
 
 		# Get account balance and minimum stake
 		account = self.GetAccount(wallet.addr)
