@@ -821,6 +821,8 @@ class MyTonCore():
 		maxStake = self.GetVarFromWorkerOutput(result, "max_stake")
 		maxStake = self.GetVarFromWorkerOutput(maxStake, "value")
 		config17["maxStake"] = ng2g(maxStake)
+		maxStakeFactor = self.GetVarFromWorkerOutput(result, "max_stake_factor")
+		config17["maxStakeFactor"] = maxStakeFactor
 		local.buffer["config17"] = config17 # set buffer
 		return config17
 	#end define
@@ -1159,6 +1161,14 @@ class MyTonCore():
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)
 
+		# Check if validator is not synchronized
+		validatorStatus = self.GetValidatorStatus()
+		validatorOutOfSync = validatorStatus.get("outOfSync")
+		if validatorOutOfSync > 60:
+			local.AddLog("Validator is not synchronized", "error")
+			return
+		#end if
+
 		# Get startWorkTime and endWorkTime
 		fullElectorAddr = self.GetFullElectorAddr()
 		startWorkTime = self.GetActiveElectionId(fullElectorAddr)
@@ -1167,6 +1177,7 @@ class MyTonCore():
 		if (startWorkTime == 0):
 			local.AddLog("Elections have not yet begun", "info")
 			return
+		#end if
 
 		# Check if election entry is completed
 		vconfig = self.GetConfigFromValidator()
@@ -1175,6 +1186,7 @@ class MyTonCore():
 			if item.get("election_date") == startWorkTime:
 				local.AddLog("Elections entry already completed", "info")
 				return
+		#end for
 
 		# Get account balance and minimum stake
 		account = self.GetAccount(wallet.addr)
@@ -1212,7 +1224,10 @@ class MyTonCore():
 		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
 
 		# Create fift's
-		maxFactor = round(stake / minStake, 1)
+		config15 = self.GetConfig15()
+		config17 = self.GetConfig17()
+		# maxFactor = round(stake / minStake, 1)
+		maxFactor = round(config17["maxStakeFactor"] / config15["validatorsElectedFor"], 1)
 		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, maxFactor)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor)
