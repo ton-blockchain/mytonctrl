@@ -2339,18 +2339,47 @@ def Telemetry(ton):
 		return
 	#end if
 	
+	# Get validator status
 	data = dict()
 	data["adnlAddr"] = ton.adnlAddr
 	data["validatorStatus"] = ton.GetValidatorStatus()
 	data["cpuLoad"] = GetLoadAvg()
 	data["netLoad"] = ton.GetNetLoadAvg()
 	data["tps"] = ton.GetTpsAvg()
+
+	# Get services status
+	services = dict()
+	services["mytoncore"] = GetServiceStatus("mytoncore")
+	services["validator"] = GetServiceStatus("validator")
+	services["validator2"] = GetServiceStatus("validator2")
+
+	# Get git hashes
+	gitHashes = dict()
+	gitHashes["mytonctrl"] = GetGitHash("/usr/src/mytonctrl")
+	gitHashes["validator"] = GetGitHash("/usr/src/ton")
+	gitHashes["validator2"] = GetGitHash("/usr/src/ton2")
+	data["services"] = services
+	data["gitHashes"] = gitHashes
+	data["stake"] = ton.GetSettings("stake")
+
+	# Get engine
+	if services["validator"] == True:
+		engine = "r1"
+	elif services["validator2"] == True:
+		engine = "r2"
+	if services["validator"] == True and services["validator2"] == True:
+		engine = "wtf"
+	elif services["validator"] == False and services["validator2"] == False:
+		engine = "omg"
+	data["engine"] = engine
+
+	# Send data to toncenter server
 	url = "https://toncenter.com/api/newton_test/status/report_status"
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
 	
 	# fix me
-	if ton.adnlAddr != "8F6B69A49F6AED54A5B92623699AA44E6F801CDD5BA8B89519AA0DDEA7E9A618":
+	if ton.adnlAddr != "EADD038C8B931BFC802E6725D57581570630C55AEF7181C8748C4A8F7907CDF7":
 		return
 	data = dict()
 	config34 = ton.GetConfig34()
@@ -2360,6 +2389,18 @@ def Telemetry(ton):
 	url = "https://toncenter.com/api/newton_test/status/report_validators"
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
+#end define
+
+def GetGitHash(gitPath):
+	args = ["git", "rev-parse", "HEAD"]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3, cwd=gitPath)
+	output = process.stdout.decode("utf-8")
+	err = process.stderr.decode("utf-8")
+	if len(err) > 0:
+		local.AddLog("args: {args}".format(args=args), "error")
+		raise Exception("GetGitHash error: {err}".format(err=err))
+	buff = output.split('\n')
+	return buff[0]
 #end define
 
 def Mining(ton):
