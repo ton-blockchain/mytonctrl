@@ -839,6 +839,8 @@ class MyTonCore():
 		maxStake = self.GetVarFromWorkerOutput(result, "max_stake")
 		maxStake = self.GetVarFromWorkerOutput(maxStake, "value")
 		config17["maxStake"] = ng2g(maxStake)
+		maxStakeFactor = self.GetVarFromWorkerOutput(result, "max_stake_factor")
+		config17["maxStakeFactor"] = maxStakeFactor
 		local.buffer["config17"] = config17 # set buffer
 		return config17
 	#end define
@@ -1217,6 +1219,8 @@ class MyTonCore():
 		if (startWorkTime == 0):
 			local.AddLog("Elections have not yet begun", "info")
 			return
+		#end if
+
 		# Check wether it is too early to participate
 		if "participateBeforeEnd" in local.db:
 			now = time.time()
@@ -1245,6 +1249,7 @@ class MyTonCore():
 		rateMultiplier = 1
 		if args and len(args) > 1:
 			rateMultiplier = float(args[1])
+		#end if
 		
 		# Check if we have enough grams
 		balance = account.balance
@@ -1275,7 +1280,10 @@ class MyTonCore():
 		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
 
 		# Create fift's
-		maxFactor = round((stake / minStake) * rateMultiplier, 1)
+		config15 = self.GetConfig15()
+		config17 = self.GetConfig17()
+		# maxFactor = round((stake / minStake) * rateMultiplier, 1)
+		maxFactor = round((config17["maxStakeFactor"] / config15["validatorsElectedFor"]) * rateMultiplier, 1)
 		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, maxFactor)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor)
