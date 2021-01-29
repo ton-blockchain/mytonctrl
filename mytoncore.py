@@ -822,7 +822,7 @@ class MyTonCore():
 		maxStake = self.GetVarFromWorkerOutput(maxStake, "value")
 		config17["maxStake"] = ng2g(maxStake)
 		maxStakeFactor = self.GetVarFromWorkerOutput(result, "max_stake_factor")
-		config17["maxStakeFactor"] = maxStakeFactor
+		config17["maxStakeFactor"] = int(maxStakeFactor)
 		local.buffer["config17"] = config17 # set buffer
 		return config17
 	#end define
