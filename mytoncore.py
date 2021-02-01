@@ -2355,9 +2355,9 @@ def Telemetry(ton):
 
 	# Get git hashes
 	gitHashes = dict()
-	gitHashes["mytonctrl"] = GetGitHash("/usr/src/mytonctrl")
-	gitHashes["validator"] = GetGitHash("/usr/src/ton")
-	gitHashes["validator2"] = GetGitHash("/usr/src/ton2")
+	gitHashes["mytonctrl"] = TryGetGitHash("/usr/src/mytonctrl")
+	gitHashes["validator"] = TryGetGitHash("/usr/src/ton")
+	gitHashes["validator2"] = TryGetGitHash("/usr/src/ton2")
 	data["services"] = services
 	data["gitHashes"] = gitHashes
 	data["stake"] = ton.GetSettings("stake")
@@ -2391,14 +2391,22 @@ def Telemetry(ton):
 	resp = requests.post(url, data=output, timeout=3)
 #end define
 
+def TryGetGitHash(gitPath):
+	result = None
+	try:
+		result = GetGitHash(gitPath)
+	except Exception as err:
+		local.AddLog("TryGetGitHash error: {err}".format(err=err), "error")
+	return result
+#end define
+
 def GetGitHash(gitPath):
 	args = ["git", "rev-parse", "HEAD"]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3, cwd=gitPath)
 	output = process.stdout.decode("utf-8")
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
-		local.AddLog("args: {args}".format(args=args), "error")
-		raise Exception("GetGitHash error: {err}".format(err=err))
+		raise Exception("GetGitHash error: {err}, '{path}'".format(err=err, path=gitPath))
 	buff = output.split('\n')
 	return buff[0]
 #end define
