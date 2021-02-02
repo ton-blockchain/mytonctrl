@@ -1283,7 +1283,8 @@ class MyTonCore():
 		config15 = self.GetConfig15()
 		config17 = self.GetConfig17()
 		# maxFactor = round((stake / minStake) * rateMultiplier, 1)
-		maxFactor = round((config17["maxStakeFactor"] / config15["validatorsElectedFor"]) * rateMultiplier, 1)
+		# Either use defined maxFactor, or set maximal allowed by config17
+		maxFactor = round(local.db.get("maxFactor"), 1) if local.db.get("maxFactor") else round(config17["maxStakeFactor"] / 65536, 1)
 		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, maxFactor)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor)
