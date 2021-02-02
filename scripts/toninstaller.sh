@@ -83,7 +83,6 @@ rm -rf $SOURCES_DIR/mytonctrl
 git clone --recursive https://github.com/newton-blockchain/ton.git
 git clone --recursive https://github.com/ton-blockchain/ton.git ton2 # fix me
 git clone --recursive https://github.com/igroman787/mytonctrl.git
-cd mytonctrl && git checkout dev && git submodule update --init --recursive # fix me
 
 
 # Подготавливаем папки для компиляции

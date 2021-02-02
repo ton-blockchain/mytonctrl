@@ -40,10 +40,9 @@ if [ -f "${file1}" ] && [ -f "${file2}" ] && [ -f "${file3}" ]; then
 	cd $SOURCES_DIR
 	rm -rf $SOURCES_DIR/mytonctrl
 	git clone --recursive https://github.com/igroman787/mytonctrl.git
-	cd mytonctrl && git checkout dev && git submodule update --init --recursive # fix me
 else
 	rm -f toninstaller.sh
-	wget https://raw.githubusercontent.com/igroman787/mytonctrl/dev/scripts/toninstaller.sh # fix me
+	wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/toninstaller.sh
 	bash toninstaller.sh
 	rm -f toninstaller.sh
 fi
