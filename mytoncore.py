@@ -1028,7 +1028,7 @@ class MyTonCore():
 	def CreateConfigProposalRequest(self, offerHash, validatorIndex):
 		local.AddLog("start CreateConfigProposalRequest function", "debug")
 		fileName = self.tempDir + self.nodeName + "proposal_validator-to-sign.req"
-		args = ["config-proposal-vote-req.fif", "-i", validatorIndex, offerHash]
+		args = ["config-proposal-vote-req.fif", "-i", validatorIndex, offerHash, fileName]
 		result = self.fift.Run(args)
 		fileName = Pars(result, "Saved to file ", '\n')
 		resultList = result.split('\n')
