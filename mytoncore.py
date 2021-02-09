@@ -2487,7 +2487,6 @@ def Telemetry(ton):
 	gitHashes = dict()
 	gitHashes["mytonctrl"] = TryGetGitHash("/usr/src/mytonctrl")
 	gitHashes["validator"] = TryGetGitHash("/usr/src/ton")
-	data["services"] = services
 	data["gitHashes"] = gitHashes
 	data["stake"] = ton.GetSettings("stake")
 
