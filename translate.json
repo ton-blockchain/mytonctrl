@@ -87,6 +87,10 @@
 		"en": "Vote for offer",
 		"ru": "Голосовать за предложение"
 	},
+	"od_cmd": {
+		"en": "Show offer diff",
+		"ru": "Показать разницу предложений"
+	},
 	"cl_cmd": {
 		"en": "Show complaints list",
 		"ru": "Показать действующие жалобы"

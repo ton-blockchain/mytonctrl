@@ -48,6 +48,7 @@ def Init():
 
 	console.AddItem("ol", PrintOffersList, local.Translate("ol_cmd"))
 	console.AddItem("vo", VoteOffer, local.Translate("vo_cmd"))
+	console.AddItem("od", OfferDiff, local.Translate("od_cmd"))
 	console.AddItem("el", PrintElectionEntriesList, local.Translate("el_cmd"))
 	console.AddItem("ve", VoteElectionEntry, local.Translate("ve_cmd"))
 	console.AddItem("vl", PrintValidatorList, local.Translate("vl_cmd"))
@@ -60,7 +61,6 @@ def Init():
 
 	console.AddItem("test", Test, "Test")
 	console.AddItem("test2", Test2, "Test")
-	console.AddItem("test3", Test3, "Test")
 	console.AddItem("pt", PrintTest, "PrintTest")
 
 	local.db["config"]["logLevel"] = "debug"
@@ -74,13 +74,24 @@ def Installer(args):
 #end define
 
 def Update(args):
-	RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/update.sh"])
-	ColorPrint("Update - {green}OK{endc}")
+	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/update.sh"])
+	if exitCode == 0:
+		text = "Update - {green}OK{endc}"
+	else:
+		text = "Update - {red}Error{endc}"
+	ColorPrint(text)
+	local.Exit()
 #end define
 
 def Upgrade(args):
-	RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"])
-	ColorPrint("Upgrade - {green}OK{endc}")
+	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"])
+	exitCode += RunAsRoot(["python3", "/usr/src/mytonctrl/scripts/upgrade.py"])
+
+	if exitCode == 0:
+		text = "Upgrade - {green}OK{endc}"
+	else:
+		text = "Upgrade - {red}Error{endc}"
+	ColorPrint(text)
 #end define
 
 def PrintTest(args):
@@ -112,10 +123,6 @@ def Test(args):
 
 def Test2(args):
 	ton.CheckValidators()
-#end define
-
-def Test3(args):
-	Complaints(ton)
 #end define
 
 def TestWork(ok_arr, pending_arr):
@@ -248,7 +255,7 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	# Thread status
 	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(GetColorStatus(mytoncoreStatus_bool))
 	validatorStatus_text = local.Translate("local_status_validator_status").format(GetColorStatus(validatorStatus_bool))
-	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, ending=" с"))
+	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, ending=" s"))
 	dbSize_text = local.Translate("local_status_db_size").format(GetColorInt(dbSize, 1000, ending=" Gb"))
 
 	ColorPrint(local.Translate("local_status_head"))
@@ -620,6 +627,15 @@ def VoteOffer(args):
 	ColorPrint("VoteOffer - {green}OK{endc}")
 #end define
 
+def OfferDiff(args):
+	try:
+		offerHash = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} od <offer-hash>")
+		return
+	ton.GetOfferDiff(offerHash)
+#end define
+
 def PrintComplaintsList(args):
 	complaints = ton.GetComplaints()
 	print(json.dumps(complaints, indent=4))
@@ -708,14 +724,7 @@ def VoteElectionEntry(args):
 #end define
 
 def PrintValidatorList(args):
-	config34 = ton.GetConfig34()
-	vdata, compFiles = ton.GetValidatorsLoad()
-	validators = config34["validators"]
-	for vid in range(len(vdata)):
-		validator = validators[vid]
-		validator["mr"] = vdata[vid]["mr"]
-		validator["wr"] = vdata[vid]["wr"]
-		validator["online"] = vdata[vid]["online"]
+	validators = ton.GetValidatorsList()
 	print(json.dumps(validators, indent=4))
 #end define
 

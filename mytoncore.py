@@ -17,7 +17,8 @@ class LiteClient:
 		self.ton = None # magic
 	#end define
 
-	def Run(self, cmd):
+	def Run(self, cmd, **kwargs):
+		timeout = kwargs.get("timeout", 3)
 		ready = False
 		if self.pubkeyPath:
 			validatorStatus = self.ton.GetValidatorStatus()
@@ -27,7 +28,7 @@ class LiteClient:
 				ready = True
 		if ready == False:
 			args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
@@ -45,11 +46,12 @@ class ValidatorConsole:
 		self.addr = None
 	#end define
 
-	def Run(self, cmd):
+	def Run(self, cmd, **kwargs):
+		timeout = kwargs.get("timeout", 3)
 		if self.appPath is None or self.privKeyPath is None or self.pubKeyPath is None:
 			raise Exception("ValidatorConsole error: Validator console is not settings")
 		args = [self.appPath, "-k", self.privKeyPath, "-p", self.pubKeyPath, "-a", self.addr, "-v", "0", "--cmd", cmd]
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
@@ -66,12 +68,13 @@ class Fift:
 		self.smartcontsPath = None
 	#end define
 
-	def Run(self, args):
+	def Run(self, cmd, **kwargs):
+		timeout = kwargs.get("timeout", 3)
 		for i in range(len(args)):
 			args[i] = str(args[i])
 		includePath = self.libsPath + ':' + self.smartcontsPath
 		args = [self.appPath, "-I", includePath, "-s"] + args
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
@@ -756,6 +759,35 @@ class MyTonCore():
 		return item
 	#end define
 
+	def GetConfigs(self):
+		configs = local.buffer.get("configs")
+		if configs is None:
+			configs = dict()
+			local.buffer["configs"] = configs
+		return configs
+	#end define
+
+	def GetConfig(self, configId):
+		# get buffer
+		timestamp = GetTimestamp()
+		configs = self.GetConfigs()
+		config = configs.get("configId")
+		if config:
+			diffTime = timestamp - config.get("timestamp")
+			if diffTime < 10:
+				return config
+		#end if
+
+		text = "start GetConfig {configId} function".format(configId=configId)
+		local.AddLog(text, "debug")
+		cmd = "getconfig {configId}".format(configId=configId)
+		result = self.liteClient.Run(cmd)
+		start = result.find("ConfigParam")
+		text = result[start:]
+		data = self.Tlb2Json(text)
+		return data
+	#end define
+
 	def GetConfig12(self):
 		# get buffer
 		timestamp = GetTimestamp()
@@ -1010,7 +1042,7 @@ class MyTonCore():
 	def CreateConfigProposalRequest(self, offerHash, validatorIndex):
 		local.AddLog("start CreateConfigProposalRequest function", "debug")
 		fileName = self.tempDir + "proposal_validator-to-sign.req"
-		args = ["config-proposal-vote-req.fif", "-i", validatorIndex, offerHash]
+		args = ["config-proposal-vote-req.fif", "-i", validatorIndex, offerHash, fileName]
 		result = self.fift.Run(args)
 		fileName = Pars(result, "Saved to file ", '\n')
 		resultList = result.split('\n')
@@ -1156,6 +1188,16 @@ class MyTonCore():
 		return stake
 	#end define
 
+	def GetMaxFactor(self):
+		# Either use defined maxFactor, or set maximal allowed by config17
+		maxFactor = local.db.get("maxFactor")
+		if maxFactor is None:
+			config17 = self.GetConfig17()
+			maxFactor = config17["maxStakeFactor"] / 65536
+		maxFactor = round(maxFactor, 1)
+		return maxFactor
+	#end define
+
 	def ElectionEntry(self):
 		local.AddLog("start ElectionEntry function", "debug")
 		walletName = self.validatorWalletName
@@ -1224,10 +1266,7 @@ class MyTonCore():
 		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
 
 		# Create fift's
-		config15 = self.GetConfig15()
-		config17 = self.GetConfig17()
-		# maxFactor = round(stake / minStake, 1)
-		maxFactor = round(config17["maxStakeFactor"] / config15["validatorsElectedFor"], 1)
+		maxFactor = self.GetMaxFactor()
 		var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, maxFactor)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 		validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor)
@@ -1498,11 +1537,84 @@ class MyTonCore():
 			item["votedValidators"] = subdata[4] # *voters_list*
 			item["weightRemaining"] = subdata[5] # *weight_remaining*
 			item["roundsRemaining"] = subdata[6] # *rounds_remaining*
-			item["losses"] = subdata[7] # *losses*
-			item["wins"] = subdata[8] # *wins*
+			item["wins"] = subdata[7] # *losses*
+			item["losses"] = subdata[8] # *wins*
 			offers.append(item)
 		#end for
 		return offers
+	#end define
+
+	def GetOfferDiff(self, offerHash):
+		local.AddLog("start GetOfferDiff function", "debug")
+		offer = self.GetOffer(offerHash)
+		configId = offer["config"]["id"]
+		configValue = offer["config"]["value"]
+
+		if '{' in configValue or '}' in configValue:
+			start = configValue.find('{') + 1
+			end = configValue.find('}')
+			configValue = configValue[start:end]
+		#end if
+
+		args = [self.liteClient.appPath, "--global-config", self.liteClient.configPath, "--verbosity", "0"]
+		process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		time.sleep(1)
+
+		fullConfigAddr = self.GetFullConfigAddr()
+		cmd = "runmethod {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
+		process.stdin.write(cmd.encode() + b'\n')
+		process.stdin.flush()
+		time.sleep(1)
+
+		cmd = "dumpcellas ConfigParam{configId} {configValue}".format(configId=configId, configValue=configValue)
+		process.stdin.write(cmd.encode() + b'\n')
+		process.stdin.flush()
+		time.sleep(1)
+
+		process.terminate()
+		text = process.stdout.read().decode()
+
+		lines = text.split('\n')
+		b = len(lines)
+		for i in range(b):
+			line = lines[i]
+			if "dumping cells as values of TLB type" in line:
+				a = i + 2
+				break
+		#end for
+
+		for i in range(a, b):
+			line = lines[i]
+			if '(' in line:
+				start = i
+				break
+		#end for
+
+		for i in range(a, b):
+			line = lines[i]
+			if '>' in line:
+				end = i
+				break
+		#end for
+
+		buff = lines[start:end]
+		text = "".join(buff)
+		newData = self.Tlb2Json(text)
+		newFileName = self.tempDir + "data1diff"
+		file = open(newFileName, 'wt')
+		newText = json.dumps(newData, indent=2)
+		file.write(newText)
+		file.close()
+
+		oldData = self.GetConfig(configId)
+		oldFileName = self.tempDir + "data2diff"
+		file = open(oldFileName, 'wt')
+		oldText = json.dumps(oldData, indent=2)
+		file.write(oldText)
+		file.close()
+
+		args = ["diff", "--color", oldFileName, newFileName]
+		subprocess.run(args)
 	#end define
 
 	def GetComplaints(self, electionId=None):
@@ -1693,7 +1805,7 @@ class MyTonCore():
 		time2 = timeNow - 2000
 		filePrefix = self.tempDir + "check_{timeNow}".format(timeNow=timeNow)
 		cmd = "checkloadall {time2} {timeNow} {filePrefix}".format(timeNow=timeNow, time2=time2, filePrefix=filePrefix)
-		result = self.liteClient.Run(cmd)
+		result = self.liteClient.Run(cmd, timeout=10)
 		lines = result.split('\n')
 		vdata = dict()
 		compFiles = list()
@@ -1742,6 +1854,18 @@ class MyTonCore():
 				item["online"] = online
 				vdata[vid] = item
 		return vdata, compFiles
+	#end define
+
+	def GetValidatorsList(self):
+		config34 = self.GetConfig34()
+		vdata, compFiles = self.GetValidatorsLoad()
+		validators = config34["validators"]
+		for vid in range(len(vdata)):
+			validator = validators[vid]
+			validator["mr"] = vdata[vid]["mr"]
+			validator["wr"] = vdata[vid]["wr"]
+			validator["online"] = vdata[vid]["online"]
+		return validators
 	#end define
 
 	def CheckValidators(self):
@@ -2094,6 +2218,74 @@ class MyTonCore():
 		local.db[name] = data
 		local.dbSave()
 	#end define
+
+	def Tlb2Json(self, text):
+		# Заменить скобки
+		start = 0
+		end = len(text)
+		if '=' in text:
+			start = text.find('=')+1
+		if "x{" in text:
+			end = text.find("x{")
+		text = text[start:end]
+		text = text.strip()
+		text = text.replace('(', '{')
+		text = text.replace(')', '}')
+
+		# Добавить кавычки к строкам (1 этап)
+		buff = text
+		buff = buff.replace('\r', ' ')
+		buff = buff.replace('\n', ' ')
+		buff = buff.replace('\t', ' ')
+		buff = buff.replace('{', ' ')
+		buff = buff.replace('}', ' ')
+		buff = buff.replace(':', ' ')
+
+		# Добавить кавычки к строкам (2 этап)
+		buff2 = ""
+		itemList = list()
+		for item in list(buff):
+			if item == ' ':
+				if len(buff2) > 0:
+					itemList.append(buff2)
+					buff2 = ""
+				itemList.append(item)
+			else:
+				buff2 += item
+		#end for
+
+		# Добавить кавычки к строкам (3 этап)
+		i = 0
+		for item in itemList:
+			l = len(item)
+			if item == ' ':
+				pass
+			elif item.isdigit() is False:
+				c = '"'
+				item2 = c + item + c
+				text = text[:i] + item2 + text[i+l:]
+				i += 2
+			#end if
+			i += l
+		#end for
+
+		# Обозначить тип объекта
+		text = text.replace('{"', '{"_":"')
+
+		# Расставить запятые
+		while True:
+			try:
+				data = json.loads(text)
+				break
+			except json.JSONDecodeError as err:
+				if "Expecting ',' delimiter" in err.msg:
+					text = text[:err.pos] + ',' + text[err.pos:]
+				else:
+					raise err
+		#end while
+
+		return data
+	#end define
 #end class
 
 def ng2g(ng):
@@ -2283,27 +2475,58 @@ def Telemetry(ton):
 		return
 	#end if
 	
+	# Get validator status
 	data = dict()
 	data["adnlAddr"] = ton.adnlAddr
 	data["validatorStatus"] = ton.GetValidatorStatus()
 	data["cpuLoad"] = GetLoadAvg()
 	data["netLoad"] = ton.GetNetLoadAvg()
 	data["tps"] = ton.GetTpsAvg()
+
+	# Get git hashes
+	gitHashes = dict()
+	gitHashes["mytonctrl"] = TryGetGitHash("/usr/src/mytonctrl")
+	gitHashes["validator"] = TryGetGitHash("/usr/src/ton")
+	data["services"] = services
+	data["gitHashes"] = gitHashes
+	data["stake"] = ton.GetSettings("stake")
+
+	# Send data to toncenter server
 	url = "https://toncenter.com/api/newton_test/status/report_status"
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
 	
 	# fix me
-	if ton.adnlAddr != "8F6B69A49F6AED54A5B92623699AA44E6F801CDD5BA8B89519AA0DDEA7E9A618":
+	if ton.adnlAddr != "EADD038C8B931BFC802E6725D57581570630C55AEF7181C8748C4A8F7907CDF7":
 		return
 	data = dict()
-	config34 = ton.GetConfig34()
 	config36 = ton.GetConfig36()
-	data["currentValidators"] = config34.get("validators")
+	data["currentValidators"] = ton.GetValidatorsList()
 	data["nextValidators"] = config36.get("validators")
+	data["elections"] = ton.GetElectionEntries()
 	url = "https://toncenter.com/api/newton_test/status/report_validators"
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
+#end define
+
+def TryGetGitHash(gitPath):
+	result = None
+	try:
+		result = GetGitHash(gitPath)
+	except Exception as err:
+		local.AddLog("TryGetGitHash error: {err}".format(err=err), "error")
+	return result
+#end define
+
+def GetGitHash(gitPath):
+	args = ["git", "rev-parse", "HEAD"]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3, cwd=gitPath)
+	output = process.stdout.decode("utf-8")
+	err = process.stderr.decode("utf-8")
+	if len(err) > 0:
+		raise Exception("GetGitHash error: {err}, '{path}'".format(err=err, path=gitPath))
+	buff = output.split('\n')
+	return buff[0]
 #end define
 
 def Mining(ton):

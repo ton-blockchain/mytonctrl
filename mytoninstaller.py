@@ -243,7 +243,6 @@ def FirstMytoncoreSettings():
 	mconfig["sendTelemetry"] = sendTelemetry
 
 	# Записать настройки в файл
-	mconfigPath = local.buffer["mconfigPath"]
 	SetConfig(path=mconfigPath, data=mconfig)
 
 	# chown 1
