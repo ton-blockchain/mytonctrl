@@ -1705,7 +1705,6 @@ class MyTonCore():
 	
 	def VoteOffer(self, offerHash):
 		local.AddLog("start VoteOffer function", "debug")
-		offerHash = int(offerHash)
 		fullConfigAddr = self.GetFullConfigAddr()
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)

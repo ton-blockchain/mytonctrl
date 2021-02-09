@@ -620,6 +620,7 @@ def PrintOffersList(args):
 def VoteOffer(args):
 	try:
 		offerHash = args[0]
+		offerHash = int(offerHash)
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} vo <offer-hash>")
 		return
@@ -630,6 +631,7 @@ def VoteOffer(args):
 def OfferDiff(args):
 	try:
 		offerHash = args[0]
+		offerHash = int(offerHash)
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} od <offer-hash>")
 		return
