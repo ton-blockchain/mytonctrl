@@ -1802,7 +1802,8 @@ class MyTonCore():
 	def GetValidatorsLoad(self, timeDiff=2000):
 		# get buffer
 		timestamp = GetTimestamp()
-		validatorsLoad = local.buffer.get("validatorsLoad")
+		bname = "validatorsLoad{timeDiff}".format(timeDiff=timeDiff)
+		validatorsLoad = local.buffer.get(bname)
 		if validatorsLoad:
 			diffTime = timestamp - validatorsLoad.get("timestamp")
 			if diffTime < 60:
@@ -1869,7 +1870,7 @@ class MyTonCore():
 		validatorsLoad["timestamp"] = timestamp
 		validatorsLoad["vdata"] = vdata
 		validatorsLoad["compFiles"] = compFiles
-		local.buffer["validatorsLoad"] = validatorsLoad
+		local.buffer[bname] = validatorsLoad
 		return vdata, compFiles
 	#end define
 
