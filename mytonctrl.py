@@ -15,12 +15,14 @@ def Init():
 
 	# Create user console
 	console.name = "MyTonCtrl"
+	console.startFunction = CheckMytonctrlUpdate
 
 	console.AddItem("update", Update, local.Translate("update_cmd"))
 	console.AddItem("upgrade", Upgrade, local.Translate("upgrade_cmd"))
 	console.AddItem("installer", Installer, local.Translate("installer_cmd"))
 	console.AddItem("status", PrintStatus, local.Translate("status_cmd"))
 	console.AddItem("seqno", Seqno, local.Translate("seqno_cmd"))
+	console.AddItem("getconfig", GetConfig, local.Translate("getconfig_cmd"))
 
 	console.AddItem("nw", CreatNewWallet, local.Translate("nw_cmd"))
 	console.AddItem("aw", ActivateWallet, local.Translate("aw_cmd"))
@@ -49,7 +51,6 @@ def Init():
 	console.AddItem("ol", PrintOffersList, local.Translate("ol_cmd"))
 	console.AddItem("vo", VoteOffer, local.Translate("vo_cmd"))
 	console.AddItem("od", OfferDiff, local.Translate("od_cmd"))
-	console.AddItem("gc", GetConfig, local.Translate("gc_cmd"))
 
 	console.AddItem("el", PrintElectionEntriesList, local.Translate("el_cmd"))
 	console.AddItem("ve", VoteElectionEntry, local.Translate("ve_cmd"))
@@ -94,6 +95,23 @@ def Upgrade(args):
 	else:
 		text = "Upgrade - {red}Error{endc}"
 	ColorPrint(text)
+#end define
+
+def CheckMytonctrlUpdate():
+	gitPath = local.buffer.get("myDir")
+	result = CheckUpdate(gitPath)
+	if result:
+		ColorPrint(local.Translate("update_available"))
+#end define
+
+def CheckUpdate(gitPath):
+	args = ["git", "fetch", "--dry-run"]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
+	output = process.stdout.decode("utf-8")
+	if len(output) > 0:
+		return True
+	else:
+		return False
 #end define
 
 def PrintTest(args):
@@ -186,7 +204,6 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 	allOffers = offersNumber.get("all")
 	newComplaints = complaintsNumber.get("new")
 	allComplaints = complaintsNumber.get("all")
-
 	tps1_text = bcolors.Green(tps1)
 	tps5_text = bcolors.Green(tps5)
 	tps15_text = bcolors.Green(tps15)

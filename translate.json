@@ -15,6 +15,10 @@
 		"en": "Get seqno wallet",
 		"ru": "Получить seqno кошелька"
 	},
+	"getconfig_cmd": {
+		"en": "Get config",
+		"ru": "Получить конфигурацию"
+	},
 	"nw_cmd": {
 		"en": "Create a new local wallet",
 		"ru": "Создать новый локальный кошелек"
@@ -90,10 +94,6 @@
 	"od_cmd": {
 		"en": "Show offer diff",
 		"ru": "Показать разницу предложений"
-	},
-	"gc_cmd": {
-		"en": "Get config",
-		"ru": "Получить конфигурацию"
 	},
 	"cl_cmd": {
 		"en": "Show complaints list",
@@ -247,9 +247,9 @@
 		"en": "Beginning of the next elections: {0}",
 		"ru": "Начало следующих выборов: {0}"
 	},
-	"000": {
-		"en": "001",
-		"ru": "002"
+	"update_available": {
+		"en": "{green}MyTonCtrl update available. Please update it with `update` command.{endc}",
+		"ru": "{green}Доступно обновление MyTonCtrl. Пожалуйста, обновите его с помощью команды `update`.{endc}"
 	},
 	"000": {
 		"en": "001",

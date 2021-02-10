@@ -68,7 +68,7 @@ class Fift:
 		self.smartcontsPath = None
 	#end define
 
-	def Run(self, cmd, **kwargs):
+	def Run(self, args, **kwargs):
 		timeout = kwargs.get("timeout", 3)
 		for i in range(len(args)):
 			args[i] = str(args[i])
@@ -2520,7 +2520,7 @@ def TryGetGitHash(gitPath):
 
 def GetGitHash(gitPath):
 	args = ["git", "rev-parse", "HEAD"]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3, cwd=gitPath)
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
 	output = process.stdout.decode("utf-8")
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
