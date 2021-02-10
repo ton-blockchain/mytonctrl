@@ -91,6 +91,10 @@
 		"en": "Show offer diff",
 		"ru": "Показать разницу предложений"
 	},
+	"gc_cmd": {
+		"en": "Get config",
+		"ru": "Получить конфигурацию"
+	},
 	"cl_cmd": {
 		"en": "Show complaints list",
 		"ru": "Показать действующие жалобы"

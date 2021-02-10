@@ -1613,6 +1613,7 @@ class MyTonCore():
 		file.write(oldText)
 		file.close()
 
+		print(oldText)
 		args = ["diff", "--color", oldFileName, newFileName]
 		subprocess.run(args)
 	#end define
@@ -1775,7 +1776,7 @@ class MyTonCore():
 	def CheckComplaint(self, filePath):
 		local.AddLog("start CheckComplaint function", "debug")
 		cmd = "loadproofcheck {filePath}".format(filePath=filePath)
-		result = self.liteClient.Run(cmd)
+		result = self.liteClient.Run(cmd, timeout=10)
 		lines = result.split('\n')
 		ok = False
 		for line in lines:
@@ -1837,7 +1838,7 @@ class MyTonCore():
 				mr = masterBlocksCreated / masterBlocksExpected
 				wr = workBlocksCreated / workBlocksExpected
 				r = (mr + wr) / 2
-				if r > 0.7:
+				if r > 0.5:
 					online = True
 				else:
 					online = False
@@ -2478,6 +2479,7 @@ def Telemetry(ton):
 	data = dict()
 	data["adnlAddr"] = ton.adnlAddr
 	data["validatorStatus"] = ton.GetValidatorStatus()
+	data["cpuNumber"] = psutil.cpu_count()
 	data["cpuLoad"] = GetLoadAvg()
 	data["netLoad"] = ton.GetNetLoadAvg()
 	data["tps"] = ton.GetTpsAvg()

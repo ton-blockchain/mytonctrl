@@ -49,6 +49,8 @@ def Init():
 	console.AddItem("ol", PrintOffersList, local.Translate("ol_cmd"))
 	console.AddItem("vo", VoteOffer, local.Translate("vo_cmd"))
 	console.AddItem("od", OfferDiff, local.Translate("od_cmd"))
+	console.AddItem("gc", GetConfig, local.Translate("gc_cmd"))
+
 	console.AddItem("el", PrintElectionEntriesList, local.Translate("el_cmd"))
 	console.AddItem("ve", VoteElectionEntry, local.Translate("ve_cmd"))
 	console.AddItem("vl", PrintValidatorList, local.Translate("vl_cmd"))
@@ -638,9 +640,22 @@ def OfferDiff(args):
 	ton.GetOfferDiff(offerHash)
 #end define
 
+def GetConfig(args):
+	try:
+		configId = args[0]
+		configId = int(configId)
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} gc <config-id>")
+		return
+	data = ton.GetConfig(configId)
+	text = json.loads(data, indent=2)
+	print(text)
+#end define
+
 def PrintComplaintsList(args):
 	complaints = ton.GetComplaints()
-	print(json.dumps(complaints, indent=4))
+	text = json.dumps(complaints, indent=4)
+	print(text)
 #end define
 
 def VoteComplaint(args):
