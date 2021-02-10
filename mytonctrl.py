@@ -147,10 +147,13 @@ def TestWork(ok_arr, pending_arr):
 def PrintStatus(args):
 	rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
 	config34 = ton.GetConfig34()
+	config36 = ton.GetConfig36()
 	totalValidators = config34["totalValidators"]
 	onlineValidators = ton.GetOnlineValidators()
 	onlineValidators = len(onlineValidators)
-	oldStartWorkTime = config34["startWorkTime"]
+	oldStartWorkTime = config36.get("startWorkTime")
+	if oldStartWorkTime is None:
+		oldStartWorkTime = config34.get("startWorkTime")
 	shardsNumber = ton.GetShardsNumber()
 	validatorStatus = ton.GetValidatorStatus()
 	config15 = ton.GetConfig15()
@@ -174,7 +177,6 @@ def PrintStatus(args):
 #end define
 
 def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber):
-	# Статус сети TON
 	tpsAvg = ton.GetTpsAvg()
 	tps1 = tpsAvg[0]
 	tps5 = tpsAvg[1]
@@ -217,7 +219,6 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 #end define
 
 def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validatorStatus, dbSize):
-	# Статус локального валидатора
 	if validatorWallet is None:
 		return
 	adnlAddr = ton.adnlAddr
@@ -291,7 +292,6 @@ def GetColorStatus(input):
 #end define
 
 def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
-	# Конфигурация сети TON
 	validatorsElectedFor = config15["validatorsElectedFor"]
 	electionsStartBefore = config15["electionsStartBefore"]
 	electionsEndBefore = config15["electionsEndBefore"]
@@ -648,7 +648,7 @@ def GetConfig(args):
 		ColorPrint("{red}Bad args. Usage:{endc} gc <config-id>")
 		return
 	data = ton.GetConfig(configId)
-	text = json.loads(data, indent=2)
+	text = json.dumps(data, indent=2)
 	print(text)
 #end define
 

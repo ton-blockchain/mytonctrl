@@ -100,4 +100,9 @@ local.db["config"]["logLevel"] = "info"
 load = 10
 
 Local.StartCycle(General, sec=1)
-Sleep()
+while True:
+	time.sleep(60)
+	hour_str = time.strftime("%H")
+	hour = int(hour_str)
+	load = hour * 4
+#end while
