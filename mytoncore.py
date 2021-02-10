@@ -1799,10 +1799,21 @@ class MyTonCore():
 		return onlineValidators
 	#end define
 
-	def GetValidatorsLoad(self):
+	def GetValidatorsLoad(self, timeDiff=2000):
+		# get buffer
+		timestamp = GetTimestamp()
+		validatorsLoad = local.buffer.get("validatorsLoad")
+		if validatorsLoad:
+			diffTime = timestamp - validatorsLoad.get("timestamp")
+			if diffTime < 60:
+				vdata = validatorsLoad.get("vdata")
+				compFiles = validatorsLoad.get("compFiles")
+				return vdata, compFiles
+		#end if
+
 		local.AddLog("start GetValidatorsLoad function", "debug")
 		timeNow = GetTimestamp() - 10
-		time2 = timeNow - 2000
+		time2 = timeNow - timeDiff
 		filePrefix = self.tempDir + "check_{timeNow}".format(timeNow=timeNow)
 		cmd = "checkloadall {time2} {timeNow} {filePrefix}".format(timeNow=timeNow, time2=time2, filePrefix=filePrefix)
 		result = self.liteClient.Run(cmd, timeout=10)
@@ -1853,6 +1864,12 @@ class MyTonCore():
 				item["wr"] = wr
 				item["online"] = online
 				vdata[vid] = item
+		# Write buffer
+		validatorsLoad = dict()
+		validatorsLoad["timestamp"] = timestamp
+		validatorsLoad["vdata"] = vdata
+		validatorsLoad["compFiles"] = compFiles
+		local.buffer["validatorsLoad"] = validatorsLoad
 		return vdata, compFiles
 	#end define
 
@@ -1868,9 +1885,9 @@ class MyTonCore():
 		return validators
 	#end define
 
-	def CheckValidators(self):
+	def CheckValidators(self, timeDiff=2000):
 		local.AddLog("start CheckValidators function", "debug")
-		vdata, compFiles = self.GetValidatorsLoad()
+		vdata, compFiles = self.GetValidatorsLoad(timeDiff)
 		fullElectorAddr = self.GetFullElectorAddr()
 		config34 = self.GetConfig34()
 		electionId = config34.get("startWorkTime")

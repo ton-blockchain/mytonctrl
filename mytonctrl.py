@@ -142,7 +142,12 @@ def Test(args):
 #end define
 
 def Test2(args):
-	ton.CheckValidators()
+	try:
+		timeDiff = args[0]
+		timeDiff = int(timeDiff)
+	except:
+		timeDiff = 2000
+	ton.CheckValidators(timeDiff)
 #end define
 
 def TestWork(ok_arr, pending_arr):
