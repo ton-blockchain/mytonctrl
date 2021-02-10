@@ -108,7 +108,8 @@ def CheckUpdate(gitPath):
 	args = ["git", "fetch", "--dry-run"]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
 	output = process.stdout.decode("utf-8")
-	if len(output) > 0:
+	err = process.stderr.decode("utf-8")
+	if len(output) > 0 or len(err) > 0:
 		return True
 	else:
 		return False
