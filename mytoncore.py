@@ -1850,7 +1850,8 @@ class MyTonCore():
 				mr = masterBlocksCreated / masterBlocksExpected
 				wr = workBlocksCreated / workBlocksExpected
 				r = (mr + wr) / 2
-				if r > 0.5:
+				efficiency = round(r * 100, 2)
+				if efficiency > 50:
 					online = True
 				else:
 					online = False
@@ -1863,6 +1864,7 @@ class MyTonCore():
 				item["workBlocksExpected"] = workBlocksExpected
 				item["mr"] = mr
 				item["wr"] = wr
+				item["efficiency"] = efficiency
 				item["online"] = online
 				vdata[vid] = item
 		# Write buffer
@@ -1952,10 +1954,7 @@ class MyTonCore():
 		for validator in validators:
 			searchAdnlAddr = validator.get("adnlAddr")
 			if adnlAddr == searchAdnlAddr:
-				mr = validator.get("mr")
-				wr = validator.get("wr")
-				r = (mr + wr) / 2
-				efficiency = round(r * 100, 2)
+				efficiency = validator.get("efficiency")
 				return efficiency
 		local.AddLog("GetValidatorEfficiency warning: efficiency not found.", "warning")
 	#end define
