@@ -313,7 +313,7 @@ def GetColorInt_old(data, border, ending=None):
 
 def GetColorInt(data, border, logic, ending=None):
 	if data is None:
-		result = bcolors.Green("n/a", ending)
+		result = bcolors.Green("n/a")
 	elif logic == "more":
 		if data >= border:
 			result = bcolors.Green(data, ending)

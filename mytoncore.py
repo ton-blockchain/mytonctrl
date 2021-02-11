@@ -1884,6 +1884,7 @@ class MyTonCore():
 			validator = validators[vid]
 			validator["mr"] = vdata[vid]["mr"]
 			validator["wr"] = vdata[vid]["wr"]
+			validator["efficiency"] = vdata[vid]["efficiency"]
 			validator["online"] = vdata[vid]["online"]
 		return validators
 	#end define
