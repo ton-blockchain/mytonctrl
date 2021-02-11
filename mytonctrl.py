@@ -186,6 +186,7 @@ def PrintStatus(args):
 	fullElectorAddr = ton.GetFullElectorAddr()
 	startWorkTime = ton.GetActiveElectionId(fullElectorAddr)
 	validatorIndex = ton.GetValidatorIndex()
+	validatorEfficiency = ton.GetValidatorEfficiency()
 	validatorWallet = ton.GetLocalWallet(ton.validatorWalletName)
 	dbSize = ton.GetDbSize()
 	offersNumber = ton.GetOffersNumber()
@@ -195,7 +196,7 @@ def PrintStatus(args):
 	else:
 		validatorAccount = None
 	PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber)
-	PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validatorStatus, dbSize)
+	PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize)
 	PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17)
 	PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
@@ -241,7 +242,7 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 	print()
 #end define
 
-def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validatorStatus, dbSize):
+def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize):
 	if validatorWallet is None:
 		return
 	adnlAddr = ton.adnlAddr
@@ -260,32 +261,36 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	mytoncoreStatus_bool = GetServiceStatus("mytoncore")
 	validatorStatus_bool = GetServiceStatus("validator")
 
-	validatorIndex_text = local.Translate("local_status_validator_index").format(bcolors.Green(validatorIndex))
+	validatorIndex_text = GetColorInt(validatorIndex, 0, logic="more")
+	validatorIndex_text = local.Translate("local_status_validator_index").format(validatorIndex_text)
+	validatorEfficiency_text = GetColorInt(validatorEfficiency, 50, logic="more")
+	validatorEfficiency_text = local.Translate("local_status_validator_efficiency").format(validatorEfficiency_text)
 	adnlAddr_text = local.Translate("local_status_adnl_addr").format(bcolors.Yellow(adnlAddr))
 	walletAddr_text = local.Translate("local_status_wallet_addr").format(bcolors.Yellow(walletAddr))
 	walletBalance_text = local.Translate("local_status_wallet_balance").format(bcolors.Green(walletBalance, " GRM"))
 
 	# CPU status
 	cpuNumber_text = bcolors.Yellow(cpuNumber)
-	cpuLoad1_text = GetColorInt(cpuLoad1, cpuNumber)
-	cpuLoad5_text = GetColorInt(cpuLoad5, cpuNumber)
-	cpuLoad15_text = GetColorInt(cpuLoad15, cpuNumber)
+	cpuLoad1_text = GetColorInt(cpuLoad1, cpuNumber, logic="less")
+	cpuLoad5_text = GetColorInt(cpuLoad5, cpuNumber, logic="less")
+	cpuLoad15_text = GetColorInt(cpuLoad15, cpuNumber, logic="less")
 	cpuLoad_text = local.Translate("local_status_cpu_load").format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text)
 
 	# Network status
-	netLoad1_text = GetColorInt(netLoad1, 300)
-	netLoad5_text = GetColorInt(netLoad5, 300)
-	netLoad15_text = GetColorInt(netLoad15, 300)
+	netLoad1_text = GetColorInt(netLoad1, 300, logic="less")
+	netLoad5_text = GetColorInt(netLoad5, 300, logic="less")
+	netLoad15_text = GetColorInt(netLoad15, 300, logic="less")
 	netLoad_text = local.Translate("local_status_net_load").format(netLoad1_text, netLoad5_text, netLoad15_text)
 
 	# Thread status
 	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(GetColorStatus(mytoncoreStatus_bool))
 	validatorStatus_text = local.Translate("local_status_validator_status").format(GetColorStatus(validatorStatus_bool))
-	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, ending=" s"))
-	dbSize_text = local.Translate("local_status_db_size").format(GetColorInt(dbSize, 1000, ending=" Gb"))
+	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, logic="less", ending=" s"))
+	dbSize_text = local.Translate("local_status_db_size").format(GetColorInt(dbSize, 1000, logic="less", ending=" Gb"))
 
 	ColorPrint(local.Translate("local_status_head"))
 	print(validatorIndex_text)
+	print(validatorEfficiency_text)
 	print(adnlAddr_text)
 	print(walletAddr_text)
 	print(walletBalance_text)
@@ -298,11 +303,25 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	print()
 #end define
 
-def GetColorInt(input, border, ending=None):
-	if input < border:
-		result = bcolors.Green(input, ending)
+def GetColorInt_old(data, border, ending=None):
+	if data < border:
+		result = bcolors.Green(data, ending)
 	else:
-		result = bcolors.Red(input, ending)
+		result = bcolors.Red(data, ending)
+	return result
+#end define
+
+def GetColorInt(data, border, logic, ending=None):
+	if logic == "more":
+		if data >= border:
+			result = bcolors.Green(data, ending)
+		else:
+			result = bcolors.Red(data, ending)
+	elif logic == "less":
+		if data <= border:
+			result = bcolors.Green(data, ending)
+		else:
+			result = bcolors.Red(data, ending)
 	return result
 #end define
 

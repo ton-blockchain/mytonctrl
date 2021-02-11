@@ -163,6 +163,10 @@
 		"en": "Validator index: {0}",
 		"ru": "Индекс валидатора: {0}"
 	},
+	"local_status_validator_efficiency": {
+		"en": "Validator efficiency: {0}",
+		"ru": "Эффективность валидатора: {0}"
+	},
 	"local_status_adnl_addr": {
 		"en": "ADNL address of local validator: {0}",
 		"ru": "ADNL адрес локального валидатора: {0}"

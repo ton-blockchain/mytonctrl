@@ -1944,6 +1944,20 @@ class MyTonCore():
 		local.AddLog("GetValidatorIndex warning: index not found.", "warning")
 		return -1
 	#end define
+
+	def GetValidatorEfficiency(self, adnlAddr=None):
+		validators = self.GetValidatorsList()
+		if adnlAddr is None:
+			adnlAddr = self.GetAdnlAddr()
+		for validator in validators:
+			searchAdnlAddr = validator.get("adnlAddr")
+			if adnlAddr == searchAdnlAddr:
+				mr = validator.get("mr")
+				wr = validator.get("wr")
+				r = (mr + wr) / 2
+				return r
+		local.AddLog("GetValidatorEfficiency warning: efficiency not found.", "warning")
+	#end define
 	
 	def GetDbSize(self, exceptions="log"):
 		local.AddLog("start GetDbSize function", "debug")
