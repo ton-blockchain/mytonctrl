@@ -252,8 +252,8 @@
 		"ru": "Начало следующих выборов: {0}"
 	},
 	"update_available": {
-		"en": "{green}MyTonCtrl update available. Please update it with `update` command.{endc}",
-		"ru": "{green}Доступно обновление MyTonCtrl. Пожалуйста, обновите его с помощью команды `update`.{endc}"
+		"en": "{green}MyTonCtrl update available. {red}Please update it with `update` command.{endc}",
+		"ru": "{green}Доступно обновление MyTonCtrl. {red}Пожалуйста, обновите его с помощью команды `update`.{endc}"
 	},
 	"000": {
 		"en": "001",

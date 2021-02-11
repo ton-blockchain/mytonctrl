@@ -263,7 +263,7 @@ def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, valid
 
 	validatorIndex_text = GetColorInt(validatorIndex, 0, logic="more")
 	validatorIndex_text = local.Translate("local_status_validator_index").format(validatorIndex_text)
-	validatorEfficiency_text = GetColorInt(validatorEfficiency, 50, logic="more")
+	validatorEfficiency_text = GetColorInt(validatorEfficiency, 50, logic="more", ending=" %")
 	validatorEfficiency_text = local.Translate("local_status_validator_efficiency").format(validatorEfficiency_text)
 	adnlAddr_text = local.Translate("local_status_adnl_addr").format(bcolors.Yellow(adnlAddr))
 	walletAddr_text = local.Translate("local_status_wallet_addr").format(bcolors.Yellow(walletAddr))

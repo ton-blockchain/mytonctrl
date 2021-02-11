@@ -1954,7 +1954,7 @@ class MyTonCore():
 			if adnlAddr == searchAdnlAddr:
 				mr = validator.get("mr")
 				wr = validator.get("wr")
-				r = (mr + wr) / 2
+				r = (mr + wr) / 2 * 100
 				return r
 		local.AddLog("GetValidatorEfficiency warning: efficiency not found.", "warning")
 	#end define
