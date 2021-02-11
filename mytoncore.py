@@ -1948,9 +1948,12 @@ class MyTonCore():
 	#end define
 
 	def GetValidatorEfficiency(self, adnlAddr=None):
+		local.AddLog("start GetValidatorEfficiency function", "debug")
 		validators = self.GetValidatorsList()
 		if adnlAddr is None:
 			adnlAddr = self.GetAdnlAddr()
+		print(f"adnlAddr: {adnlAddr}")
+		print(f"validators: {validators}")
 		for validator in validators:
 			searchAdnlAddr = validator.get("adnlAddr")
 			if adnlAddr == searchAdnlAddr:
