@@ -1953,8 +1953,6 @@ class MyTonCore():
 		validators = self.GetValidatorsList()
 		if adnlAddr is None:
 			adnlAddr = self.GetAdnlAddr()
-		print(f"adnlAddr: {adnlAddr}")
-		print(f"validators: {validators}")
 		for validator in validators:
 			searchAdnlAddr = validator.get("adnlAddr")
 			if adnlAddr == searchAdnlAddr:
