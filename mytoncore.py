@@ -1956,7 +1956,7 @@ class MyTonCore():
 				wr = validator.get("wr")
 				r = (mr + wr) / 2
 				efficiency = round(r * 100, 2)
-				return r
+				return efficiency
 		local.AddLog("GetValidatorEfficiency warning: efficiency not found.", "warning")
 	#end define
 	
