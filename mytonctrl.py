@@ -147,7 +147,7 @@ def Test2(args):
 		timeDiff = args[0]
 		timeDiff = int(timeDiff)
 	except:
-		timeDiff = 2000
+		timeDiff = 3000
 	ton.CheckValidators(timeDiff)
 #end define
 

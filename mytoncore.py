@@ -774,7 +774,7 @@ class MyTonCore():
 		config = configs.get("configId")
 		if config:
 			diffTime = timestamp - config.get("timestamp")
-			if diffTime < 10:
+			if diffTime < 60:
 				return config
 		#end if
 
@@ -794,7 +794,7 @@ class MyTonCore():
 		config12 = local.buffer.get("config12")
 		if config12:
 			diffTime = timestamp - config12.get("timestamp")
-			if diffTime < 10:
+			if diffTime < 60:
 				return config12
 		#end if
 
@@ -817,7 +817,7 @@ class MyTonCore():
 		config15 = local.buffer.get("config15")
 		if config15:
 			diffTime = timestamp - config15.get("timestamp")
-			if diffTime < 10:
+			if diffTime < 60:
 				return config15
 		#end if
 
@@ -839,7 +839,7 @@ class MyTonCore():
 		config17 = local.buffer.get("config17")
 		if config17:
 			diffTime = timestamp - config17.get("timestamp")
-			if diffTime < 10:
+			if diffTime < 60:
 				return config17
 		#end if
 
@@ -865,7 +865,7 @@ class MyTonCore():
 		config32 = local.buffer.get("config32")
 		if config32:
 			diffTime = timestamp - config32.get("timestamp")
-			if diffTime < 10:
+			if diffTime < 60:
 				return config32
 		#end if
 
@@ -902,7 +902,7 @@ class MyTonCore():
 		config34 = local.buffer.get("config34")
 		if config34:
 			diffTime = timestamp - config34.get("timestamp")
-			if diffTime < 10:
+			if diffTime < 60:
 				return config34
 		#end if
 
@@ -939,7 +939,7 @@ class MyTonCore():
 		config36 = local.buffer.get("config36")
 		if config36:
 			diffTime = timestamp - config36.get("timestamp")
-			if diffTime < 10:
+			if diffTime < 60:
 				return config36
 		#end if
 
@@ -1748,7 +1748,7 @@ class MyTonCore():
 		resultFilePath = self.SignComplaintVoteRequestWithValidator(complaintHash, electionId, validatorIndex, validatorPubkey_b64, validatorSignature)
 		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, 1.5)
 		self.SendFile(resultFilePath, wallet)
-		self.AddSaveComplaint(complaintHash)
+		# self.AddSaveComplaint(complaintHash)
 	#end define
 
 	def CheckComplaints(self):
@@ -1776,7 +1776,7 @@ class MyTonCore():
 	def CheckComplaint(self, filePath):
 		local.AddLog("start CheckComplaint function", "debug")
 		cmd = "loadproofcheck {filePath}".format(filePath=filePath)
-		result = self.liteClient.Run(cmd, timeout=10)
+		result = self.liteClient.Run(cmd, timeout=30)
 		lines = result.split('\n')
 		ok = False
 		for line in lines:
@@ -1817,7 +1817,7 @@ class MyTonCore():
 		time2 = timeNow - timeDiff
 		filePrefix = self.tempDir + "check_{timeNow}".format(timeNow=timeNow)
 		cmd = "checkloadall {time2} {timeNow} {filePrefix}".format(timeNow=timeNow, time2=time2, filePrefix=filePrefix)
-		result = self.liteClient.Run(cmd, timeout=10)
+		result = self.liteClient.Run(cmd, timeout=30)
 		lines = result.split('\n')
 		vdata = dict()
 		compFiles = list()
@@ -1873,6 +1873,13 @@ class MyTonCore():
 		validatorsLoad["vdata"] = vdata
 		validatorsLoad["compFiles"] = compFiles
 		local.buffer[bname] = validatorsLoad
+
+		# delete compFiles
+		if timeDiff == 2000:
+			for item in compFiles:
+				os.remove(item)
+		#end if
+
 		return vdata, compFiles
 	#end define
 
@@ -1889,7 +1896,7 @@ class MyTonCore():
 		return validators
 	#end define
 
-	def CheckValidators(self, timeDiff=2000):
+	def CheckValidators(self, timeDiff=3000):
 		local.AddLog("start CheckValidators function", "debug")
 		vdata, compFiles = self.GetValidatorsLoad(timeDiff)
 		fullElectorAddr = self.GetFullElectorAddr()
@@ -2654,14 +2661,36 @@ def SaveTransNumFromShard(ton, shard, buff):
 #end define
 
 def Complaints(ton):
-	saveComplaints = ton.GetSaveComplaints()
+	validatorIndex = self.GetValidatorIndex()
+	if validatorIndex < 0:
+		return
+	#end if
+
+	# saveComplaints = ton.GetSaveComplaints()
 	checkComplaints = ton.CheckComplaints()
 	complaints = ton.GetComplaints()
 	for complaint in complaints:
 		complaintHash = complaint.get("hash")
 		complaintHash_hex = dec2hex(complaintHash).upper()
-		if complaintHash_hex in checkComplaints and complaintHash not in saveComplaints:
+		# if complaintHash_hex in checkComplaints and complaintHash not in saveComplaints:
+		if complaintHash_hex in checkComplaints:
 			ton.VoteComplaint(complaintHash)
+#end define
+
+def Slashing(ton):
+	timeNow = GetTimestamp()
+	oldSlashTime = local.buffer.get("oldSlashTime")
+	config15 = ton.GetConfig15()
+	config34 = ton.GetConfig34()
+	startWorkTime = config34.get("startWorkTime")
+	validatorsElectedFor = config15.get("validatorsElectedFor")
+	timeDiff = validatorsElectedFor - 1000
+	slashTime = startWorkTime + validatorsElectedFor - 900
+	if oldSlashTime != slashTime and slashTime > timeNow:
+		text = "start Slashing function, {}, {}, {}".format(timeNow, slashTime, timeDiff)
+		local.AddLog(text)
+		ton.CheckValidators(timeDiff)
+		local.buffer["oldSlashTime"] = slashTime
 #end define
 
 def General():
@@ -2673,6 +2702,7 @@ def General():
 	local.StartCycle(Statistics, sec=10, args=(ton, ))
 	local.StartCycle(Offers, sec=600, args=(ton, ))
 	local.StartCycle(Complaints, sec=600, args=(ton, ))
+	local.StartCycle(Slashing, sec=60, args=(ton, ))
 	local.StartCycle(Domains, sec=600, args=(ton, ))
 	local.StartCycle(Telemetry, sec=60, args=(ton, ))
 	local.StartCycle(Mining, sec=1, args=(ton, ))
