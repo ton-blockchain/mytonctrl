@@ -773,7 +773,7 @@ class MyTonCore():
 		configs = self.GetConfigs()
 		config = configs.get(configId)
 		if config:
-			diffTime = timestamp - config.get("timestamp")
+			diffTime = timestamp - config.get("_timestamp_")
 			if diffTime < 60:
 				return config
 		#end if
@@ -787,7 +787,7 @@ class MyTonCore():
 		data = self.Tlb2Json(text)
 		# write buffer
 		configs[configId] = data
-		configs[configId]["timestamp"] = timestamp
+		configs[configId]["_timestamp_"] = timestamp
 		return data
 	#end define
 
