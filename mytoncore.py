@@ -2686,7 +2686,7 @@ def Slashing(ton):
 	validatorsElectedFor = config15.get("validatorsElectedFor")
 	timeDiff = validatorsElectedFor - 1000
 	slashTime = startWorkTime + validatorsElectedFor - 900
-	if oldSlashTime != slashTime and slashTime > timeNow:
+	if oldSlashTime != slashTime and timeNow > slashTime:
 		text = "start Slashing function, {}, {}, {}".format(timeNow, slashTime, timeDiff)
 		local.AddLog(text)
 		ton.CheckValidators(timeDiff)
