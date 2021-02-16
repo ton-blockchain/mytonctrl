@@ -2661,7 +2661,7 @@ def SaveTransNumFromShard(ton, shard, buff):
 #end define
 
 def Complaints(ton):
-	validatorIndex = self.GetValidatorIndex()
+	validatorIndex = ton.GetValidatorIndex()
 	if validatorIndex < 0:
 		return
 	#end if
