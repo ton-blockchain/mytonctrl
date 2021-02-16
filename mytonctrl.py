@@ -174,7 +174,8 @@ def PrintStatus(args):
 	config36 = ton.GetConfig36()
 	totalValidators = config34["totalValidators"]
 	onlineValidators = ton.GetOnlineValidators()
-	onlineValidators = len(onlineValidators)
+	if onlineValidators:
+		onlineValidators = len(onlineValidators)
 	oldStartWorkTime = config36.get("startWorkTime")
 	if oldStartWorkTime is None:
 		oldStartWorkTime = config34.get("startWorkTime")
@@ -215,7 +216,7 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 	tps5_text = bcolors.Green(tps5)
 	tps15_text = bcolors.Green(tps15)
 	tps_text = local.Translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
-	onlineValidators_text = bcolors.Green(onlineValidators)
+	onlineValidators_text = GetColorInt(onlineValidators, border=allValidators*2/3, logic="more")
 	allValidators_text = bcolors.Yellow(allValidators)
 	validators_text = local.Translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
 	shards_text = local.Translate("ton_status_shards").format(bcolors.Green(shardsNumber))
@@ -301,14 +302,6 @@ def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, valid
 	print(validatorOutOfSync_text)
 	print(dbSize_text)
 	print()
-#end define
-
-def GetColorInt_old(data, border, ending=None):
-	if data < border:
-		result = bcolors.Green(data, ending)
-	else:
-		result = bcolors.Red(data, ending)
-	return result
 #end define
 
 def GetColorInt(data, border, logic, ending=None):

@@ -1792,6 +1792,8 @@ class MyTonCore():
 	def GetOnlineValidators(self):
 		onlineValidators = list()
 		vdata, compFiles = self.GetValidatorsLoad()
+		if len(vdata) == 0:
+			return
 		for key, item in vdata.items():
 			online = item.get("online")
 			if online is True:
