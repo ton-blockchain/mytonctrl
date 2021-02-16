@@ -771,7 +771,7 @@ class MyTonCore():
 		# get buffer
 		timestamp = GetTimestamp()
 		configs = self.GetConfigs()
-		config = configs.get("configId")
+		config = configs.get(configId)
 		if config:
 			diffTime = timestamp - config.get("timestamp")
 			if diffTime < 60:
@@ -785,10 +785,13 @@ class MyTonCore():
 		start = result.find("ConfigParam")
 		text = result[start:]
 		data = self.Tlb2Json(text)
+		# write buffer
+		configs[configId] = data
+		configs[configId]["timestamp"] = timestamp
 		return data
 	#end define
 
-	def GetConfig12(self):
+	def GetConfig12_old(self):
 		# get buffer
 		timestamp = GetTimestamp()
 		config12 = local.buffer.get("config12")
@@ -811,7 +814,14 @@ class MyTonCore():
 		return config12
 	#end define
 
-	def GetConfig15(self):
+	def GetConfig12(self):
+		config = self.GetConfig(12)
+		enabled_since = config["workchains"]["root"]["node"]["value"]["enabled_since"]
+		config12 = {"workchains": {"root": {"enabledSince": enabled_since}}}
+		return config12
+	#end define
+
+	def GetConfig15_old(self):
 		# get buffer
 		timestamp = GetTimestamp()
 		config15 = local.buffer.get("config15")
@@ -833,7 +843,17 @@ class MyTonCore():
 		return config15
 	#end define
 
-	def GetConfig17(self):
+	def GetConfig15(self):
+		config = self.GetConfig(15)
+		config15 = dict()
+		config15["validatorsElectedFor"] = config["validators_elected_for"]
+		config15["electionsStartBefore"] = config["elections_start_before"]
+		config15["electionsEndBefore"] = config["elections_end_before"]
+		config15["stakeHeldFor"] = config["stake_held_for"]
+		return config15
+	#end define
+
+	def GetConfig17_old(self):
 		# get buffer
 		timestamp = GetTimestamp()
 		config17 = local.buffer.get("config17")
@@ -856,6 +876,15 @@ class MyTonCore():
 		maxStakeFactor = self.GetVarFromWorkerOutput(result, "max_stake_factor")
 		config17["maxStakeFactor"] = int(maxStakeFactor)
 		local.buffer["config17"] = config17 # set buffer
+		return config17
+	#end define
+
+	def GetConfig17(self):
+		config = self.GetConfig(17)
+		config17 = dict()
+		config17["minStake"] = ng2g(config["min_stake"]["amount"]["value"])
+		config17["maxStake"] = ng2g(config["max_stake"]["amount"]["value"])
+		config17["maxStakeFactor"] = config["max_stake_factor"]
 		return config17
 	#end define
 
