@@ -1670,20 +1670,21 @@ class MyTonCore():
 			# parser from: https://github.com/ton-blockchain/ton/blob/dab7ee3f9794db5a6d32c895dbc2564f681d9126/crypto/smartcont/elector-code.fc#L1149
 			item = dict()
 			buff = subdata[0] # *complaint*
+			item["electionId"] = electionId
 			item["hash"] = chash
 			item["validatorPubkey"] = dec2hex(buff[0]).upper() # *validator_pubkey*
-			# item["description"] = buff[1] # *description*
+			item["description"] = buff[1] # *description*
 			item["createdTime"] = buff[2] # *created_at*
 			item["severity"] = buff[3] # *severity*
 			rewardAddr = buff[4]
 			rewardAddr = "-1:" + dec2hex(rewardAddr)
 			rewardAddr = self.HexAddr2Base64Addr(rewardAddr)
 			item["rewardAddr"] = rewardAddr # *reward_addr*
-			# item["paid"] = buff[5] # *paid*
-			# item["suggestedFine"] = buff[6] # *suggested_fine*
-			# item["suggestedFinePart"] = buff[7] # *suggested_fine_part*
+			item["paid"] = buff[5] # *paid*
+			item["suggestedFine"] = buff[6] # *suggested_fine*
+			item["suggestedFinePart"] = buff[7] # *suggested_fine_part*
 			item["votedValidators"] = subdata[1] # *voters_list*
-			# item["vsetId"] = subdata[2] # *vset_id*
+			item["vsetId"] = subdata[2] # *vset_id*
 			item["weightRemaining"] = subdata[3] # *weight_remaining*
 			complaints.append(item)
 		#end for
@@ -1694,11 +1695,13 @@ class MyTonCore():
 		local.AddLog("start GetComplaintsNumber function", "debug")
 		result = dict()
 		complaints = self.GetComplaints()
-		saveComplaints = self.GetSaveComplaints()
+		saveComplaints = self.GetSaveComplaints(mode="complaints")
 		buff = 0
 		for complaint in complaints:
-			complaintHash = complaint.get("hash")
-			if complaintHash in saveComplaints:
+			pubkey = complaint.get("pubkey")
+			electionId = complaint.get("electionId")
+			pseudohash = pubkey + electionId
+			if pseudohash in saveComplaints:
 				continue
 			buff += 1
 		result["all"] = len(complaints)
@@ -1763,7 +1766,10 @@ class MyTonCore():
 		validatorPubkey_b64 = self.GetPubKeyBase64(validatorKey)
 		validatorIndex = self.GetValidatorIndex()
 		complaint = self.GetComplaint(electionId, complaintHash)
-		if validatorIndex in complaint.get("votedValidators"):
+		votedValidators = complaint.get("votedValidators")
+		pubkey = complaint.get("pubkey")
+		pseudohash = pubkey + electionId
+		if validatorIndex in votedValidators:
 			local.AddLog("Complaint already has been voted", "debug")
 			return
 		var1 = self.CreateComplaintRequest(electionId, complaintHash, validatorIndex)
@@ -1771,7 +1777,7 @@ class MyTonCore():
 		resultFilePath = self.SignComplaintVoteRequestWithValidator(complaintHash, electionId, validatorIndex, validatorPubkey_b64, validatorSignature)
 		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, 1.5)
 		self.SendFile(resultFilePath, wallet)
-		# self.AddSaveComplaints(complaintHash)
+		self.AddSaveComplaints(pseudohash, mode="complaints")
 	#end define
 
 	def SaveComplaints(self, electionId):
@@ -1870,6 +1876,10 @@ class MyTonCore():
 				wr = workBlocksCreated / workBlocksExpected
 				r = (mr + wr) / 2
 				efficiency = round(r * 100, 2)
+				if efficiency > 30:
+					online = True
+				else:
+					online = False
 				item = dict()
 				item["id"] = vid
 				item["pubkey"] = pubkey
@@ -1880,7 +1890,7 @@ class MyTonCore():
 				item["mr"] = mr
 				item["wr"] = wr
 				item["efficiency"] = efficiency
-				item["online"] = True
+				item["online"] = online
 
 				# Get complaint file
 				try:
@@ -1891,8 +1901,6 @@ class MyTonCore():
 						item["var1"] = buff[1]
 						item["var2"] = buff[2]
 						item["fileName"] = buff[3]
-						item["online"] = False
-					#end if
 				except: pass
 
 				data[vid] = item
@@ -1922,6 +1930,7 @@ class MyTonCore():
 
 	def CheckValidators(self, start, end):
 		local.AddLog("start CheckValidators function", "debug")
+		saveComplaints = self.GetSaveComplaints(mode="slashing")
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		walletName = self.validatorWalletName
@@ -1936,10 +1945,18 @@ class MyTonCore():
 			var2 = item.get("var2")
 			pubkey = item.get("pubkey")
 			fileName = item.get("fileName")
+			suggestedFine = item.get("suggestedFine")
+			suggestedFinePart = item.get("suggestedFinePart")
+			pseudohash = pubkey + start
+			if pseudohash in saveComplaints:
+				continue
+			if suggestedFine != 1 or suggestedFinePart != 0: # fix me
+				continue
 			if fileName is not None:
 				fileName = self.PrepareComplaint(start, fileName)
 				fileName = self.SignFileWithWallet(wallet, fileName, fullElectorAddr, 100)
 				self.SendFile(fileName, wallet)
+				self.AddSaveComplaints(pseudohash, mode="slashing")
 				local.AddLog("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, start))
 				
 	#end define
@@ -2196,18 +2213,20 @@ class MyTonCore():
 		return saveOffers
 	#end define
 	
-	def GetSaveComplaints(self):
-		saveComplaints = local.db.get("saveComplaints")
+	def GetSaveComplaints(self, mode):
+		# mod: slashing or complaints
+		bname = mode + "saveComplaints"
+		saveComplaints = local.buffer.get(bname)
 		if saveComplaints is None:
 			saveComplaints = list()
-			local.db["saveComplaints"] = saveComplaints
+			local.buffer[bname] = saveComplaints
 		return saveComplaints
 	#end define
 
-	def AddSaveComplaints(self, complaintHash):
-		saveComplaints = self.GetSaveComplaints()
-		if complaintHash not in saveComplaints:
-			saveComplaints.append(complaintHash)
+	def AddSaveComplaints(self, pseudohash, mode):
+		saveComplaints = self.GetSaveComplaints(mode)
+		if pseudohash not in saveComplaints:
+			saveComplaints.append(pseudohash)
 			local.dbSave()
 	#end define
 	
@@ -2709,10 +2728,10 @@ def Complaints(ton):
 def Slashing(ton):
 	timestamp = GetTimestamp()
 	slashTime = local.buffer.get("slashTime")
-	config34 = ton.GetConfig34()
-	start = config34.get("startWorkTime")
-	end = config34.get("endWorkTime")
-	if slashTime != start and timestamp > end:
+	config32 = ton.GetConfig32()
+	start = config32.get("startWorkTime")
+	end = config32.get("endWorkTime")
+	if slashTime != start:
 		end -= 60
 		ton.CheckValidators(start, end)
 		local.buffer["slashTime"] = start
