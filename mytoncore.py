@@ -1883,15 +1883,17 @@ class MyTonCore():
 				item["online"] = True
 
 				# Get complaint file
-				index = lines.index(line)
-				nextLine = lines[index+2]
-				if "COMPLAINT_SAVED" in nextLine:
-					buff = line.split('\t')
-					item["var1"] = buff[1]
-					item["var2"] = buff[2]
-					item["fileName"] = buff[3]
-					item["online"] = False
-				#end if
+				try:
+					index = lines.index(line)
+					nextLine = lines[index+2]
+					if "COMPLAINT_SAVED" in nextLine:
+						buff = line.split('\t')
+						item["var1"] = buff[1]
+						item["var2"] = buff[2]
+						item["fileName"] = buff[3]
+						item["online"] = False
+					#end if
+				except: pass
 
 				data[vid] = item
 		#end for
