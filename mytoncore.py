@@ -910,14 +910,14 @@ class MyTonCore():
 		for line in lines:
 			if "public_key:" in line:
 				validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
-				validatorPubkey = Pars(line, "pubkey:x", ')')
+				pubkey = Pars(line, "pubkey:x", ')')
 				if config32["totalValidators"] > 1:
 					validatorWeight = int(Pars(line, "weight:", ' '))
 				else:
 					validatorWeight = int(Pars(line, "weight:", ')'))
 				buff = dict()
 				buff["adnlAddr"] = validatorAdnlAddr
-				buff["pubkey"] = validatorPubkey
+				buff["pubkey"] = pubkey
 				buff["weight"] = validatorWeight
 				validators.append(buff)
 		config32["validators"] = validators
@@ -947,14 +947,14 @@ class MyTonCore():
 		for line in lines:
 			if "public_key:" in line:
 				validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
-				validatorPubkey = Pars(line, "pubkey:x", ')')
+				pubkey = Pars(line, "pubkey:x", ')')
 				if config34["totalValidators"] > 1:
 					validatorWeight = int(Pars(line, "weight:", ' '))
 				else:
 					validatorWeight = int(Pars(line, "weight:", ')'))
 				buff = dict()
 				buff["adnlAddr"] = validatorAdnlAddr
-				buff["pubkey"] = validatorPubkey
+				buff["pubkey"] = pubkey
 				buff["weight"] = validatorWeight
 				validators.append(buff)
 		config34["validators"] = validators
@@ -985,11 +985,11 @@ class MyTonCore():
 			for line in lines:
 				if "public_key:" in line:
 					validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
-					validatorPubkey = Pars(line, "pubkey:x", ')')
+					pubkey = Pars(line, "pubkey:x", ')')
 					validatorWeight = Pars(line, "weight:", ' ')
 					buff = dict()
 					buff["adnlAddr"] = validatorAdnlAddr
-					buff["pubkey"] = validatorPubkey
+					buff["pubkey"] = pubkey
 					buff["weight"] = validatorWeight
 					validators.append(buff)
 			config36["validators"] = validators
@@ -1144,9 +1144,9 @@ class MyTonCore():
 		fileName = self.tempDir + str(startWorkTime) + "_validator-query.boc"
 		args = ["validator-elect-signed.fif", wallet.addr, startWorkTime, maxFactor, adnlAddr, validatorPubkey_b64, validatorSignature, fileName]
 		result = self.fift.Run(args)
-		validatorPubkey = Pars(result, "validator public key ", '\n')
+		pubkey = Pars(result, "validator public key ", '\n')
 		fileName = Pars(result, "Saved to file ", '\n')
-		return validatorPubkey, fileName
+		return pubkey, fileName
 	#end define
 
 	def SignFileWithWallet(self, wallet, filePath, addr, gram):
@@ -1525,7 +1525,7 @@ class MyTonCore():
 				
 			# Create dict
 			item = dict()
-			item["validatorPubkey"] = dec2hex(entry[0]).upper()
+			item["pubkey"] = dec2hex(entry[0]).upper()
 			item["stake"] = ng2g(entry[1][0])
 			item["maxFactor"] = round(entry[1][1] / 655.36) / 100.0
 			item["walletAddr_hex"] = dec2hex(entry[1][2]).upper()
@@ -1672,7 +1672,7 @@ class MyTonCore():
 			buff = subdata[0] # *complaint*
 			item["electionId"] = electionId
 			item["hash"] = chash
-			item["validatorPubkey"] = dec2hex(buff[0]).upper() # *validator_pubkey*
+			item["pubkey"] = dec2hex(buff[0]).upper() # *validator_pubkey*
 			item["description"] = buff[1] # *description*
 			item["createdTime"] = buff[2] # *created_at*
 			item["severity"] = buff[3] # *severity*
