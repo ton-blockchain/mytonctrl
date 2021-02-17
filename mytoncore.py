@@ -1721,7 +1721,7 @@ class MyTonCore():
 	def CheckComplaint(self, filePath):
 		local.AddLog("start CheckComplaint function", "debug")
 		cmd = "loadproofcheck {filePath}".format(filePath=filePath)
-		result = self.liteClient.Run(cmd)
+		result = self.liteClient.Run(cmd, timeout=10)
 		lines = result.split('\n')
 		ok = False
 		for line in lines:

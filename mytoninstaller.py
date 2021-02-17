@@ -213,11 +213,6 @@ def FirstMytoncoreSettings():
 	mconfigDir = GetDirFromPath(mconfigPath)
 	os.makedirs(mconfigDir, exist_ok=True)
 
-	# Подготовить папку mytoncore
-	mconfigPath = local.buffer["mconfigPath"]
-	mconfigDir = GetDirFromPath(mconfigPath)
-	os.makedirs(mconfigDir, exist_ok=True)
-
 	# create variables
 	srcDir = local.buffer["srcDir"]
 	tonBinDir = local.buffer["tonBinDir"]
