@@ -1706,9 +1706,9 @@ class MyTonCore():
 		return result
 	#end define
 
-	def GetComplaint(self, complaintHash):
+	def GetComplaint(self, electionId, complaintHash):
 		local.AddLog("start GetComplaint function", "debug")
-		complaints = self.GetComplaints()
+		complaints = self.GetComplaints(electionId)
 		for complaint in complaints:
 			if complaintHash == complaint.get("hash"):
 				return complaint
@@ -1753,7 +1753,7 @@ class MyTonCore():
 		self.AddSaveOffer(offerHash)
 	#end define
 
-	def VoteComplaint(self, complaintHash):
+	def VoteComplaint(self, electionId, complaintHash):
 		local.AddLog("start VoteComplaint function", "debug")
 		complaintHash = int(complaintHash)
 		fullElectorAddr = self.GetFullElectorAddr()
@@ -1762,33 +1762,25 @@ class MyTonCore():
 		validatorKey = self.GetValidatorKey()
 		validatorPubkey_b64 = self.GetPubKeyBase64(validatorKey)
 		validatorIndex = self.GetValidatorIndex()
-		complaint = self.GetComplaint(complaintHash)
+		complaint = self.GetComplaint(electionId, complaintHash)
 		if validatorIndex in complaint.get("votedValidators"):
 			local.AddLog("Complaint already has been voted", "debug")
 			return
-		config34 = self.GetConfig34()
-		electionId = config34.get("startWorkTime")
-		createdTime = complaint.get("createdTime")
-		if electionId > createdTime:
-			config32 = self.GetConfig32()
-			electionId = config32.get("startWorkTime")
 		var1 = self.CreateComplaintRequest(electionId, complaintHash, validatorIndex)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 		resultFilePath = self.SignComplaintVoteRequestWithValidator(complaintHash, electionId, validatorIndex, validatorPubkey_b64, validatorSignature)
 		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, 1.5)
 		self.SendFile(resultFilePath, wallet)
-		# self.AddSaveComplaint(complaintHash)
+		# self.AddSaveComplaints(complaintHash)
 	#end define
 
-	def CheckComplaints(self):
-		local.AddLog("start CheckComplaints function", "debug")
-		config34 = self.GetConfig34()
-		electionId = config34.get("startWorkTime")
+	def SaveComplaints(self, electionId):
+		local.AddLog("start SaveComplaints function", "debug")
 		filePrefix = self.tempDir + "scheck_"
 		cmd = "savecomplaints {electionId} {filePrefix}".format(electionId=electionId, filePrefix=filePrefix)
 		result = self.liteClient.Run(cmd)
 		lines = result.split('\n')
-		checkComplaints = list()
+		complaintsHashes = list()
 		for line in lines:
 			if "SAVE_COMPLAINT" in line:
 				buff = line.split('\t')
@@ -1798,8 +1790,8 @@ class MyTonCore():
 				filePath = buff[5]
 				ok = self.CheckComplaint(filePath)
 				if ok is True:
-					checkComplaints.append(chash)
-		return checkComplaints
+					complaintsHashes.append(chash)
+		return complaintsHashes
 	#end define
 
 	def CheckComplaint(self, filePath):
@@ -1820,46 +1812,42 @@ class MyTonCore():
 
 	def GetOnlineValidators(self):
 		onlineValidators = list()
-		vdata, compFiles = self.GetValidatorsLoad()
-		if len(vdata) == 0:
+		data = self.GetValidatorsLoad()
+		if len(data) == 0:
 			return
-		for key, item in vdata.items():
+		for key, item in data.items():
 			online = item.get("online")
 			if online is True:
 				onlineValidators.append(item)
 		return onlineValidators
 	#end define
 
-	def GetValidatorsLoad(self, timeDiff=2000):
-		# get buffer
+	def GetValidatorsLoad(self, start=None, end=None, timeDiff=2000, saveCompFiles=False):
 		timestamp = GetTimestamp()
-		bname = "validatorsLoad{timeDiff}".format(timeDiff=timeDiff)
-		validatorsLoad = local.buffer.get(bname)
-		if validatorsLoad:
-			diffTime = timestamp - validatorsLoad.get("timestamp")
+		if start is None or end is None:
+			end = timestamp - 10
+			start = end - timeDiff
+		# get buffer
+		bname = "validatorsLoad_{start}_{end}".format(start=start, end=end)
+		buff = local.buffer.get(bname)
+		if buff:
+			diffTime = timestamp - buff.get("timestamp")
 			if diffTime < 60:
-				vdata = validatorsLoad.get("vdata")
-				compFiles = validatorsLoad.get("compFiles")
-				return vdata, compFiles
+				data = buff.get("data")
+				return data
 		#end if
 
 		local.AddLog("start GetValidatorsLoad function", "debug")
-		timeNow = GetTimestamp() - 10
-		time2 = timeNow - timeDiff
-		filePrefix = self.tempDir + "check_{timeNow}".format(timeNow=timeNow)
-		cmd = "checkloadall {time2} {timeNow} {filePrefix}".format(timeNow=timeNow, time2=time2, filePrefix=filePrefix)
+		if saveCompFiles is True:
+			filePrefix = self.tempDir + "checkload_{start}_{end}".format(start=start, end=end)
+		else:
+			filePrefix = ""
+		cmd = "checkloadall {start} {end} {filePrefix}".format(end=end, start=start, filePrefix=filePrefix)
 		result = self.liteClient.Run(cmd, timeout=30)
 		lines = result.split('\n')
-		vdata = dict()
-		compFiles = list()
+		data = dict()
 		for line in lines:
-			if "COMPLAINT_SAVED" in line:
-				buff = line.split('\t')
-				var1 = buff[1]
-				var2 = buff[2]
-				fileName = buff[3]
-				compFiles.append(fileName)
-			elif "val" in line and "pubkey" in line:
+			if "val" in line and "pubkey" in line:
 				buff = line.split(' ')
 				vid = buff[1]
 				vid = vid.replace('#', '')
@@ -1882,10 +1870,6 @@ class MyTonCore():
 				wr = workBlocksCreated / workBlocksExpected
 				r = (mr + wr) / 2
 				efficiency = round(r * 100, 2)
-				if efficiency > 50:
-					online = True
-				else:
-					online = False
 				item = dict()
 				item["id"] = vid
 				item["pubkey"] = pubkey
@@ -1896,43 +1880,48 @@ class MyTonCore():
 				item["mr"] = mr
 				item["wr"] = wr
 				item["efficiency"] = efficiency
-				item["online"] = online
-				vdata[vid] = item
+				item["online"] = True
+
+				# Get complaint file
+				index = lines.index(line)
+				nextLine = lines[index+2]
+				if "COMPLAINT_SAVED" in nextLine:
+					buff = line.split('\t')
+					item["var1"] = buff[1]
+					item["var2"] = buff[2]
+					item["fileName"] = buff[3]
+					item["online"] = False
+				#end if
+
+				data[vid] = item
+		#end for
+
 		# Write buffer
-		validatorsLoad = dict()
-		validatorsLoad["timestamp"] = timestamp
-		validatorsLoad["vdata"] = vdata
-		validatorsLoad["compFiles"] = compFiles
-		local.buffer[bname] = validatorsLoad
+		buff = dict()
+		buff["timestamp"] = timestamp
+		buff["data"] = data
+		local.buffer[bname] = buff
 
-		# delete compFiles
-		if timeDiff == 2000:
-			for item in compFiles:
-				os.remove(item)
-		#end if
-
-		return vdata, compFiles
+		return data
 	#end define
 
 	def GetValidatorsList(self):
 		config34 = self.GetConfig34()
-		vdata, compFiles = self.GetValidatorsLoad()
+		data = self.GetValidatorsLoad()
 		validators = config34["validators"]
-		for vid in range(len(vdata)):
+		for vid in range(len(data)):
 			validator = validators[vid]
-			validator["mr"] = vdata[vid]["mr"]
-			validator["wr"] = vdata[vid]["wr"]
-			validator["efficiency"] = vdata[vid]["efficiency"]
-			validator["online"] = vdata[vid]["online"]
+			validator["mr"] = data[vid]["mr"]
+			validator["wr"] = data[vid]["wr"]
+			validator["efficiency"] = data[vid]["efficiency"]
+			validator["online"] = data[vid]["online"]
 		return validators
 	#end define
 
-	def CheckValidators(self, timeDiff=3000):
+	def CheckValidators(self, start, end):
 		local.AddLog("start CheckValidators function", "debug")
-		vdata, compFiles = self.GetValidatorsLoad(timeDiff)
+		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
-		config34 = self.GetConfig34()
-		electionId = config34.get("startWorkTime")
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)
 		account = self.GetAccount(wallet.addr)
@@ -1940,10 +1929,17 @@ class MyTonCore():
 			raise Exception("Validator wallet not fond")
 		if account.balance < 100:
 			raise Exception("Validator wallet balance must be greater than 100")
-		for fileName in compFiles:
-			fileName = self.PrepareComplaint(electionId, fileName)
-			fileName = self.SignFileWithWallet(wallet, fileName, fullElectorAddr, 100)
-			self.SendFile(fileName, wallet)
+		for key, item in data.items():
+			var1 = item.get("var1")
+			var2 = item.get("var2")
+			pubkey = item.get("pubkey")
+			fileName = item.get("fileName")
+			if fileName is not None:
+				fileName = self.PrepareComplaint(start, fileName)
+				fileName = self.SignFileWithWallet(wallet, fileName, fullElectorAddr, 100)
+				self.SendFile(fileName, wallet)
+				local.AddLog("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, start))
+				
 	#end define
 	
 	def GetOffer(self, offerHash):
@@ -2206,7 +2202,7 @@ class MyTonCore():
 		return saveComplaints
 	#end define
 
-	def AddSaveComplaint(self, complaintHash):
+	def AddSaveComplaints(self, complaintHash):
 		saveComplaints = self.GetSaveComplaints()
 		if complaintHash not in saveComplaints:
 			saveComplaints.append(complaintHash)
@@ -2697,31 +2693,27 @@ def Complaints(ton):
 		return
 	#end if
 
-	# saveComplaints = ton.GetSaveComplaints()
-	checkComplaints = ton.CheckComplaints()
-	complaints = ton.GetComplaints()
+	config32 = self.GetConfig32()
+	electionId = config32.get("startWorkTime")
+	complaintsHashes = ton.SaveComplaints(electionId)
+	complaints = ton.GetComplaints(electionId)
 	for complaint in complaints:
 		complaintHash = complaint.get("hash")
 		complaintHash_hex = dec2hex(complaintHash).upper()
-		# if complaintHash_hex in checkComplaints and complaintHash not in saveComplaints:
-		if complaintHash_hex in checkComplaints:
-			ton.VoteComplaint(complaintHash)
+		if complaintHash_hex in complaintsHashes:
+			ton.VoteComplaint(electionId, complaintHash)
 #end define
 
 def Slashing(ton):
-	timeNow = GetTimestamp()
-	oldSlashTime = local.buffer.get("oldSlashTime")
-	config15 = ton.GetConfig15()
+	timestamp = GetTimestamp()
+	slashTime = local.buffer.get("slashTime")
 	config34 = ton.GetConfig34()
-	startWorkTime = config34.get("startWorkTime")
-	validatorsElectedFor = config15.get("validatorsElectedFor")
-	timeDiff = validatorsElectedFor - 1000
-	slashTime = startWorkTime + validatorsElectedFor - 900
-	if oldSlashTime != slashTime and timeNow > slashTime:
-		text = "start Slashing function, {}, {}, {}".format(timeNow, slashTime, timeDiff)
-		local.AddLog(text)
-		ton.CheckValidators(timeDiff)
-		local.buffer["oldSlashTime"] = slashTime
+	start = config34.get("startWorkTime")
+	end = config34.get("endWorkTime")
+	if slashTime != start and timestamp > end:
+		end -= 60
+		ton.CheckValidators(start, end)
+		local.buffer["slashTime"] = start
 #end define
 
 def General():
@@ -2733,7 +2725,7 @@ def General():
 	local.StartCycle(Statistics, sec=10, args=(ton, ))
 	local.StartCycle(Offers, sec=600, args=(ton, ))
 	local.StartCycle(Complaints, sec=600, args=(ton, ))
-	local.StartCycle(Slashing, sec=60, args=(ton, ))
+	local.StartCycle(Slashing, sec=600, args=(ton, ))
 	local.StartCycle(Domains, sec=600, args=(ton, ))
 	local.StartCycle(Telemetry, sec=60, args=(ton, ))
 	local.StartCycle(Mining, sec=1, args=(ton, ))

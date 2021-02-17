@@ -143,12 +143,10 @@ def Test(args):
 #end define
 
 def Test2(args):
-	try:
-		timeDiff = args[0]
-		timeDiff = int(timeDiff)
-	except:
-		timeDiff = 3000
-	ton.CheckValidators(timeDiff)
+	config34 = ton.GetConfig34()
+	start = config34.get("startWorkTime")
+	end = config34.get("endWorkTime")
+	ton.CheckValidators(start, end)
 #end define
 
 def TestWork(ok_arr, pending_arr):
@@ -697,11 +695,12 @@ def PrintComplaintsList(args):
 
 def VoteComplaint(args):
 	try:
-		complaintHash = args[0]
+		electionId = args[0]
+		complaintHash = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} vc <complaint-hash>")
+		ColorPrint("{red}Bad args. Usage:{endc} vc <election-id> <complaint-hash>")
 		return
-	ton.VoteComplaint(complaintHash)
+	ton.VoteComplaint(electionId, complaintHash)
 	ColorPrint("VoteComplaint - {green}OK{endc}")
 #end define
 
