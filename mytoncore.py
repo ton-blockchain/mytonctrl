@@ -1700,7 +1700,7 @@ class MyTonCore():
 		for complaint in complaints:
 			pubkey = complaint.get("pubkey")
 			electionId = complaint.get("electionId")
-			pseudohash = pubkey + electionId
+			pseudohash = pubkey + str(electionId)
 			if pseudohash in saveComplaints:
 				continue
 			buff += 1
@@ -1768,7 +1768,7 @@ class MyTonCore():
 		complaint = self.GetComplaint(electionId, complaintHash)
 		votedValidators = complaint.get("votedValidators")
 		pubkey = complaint.get("pubkey")
-		pseudohash = pubkey + electionId
+		pseudohash = pubkey + str(electionId)
 		if validatorIndex in votedValidators:
 			local.AddLog("Complaint already has been voted", "debug")
 			return
@@ -1947,7 +1947,7 @@ class MyTonCore():
 			fileName = item.get("fileName")
 			suggestedFine = item.get("suggestedFine")
 			suggestedFinePart = item.get("suggestedFinePart")
-			pseudohash = pubkey + start
+			pseudohash = pubkey + str(start)
 			local.AddLog("pseudohash {}, saveComplaints {}".format(pseudohash, saveComplaints), "debug")
 			local.AddLog("suggestedFine {}, suggestedFinePart {}".format(suggestedFine, suggestedFinePart), "debug")
 			if pseudohash in saveComplaints:
@@ -2749,7 +2749,7 @@ def General():
 	local.StartCycle(Statistics, sec=10, args=(ton, ))
 	local.StartCycle(Offers, sec=600, args=(ton, ))
 	local.StartCycle(Complaints, sec=600, args=(ton, ))
-	local.StartCycle(Slashing, sec=600, args=(ton, ))
+	local.StartCycle(Slashing, sec=60, args=(ton, ))
 	local.StartCycle(Domains, sec=600, args=(ton, ))
 	local.StartCycle(Telemetry, sec=60, args=(ton, ))
 	local.StartCycle(Mining, sec=1, args=(ton, ))
