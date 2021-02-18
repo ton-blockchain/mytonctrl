@@ -2714,7 +2714,7 @@ def Complaints(ton):
 		return
 	#end if
 
-	config32 = self.GetConfig32()
+	config32 = ton.GetConfig32()
 	electionId = config32.get("startWorkTime")
 	complaintsHashes = ton.SaveComplaints(electionId)
 	complaints = ton.GetComplaints(electionId)
@@ -2731,6 +2731,7 @@ def Slashing(ton):
 	config32 = ton.GetConfig32()
 	start = config32.get("startWorkTime")
 	end = config32.get("endWorkTime")
+	local.AddLog("slashTime {}, start {}, end {}".format(slashTime, start, end))
 	if slashTime != start:
 		end -= 60
 		ton.CheckValidators(start, end)
