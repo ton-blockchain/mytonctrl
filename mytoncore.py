@@ -1651,8 +1651,8 @@ class MyTonCore():
 		local.AddLog("start GetComplaints function", "debug")
 		fullElectorAddr = self.GetFullElectorAddr()
 		if electionId is None:
-			config34 = self.GetConfig34()
-			electionId = config34.get("startWorkTime")
+			config32 = self.GetConfig32()
+			electionId = config32.get("startWorkTime")
 		cmd = "runmethod {fullElectorAddr} list_complaints {electionId}".format(fullElectorAddr=fullElectorAddr, electionId=electionId)
 		result = self.liteClient.Run(cmd)
 		rawComplaints = self.Result2List(result)
@@ -1948,6 +1948,8 @@ class MyTonCore():
 			suggestedFine = item.get("suggestedFine")
 			suggestedFinePart = item.get("suggestedFinePart")
 			pseudohash = pubkey + start
+			local.AddLog("pseudohash {}, saveComplaints {}".format(pseudohash, saveComplaints), "debug")
+			local.AddLog("suggestedFine {}, suggestedFinePart {}".format(suggestedFine, suggestedFinePart), "debug")
 			if pseudohash in saveComplaints:
 				continue
 			if suggestedFine != 1 or suggestedFinePart != 0: # fix me
@@ -2731,7 +2733,7 @@ def Slashing(ton):
 	config32 = ton.GetConfig32()
 	start = config32.get("startWorkTime")
 	end = config32.get("endWorkTime")
-	local.AddLog("slashTime {}, start {}, end {}".format(slashTime, start, end))
+	local.AddLog("slashTime {}, start {}, end {}".format(slashTime, start, end), "debug")
 	if slashTime != start:
 		end -= 60
 		ton.CheckValidators(start, end)
