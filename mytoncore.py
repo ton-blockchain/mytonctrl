@@ -1936,6 +1936,7 @@ class MyTonCore():
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)
 		account = self.GetAccount(wallet.addr)
+		local.AddLog("data {}".format(data), "debug")
 		if wallet is None:
 			raise Exception("Validator wallet not fond")
 		if account.balance < 100:
