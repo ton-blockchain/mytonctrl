@@ -1899,14 +1899,13 @@ class MyTonCore():
 				# Get complaint file
 				index = lines.index(line)
 				nextIndex = index + 2
-				if nextIndex >= len(lines):
-					continue
-				nextLine = lines[nextIndex]
-				if "COMPLAINT_SAVED" in nextLine:
-					buff = nextLine.split('\t')
-					item["var1"] = buff[1]
-					item["var2"] = buff[2]
-					item["fileName"] = buff[3]
+				if nextIndex < len(lines):
+					nextLine = lines[nextIndex]
+					if "COMPLAINT_SAVED" in nextLine:
+						buff = nextLine.split('\t')
+						item["var1"] = buff[1]
+						item["var2"] = buff[2]
+						item["fileName"] = buff[3]
 				data[vid] = item
 		#end for
 
