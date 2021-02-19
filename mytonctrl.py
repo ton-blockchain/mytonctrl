@@ -143,10 +143,7 @@ def Test(args):
 #end define
 
 def Test2(args):
-	config34 = ton.GetConfig34()
-	start = config34.get("startWorkTime")
-	end = config34.get("endWorkTime")
-	ton.CheckValidators(start, end)
+	Slashing(ton)
 #end define
 
 def TestWork(ok_arr, pending_arr):

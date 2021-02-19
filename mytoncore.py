@@ -1843,7 +1843,8 @@ class MyTonCore():
 				return data
 		#end if
 
-		local.AddLog("start GetValidatorsLoad function", "debug")
+		text = "start GetValidatorsLoad function ({}, {})".format(start, end)
+		local.AddLog(text, "debug")
 		if saveCompFiles is True:
 			filePrefix = self.tempDir + "checkload_{start}_{end}".format(start=start, end=end)
 		else:
@@ -1860,6 +1861,7 @@ class MyTonCore():
 				vid = vid.replace(':', '')
 				vid = int(vid)
 				pubkey = buff[3]
+				pubkey = pubkey.replace(',', '')
 				blocksCreated_buff = buff[6]
 				blocksCreated_buff = blocksCreated_buff.replace('(', '')
 				blocksCreated_buff = blocksCreated_buff.replace(')', '')
@@ -1893,16 +1895,15 @@ class MyTonCore():
 				item["online"] = online
 
 				# Get complaint file
-				try:
-					index = lines.index(line)
-					nextLine = lines[index+2]
-					if "COMPLAINT_SAVED" in nextLine:
-						buff = line.split('\t')
-						item["var1"] = buff[1]
-						item["var2"] = buff[2]
-						item["fileName"] = buff[3]
-				except: pass
-
+				index = lines.index(line)
+				if index+2 > len(lines):
+					continue
+				nextLine = lines[index+2]
+				if "COMPLAINT_SAVED" in nextLine:
+					buff = line.split('\t')
+					item["var1"] = buff[1]
+					item["var2"] = buff[2]
+					item["fileName"] = buff[3]
 				data[vid] = item
 		#end for
 
@@ -2750,7 +2751,7 @@ def General():
 	local.StartCycle(Statistics, sec=10, args=(ton, ))
 	local.StartCycle(Offers, sec=600, args=(ton, ))
 	local.StartCycle(Complaints, sec=600, args=(ton, ))
-	local.StartCycle(Slashing, sec=60, args=(ton, ))
+	local.StartCycle(Slashing, sec=600, args=(ton, ))
 	local.StartCycle(Domains, sec=600, args=(ton, ))
 	local.StartCycle(Telemetry, sec=60, args=(ton, ))
 	local.StartCycle(Mining, sec=1, args=(ton, ))
