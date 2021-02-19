@@ -1833,8 +1833,10 @@ class MyTonCore():
 		if start is None or end is None:
 			end = timestamp - 60
 			start = end - timeDiff
+		else:
+			timeDiff = end - start
 		# get buffer
-		bname = "validatorsLoad_{start}_{end}".format(start=start, end=end)
+		bname = "validatorsLoad_{timeDiff}".format(timeDiff=timeDiff)
 		buff = local.buffer.get(bname)
 		if buff:
 			diffTime = timestamp - buff.get("timestamp")
