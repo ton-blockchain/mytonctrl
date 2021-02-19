@@ -304,7 +304,7 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	# Thread status
 	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(GetColorStatus(mytoncoreStatus_bool))
 	validatorStatus_text = local.Translate("local_status_validator_status").format(GetColorStatus(validatorStatus_bool))
-	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, ending=" с"))
+	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, ending=" s"))
 	dbSize_text = local.Translate("local_status_db_size").format(GetColorInt(dbSize, 1000, ending=" Gb"))
 
 	ColorPrint(local.Translate("local_status_head"))
