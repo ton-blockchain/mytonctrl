@@ -1831,7 +1831,7 @@ class MyTonCore():
 	def GetValidatorsLoad(self, start=None, end=None, timeDiff=2000, saveCompFiles=False):
 		timestamp = GetTimestamp()
 		if start is None or end is None:
-			end = timestamp - 10
+			end = timestamp - 60
 			start = end - timeDiff
 		# get buffer
 		bname = "validatorsLoad_{start}_{end}".format(start=start, end=end)
@@ -1896,11 +1896,12 @@ class MyTonCore():
 
 				# Get complaint file
 				index = lines.index(line)
-				if index+2 > len(lines):
+				nextIndex = index + 2
+				if nextIndex >= len(lines):
 					continue
-				nextLine = lines[index+2]
+				nextLine = lines[nextIndex]
 				if "COMPLAINT_SAVED" in nextLine:
-					buff = line.split('\t')
+					buff = nextLine.split('\t')
 					item["var1"] = buff[1]
 					item["var2"] = buff[2]
 					item["fileName"] = buff[3]
@@ -1932,6 +1933,7 @@ class MyTonCore():
 	def CheckValidators(self, start, end):
 		local.AddLog("start CheckValidators function", "debug")
 		saveComplaints = self.GetSaveComplaints(mode="slashing")
+		saveComplaints += self.GetSaveComplaints(mode="complaints")
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		walletName = self.validatorWalletName
@@ -1943,26 +1945,23 @@ class MyTonCore():
 		if account.balance < 100:
 			raise Exception("Validator wallet balance must be greater than 100")
 		for key, item in data.items():
+			fileName = item.get("fileName")
+			if fileName is None:
+				continue
 			var1 = item.get("var1")
 			var2 = item.get("var2")
 			pubkey = item.get("pubkey")
-			fileName = item.get("fileName")
-			suggestedFine = item.get("suggestedFine")
-			suggestedFinePart = item.get("suggestedFinePart")
 			pseudohash = pubkey + str(start)
 			local.AddLog("pseudohash {}, saveComplaints {}".format(pseudohash, saveComplaints), "debug")
-			local.AddLog("suggestedFine {}, suggestedFinePart {}".format(suggestedFine, suggestedFinePart), "debug")
 			if pseudohash in saveComplaints:
 				continue
-			if suggestedFine != 1 or suggestedFinePart != 0: # fix me
-				continue
-			if fileName is not None:
-				fileName = self.PrepareComplaint(start, fileName)
-				fileName = self.SignFileWithWallet(wallet, fileName, fullElectorAddr, 100)
-				self.SendFile(fileName, wallet)
-				self.AddSaveComplaints(pseudohash, mode="slashing")
-				local.AddLog("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, start))
-				
+			# Create complaint
+			fileName = self.PrepareComplaint(start, fileName)
+			fileName = self.SignFileWithWallet(wallet, fileName, fullElectorAddr, 100)
+			self.SendFile(fileName, wallet)
+			self.AddSaveComplaints(pseudohash, mode="slashing")
+			local.AddLog("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, start))
+			
 	#end define
 	
 	def GetOffer(self, offerHash):
@@ -2713,6 +2712,7 @@ def SaveTransNumFromShard(ton, shard, buff):
 #end define
 
 def Complaints(ton):
+	# Voting for complaints
 	validatorIndex = ton.GetValidatorIndex()
 	if validatorIndex < 0:
 		return
@@ -2725,11 +2725,17 @@ def Complaints(ton):
 	for complaint in complaints:
 		complaintHash = complaint.get("hash")
 		complaintHash_hex = dec2hex(complaintHash).upper()
+		suggestedFine = complaint.get("suggestedFine")
+		suggestedFinePart = complaint.get("suggestedFinePart")
+		local.AddLog("suggestedFine {}, suggestedFinePart {}".format(suggestedFine, suggestedFinePart), "debug")
+		if suggestedFine != 1 or suggestedFinePart != 0: # fix me
+			continue
 		if complaintHash_hex in complaintsHashes:
 			ton.VoteComplaint(electionId, complaintHash)
 #end define
 
 def Slashing(ton):
+	# Creating complaints
 	timestamp = GetTimestamp()
 	slashTime = local.buffer.get("slashTime")
 	config32 = ton.GetConfig32()
