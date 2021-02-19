@@ -778,7 +778,7 @@ class MyTonCore():
 				return config
 		#end if
 
-		text = "start GetConfig {configId} function".format(configId=configId)
+		text = "start GetConfig function ({})".format(configId)
 		local.AddLog(text, "debug")
 		cmd = "getconfig {configId}".format(configId=configId)
 		result = self.liteClient.Run(cmd)
