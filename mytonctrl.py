@@ -15,7 +15,7 @@ def Init():
 
 	# Create user console
 	console.name = "MyTonCtrl"
-	console.startFunction = CheckMytonctrlUpdate
+	console.startFunction = PreUp
 
 	console.AddItem("update", Update, local.Translate("update_cmd"))
 	console.AddItem("upgrade", Upgrade, local.Translate("upgrade_cmd"))
@@ -72,6 +72,11 @@ def Init():
 	local.Run()
 #end define
 
+def PreUp():
+	CheckMytonctrlUpdate()
+	# CheckTonUpdate()
+#end define
+
 def Installer(args):
 	args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
 	subprocess.run(args)
@@ -101,19 +106,24 @@ def Upgrade(args):
 def CheckMytonctrlUpdate():
 	gitPath = local.buffer.get("myDir")
 	result = CheckUpdate(gitPath)
-	if result:
-		ColorPrint(local.Translate("update_available"))
+	if result is True:
+		ColorPrint(local.Translate("mytonctrl_update_available"))
+#end define
+
+def CheckTonUpdate():
+	gitPath = local.buffer.get("myDir")
+	result = CheckUpdate(gitPath)
+	if result is True:
+		ColorPrint(local.Translate("ton_update_available"))
 #end define
 
 def CheckUpdate(gitPath):
-	args = ["git", "fetch", "--dry-run"]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(output) > 0 or len(err) > 0:
-		return True
-	else:
-		return False
+	newHash = GetGitLastRemoteCommit(gitPath)
+	oldHash = TryGetGitHash(gitPath)
+	result = False
+	if oldHash != newHash:
+		result = True
+	return result
 #end define
 
 def PrintTest(args):

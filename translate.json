@@ -251,9 +251,13 @@
 		"en": "Beginning of the next elections: {0}",
 		"ru": "Начало следующих выборов: {0}"
 	},
-	"update_available": {
+	"mytonctrl_update_available": {
 		"en": "{green}MyTonCtrl update available. {red}Please update it with `update` command.{endc}",
 		"ru": "{green}Доступно обновление MyTonCtrl. {red}Пожалуйста, обновите его с помощью команды `update`.{endc}"
+	},
+	"ton_update_available": {
+		"en": "{green}TON update available. {red}Please update it with `upgrade` command.{endc}",
+		"ru": "{green}Доступно обновление TON. {red}Пожалуйста, обновите его с помощью команды `upgrade`.{endc}"
 	},
 	"000": {
 		"en": "001",
