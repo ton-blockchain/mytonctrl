@@ -2725,11 +2725,11 @@ def Complaints(ton):
 	electionId = config32.get("startWorkTime")
 	complaintsHashes = ton.SaveComplaints(electionId)
 	complaints = ton.GetComplaints(electionId)
-	for complaint in complaints:
-		complaintHash = complaint.get("hash")
+	for key, item in complaints.items():
+		complaintHash = item.get("hash")
 		complaintHash_hex = dec2hex(complaintHash).upper()
-		suggestedFine = complaint.get("suggestedFine")
-		suggestedFinePart = complaint.get("suggestedFinePart")
+		suggestedFine = item.get("suggestedFine")
+		suggestedFinePart = item.get("suggestedFinePart")
 		local.AddLog("suggestedFine {}, suggestedFinePart {}".format(suggestedFine, suggestedFinePart), "debug")
 		if suggestedFine != 101 or suggestedFinePart != 0: # fix me
 			continue
