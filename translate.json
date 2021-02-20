@@ -15,6 +15,10 @@
 		"en": "Get seqno wallet",
 		"ru": "Получить seqno кошелька"
 	},
+	"getconfig_cmd": {
+		"en": "Get config",
+		"ru": "Получить конфигурацию"
+	},
 	"nw_cmd": {
 		"en": "Create a new local wallet",
 		"ru": "Создать новый локальный кошелек"
@@ -87,6 +91,10 @@
 		"en": "Vote for offer",
 		"ru": "Голосовать за предложение"
 	},
+	"od_cmd": {
+		"en": "Show offer diff",
+		"ru": "Показать разницу предложений"
+	},
 	"cl_cmd": {
 		"en": "Show complaints list",
 		"ru": "Показать действующие жалобы"
@@ -154,6 +162,10 @@
 	"local_status_validator_index": {
 		"en": "Validator index: {0}",
 		"ru": "Индекс валидатора: {0}"
+	},
+	"local_status_validator_efficiency": {
+		"en": "Validator efficiency: {0}",
+		"ru": "Эффективность валидатора: {0}"
 	},
 	"local_status_adnl_addr": {
 		"en": "ADNL address of local validator: {0}",
@@ -239,11 +251,15 @@
 		"en": "Beginning of the next elections: {0}",
 		"ru": "Начало следующих выборов: {0}"
 	},
-	"000": {
-		"en": "001",
-		"ru": "002"
+	"mytonctrl_update_available": {
+		"en": "{green}MyTonCtrl update available. {red}Please update it with `update` command.{endc}",
+		"ru": "{green}Доступно обновление MyTonCtrl. {red}Пожалуйста, обновите его с помощью команды `update`.{endc}"
 	},
-	"000": {
+	"ton_update_available": {
+		"en": "{green}TON update available. {red}Please update it with `upgrade` command.{endc}",
+		"ru": "{green}Доступно обновление TON. {red}Пожалуйста, обновите его с помощью команды `upgrade`.{endc}"
+	},
+	"test": {
 		"en": "001",
 		"ru": "002"
 	},

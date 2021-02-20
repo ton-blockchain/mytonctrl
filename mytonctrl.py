@@ -16,12 +16,14 @@ def Init(argv):
 
 	# Create user console
 	console.name = "MyTonCtrl"
+	console.startFunction = PreUp
 
 	console.AddItem("update", Update, local.Translate("update_cmd"))
 	console.AddItem("upgrade", Upgrade, local.Translate("upgrade_cmd"))
 	console.AddItem("installer", Installer, local.Translate("installer_cmd"))
 	console.AddItem("status", PrintStatus, local.Translate("status_cmd"))
 	console.AddItem("seqno", Seqno, local.Translate("seqno_cmd"))
+	console.AddItem("getconfig", GetConfig, local.Translate("getconfig_cmd"))
 
 	console.AddItem("nw", CreatNewWallet, local.Translate("nw_cmd"))
 	console.AddItem("aw", ActivateWallet, local.Translate("aw_cmd"))
@@ -49,6 +51,8 @@ def Init(argv):
 
 	console.AddItem("ol", PrintOffersList, local.Translate("ol_cmd"))
 	console.AddItem("vo", VoteOffer, local.Translate("vo_cmd"))
+	console.AddItem("od", OfferDiff, local.Translate("od_cmd"))
+
 	console.AddItem("el", PrintElectionEntriesList, local.Translate("el_cmd"))
 	console.AddItem("ve", VoteElectionEntry, local.Translate("ve_cmd"))
 	console.AddItem("vl", PrintValidatorList, local.Translate("vl_cmd"))
@@ -66,7 +70,7 @@ def Init(argv):
 	console.AddItem("r2", r2, "Switch to the second validator (ton-blockchain)")
 	console.AddItem("pt", PrintTest, "PrintTest")
 
-	
+
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
 	for opt, arg in opts:
@@ -97,6 +101,11 @@ def Init(argv):
 	local.Run()
 #end define
 
+def PreUp():
+	CheckMytonctrlUpdate()
+	# CheckTonUpdate()
+#end define
+
 def Installer(args):
 	args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
 	subprocess.run(args)
@@ -121,6 +130,20 @@ def Upgrade(args):
 	else:
 		text = "Upgrade - {red}Error{endc}"
 	ColorPrint(text)
+#end define
+
+def CheckMytonctrlUpdate():
+	gitPath = local.buffer.get("myDir")
+	result = CheckGitUpdate(gitPath)
+	if result is True:
+		ColorPrint(local.Translate("mytonctrl_update_available"))
+#end define
+
+def CheckTonUpdate():
+	gitPath = "/usr/src/ton"
+	result = CheckGitUpdate(gitPath)
+	if result is True:
+		ColorPrint(local.Translate("ton_update_available"))
 #end define
 
 def PrintTest(args):
@@ -194,10 +217,14 @@ def TestWork(ok_arr, pending_arr):
 def PrintStatus(args):
 	rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
 	config34 = ton.GetConfig34()
+	config36 = ton.GetConfig36()
 	totalValidators = config34["totalValidators"]
 	onlineValidators = ton.GetOnlineValidators()
-	onlineValidators = len(onlineValidators)
-	oldStartWorkTime = config34["startWorkTime"]
+	if onlineValidators:
+		onlineValidators = len(onlineValidators)
+	oldStartWorkTime = config36.get("startWorkTime")
+	if oldStartWorkTime is None:
+		oldStartWorkTime = config34.get("startWorkTime")
 	shardsNumber = ton.GetShardsNumber()
 	validatorStatus = ton.GetValidatorStatus()
 	config15 = ton.GetConfig15()
@@ -206,6 +233,7 @@ def PrintStatus(args):
 	fullElectorAddr = ton.GetFullElectorAddr()
 	startWorkTime = ton.GetActiveElectionId(fullElectorAddr)
 	validatorIndex = ton.GetValidatorIndex()
+	validatorEfficiency = ton.GetValidatorEfficiency()
 	validatorWallet = ton.GetLocalWallet(ton.validatorWalletName)
 	dbSize = ton.GetDbSize()
 	offersNumber = ton.GetOffersNumber()
@@ -215,13 +243,12 @@ def PrintStatus(args):
 	else:
 		validatorAccount = None
 	PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber)
-	PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validatorStatus, dbSize)
+	PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize)
 	PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17)
 	PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
 
 def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber):
-	# Статус сети TON
 	tpsAvg = ton.GetTpsAvg()
 	tps1 = tpsAvg[0]
 	tps5 = tpsAvg[1]
@@ -231,12 +258,11 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 	allOffers = offersNumber.get("all")
 	newComplaints = complaintsNumber.get("new")
 	allComplaints = complaintsNumber.get("all")
-
 	tps1_text = bcolors.Green(tps1)
 	tps5_text = bcolors.Green(tps5)
 	tps15_text = bcolors.Green(tps15)
 	tps_text = local.Translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
-	onlineValidators_text = bcolors.Green(onlineValidators)
+	onlineValidators_text = GetColorInt(onlineValidators, border=allValidators*2/3, logic="more")
 	allValidators_text = bcolors.Yellow(allValidators)
 	validators_text = local.Translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
 	shards_text = local.Translate("ton_status_shards").format(bcolors.Green(shardsNumber))
@@ -263,8 +289,7 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 	print()
 #end define
 
-def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validatorStatus, dbSize):
-	# Статус локального валидатора
+def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize):
 	if validatorWallet is None:
 		return
 	adnlAddr = ton.adnlAddr
@@ -283,32 +308,36 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	mytoncoreStatus_bool = GetServiceStatus("mytoncore")
 	validatorStatus_bool = GetServiceStatus("validator")
 
-	validatorIndex_text = local.Translate("local_status_validator_index").format(bcolors.Green(validatorIndex))
+	validatorIndex_text = GetColorInt(validatorIndex, 0, logic="more")
+	validatorIndex_text = local.Translate("local_status_validator_index").format(validatorIndex_text)
+	validatorEfficiency_text = GetColorInt(validatorEfficiency, 70, logic="more", ending=" %")
+	validatorEfficiency_text = local.Translate("local_status_validator_efficiency").format(validatorEfficiency_text)
 	adnlAddr_text = local.Translate("local_status_adnl_addr").format(bcolors.Yellow(adnlAddr))
 	walletAddr_text = local.Translate("local_status_wallet_addr").format(bcolors.Yellow(walletAddr))
 	walletBalance_text = local.Translate("local_status_wallet_balance").format(bcolors.Green(walletBalance, " GRM"))
 
 	# CPU status
 	cpuNumber_text = bcolors.Yellow(cpuNumber)
-	cpuLoad1_text = GetColorInt(cpuLoad1, cpuNumber)
-	cpuLoad5_text = GetColorInt(cpuLoad5, cpuNumber)
-	cpuLoad15_text = GetColorInt(cpuLoad15, cpuNumber)
+	cpuLoad1_text = GetColorInt(cpuLoad1, cpuNumber, logic="less")
+	cpuLoad5_text = GetColorInt(cpuLoad5, cpuNumber, logic="less")
+	cpuLoad15_text = GetColorInt(cpuLoad15, cpuNumber, logic="less")
 	cpuLoad_text = local.Translate("local_status_cpu_load").format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text)
 
 	# Network status
-	netLoad1_text = GetColorInt(netLoad1, 300)
-	netLoad5_text = GetColorInt(netLoad5, 300)
-	netLoad15_text = GetColorInt(netLoad15, 300)
+	netLoad1_text = GetColorInt(netLoad1, 300, logic="less")
+	netLoad5_text = GetColorInt(netLoad5, 300, logic="less")
+	netLoad15_text = GetColorInt(netLoad15, 300, logic="less")
 	netLoad_text = local.Translate("local_status_net_load").format(netLoad1_text, netLoad5_text, netLoad15_text)
 
 	# Thread status
 	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(GetColorStatus(mytoncoreStatus_bool))
 	validatorStatus_text = local.Translate("local_status_validator_status").format(GetColorStatus(validatorStatus_bool))
-	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, ending=" s"))
-	dbSize_text = local.Translate("local_status_db_size").format(GetColorInt(dbSize, 1000, ending=" Gb"))
+	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, logic="less", ending=" s"))
+	dbSize_text = local.Translate("local_status_db_size").format(GetColorInt(dbSize, 1000, logic="less", ending=" Gb"))
 
 	ColorPrint(local.Translate("local_status_head"))
 	print(validatorIndex_text)
+	print(validatorEfficiency_text)
 	print(adnlAddr_text)
 	print(walletAddr_text)
 	print(walletBalance_text)
@@ -321,11 +350,19 @@ def PrintLocalStatus(validatorIndex, validatorWallet, validatorAccount, validato
 	print()
 #end define
 
-def GetColorInt(input, border, ending=None):
-	if input < border:
-		result = bcolors.Green(input, ending)
-	else:
-		result = bcolors.Red(input, ending)
+def GetColorInt(data, border, logic, ending=None):
+	if data is None:
+		result = bcolors.Green("n/a")
+	elif logic == "more":
+		if data >= border:
+			result = bcolors.Green(data, ending)
+		else:
+			result = bcolors.Red(data, ending)
+	elif logic == "less":
+		if data <= border:
+			result = bcolors.Green(data, ending)
+		else:
+			result = bcolors.Red(data, ending)
 	return result
 #end define
 
@@ -338,7 +375,6 @@ def GetColorStatus(input):
 #end define
 
 def PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17):
-	# Конфигурация сети TON
 	validatorsElectedFor = config15["validatorsElectedFor"]
 	electionsStartBefore = config15["electionsStartBefore"]
 	electionsEndBefore = config15["electionsEndBefore"]
@@ -669,6 +705,7 @@ def PrintOffersList(args):
 def VoteOffer(args):
 	try:
 		offerHash = args[0]
+		offerHash = int(offerHash)
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} vo <offer-hash>")
 		return
@@ -676,18 +713,42 @@ def VoteOffer(args):
 	ColorPrint("VoteOffer - {green}OK{endc}")
 #end define
 
+def OfferDiff(args):
+	try:
+		offerHash = args[0]
+		offerHash = int(offerHash)
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} od <offer-hash>")
+		return
+	ton.GetOfferDiff(offerHash)
+#end define
+
+def GetConfig(args):
+	try:
+		configId = args[0]
+		configId = int(configId)
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} gc <config-id>")
+		return
+	data = ton.GetConfig(configId)
+	text = json.dumps(data, indent=2)
+	print(text)
+#end define
+
 def PrintComplaintsList(args):
 	complaints = ton.GetComplaints()
-	print(json.dumps(complaints, indent=4))
+	text = json.dumps(complaints, indent=4)
+	print(text)
 #end define
 
 def VoteComplaint(args):
 	try:
-		complaintHash = args[0]
+		electionId = args[0]
+		complaintHash = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} vc <complaint-hash>")
+		ColorPrint("{red}Bad args. Usage:{endc} vc <election-id> <complaint-hash>")
 		return
-	ton.VoteComplaint(complaintHash)
+	ton.VoteComplaint(electionId, complaintHash)
 	ColorPrint("VoteComplaint - {green}OK{endc}")
 #end define
 
@@ -764,14 +825,7 @@ def VoteElectionEntry(args):
 #end define
 
 def PrintValidatorList(args):
-	config34 = ton.GetConfig34()
-	vdata, compFiles = ton.GetValidatorsLoad()
-	validators = config34["validators"]
-	for vid in range(len(vdata)):
-		validator = validators[vid]
-		validator["mr"] = vdata[vid]["mr"]
-		validator["wr"] = vdata[vid]["wr"]
-		validator["online"] = vdata[vid]["online"]
+	validators = ton.GetValidatorsList()
 	print(json.dumps(validators, indent=4))
 #end define
 
