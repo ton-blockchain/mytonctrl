@@ -2818,6 +2818,7 @@ def EnsurePeriodParams():
 			"statistics": 10,
 			"offers": 600,
 			"complaints": 600,
+			"slashing": 600,
 			"domains": 600,
 			"telemetry": 60,
 			"mining": 1,
