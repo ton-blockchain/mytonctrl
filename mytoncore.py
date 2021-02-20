@@ -2604,53 +2604,6 @@ def Telemetry(ton):
 	resp = requests.post(url, data=output, timeout=3)
 #end define
 
-def GetGitHash(gitPath):
-	args = ["git", "rev-parse", "HEAD"]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(err) > 0:
-		return
-	buff = output.split('\n')
-	return buff[0]
-#end define
-
-def GetGitUrl(gitPath):
-	args = ["git", "remote", "-v"]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(err) > 0:
-		return
-	lines = output.split('\n')
-	url = None
-	for line in lines:
-		if "origin" in line:
-			buff = line.split()
-			url = buff[1]
-		#end if
-	return url
-#end define
-
-def GetGitAuthorAndRepo(gitPath):
-	url = GetGitUrl(gitPath)
-	if url is None:
-		return
-	buff = url.split('/')
-	author = buff[3]
-	repo = buff[4]
-	return author, repo
-#end define
-
-def GetGitLastRemoteCommit(gitPath, branch="master"):
-	author, repo = GetGitAuthorAndRepo(gitPath)
-	url = "https://api.github.com/repos/{author}/{repo}/branches/{branch}".format(author=author, repo=repo, branch=branch)
-	text = GetRequest(url)
-	data = json.loads(text)
-	sha = data["commit"]["sha"]
-	return sha
-#end define
-
 def Mining(ton):
 	powAddr = local.db.get("powAddr")
 	minerAddr = local.db.get("minerAddr")

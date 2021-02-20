@@ -105,26 +105,18 @@ def Upgrade(args):
 
 def CheckMytonctrlUpdate():
 	gitPath = local.buffer.get("myDir")
-	result = CheckUpdate(gitPath)
+	result = CheckGitUpdate(gitPath)
 	if result is True:
 		ColorPrint(local.Translate("mytonctrl_update_available"))
 #end define
 
 def CheckTonUpdate():
-	gitPath = local.buffer.get("myDir")
-	result = CheckUpdate(gitPath)
+	gitPath = "/usr/src/ton"
+	result = CheckGitUpdate(gitPath)
 	if result is True:
 		ColorPrint(local.Translate("ton_update_available"))
 #end define
 
-def CheckUpdate(gitPath):
-	newHash = GetGitLastRemoteCommit(gitPath)
-	oldHash = GetGitHash(gitPath)
-	result = False
-	if oldHash != newHash:
-		result = True
-	return result
-#end define
 
 def PrintTest(args):
 	print(json.dumps(local.buffer, indent=4))
