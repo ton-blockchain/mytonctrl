@@ -1937,7 +1937,7 @@ class MyTonCore():
 	def CheckValidators(self, start, end):
 		local.AddLog("start CheckValidators function", "debug")
 		electionId = start
-		complaints = ton.GetComplaints(electionId)
+		complaints = self.GetComplaints(electionId)
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		walletName = self.validatorWalletName
