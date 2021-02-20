@@ -18,6 +18,7 @@ args = ["systemctl", "disable", "validator2"]
 subprocess.run(args)
 
 #fix me
+vuser = "validator"
 os.remove("/etc/systemd/system/validator.service")
 cmd = "{validatorAppPath} --daemonize --global-config {globalConfigPath} --db {tonDbDir} --logname {tonLogPath} --state-ttl 172800 --block-ttl 1814400 --archive-ttl 3153600000 --key-proof-ttl 3153600000 --sync-before 3600000 --verbosity 1"
 cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath)
