@@ -151,7 +151,7 @@ def Test(args):
 #end define
 
 def Test2(args):
-	ton.CheckValidators()
+	Slashing(ton)
 #end define
 
 def Test3(args):
