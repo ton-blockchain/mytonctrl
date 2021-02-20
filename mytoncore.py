@@ -2566,7 +2566,8 @@ def Domains(ton):
 #end define
 
 def Telemetry(ton):
-	if (local.db.get("sendTelemetry") != True):
+	sendTelemetry = local.db.get("sendTelemetry")
+	if sendTelemetry is not True:
 		return
 	#end if
 	
@@ -2581,8 +2582,10 @@ def Telemetry(ton):
 
 	# Get git hashes
 	gitHashes = dict()
-	gitHashes["mytonctrl"] = GetGitHash("/usr/src/mytonctrl")
-	gitHashes["validator"] = GetGitHash("/usr/src/ton")
+	mytonctrlGitPath = local.buffer.get("myDir")
+	tonGitPath = "/usr/src/ton"
+	gitHashes["mytonctrl"] = GetGitHash(mytonctrlGitPath)
+	gitHashes["validator"] = GetGitHash(tonGitPath)
 	data["gitHashes"] = gitHashes
 	data["stake"] = ton.GetSettings("stake")
 
@@ -2591,9 +2594,12 @@ def Telemetry(ton):
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
 	
-	# fix me
-	if ton.adnlAddr != "EADD038C8B931BFC802E6725D57581570630C55AEF7181C8748C4A8F7907CDF7":
+	sendFullTelemetry = local.db.get("sendFullTelemetry")
+	if sendFullTelemetry is not True:
 		return
+	#end if
+
+	# Send full telemetry
 	data = dict()
 	config36 = ton.GetConfig36()
 	data["currentValidators"] = ton.GetValidatorsList()
@@ -2695,12 +2701,12 @@ def SaveTransNumFromShard(ton, shard, buff):
 #end define
 
 def Complaints(ton):
-	# Voting for complaints
 	validatorIndex = ton.GetValidatorIndex()
 	if validatorIndex < 0:
 		return
 	#end if
 
+	# Voting for complaints
 	config32 = ton.GetConfig32()
 	electionId = config32.get("startWorkTime")
 	complaintsHashes = ton.SaveComplaints(electionId)
@@ -2718,6 +2724,11 @@ def Complaints(ton):
 #end define
 
 def Slashing(ton):
+	isSlashing = local.db.get("isSlashing")
+	if isSlashing is not True:
+		return
+	#end if
+
 	# Creating complaints
 	timestamp = GetTimestamp()
 	slashTime = local.buffer.get("slashTime")
