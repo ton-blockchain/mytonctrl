@@ -119,7 +119,7 @@ def CheckTonUpdate():
 
 def CheckUpdate(gitPath):
 	newHash = GetGitLastRemoteCommit(gitPath)
-	oldHash = TryGetGitHash(gitPath)
+	oldHash = GetGitHash(gitPath)
 	result = False
 	if oldHash != newHash:
 		result = True
