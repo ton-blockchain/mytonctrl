@@ -1659,7 +1659,7 @@ class MyTonCore():
 		rawComplaints = rawComplaints[0]
 
 		# Get json
-		complaints = list()
+		complaints = dict()
 		for complaint in rawComplaints:
 			if len(complaint) == 0:
 				continue
@@ -1672,7 +1672,8 @@ class MyTonCore():
 			buff = subdata[0] # *complaint*
 			item["electionId"] = electionId
 			item["hash"] = chash
-			item["pubkey"] = dec2hex(buff[0]).upper() # *validator_pubkey*
+			pubkey = dec2hex(buff[0]).upper() # *validator_pubkey*
+			item["pubkey"] = pubkey
 			item["description"] = buff[1] # *description*
 			item["createdTime"] = buff[2] # *created_at*
 			item["severity"] = buff[3] # *severity*
@@ -1681,12 +1682,15 @@ class MyTonCore():
 			rewardAddr = self.HexAddr2Base64Addr(rewardAddr)
 			item["rewardAddr"] = rewardAddr # *reward_addr*
 			item["paid"] = buff[5] # *paid*
-			item["suggestedFine"] = buff[6] # *suggested_fine*
+			suggestedFine = buff[6] # *suggested_fine*
+			item["suggestedFine"] = ng2g(suggestedFine)
 			item["suggestedFinePart"] = buff[7] # *suggested_fine_part*
 			item["votedValidators"] = subdata[1] # *voters_list*
 			item["vsetId"] = subdata[2] # *vset_id*
 			item["weightRemaining"] = subdata[3] # *weight_remaining*
-			complaints.append(item)
+			pseudohash = pubkey + str(electionId)
+			item["pseudohash"] = pseudohash
+			complaints[pseudohash] = item
 		#end for
 		return complaints
 	#end define
@@ -1695,11 +1699,11 @@ class MyTonCore():
 		local.AddLog("start GetComplaintsNumber function", "debug")
 		result = dict()
 		complaints = self.GetComplaints()
-		saveComplaints = self.GetSaveComplaints(mode="complaints")
+		saveComplaints = self.GetSaveComplaints()
 		buff = 0
-		for complaint in complaints:
-			pubkey = complaint.get("pubkey")
-			electionId = complaint.get("electionId")
+		for key, item in complaints.items():
+			pubkey = item.get("pubkey")
+			electionId = item.get("electionId")
 			pseudohash = pubkey + str(electionId)
 			if pseudohash in saveComplaints:
 				continue
@@ -1712,9 +1716,9 @@ class MyTonCore():
 	def GetComplaint(self, electionId, complaintHash):
 		local.AddLog("start GetComplaint function", "debug")
 		complaints = self.GetComplaints(electionId)
-		for complaint in complaints:
-			if complaintHash == complaint.get("hash"):
-				return complaint
+		for key, item in complaints.items():
+			if complaintHash == item.get("hash"):
+				return item
 		raise Exception("GetComplaint error: complaint not found.")
 	#end define
 	
@@ -1753,7 +1757,7 @@ class MyTonCore():
 		resultFilePath = self.SignProposalVoteRequestWithValidator(offerHash, validatorIndex, validatorPubkey_b64, validatorSignature)
 		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullConfigAddr, 1.5)
 		self.SendFile(resultFilePath, wallet)
-		self.AddSaveOffer(offerHash)
+		self.AddSaveOffer(offer)
 	#end define
 
 	def VoteComplaint(self, electionId, complaintHash):
@@ -1768,7 +1772,6 @@ class MyTonCore():
 		complaint = self.GetComplaint(electionId, complaintHash)
 		votedValidators = complaint.get("votedValidators")
 		pubkey = complaint.get("pubkey")
-		pseudohash = pubkey + str(electionId)
 		if validatorIndex in votedValidators:
 			local.AddLog("Complaint already has been voted", "debug")
 			return
@@ -1777,7 +1780,7 @@ class MyTonCore():
 		resultFilePath = self.SignComplaintVoteRequestWithValidator(complaintHash, electionId, validatorIndex, validatorPubkey_b64, validatorSignature)
 		resultFilePath = self.SignFileWithWallet(wallet, resultFilePath, fullElectorAddr, 1.5)
 		self.SendFile(resultFilePath, wallet)
-		self.AddSaveComplaints(pseudohash, mode="complaints")
+		self.AddSaveComplaints(complaint)
 	#end define
 
 	def SaveComplaints(self, electionId):
@@ -1933,14 +1936,13 @@ class MyTonCore():
 
 	def CheckValidators(self, start, end):
 		local.AddLog("start CheckValidators function", "debug")
-		saveComplaints = self.GetSaveComplaints(mode="slashing")
-		saveComplaints += self.GetSaveComplaints(mode="complaints")
+		electionId = start
+		complaints = ton.GetComplaints(electionId)
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)
 		account = self.GetAccount(wallet.addr)
-		local.AddLog("data {}".format(data), "debug")
 		if wallet is None:
 			raise Exception("Validator wallet not fond")
 		if account.balance < 100:
@@ -1952,17 +1954,15 @@ class MyTonCore():
 			var1 = item.get("var1")
 			var2 = item.get("var2")
 			pubkey = item.get("pubkey")
-			pseudohash = pubkey + str(start)
-			local.AddLog("pseudohash {}, saveComplaints {}".format(pseudohash, saveComplaints), "debug")
-			if pseudohash in saveComplaints:
+			pseudohash = pubkey + str(electionId)
+			local.AddLog("pseudohash {}, complaints {}".format(pseudohash, complaints), "debug")
+			if pseudohash in complaints:
 				continue
 			# Create complaint
-			fileName = self.PrepareComplaint(start, fileName)
+			fileName = self.PrepareComplaint(electionId, fileName)
 			fileName = self.SignFileWithWallet(wallet, fileName, fullElectorAddr, 100)
 			self.SendFile(fileName, wallet)
-			self.AddSaveComplaints(pseudohash, mode="slashing")
-			local.AddLog("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, start))
-			
+			local.AddLog("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, electionId), "debug")
 	#end define
 	
 	def GetOffer(self, offerHash):
@@ -2201,36 +2201,38 @@ class MyTonCore():
 			data = "null"
 		bookmark["data"] = data
 	#end define
-	
-	def AddSaveOffer(self, offerHash):
+
+	def GetSaveOffers(self):
+		bname = "newSaveOffers"
+		saveOffers = local.db.get(bname)
+		if saveOffers is None:
+			saveOffers = dict()
+			local.db[bname] = saveOffers
+		return saveOffers
+	#end define
+
+	def AddSaveOffer(self, offer):
+		offerHash = offer.get("hash")
 		saveOffers = self.GetSaveOffers()
 		if offerHash not in saveOffers:
 			saveOffers.append(offerHash)
 			local.dbSave()
 	#end define
-
-	def GetSaveOffers(self):
-		saveOffers = local.db.get("saveOffers")
-		if saveOffers is None:
-			saveOffers = list()
-			local.db["saveOffers"] = saveOffers
-		return saveOffers
-	#end define
 	
-	def GetSaveComplaints(self, mode):
-		# mod: slashing or complaints
-		bname = mode + "saveComplaints"
+	def GetSaveComplaints(self):
+		bname = "newSaveComplaints"
 		saveComplaints = local.buffer.get(bname)
 		if saveComplaints is None:
-			saveComplaints = list()
+			saveComplaints = dict()
 			local.buffer[bname] = saveComplaints
 		return saveComplaints
 	#end define
 
-	def AddSaveComplaints(self, pseudohash, mode):
-		saveComplaints = self.GetSaveComplaints(mode)
+	def AddSaveComplaints(self, complaint):
+		pseudohash = complaint.get("pseudohash")
+		saveComplaints = self.GetSaveComplaints()
 		if pseudohash not in saveComplaints:
-			saveComplaints.append(pseudohash)
+			saveComplaints[pseudohash] = complaint
 			local.dbSave()
 	#end define
 	
@@ -2729,7 +2731,7 @@ def Complaints(ton):
 		suggestedFine = complaint.get("suggestedFine")
 		suggestedFinePart = complaint.get("suggestedFinePart")
 		local.AddLog("suggestedFine {}, suggestedFinePart {}".format(suggestedFine, suggestedFinePart), "debug")
-		if suggestedFine != 1 or suggestedFinePart != 0: # fix me
+		if suggestedFine != 101 or suggestedFinePart != 0: # fix me
 			continue
 		if complaintHash_hex in complaintsHashes:
 			ton.VoteComplaint(electionId, complaintHash)

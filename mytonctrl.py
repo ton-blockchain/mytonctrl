@@ -64,6 +64,7 @@ def Init():
 
 	console.AddItem("test", Test, "Test")
 	console.AddItem("test2", Test2, "Test")
+	console.AddItem("test3", Test3, "Test")
 	console.AddItem("pt", PrintTest, "PrintTest")
 
 	local.db["config"]["logLevel"] = "debug"
@@ -144,6 +145,10 @@ def Test(args):
 
 def Test2(args):
 	Slashing(ton)
+#end define
+
+def Test3(args):
+	Complaints(ton)
 #end define
 
 def TestWork(ok_arr, pending_arr):
