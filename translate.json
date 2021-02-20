@@ -259,7 +259,7 @@
 		"en": "{green}TON update available. {red}Please update it with `upgrade` command.{endc}",
 		"ru": "{green}Доступно обновление TON. {red}Пожалуйста, обновите его с помощью команды `upgrade`.{endc}"
 	},
-	"000": {
+	"test": {
 		"en": "001",
 		"ru": "002"
 	},
