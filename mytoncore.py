@@ -1240,9 +1240,6 @@ class MyTonCore():
 			if stake > account.balance - 10:
 				stake = account.balance - 10
 
-			if minStake > stake:
-				local.AddLog('Stake is smaller then Minimum stake: ' + str(minStake), "error")
-				return
 		#end if
 
 		if stake is None:
