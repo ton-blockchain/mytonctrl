@@ -1706,7 +1706,7 @@ class MyTonCore():
 		if electionId is None:
 			config32 = self.GetConfig32()
 			electionId = config32.get("startWorkTime")
-		cmd = "runmethod {fullElectorAddr} list_complaints {electionId}".format(fullElectorAddr=fullElectorAddr, electionId=electionId)
+		cmd = "runmethodfull {fullElectorAddr} list_complaints {electionId}".format(fullElectorAddr=fullElectorAddr, electionId=electionId)
 		result = self.liteClient.Run(cmd)
 		rawComplaints = self.Result2List(result)
 		rawComplaints = rawComplaints[0]
