@@ -472,7 +472,7 @@ class MyTonCore():
 	#end define
 
 	def GetFullElectorAddr(self):
-		# get buffer
+		# Get buffer
 		timestamp = GetTimestamp()
 		fullElectorAddr = local.buffer.get("fullElectorAddr")
 		fullElectorAddr_time = local.buffer.get("fullElectorAddr_time")
@@ -482,17 +482,20 @@ class MyTonCore():
 				return fullElectorAddr
 		#end if
 
+		# Get data
 		local.AddLog("start GetFullElectorAddr function", "debug")
 		result = self.liteClient.Run("getconfig 1")
 		electorAddr_hex = self.GetVarFromWorkerOutput(result, "elector_addr:x")
 		fullElectorAddr = "-1:{electorAddr_hex}".format(electorAddr_hex=electorAddr_hex)
+
+		# Set buffer
 		local.buffer["fullElectorAddr"] = fullElectorAddr
 		local.buffer["fullElectorAddr_time"] = timestamp
 		return fullElectorAddr
 	#end define
 
 	def GetFullMinterAddr(self):
-		# get buffer
+		# Get buffer
 		timestamp = GetTimestamp()
 		fullMinterAddr = local.buffer.get("fullMinterAddr")
 		fullMinterAddr_time = local.buffer.get("fullMinterAddr_time")
@@ -506,6 +509,8 @@ class MyTonCore():
 		result = self.liteClient.Run("getconfig 2")
 		minterAddr_hex = self.GetVarFromWorkerOutput(result, "minter_addr:x")
 		fullMinterAddr = "-1:{minterAddr_hex}".format(minterAddr_hex=minterAddr_hex)
+
+		# Set buffer
 		local.buffer["fullMinterAddr"] = fullMinterAddr
 		local.buffer["fullMinterAddr_time"] = timestamp
 		return fullMinterAddr
@@ -675,6 +680,18 @@ class MyTonCore():
 		output["action_list_hash"] = action_list_hash
 
 		return output
+	#end define
+
+	def TryGetTransactionsNumber(self, block):
+		errText = None
+		for i in range(3):
+			time.sleep(i)
+			try:
+				transNum = self.GetTransactionsNumber(block)
+				return transNum
+			except Exception as err:
+				errText = str(err)
+		local.AddLog("TryGetTransactionsNumber error: " + errText, "error")
 	#end define
 
 	def GetTransactionsNumber(self, block):
@@ -1468,7 +1485,7 @@ class MyTonCore():
 			local.AddLog("MoveGramsFromHW warning: destList is empty, break function", "warning")
 			return
 		#end if
-		
+
 		orderFilePath = local.buffer.get("myTempDir") + wallet.name + "_order.txt"
 		lines = list()
 		for dest, grams in destList:
@@ -1502,16 +1519,32 @@ class MyTonCore():
 	#end define
 	
 	def GetElectionEntries(self):
-		local.AddLog("start GetElectionEntries function", "debug")
-		fullConfigAddr = self.GetFullElectorAddr()
+		# Get buffer
+		timestamp = GetTimestamp()
+		electionEntries = local.buffer.get("electionEntries")
+		electionEntries_time = local.buffer.get("electionEntries_time")
+		if electionEntries:
+			diffTime = timestamp - electionEntries_time
+			if diffTime < 60:
+				return electionEntries
+		#end if
+
+		# Check if the elections are open
+		entries = dict()
+		fullElectorAddr = self.GetFullElectorAddr()
+		electionId = self.GetActiveElectionId(fullElectorAddr)
+		if electionId == 0:
+			return entries
+		#end if
+
 		# Get raw data
-		cmd = "runmethod {fullConfigAddr} participant_list_extended".format(fullConfigAddr=fullConfigAddr)
+		local.AddLog("start GetElectionEntries function", "debug")
+		cmd = "runmethod {fullElectorAddr} participant_list_extended".format(fullElectorAddr=fullElectorAddr)
 		result = self.liteClient.Run(cmd)
 		rawElectionEntries = self.Result2List(result)
 		
 		# Get json
 		# Parser by @skydev (https://github.com/skydev0h)
-		entries = list()
 		startWorkTime = rawElectionEntries[0]
 		endElectionsTime = rawElectionEntries[1]
 		minStake = rawElectionEntries[2]
@@ -1530,11 +1563,50 @@ class MyTonCore():
 			item["maxFactor"] = round(entry[1][1] / 655.36) / 100.0
 			item["walletAddr_hex"] = dec2hex(entry[1][2]).upper()
 			item["walletAddr"] = self.HexAddr2Base64Addr("-1:"+item["walletAddr_hex"])
-			item["adnlAddr"] = dec2hex(entry[1][3]).upper()
-			entries.append(item)
+			adnlAddr = dec2hex(entry[1][3]).upper()
+			entries[adnlAddr] = item
+
+		# Set buffer
+		local.buffer["electionEntries"] = entries
+		local.buffer["electionEntries_time"] = timestamp
+
+		# Save elections
+		saveElections = self.GetSaveElections()
+		seid = hex(id(saveElections))
+		sek = saveElections.keys()
+		local.AddLog(f"saveElections: {seid}, {sek}")
+
+		electionId = str(electionId)
+		# saveElections = self.GetSaveElections()
+		saveElections[electionId] = entries
+
+		seid = hex(id(saveElections))
+		sek = saveElections.keys()
+		local.AddLog(f"saveElections: {seid}, {sek}")
 		return entries
 	#end define
 	
+	def GetSaveElections(self):
+		timestamp = GetTimestamp()
+		saveElections = local.db.get("saveElections")
+		if saveElections is None:
+			saveElections = dict()
+			local.db["saveElections"] = saveElections
+		buff = saveElections.copy()
+		for key, item in buff.items():
+			diffTime = timestamp - int(key)
+			if diffTime > 604800:
+				saveElections.pop(key)
+		return saveElections
+	#end define
+
+	def GetSaveElectionEntries(self, electionId):
+		electionId = str(electionId)
+		saveElections = self.GetSaveElections()
+		result = saveElections.get(electionId)
+		return result
+	#end define
+
 	def GetOffers(self):
 		local.AddLog("start GetOffers function", "debug")
 		fullConfigAddr = self.GetFullConfigAddr()
@@ -1649,6 +1721,7 @@ class MyTonCore():
 
 	def GetComplaints(self, electionId=None):
 		local.AddLog("start GetComplaints function", "debug")
+		complaints = dict()
 		fullElectorAddr = self.GetFullElectorAddr()
 		if electionId is None:
 			config32 = self.GetConfig32()
@@ -1656,16 +1729,17 @@ class MyTonCore():
 		cmd = "runmethod {fullElectorAddr} list_complaints {electionId}".format(fullElectorAddr=fullElectorAddr, electionId=electionId)
 		result = self.liteClient.Run(cmd)
 		rawComplaints = self.Result2List(result)
+		if rawComplaints is None:
+			return complaints
 		rawComplaints = rawComplaints[0]
 
 		# Get json
-		complaints = dict()
 		for complaint in rawComplaints:
 			if len(complaint) == 0:
 				continue
 			chash = complaint[0]
 			subdata = complaint[1]
-			
+
 			# Create dict
 			# parser from: https://github.com/ton-blockchain/ton/blob/dab7ee3f9794db5a6d32c895dbc2564f681d9126/crypto/smartcont/elector-code.fc#L1149
 			item = dict()
@@ -1673,7 +1747,9 @@ class MyTonCore():
 			item["electionId"] = electionId
 			item["hash"] = chash
 			pubkey = dec2hex(buff[0]).upper() # *validator_pubkey*
+			adnl = self.GetAdnlFromPubkey(pubkey)
 			item["pubkey"] = pubkey
+			item["adnl"] = adnl
 			item["description"] = buff[1] # *description*
 			item["createdTime"] = buff[2] # *created_at*
 			item["severity"] = buff[3] # *severity*
@@ -1693,6 +1769,16 @@ class MyTonCore():
 			complaints[pseudohash] = item
 		#end for
 		return complaints
+	#end define
+
+	def GetAdnlFromPubkey(self, inputPubkey):
+		config32 = self.GetConfig32()
+		validators = config32["validators"]
+		for validator in validators:
+			adnl = validator["adnlAddr"]
+			pubkey = validator["pubkey"]
+			if pubkey == inputPubkey:
+				return adnl
 	#end define
 
 	def GetComplaintsNumber(self):
@@ -1721,7 +1807,7 @@ class MyTonCore():
 				return item
 		raise Exception("GetComplaint error: complaint not found.")
 	#end define
-	
+
 	def SignProposalVoteRequestWithValidator(self, offerHash, validatorIndex, validatorPubkey_b64, validatorSignature):
 		local.AddLog("start SignProposalVoteRequestWithValidator function", "debug")
 		fileName = self.tempDir + "proposal_vote-msg-body.boc"
@@ -1739,7 +1825,7 @@ class MyTonCore():
 		fileName = Pars(result, "Saved to file ", '\n')
 		return fileName
 	#end define
-	
+
 	def VoteOffer(self, offerHash):
 		local.AddLog("start VoteOffer function", "debug")
 		fullConfigAddr = self.GetFullConfigAddr()
@@ -1883,7 +1969,7 @@ class MyTonCore():
 				wr = workBlocksCreated / workBlocksExpected
 				r = (mr + wr) / 2
 				efficiency = round(r * 100, 2)
-				if efficiency > 30:
+				if efficiency > 10:
 					online = True
 				else:
 					online = False
@@ -1923,14 +2009,19 @@ class MyTonCore():
 
 	def GetValidatorsList(self):
 		config34 = self.GetConfig34()
-		data = self.GetValidatorsLoad()
+		electionId = config34.get("startWorkTime")
+		validatorsLoad = self.GetValidatorsLoad()
+		saveElectionEntries = self.GetSaveElectionEntries(electionId)
 		validators = config34["validators"]
-		for vid in range(len(data)):
+		for vid in range(len(validatorsLoad)):
 			validator = validators[vid]
-			validator["mr"] = data[vid]["mr"]
-			validator["wr"] = data[vid]["wr"]
-			validator["efficiency"] = data[vid]["efficiency"]
-			validator["online"] = data[vid]["online"]
+			adnlAddr = validator["adnlAddr"]
+			validator["mr"] = validatorsLoad[vid]["mr"]
+			validator["wr"] = validatorsLoad[vid]["wr"]
+			validator["efficiency"] = validatorsLoad[vid]["efficiency"]
+			validator["online"] = validatorsLoad[vid]["online"]
+			if saveElectionEntries and adnlAddr in saveElectionEntries:
+				validator["walletAddr"] = saveElectionEntries[adnlAddr]["walletAddr"]
 		return validators
 	#end define
 
@@ -1964,7 +2055,7 @@ class MyTonCore():
 			self.SendFile(fileName, wallet)
 			local.AddLog("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, electionId), "debug")
 	#end define
-	
+
 	def GetOffer(self, offerHash):
 		local.AddLog("start GetOffer function", "debug")
 		offers = self.GetOffers()
@@ -2017,7 +2108,7 @@ class MyTonCore():
 				return efficiency
 		local.AddLog("GetValidatorEfficiency warning: efficiency not found.", "warning")
 	#end define
-	
+
 	def GetDbSize(self, exceptions="log"):
 		local.AddLog("start GetDbSize function", "debug")
 		exceptions = exceptions.split()
@@ -2037,6 +2128,8 @@ class MyTonCore():
 	
 	def Result2List(self, text):
 		buff = Pars(text, "result:", "\n")
+		if buff is None or "error" in buff:
+			return
 		buff = buff.replace(')', ']')
 		buff = buff.replace('(', '[')
 		buff = buff.replace(']', ' ] ')
@@ -2235,7 +2328,7 @@ class MyTonCore():
 			saveComplaints[pseudohash] = complaint
 			local.dbSave()
 	#end define
-	
+
 	def GetStrType(self, inputStr):
 		if type(inputStr) is not str:
 			result = None
@@ -2283,8 +2376,10 @@ class MyTonCore():
 		return result
 	#end define
 	
-	def GetNetLoadAvg(self):
-		statistics = self.GetSettings("statistics")
+	def GetNetLoadAvg(self, statistics=None):
+		# statistics = self.GetSettings("statistics")
+		if statistics is None:
+			statistics = local.db.get("statistics")
 		if statistics:
 			netLoadAvg = statistics.get("netLoadAvg")
 		else:
@@ -2292,8 +2387,9 @@ class MyTonCore():
 		return netLoadAvg
 	#end define
 
-	def GetTpsAvg(self):
-		statistics = self.GetSettings("statistics")
+	def GetTpsAvg(self, statistics=None):
+		if statistics is None:
+			statistics = local.db.get("statistics")
 		if statistics:
 			tpsAvg = statistics.get("tpsAvg")
 		else:
@@ -2579,15 +2675,14 @@ def Telemetry(ton):
 	data["cpuLoad"] = GetLoadAvg()
 	data["netLoad"] = ton.GetNetLoadAvg()
 	data["tps"] = ton.GetTpsAvg()
+	elections = ton.GetElectionEntries()
 
 	# Get git hashes
 	gitHashes = dict()
-	mytonctrlGitPath = local.buffer.get("myDir")
-	tonGitPath = "/usr/src/ton"
-	gitHashes["mytonctrl"] = GetGitHash(mytonctrlGitPath)
-	gitHashes["validator"] = GetGitHash(tonGitPath)
+	gitHashes["mytonctrl"] = GetGitHash("/usr/src/mytonctrl")
+	gitHashes["validator"] = GetGitHash("/usr/src/ton")
 	data["gitHashes"] = gitHashes
-	data["stake"] = ton.GetSettings("stake")
+	data["stake"] = local.db.get("stake")
 
 	# Send data to toncenter server
 	url = "https://toncenter.com/api/newton_test/status/report_status"
@@ -2604,7 +2699,7 @@ def Telemetry(ton):
 	config36 = ton.GetConfig36()
 	data["currentValidators"] = ton.GetValidatorsList()
 	data["nextValidators"] = config36.get("validators")
-	data["elections"] = ton.GetElectionEntries()
+	data["elections"] = elections
 	url = "https://toncenter.com/api/newton_test/status/report_validators"
 	output = json.dumps(data)
 	resp = requests.post(url, data=output, timeout=3)
@@ -2687,7 +2782,7 @@ def ReadBlocks(ton):
 #end define
 
 def SaveTransNumFromBlock(ton, block, buff):
-	buff["transNum"] = ton.GetTransactionsNumber(block)
+	buff["transNum"] = ton.TryGetTransactionsNumber(block)
 #end define
 
 def SaveShardsFromBlock(ton, block, buff):
@@ -2697,7 +2792,7 @@ def SaveShardsFromBlock(ton, block, buff):
 def SaveTransNumFromShard(ton, shard, buff):
 	shard_id = shard["id"]
 	shard_block = shard["block"]
-	buff[shard_id] = ton.GetTransactionsNumber(shard_block)
+	buff[shard_id] = ton.TryGetTransactionsNumber(shard_block)
 #end define
 
 def Complaints(ton):
@@ -2790,4 +2885,3 @@ if __name__ == "__main__":
 	Init()
 	General()
 #end if
-
