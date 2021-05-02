@@ -116,7 +116,7 @@ make -j ${cpuNumber}
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
 cd $BIN_DIR/ton/lite-client
 if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
-	wget https://newton-blockchain.github.io/ton-lite-client-test1.config.json
+	wget https://newton-blockchain.github.io/global.config.json -O ton-lite-client-test1.config.json
 else
 	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-lite-client-test1.config.json
 fi
@@ -124,7 +124,7 @@ fi
 # Скачиваем конфигурационные файлы validator-engine
 cd $BIN_DIR/ton/validator-engine
 if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
-	wget https://newton-blockchain.github.io/ton-global.config.json
+	wget https://newton-blockchain.github.io/global.config.json -O ton-global.config.json
 else
 	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-global.config.json
 fi
