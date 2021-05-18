@@ -41,7 +41,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
 		apt-get update
-		apt-get install -y git make cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip
+		apt-get install -y build-essential git make cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip
 	else
 		echo "Unknown Linux distribution."
 		echo "This OS is not supported with this script at present. Sorry."
@@ -115,7 +115,7 @@ make -j ${cpuNumber}
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
 cd $BIN_DIR/ton/lite-client
 if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
-	wget https://newton-blockchain.github.io/ton-lite-client-test1.config.json
+	wget https://newton-blockchain.github.io/global.config.json -O ton-lite-client-test1.config.json
 else
 	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-lite-client-test1.config.json
 fi
@@ -123,7 +123,7 @@ fi
 # Скачиваем конфигурационные файлы validator-engine
 cd $BIN_DIR/ton/validator-engine
 if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
-	wget https://newton-blockchain.github.io/ton-global.config.json
+	wget https://newton-blockchain.github.io/global.config.json -O ton-global.config.json
 else
 	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-global.config.json
 fi

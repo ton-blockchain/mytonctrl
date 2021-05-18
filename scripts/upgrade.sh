@@ -40,6 +40,9 @@ mv /tmp/mytoninstaller/client.pub /usr/bin/ton/validator-engine-console/client.p
 mv /tmp/mytoninstaller/server.pub /usr/bin/ton/validator-engine-console/server.pub
 mv /tmp/mytoninstaller/liteserver.pub /usr/bin/ton/validator-engine-console/liteserver.pub
 
+rm -rf /usr/bin/ton2 # fix me
+rm -rf /usr/src/ton2 # fix me
+
 # Конец
 echo -e "${COLOR}[1/1]${ENDC} TON components update completed"
 exit 0

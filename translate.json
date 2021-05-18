@@ -55,6 +55,10 @@
 		"en": "Move grams to account",
 		"ru": "Перевод средств на кошелек"
 	},
+	"mgtp_cmd": {
+		"en": "Move grams through proxy",
+		"ru": "Перевод средств через прокси"
+	},
 	"nb_cmd": {
 		"en": "Create new bookmark",
 		"ru": "Добавить аккаунт в закладки"
