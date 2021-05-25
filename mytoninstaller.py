@@ -201,6 +201,16 @@ def FirstMytoncoreSettings():
 		local.AddLog("mytoncore.db already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
 	#end if
+	
+	#amazon bugfix
+	path = "/home/{user}/.local/".format(user=user)
+	owner = pwd.getpwuid(os.stat(path).st_uid).pw_name
+	if owner != user:
+		local.AddLog("User does not have permission to access his `.local` folder", "warning")
+		chownOwner = "{user}:{user}".format(user=user)
+		args = ["chown", "-R", chownOwner, path]
+		subprocess.run(args)
+	#end if
 
 	# Подготовить папку mytoncore
 	mconfigPath = local.buffer["mconfigPath"]

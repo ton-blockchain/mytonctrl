@@ -108,6 +108,10 @@ cmake $SOURCES_DIR/ton
 echo -e "${COLOR}[4/6]${ENDC} Source Compilation"
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000"
+if [ ${cpuNumber} == 0 ]; then
+	echo "Warning! insufficient RAM"
+	cpuNumber=1
+fi
 echo "use ${cpuNumber} cpus"
 make -j ${cpuNumber}
 
