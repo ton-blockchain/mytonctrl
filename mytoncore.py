@@ -1993,8 +1993,14 @@ class MyTonCore():
 				blocksExpected_buff = blocksExpected_buff.split(',')
 				masterBlocksExpected = float(blocksExpected_buff[0])
 				workBlocksExpected = float(blocksExpected_buff[1])
-				mr = masterBlocksCreated / masterBlocksExpected
-				wr = workBlocksCreated / workBlocksExpected
+				if masterBlocksExpected == 0:
+					mr = 0
+				else:
+					mr = masterBlocksCreated / masterBlocksExpected
+				if workBlocksExpected == 0:
+					wr = 0
+				else:
+					wr = workBlocksCreated / workBlocksExpected
 				r = (mr + wr) / 2
 				efficiency = round(r * 100, 2)
 				if efficiency > 10:
