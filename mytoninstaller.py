@@ -205,6 +205,7 @@ def FirstMytoncoreSettings():
 
 	#amazon bugfix
 	path = "/home/{user}/.local/".format(user=user)
+	os.makedirs(path, exist_ok=True)
 	owner = pwd.getpwuid(os.stat(path).st_uid).pw_name
 	if owner != user:
 		local.AddLog("User does not have permission to access his `.local` folder", "warning")
