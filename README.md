@@ -22,6 +22,7 @@ This console program is a wrapper over `fift`,`lite-client` and `validator-engin
 	- [x] Transfer of the entire amount (all)
 	- [x] Transfer of the entire amount with wallet deactivation (alld)
 	- [x] Transferring funds to the wallet from bookmarks
+	- [x] Transferring funds to a wallet through a chain of self-deleting wallets
 - [x] Manage bookmarks
 	- [x] Add account to bookmarks
 	- [x] Show bookmarks

@@ -12,7 +12,6 @@ ENDC='\033[0m'
 
 # Остановка служб
 systemctl stop validator
-systemctl stop validator2 # fix me
 systemctl stop mytoncore
 
 # Переменные
