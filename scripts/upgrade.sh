@@ -40,14 +40,8 @@ mv /tmp/mytoninstaller/client.pub /usr/bin/ton/validator-engine-console/client.p
 mv /tmp/mytoninstaller/server.pub /usr/bin/ton/validator-engine-console/server.pub
 mv /tmp/mytoninstaller/liteserver.pub /usr/bin/ton/validator-engine-console/liteserver.pub
 
-# fix me
-rm -rf /usr/src/ton2
-cd /usr/src
-git clone --recursive https://github.com/ton-blockchain/ton.git ton2
-rm -rf /usr/bin/ton2
-mkdir /usr/bin/ton2 && cd /usr/bin/ton2
-systemctl stop validator2 && sleep 5
-cmake /usr/src/ton2 && make -j ${cpuNumber}
+rm -rf /usr/bin/ton2 # fix me
+rm -rf /usr/src/ton2 # fix me
 
 # Конец
 echo -e "${COLOR}[1/1]${ENDC} TON components update completed"

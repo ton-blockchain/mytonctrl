@@ -166,13 +166,6 @@ def FirstNodeSettings():
 	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath)
 	Add2Systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
-	# fix me
-	validatorAppPath = "/usr/bin/ton2/validator-engine/validator-engine"
-	cmd = "{validatorAppPath} -d -C {globalConfigPath} --db {tonDbDir} -l {tonLogPath} -v 1".format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath)
-	Add2Systemd(name="validator2", user=vuser, start=cmd)
-	args = ["systemctl", "disable", "validator2"]
-	subprocess.run(args)
-
 	# Получить внешний ip адрес
 	response = requests.get("https://ifconfig.me")
 	ip = response.text
@@ -208,7 +201,17 @@ def FirstMytoncoreSettings():
 		local.AddLog("mytoncore.db already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
 	#end if
-	
+
+	#amazon bugfix
+	path = "/home/{user}/.local/".format(user=user)
+	owner = pwd.getpwuid(os.stat(path).st_uid).pw_name
+	if owner != user:
+		local.AddLog("User does not have permission to access his `.local` folder", "warning")
+		chownOwner = "{user}:{user}".format(user=user)
+		args = ["chown", "-R", chownOwner, path]
+		subprocess.run(args)
+	#end if
+
 	# Подготовить папку mytoncore
 	mconfigPath = local.buffer["mconfigPath"]
 	mconfigDir = GetDirFromPath(mconfigPath)

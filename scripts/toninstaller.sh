@@ -78,10 +78,8 @@ pip3 install psutil crc16 requests
 echo -e "${COLOR}[2/6]${ENDC} Cloning github repository"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
-rm -rf $SOURCES_DIR/ton2 # fix me
 rm -rf $SOURCES_DIR/mytonctrl
 git clone --recursive https://github.com/newton-blockchain/ton.git
-git clone --recursive https://github.com/ton-blockchain/ton.git ton2 # fix me
 git clone --recursive https://github.com/igroman787/mytonctrl.git
 
 
@@ -132,13 +130,6 @@ if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
 else
 	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-global.config.json
 fi
-
-# fix me
-rm -rf $BIN_DIR/ton2
-mkdir $BIN_DIR/ton2
-cd $BIN_DIR/ton2
-cmake $SOURCES_DIR/ton2
-make -j ${cpuNumber}
 
 # Выход из программы
 echo -e "${COLOR}[6/6]${ENDC} TON software installation complete"

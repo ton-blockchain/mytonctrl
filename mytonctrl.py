@@ -35,14 +35,15 @@ def Init(argv):
 	console.AddItem("vas", ViewAccountStatus, local.Translate("vas_cmd"))
 	console.AddItem("vah", ViewAccountHistory, local.Translate("vah_cmd"))
 	console.AddItem("mg", MoveGrams, local.Translate("mg_cmd"))
+	console.AddItem("mgtp", MoveGramsThroughProxy, local.Translate("mgtp_cmd"))
 
 	console.AddItem("nb", CreatNewBookmark, local.Translate("nb_cmd"))
 	console.AddItem("bl", PrintBookmarksList, local.Translate("bl_cmd"))
 	console.AddItem("db", DeleteBookmark, local.Translate("db_cmd"))
 
-	# console.AddItem("nr", CreatNewRule, local.Translate("nr_cmd")) # "Добавить правило в расписание / Create new rule"
-	# console.AddItem("rl", PrintRulesList, local.Translate("rl_cmd")) # "Показать правила расписания / Show rule list"
-	# console.AddItem("dr", DeleteRule, local.Translate("dr_cmd")) # "Удалить правило из расписания / Delete rule"
+	# console.AddItem("nr", CreatNewAutoTransferRule, local.Translate("nr_cmd")) # "Добавить правило автопереводов в расписание / Create new auto transfer rule"
+	# console.AddItem("rl", PrintAutoTransferRulesList, local.Translate("rl_cmd")) # "Показать правила автопереводов / Show auto transfer rule list"
+	# console.AddItem("dr", DeleteAutoTransferRule, local.Translate("dr_cmd")) # "Удалить правило автопереводов из расписания / Delete auto transfer rule"
 
 	console.AddItem("nd", NewDomain, local.Translate("nd_cmd"))
 	console.AddItem("dl", PrintDomainsList, local.Translate("dl_cmd"))
@@ -63,12 +64,8 @@ def Init(argv):
 	console.AddItem("get", GetSettings, local.Translate("get_cmd"))
 	console.AddItem("set", SetSettings, local.Translate("set_cmd"))
 
-	console.AddItem("test", Test, "Test")
-	console.AddItem("test2", Test2, "Test")
-	console.AddItem("test3", Test3, "Test")
-	console.AddItem("r1", r1, "Switch to the first validator (newton-blockchain)")
-	console.AddItem("r2", r2, "Switch to the second validator (ton-blockchain)")
-	console.AddItem("pt", PrintTest, "PrintTest")
+	# console.AddItem("test", Test, "Test")
+	# console.AddItem("pt", PrintTest, "PrintTest")
 
 
 	# Process input parameters
@@ -123,7 +120,6 @@ def Update(args):
 
 def Upgrade(args):
 	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"])
-	exitCode += RunAsRoot(["python3", "/usr/src/mytonctrl/scripts/upgrade.py"])
 
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
@@ -147,7 +143,7 @@ def CheckTonUpdate():
 #end define
 
 def PrintTest(args):
-	print(json.dumps(local.buffer, indent=4))
+	print(json.dumps(local.buffer, indent=2))
 #end define
 
 def Test(args):
@@ -171,30 +167,6 @@ def Test(args):
 			file = open("testoutput.txt", "wt")
 			file.write(data)
 			file.close()
-#end define
-
-def Test2(args):
-	Slashing(ton)
-#end define
-
-def Test3(args):
-	Complaints(ton)
-#end define
-
-def r1(args):
-	args = ["systemctl", "stop", "validator2"]
-	subprocess.run(args)
-
-	args = ["systemctl", "start", "validator"]
-	subprocess.run(args)
-#end define
-
-def r2(args):
-	args = ["systemctl", "stop", "validator"]
-	subprocess.run(args)
-
-	args = ["systemctl", "start", "validator2"]
-	subprocess.run(args)
 #end define
 
 def TestWork(ok_arr, pending_arr):
@@ -238,18 +210,20 @@ def PrintStatus(args):
 	dbSize = ton.GetDbSize()
 	offersNumber = ton.GetOffersNumber()
 	complaintsNumber = ton.GetComplaintsNumber()
+	statistics = ton.GetSettings("statistics")
+	tpsAvg = ton.GetTpsAvg(statistics)
+	netLoadAvg = ton.GetNetLoadAvg(statistics)
 	if validatorWallet is not None:
 		validatorAccount = ton.GetAccount(validatorWallet.addr)
 	else:
 		validatorAccount = None
-	PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber)
-	PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize)
+	PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
+	PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, netLoadAvg)
 	PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17)
 	PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
 
-def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber):
-	tpsAvg = ton.GetTpsAvg()
+def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg):
 	tps1 = tpsAvg[0]
 	tps5 = tpsAvg[1]
 	tps15 = tpsAvg[2]
@@ -289,7 +263,7 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 	print()
 #end define
 
-def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize):
+def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, netLoadAvg):
 	if validatorWallet is None:
 		return
 	adnlAddr = ton.adnlAddr
@@ -300,7 +274,6 @@ def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, valid
 	cpuLoad1 = loadavg[0]
 	cpuLoad5 = loadavg[1]
 	cpuLoad15 = loadavg[2]
-	netLoadAvg = ton.GetNetLoadAvg()
 	netLoad1 = netLoadAvg[0]
 	netLoad5 = netLoadAvg[1]
 	netLoad15 = netLoadAvg[2]
@@ -310,11 +283,11 @@ def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, valid
 
 	validatorIndex_text = GetColorInt(validatorIndex, 0, logic="more")
 	validatorIndex_text = local.Translate("local_status_validator_index").format(validatorIndex_text)
-	validatorEfficiency_text = GetColorInt(validatorEfficiency, 70, logic="more", ending=" %")
+	validatorEfficiency_text = GetColorInt(validatorEfficiency, 10, logic="more", ending=" %")
 	validatorEfficiency_text = local.Translate("local_status_validator_efficiency").format(validatorEfficiency_text)
 	adnlAddr_text = local.Translate("local_status_adnl_addr").format(bcolors.Yellow(adnlAddr))
 	walletAddr_text = local.Translate("local_status_wallet_addr").format(bcolors.Yellow(walletAddr))
-	walletBalance_text = local.Translate("local_status_wallet_balance").format(bcolors.Green(walletBalance, " GRM"))
+	walletBalance_text = local.Translate("local_status_wallet_balance").format(bcolors.Green(walletBalance))
 
 	# CPU status
 	cpuNumber_text = bcolors.Yellow(cpuNumber)
@@ -492,9 +465,7 @@ def ActivateWallet(args):
 		if not os.path.isfile(wallet.bocFilePath):
 			local.AddLog("Wallet {walletName} already activated".format(walletName=walletName), "warning")
 			return
-		account = ton.GetAccount(wallet.addr)
-		if account.balance > 0:
-			ton.SendFile(wallet.bocFilePath, wallet)
+		ton.ActivateWallet(wallet)
 	ColorPrint("ActivateWallet - {green}OK{endc}")
 #end define
 
@@ -634,6 +605,20 @@ def MoveGrams(args):
 	ColorPrint("MoveGrams - {green}OK{endc}")
 #end define
 
+def MoveGramsThroughProxy(args):
+	try:
+		walletName = args[0]
+		destination = args[1]
+		gram = args[2]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <gram-amount>")
+		return
+	wallet = ton.GetLocalWallet(walletName)
+	destination = ton.GetDestinationAddr(destination)
+	ton.MoveGramsThroughProxy(wallet, destination, gram)
+	ColorPrint("MoveGramsThroughProxy - {green}OK{endc}")
+#end define
+
 def CreatNewBookmark(args):
 	try:
 		name = args[0]
@@ -677,11 +662,21 @@ def DeleteBookmark(args):
 	ColorPrint("DeleteBookmark - {green}OK{endc}")
 #end define
 
-# def CreatNewRule(args):
-# 	print("fix me")
+# def CreatNewAutoTransferRule(args):
+# 	try:
+# 		name = args[0]
+# 		addr = args[1]
+# 	except:
+# 		ColorPrint("{red}Bad args. Usage:{endc} nr <rule-name> <account-addr | domain-name>")
+# 		return
+# 	rule = dict()
+# 	rule["name"] = name
+# 	rule["addr"] = addr
+# 	ton.AddAutoTransferRule(rule)
+# 	ColorPrint("CreatNewAutoTransferRule - {green}OK{endc}")
 # #end define
 
-# def PrintRulesList(args):
+# def PrintAutoTransferRulesList(args):
 # 	data = ton.GetRules()
 # 	if (data is None or len(data) == 0):
 # 		print("No data")
@@ -693,13 +688,13 @@ def DeleteBookmark(args):
 # 	PrintTable(table)
 # #end define
 
-# def DeleteRule(args):
+# def DeleteAutoTransferRule(args):
 # 	print("fix me")
 # #end define
 
 def PrintOffersList(args):
 	offers = ton.GetOffers()
-	print(json.dumps(offers, indent=4))
+	print(json.dumps(offers, indent=2))
 #end define
 
 def VoteOffer(args):
@@ -737,8 +732,25 @@ def GetConfig(args):
 
 def PrintComplaintsList(args):
 	complaints = ton.GetComplaints()
-	text = json.dumps(complaints, indent=4)
-	print(text)
+	if len(args) > 0 and args[0] == "--json":
+		text = json.dumps(complaints, indent=2)
+		print(text)
+	else:
+		table = list()
+		table += [["Election id", "ADNL", "Fine (part)", "Votes", "Approved", "Is passed"]]
+		for key, item in complaints.items():
+			electionId = item.get("electionId")
+			adnl = item.get("adnl")
+			adnl = adnl[0:6] + "..." + adnl[58:64]
+			suggestedFine = item.get("suggestedFine")
+			suggestedFinePart = item.get("suggestedFinePart")
+			Fine_text = "{0} ({1})".format(suggestedFine, suggestedFinePart)
+			votedValidators = len(item.get("votedValidators"))
+			approvedPercent = item.get("approvedPercent")
+			approvedPercent_text = "{0}%".format(approvedPercent)
+			isPassed = item.get("isPassed")
+			table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
+		PrintTable(table)
 #end define
 
 def VoteComplaint(args):
@@ -813,7 +825,7 @@ def DeleteDomain(args):
 
 def PrintElectionEntriesList(args):
 	entries = ton.GetElectionEntries()
-	print(json.dumps(entries, indent=4))
+	print(json.dumps(entries, indent=2))
 #end define
 
 def VoteElectionEntry(args):
@@ -826,7 +838,7 @@ def VoteElectionEntry(args):
 
 def PrintValidatorList(args):
 	validators = ton.GetValidatorsList()
-	print(json.dumps(validators, indent=4))
+	print(json.dumps(validators, indent=2))
 #end define
 
 def GetSettings(args):
@@ -836,7 +848,7 @@ def GetSettings(args):
 		ColorPrint("{red}Bad args. Usage:{endc} get <settings-name>")
 		return
 	result = ton.GetSettings(name)
-	print(json.dumps(result, indent=4))
+	print(json.dumps(result, indent=2))
 #end define
 
 def SetSettings(args):
