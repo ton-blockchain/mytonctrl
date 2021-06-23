@@ -187,11 +187,18 @@ def TestWork(ok_arr, pending_arr):
 #end define
 
 def PrintStatus(args):
+	opt = None
+	if len(args) == 1:
+		opt = args[0]
 	rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
 	config34 = ton.GetConfig34()
 	config36 = ton.GetConfig36()
 	totalValidators = config34["totalValidators"]
-	onlineValidators = ton.GetOnlineValidators()
+	onlineValidators = None
+	validatorEfficiency = None
+	if opt != "fast":
+		onlineValidators = ton.GetOnlineValidators()
+		validatorEfficiency = ton.GetValidatorEfficiency()
 	if onlineValidators:
 		onlineValidators = len(onlineValidators)
 	oldStartWorkTime = config36.get("startWorkTime")
@@ -205,7 +212,6 @@ def PrintStatus(args):
 	fullElectorAddr = ton.GetFullElectorAddr()
 	startWorkTime = ton.GetActiveElectionId(fullElectorAddr)
 	validatorIndex = ton.GetValidatorIndex()
-	validatorEfficiency = ton.GetValidatorEfficiency()
 	validatorWallet = ton.GetLocalWallet(ton.validatorWalletName)
 	dbSize = ton.GetDbSize()
 	offersNumber = ton.GetOffersNumber()
