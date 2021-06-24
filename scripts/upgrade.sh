@@ -30,9 +30,9 @@ memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000"
 cmake /usr/src/ton && make -j ${cpuNumber}
 cd /usr/bin/ton/lite-client
-wget https://newton-blockchain.github.io/ton-lite-client-test1.config.json
+wget https://newton-blockchain.github.io/global.config.json -O ton-lite-client-test1.config.json
 cd /usr/bin/ton/validator-engine
-wget https://newton-blockchain.github.io/ton-global.config.json
+wget https://newton-blockchain.github.io/global.config.json -O ton-global.config.json
 systemctl restart validator
 
 mv /tmp/mytoninstaller/client /usr/bin/ton/validator-engine-console/client
