@@ -2379,10 +2379,10 @@ class MyTonCore():
 	#end define
 
 	def GetSaveOffers(self):
-		bname = "newSaveOffers"
+		bname = "saveOffers"
 		saveOffers = local.db.get(bname)
 		if saveOffers is None:
-			saveOffers = dict()
+			saveOffers = list()
 			local.db[bname] = saveOffers
 		return saveOffers
 	#end define
