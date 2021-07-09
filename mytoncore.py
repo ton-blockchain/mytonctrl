@@ -21,6 +21,7 @@ class LiteClient:
 
 	def Run(self, cmd, **kwargs):
 		timeout = kwargs.get("timeout", 3)
+		index = kwargs.get("index")
 		ready = False
 		if self.pubkeyPath:
 			validatorStatus = self.ton.GetValidatorStatus()
@@ -30,6 +31,16 @@ class LiteClient:
 				ready = True
 		if ready == False:
 			args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
+		if index:
+			index = str(index)
+			args += ["-i", index]
+		else:
+			buff = local.db.get("liteServerIndex")
+			if buff:
+				index = str(buff)
+				args += ["-i", index]
+		#end if
+
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
@@ -431,7 +442,7 @@ class MyTonCore():
 			raise Exception("GetHighWalletFromFile error: Private key not found: " + filePath)
 		#end if
 
-		# Create wallet
+		# Create wallet object
 		wallet = Wallet()
 		wallet.subwallet = subwallet
 		wallet.v = "hw"
@@ -2116,11 +2127,13 @@ class MyTonCore():
 		fullElectorAddr = self.GetFullElectorAddr()
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)
-		account = self.GetAccount(wallet.addr)
+
+		# Check wallet and balance
 		if wallet is None:
 			raise Exception("Validator wallet not fond")
-		if account.balance < 100:
-			raise Exception("Validator wallet balance must be greater than 100")
+		account = self.GetAccount(wallet.addr)
+		if account.balance < 300:
+			raise Exception("Validator wallet balance must be greater than 300")
 		for key, item in data.items():
 			fileName = item.get("fileName")
 			if fileName is None:
@@ -2133,7 +2146,7 @@ class MyTonCore():
 				continue
 			# Create complaint
 			fileName = self.PrepareComplaint(electionId, fileName)
-			fileName = self.SignFileWithWallet(wallet, fileName, fullElectorAddr, 100)
+			fileName = self.SignFileWithWallet(wallet, fileName, fullElectorAddr, 300)
 			self.SendFile(fileName, wallet)
 			local.AddLog("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, electionId), "debug")
 	#end define
@@ -2920,6 +2933,37 @@ def Slashing(ton):
 		local.buffer["slashTime"] = start
 #end define
 
+def ScanLiteServers(ton):
+	local.AddLog("start ScanLiteServers function", "debug")
+	# Считать список серверов
+	filePath = ton.liteClient.configPath
+	file = open(filePath, 'rt')
+	text = file.read()
+	file.close()
+	data = json.loads(text)
+
+	# Пройтись по серверам
+	liteservers = data.get("liteservers")
+	for index in range(len(liteservers)):
+		item = liteservers[index]
+		try:
+			start = time.time()
+			ton.liteClient.Run("last", index=index)
+			end = time.time()
+			timediff = end - start
+		except:
+			timediff = 999
+		item["index"] = index
+		item["timediff"] = timediff
+	#end for
+
+	# Посчитать время реакции запроса
+	buff = sorted(liteservers, key=lambda k: k['timediff'])
+	prime = buff[0]
+	primeIndex = prime.get("index")
+	local.db["liteServerIndex"] = primeIndex
+#end define
+
 def EnsurePeriodParams():
 	default_periods = {
 			"elections": 600,
@@ -2931,7 +2975,8 @@ def EnsurePeriodParams():
 			"telemetry": 60,
 			"mining": 1,
 			"scanBlocks": 1,
-			"readBlocks": 0.3
+			"readBlocks": 0.3,
+			"scanLiteServers": 60
 		};
 	if "periods" not in local.db:
 		local.db["periods"] = default_periods
@@ -2949,7 +2994,7 @@ def General():
 	# Запустить потоки
 	for subprocess in [Elections, Statistics, Offers, Complaints,
 					   Slashing, Domains, Telemetry, Mining, ScanBlocks,
-					   ReadBlocks]:
+					   ReadBlocks, ScanLiteServers]:
 		# period names in camelCase
 		periodName = subprocess.__name__[:1].lower() + subprocess.__name__[1:]
 		period = local.db["periods"][periodName]
