@@ -31,6 +31,7 @@ def Init():
 	console.color = console.RED
 	console.AddItem("status", Status, "Print TON component status")
 	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver. Example: 'enable FN'")
+	console.AddItem("plsc", PrintLiteServerConfig, "Print LiteServer config")
 
 	Refresh()
 #end define
@@ -90,6 +91,26 @@ def Enable(args):
 	user = local.buffer["user"]
 	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "enable{name}".format(name=name)]
 	RunAsRoot(args)
+#end define
+
+def PrintLiteServerConfig(args):
+	result = dict()
+	file = open("/usr/bin/ton/validator-engine-console/liteserver.pub", 'rb')
+	data = file.read()
+	file.close()
+	key = base64.b64encode(data[4:])
+	ip = requests.get("https://ifconfig.me").text
+	mconfigPath = local.buffer["mconfigPath"]
+	mconfig = GetConfig(path=mconfigPath)
+	liteClient = mconfig.get("liteClient")
+	liteServer = liteClient.get("liteServer")
+	result["ip"] = ip2int(ip)
+	result["port"] = liteServer.get("port")
+	result["id"] = dict()
+	result["id"]["@type"]= "pub.ed25519"
+	result["id"]["key"]= key.decode()
+	text = json.dumps(result, indent=4)
+	print(text)
 #end define
 
 def Event(name):
@@ -168,8 +189,7 @@ def FirstNodeSettings():
 	Add2Systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
-	response = requests.get("https://ifconfig.me")
-	ip = response.text
+	ip = requests.get("https://ifconfig.me").text
 	vport = random.randint(2000, 65000)
 	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
 	local.AddLog("Use addr: " + addr, "debug")

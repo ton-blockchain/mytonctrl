@@ -3,6 +3,7 @@
 
 import crc16
 import struct
+import random
 import requests
 import re
 import time
@@ -22,23 +23,19 @@ class LiteClient:
 	def Run(self, cmd, **kwargs):
 		timeout = kwargs.get("timeout", 3)
 		index = kwargs.get("index")
-		ready = False
-		if self.pubkeyPath:
-			validatorStatus = self.ton.GetValidatorStatus()
-			validatorOutOfSync = validatorStatus.get("outOfSync")
-			if validatorOutOfSync < 20:
-				args = [self.appPath, "--addr", self.addr, "--pub", self.pubkeyPath, "--verbosity", "0", "--cmd", cmd]
-				ready = True
-		if ready == False:
-			args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
+		validatorStatus = self.ton.GetValidatorStatus()
+		validatorOutOfSync = validatorStatus.get("outOfSync")
+		args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
 		if index:
 			index = str(index)
 			args += ["-i", index]
+		elif self.pubkeyPath and validatorOutOfSync < 20:
+			args = [self.appPath, "--addr", self.addr, "--pub", self.pubkeyPath, "--verbosity", "0", "--cmd", cmd]
 		else:
-			buff = local.db.get("liteServerIndex")
-			if buff:
-				index = str(buff)
-				args += ["-i", index]
+			liteServers = local.db.get("liteServers")
+			index = random.choice(liteServers)
+			index = str(index)
+			args += ["-i", index]
 		#end if
 
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
@@ -108,7 +105,11 @@ class Miner:
 		args = [self.appPath] + args
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		output = process.stdout.decode("utf-8")
-		return output
+		err = process.stderr.decode("utf-8")
+		# if len(err) > 0:
+		# 	local.AddLog("args: {args}".format(args=args), "error")
+		# 	raise Exception("Miner error: {err}".format(err=err))
+		return err
 	#end define
 #end class
 
@@ -2968,6 +2969,7 @@ def ScanLiteServers(ton):
 	data = json.loads(text)
 
 	# Пройтись по серверам
+	result = list()
 	liteservers = data.get("liteservers")
 	for index in range(len(liteservers)):
 		item = liteservers[index]
@@ -2975,18 +2977,12 @@ def ScanLiteServers(ton):
 			start = time.time()
 			ton.liteClient.Run("last", index=index)
 			end = time.time()
-			timediff = end - start
-		except:
-			timediff = 999
-		item["index"] = index
-		item["timediff"] = timediff
+			result.append(index)
+		except: pass
 	#end for
 
-	# Посчитать время реакции запроса
-	buff = sorted(liteservers, key=lambda k: k['timediff'])
-	prime = buff[0]
-	primeIndex = prime.get("index")
-	local.db["liteServerIndex"] = primeIndex
+	# Записать данные в базу
+	local.db["liteServers"] = result
 #end define
 
 def EnsurePeriodParams():
