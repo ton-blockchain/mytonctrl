@@ -108,11 +108,6 @@ class Miner:
 		args = [self.appPath] + args
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		output = process.stdout.decode("utf-8")
-		err = process.stderr.decode("utf-8")
-		if len(err) > 0:
-		# 	local.AddLog("args: {args}".format(args=args), "error")
-		# 	raise Exception("Miner error: {err}".format(err=err))
-			return err
 		return output
 	#end define
 #end class
