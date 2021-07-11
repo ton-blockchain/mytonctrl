@@ -67,6 +67,9 @@ def Init(argv):
 	# console.AddItem("test", Test, "Test")
 	# console.AddItem("pt", PrintTest, "PrintTest")
 
+	console.AddItem("hr", GetHashrate, local.Translate("hr_cmd"))
+	console.AddItem("mon", EnableMining, local.Translate("mo_cmd"))
+	console.AddItem("moff", DisableMining, local.Translate("moff_cmd"))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -252,7 +255,7 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 	newComplaints_text = bcolors.Green(newComplaints)
 	allComplaints_text = bcolors.Yellow(allComplaints)
 	complaints_text = local.Translate("ton_status_complaints").format(newComplaints_text, allComplaints_text)
-	
+
 	if startWorkTime == 0:
 		election_text = bcolors.Yellow("closed")
 	else:
@@ -403,7 +406,7 @@ def PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, co
 	startElectionTime = Timestamp2Datetime(startElection)
 	endElectionTime = Timestamp2Datetime(endElection)
 	startNextElectionTime = Timestamp2Datetime(startNextElection)
-	
+
 	# datetime to color text
 	rootWorkchainEnabledTime_text = local.Translate("times_root_workchain_enabled_time").format(bcolors.Yellow(rootWorkchainEnabledTime))
 	startValidationTime_text = local.Translate("times_start_validation_time").format(GetColorTime(startValidationTime, startValidation))
@@ -868,7 +871,39 @@ def SetSettings(args):
 	ColorPrint("SetSettings - {green}OK{endc}")
 #end define
 
+def GetHashrate(args):
+	ColorPrint("The data may be incorrect if mining is enabled during the test. Turn off mining before checking hashrate.")
+	result = ton.GetHashrate()
+	ColorPrint("Current Hashrate: ")
+	ColorPrint(result)
+#end define
 
+def EnableMining(args):
+	powAddr = ton.GetSettings('powAddr')
+	minerAddr = ton.GetSettings('minerAddr')
+
+	if powAddr is None:
+		ColorPrint("{yellow}powAddr is null. Set to auto select{endc}")
+		ton.SetSettings('powAddr', '"auto"')
+	#end if
+
+	if minerAddr is None:
+		ColorPrint("{yellow}minerAddr is null. Creating new address{endc}")
+		data = ton.GetWallets()
+		if (data is None or len(data) == 0):
+			ton.nw()
+			data = ton.GetWallets()
+		ColorPrint("Your miner address is: {addr}".format(addr=data[0].addr))
+		ton.SetSettings('minerAddr', '"'+data[0].addr+'"')
+	#end if
+
+	ColorPrint("Mining was enabled")
+#end define
+
+def DisableMining(args):
+	ton.SetSettings('powAddr', 'null')
+	ColorPrint("Mining was disabled. The shutdown process may take up to 100 seconds.")
+#end define
 
 ###
 ### Start of the program

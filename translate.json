@@ -127,6 +127,18 @@
 		"en": "Set settings",
 		"ru": "Задать настройки"
 	},
+	"hr_cmd": {
+		"en": "Get mining hashrate",
+		"ru": "Получить хешрейт сервера"
+	},
+	"mo_cmd": {
+		"en": "Enable mining",
+		"ru": "Включить майнинг"
+	},
+	"moff_cmd": {
+		"en": "Disable mining",
+		"ru": "Выключить майнинг"
+	},
 	"installer_cmd": {
 		"en": "Run the installer of TON modules",
 		"ru": "Запустить установщик модулей TON"
