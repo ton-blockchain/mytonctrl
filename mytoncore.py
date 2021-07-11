@@ -1524,8 +1524,8 @@ class MyTonCore():
 		return vconfig
 	#end define
 
-	def MoveGrams(self, wallet, dest, grams, **kwargs):
-		local.AddLog("start MoveGrams function", "debug")
+	def MoveCoins(self, wallet, dest, grams, **kwargs):
+		local.AddLog("start MoveCoins function", "debug")
 		flags = kwargs.get("flags")
 		wait = kwargs.get("wait", True)
 		if grams == "all":
@@ -1550,11 +1550,11 @@ class MyTonCore():
 		local.AddLog("start MoveGramsThroughProxy function", "debug")
 		wallet1 = self.CreateWallet("proxy_wallet1", 0)
 		wallet2 = self.CreateWallet("proxy_wallet2", 0)
-		self.MoveGrams(wallet, wallet1.addr_init, grams)
+		self.MoveCoins(wallet, wallet1.addr_init, grams)
 		self.ActivateWallet(wallet1)
-		self.MoveGrams(wallet1, wallet2.addr_init, "alld")
+		self.MoveCoins(wallet1, wallet2.addr_init, "alld")
 		self.ActivateWallet(wallet2)
-		self.MoveGrams(wallet2, dest, "alld", flags=["-n"])
+		self.MoveCoins(wallet2, dest, "alld", flags=["-n"])
 		wallet1.Delete()
 		wallet2.Delete()
 	#end define

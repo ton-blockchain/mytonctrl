@@ -34,7 +34,7 @@ def Init(argv):
 
 	console.AddItem("vas", ViewAccountStatus, local.Translate("vas_cmd"))
 	console.AddItem("vah", ViewAccountHistory, local.Translate("vah_cmd"))
-	console.AddItem("mg", MoveGrams, local.Translate("mg_cmd"))
+	console.AddItem("mg", MoveCoins, local.Translate("mg_cmd"))
 	console.AddItem("mgtp", MoveGramsThroughProxy, local.Translate("mgtp_cmd"))
 
 	console.AddItem("nb", CreatNewBookmark, local.Translate("nb_cmd"))
@@ -596,7 +596,7 @@ def GetHistoryTable(addr, limit):
 	return table
 #end define
 
-def MoveGrams(args):
+def MoveCoins(args):
 	try:
 		walletName = args[0]
 		destination = args[1]
@@ -610,8 +610,8 @@ def MoveGrams(args):
 		return
 	wallet = ton.GetLocalWallet(walletName)
 	destination = ton.GetDestinationAddr(destination)
-	ton.MoveGrams(wallet, destination, gram, flags=flags)
-	ColorPrint("MoveGrams - {green}OK{endc}")
+	ton.MoveCoins(wallet, destination, gram, flags=flags)
+	ColorPrint("MoveCoins - {green}OK{endc}")
 #end define
 
 def MoveGramsThroughProxy(args):
