@@ -26,16 +26,17 @@ class LiteClient:
 		validatorStatus = self.ton.GetValidatorStatus()
 		validatorOutOfSync = validatorStatus.get("outOfSync")
 		args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
-		if index:
+		if index is not None:
 			index = str(index)
 			args += ["-i", index]
 		elif self.pubkeyPath and validatorOutOfSync < 20:
 			args = [self.appPath, "--addr", self.addr, "--pub", self.pubkeyPath, "--verbosity", "0", "--cmd", cmd]
 		else:
 			liteServers = local.db.get("liteServers")
-			index = random.choice(liteServers)
-			index = str(index)
-			args += ["-i", index]
+			if liteServers is not None:
+				index = random.choice(liteServers)
+				index = str(index)
+				args += ["-i", index]
 		#end if
 
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
@@ -2816,6 +2817,7 @@ def Telemetry(ton):
 def Mining(ton):
 	powAddr = local.db.get("powAddr")
 	minerAddr = local.db.get("minerAddr")
+	miningTime = local.db.get("miningTime", 100)
 	if powAddr == 'auto':
 		givers = ["kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN", "kf8SYc83pm5JkGt0p3TQRkuiM58O9Cr3waUtR9OoFq716lN-", "kf-FV4QTxLl-7Ct3E6MqOtMt-RGXMxi27g4I645lw6MTWraV", "kf_NSzfDJI1A3rOM0GQm7xsoUXHTgmdhN5-OrGD8uwL2JMvQ", "kf8gf1PQy4u2kURl-Gz4LbS29eaN4sVdrVQkPO-JL80VhOe6", "kf8kO6K6Qh6YM4ddjRYYlvVAK7IgyW8Zet-4ZvNrVsmQ4EOF", "kf-P_TOdwcCh0AXHhBpICDMxStxHenWdLCDLNH5QcNpwMHJ8", "kf91o4NNTryJ-Cw3sDGt9OTiafmETdVFUMvylQdFPoOxIsLm", "kf9iWhwk9GwAXjtwKG-vN7rmXT3hLIT23RBY6KhVaynRrIK7", "kf8JfFUEJhhpRW80_jqD7zzQteH6EBHOzxiOhygRhBdt4z2N"]
 		giver = 0
@@ -2843,9 +2845,8 @@ def Mining(ton):
 	local.AddLog(powAddr, "debug")
 	filePath = ton.tempDir + "mined.boc"
 	cpus = psutil.cpu_count()-1
-	numThreads = "-w{cpus}".format(cpus=cpus)
 	params = ton.GetPowParams(powAddr)
-	args = ["-vv", numThreads, "-t100", minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
+	args = ["-vv", "-w", cpus, "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
 	result = ton.miner.Run(args)
 	if "Saving" in result:
 		newParams = ton.GetPowParams(powAddr)
@@ -2972,11 +2973,8 @@ def ScanLiteServers(ton):
 	result = list()
 	liteservers = data.get("liteservers")
 	for index in range(len(liteservers)):
-		item = liteservers[index]
 		try:
-			start = time.time()
 			ton.liteClient.Run("last", index=index)
-			end = time.time()
 			result.append(index)
 		except: pass
 	#end for
