@@ -101,7 +101,7 @@ else
 fi
 
 # Подготовиться к компиляции
-cmake $SOURCES_DIR/ton
+cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
 
 # Компилируем из исходников
 echo -e "${COLOR}[4/6]${ENDC} Source Compilation"

@@ -28,7 +28,7 @@ mkdir /usr/bin/ton && cd /usr/bin/ton
 systemctl stop validator && sleep 5
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000"
-cmake /usr/src/ton && make -j ${cpuNumber}
+cmake -DCMAKE_BUILD_TYPE=Release /usr/src/ton && make -j ${cpuNumber}
 cd /usr/bin/ton/lite-client
 wget https://newton-blockchain.github.io/global.config.json -O ton-lite-client-test1.config.json
 cd /usr/bin/ton/validator-engine
@@ -40,8 +40,11 @@ mv /tmp/mytoninstaller/client.pub /usr/bin/ton/validator-engine-console/client.p
 mv /tmp/mytoninstaller/server.pub /usr/bin/ton/validator-engine-console/server.pub
 mv /tmp/mytoninstaller/liteserver.pub /usr/bin/ton/validator-engine-console/liteserver.pub
 
-rm -rf /usr/bin/ton2 # fix me
-rm -rf /usr/src/ton2 # fix me
+# fix me
+rm -rf /usr/bin/ton2
+rm -rf /usr/src/ton2
+rm -rf /etc/systemd/system/validator2.service
+systemctl daemon-reload
 
 # Конец
 echo -e "${COLOR}[1/1]${ENDC} TON components update completed"
