@@ -112,24 +112,30 @@ if [ ${cpuNumber} == 0 ]; then
 	cpuNumber=1
 fi
 echo "use ${cpuNumber} cpus"
-make -j ${cpuNumber}
+make -j ${cpuNumber} validator-engine lite-client pow-miner validator-engine-console
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
-cd $BIN_DIR/ton/lite-client
 if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
-	wget https://newton-blockchain.github.io/global.config.json -O ton-lite-client-test1.config.json
+	wget https://newton-blockchain.github.io/global.config.json
 else
-	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-lite-client-test1.config.json
+	wget "$EXTERNAL_CONFIG_ADDRESS" -O global.config.json
 fi
 
+# cd $BIN_DIR/ton/lite-client
+# if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
+# 	wget https://newton-blockchain.github.io/global.config.json -O ton-lite-client-test1.config.json
+# else
+# 	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-lite-client-test1.config.json
+# fi
+
 # Скачиваем конфигурационные файлы validator-engine
-cd $BIN_DIR/ton/validator-engine
-if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
-	wget https://newton-blockchain.github.io/global.config.json -O ton-global.config.json
-else
-	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-global.config.json
-fi
+# cd $BIN_DIR/ton/validator-engine
+# if [ -z "$EXTERNAL_CONFIG_ADDRESS" ]; then
+# 	wget https://newton-blockchain.github.io/global.config.json -O ton-global.config.json
+# else
+# 	wget "$EXTERNAL_CONFIG_ADDRESS" -O ton-global.config.json
+# fi
 
 # Выход из программы
 echo -e "${COLOR}[6/6]${ENDC} TON software installation complete"

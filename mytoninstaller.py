@@ -55,10 +55,12 @@ def Refresh():
 	local.buffer["tonBinDir"] = tonBinDir
 	local.buffer["tonSrcDir"] = tonSrcDir
 	tonDbDir = tonWorkDir + "db/"
+	keysDir = tonWorkDir + "keys/"
 	local.buffer["tonDbDir"] = tonDbDir
+	local.buffer["keysDir"] = keysDir
 	local.buffer["tonLogPath"] = tonWorkDir + "log"
 	local.buffer["validatorAppPath"] = tonBinDir + "validator-engine/validator-engine"
-	local.buffer["globalConfigPath"] = tonBinDir + "validator-engine/ton-global.config.json"
+	local.buffer["globalConfigPath"] = tonBinDir + "global.config.json"
 	local.buffer["vconfigPath"] = tonDbDir + "config.json"
 #end define
 
@@ -159,6 +161,7 @@ def FirstNodeSettings():
 	vuser = local.buffer["vuser"]
 	tonWorkDir = local.buffer["tonWorkDir"]
 	tonDbDir = local.buffer["tonDbDir"]
+	keysDir = local.buffer["keysDir"]
 	tonLogPath = local.buffer["tonLogPath"]
 	validatorAppPath = local.buffer["validatorAppPath"]
 	globalConfigPath = local.buffer["globalConfigPath"]
@@ -182,9 +185,11 @@ def FirstNodeSettings():
 
 	# Подготовить папки валидатора
 	os.makedirs(tonDbDir, exist_ok=True)
+	os.makedirs(keysDir, exist_ok=True)
 	
 	# Прописать автозагрузку
-	cmd = "{validatorAppPath} --daemonize --global-config {globalConfigPath} --db {tonDbDir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
+	cpus = psutil.cpu_count() - 1
+	cmd = "{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {tonDbDir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
 	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath)
 	Add2Systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
@@ -196,7 +201,7 @@ def FirstNodeSettings():
 	
 	# Первый запуск
 	local.AddLog("First start validator - create config.json", "debug")
-	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", tonDbDir, "--ip", addr, "--logname", tonLogPath, "--sync-before", "3600000"]
+	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", tonDbDir, "--ip", addr, "--logname", tonLogPath]
 	subprocess.run(args)
 
 	# chown 1
@@ -260,7 +265,7 @@ def FirstMytoncoreSettings():
 	# lite-client
 	liteClient = dict()
 	liteClient["appPath"] = tonBinDir + "lite-client/lite-client"
-	liteClient["configPath"] = tonBinDir + "lite-client/ton-lite-client-test1.config.json"
+	liteClient["configPath"] = tonBinDir + "global.config.json"
 	mconfig["liteClient"] = liteClient
 
 	# miner
@@ -298,10 +303,11 @@ def EnableValidatorConsole():
 	tonBinDir = local.buffer["tonBinDir"]
 	vconfigPath = local.buffer["vconfigPath"]
 	generate_random_id = tonBinDir + "utils/generate-random-id"
-	server_key = tonBinDir + "validator-engine-console/server"
-	server_pubkey = server_key + ".pub"
-	client_key = tonBinDir + "validator-engine-console/client"
+	keysDir = local.buffer["keysDir"]
+	client_key = keysDir + "client"
+	server_key = keysDir + "server"
 	client_pubkey = client_key + ".pub"
+	server_pubkey = server_key + ".pub"
 
 	# Check if key exist
 	if os.path.isfile(server_key) or os.path.isfile(client_key):
@@ -364,8 +370,8 @@ def EnableValidatorConsole():
 	# edit mytoncore config file
 	validatorConsole = dict()
 	validatorConsole["appPath"] = tonBinDir + "validator-engine-console/validator-engine-console"
-	validatorConsole["privKeyPath"] = tonBinDir + "validator-engine-console/client"
-	validatorConsole["pubKeyPath"] = tonBinDir + "validator-engine-console/server.pub"
+	validatorConsole["privKeyPath"] = client_key
+	validatorConsole["pubKeyPath"] = server_pubkey
 	validatorConsole["addr"] = "127.0.0.1:{cport}".format(cport=cport)
 	mconfig["validatorConsole"] = validatorConsole
 
@@ -390,10 +396,11 @@ def EnableLiteServer():
 	lport = local.buffer["lport"]
 	srcDir = local.buffer["srcDir"]
 	tonDbDir = local.buffer["tonDbDir"]
+	keysDir = local.buffer["keysDir"]
 	tonBinDir = local.buffer["tonBinDir"]
 	vconfigPath = local.buffer["vconfigPath"]
 	generate_random_id = tonBinDir + "utils/generate-random-id"
-	liteserver_key = tonBinDir + "validator-engine-console/liteserver"
+	liteserver_key = keysDir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
 	# Check if key exist
@@ -529,7 +536,7 @@ def CreateSymlinks():
 	file.write("/usr/bin/ton/crypto/fift $@")
 	file.close()
 	file = open(liteclient_file, 'wt')
-	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/lite-client/ton-lite-client-test1.config.json $@")
+	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/global.config.json $@")
 	file.close()
 	if cport:
 		file = open(validator_console_file, 'wt')

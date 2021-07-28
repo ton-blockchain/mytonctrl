@@ -15,9 +15,6 @@ cd /usr/src/mytonctrl
 git pull --recurse-submodules
 systemctl restart mytoncore
 
-# Скачать свежий конфиг
-wget https://newton-blockchain.github.io/global.config.json -O /usr/bin/ton/lite-client/ton-lite-client-test1.config.json
-
 # Конец
 echo -e "${COLOR}[1/1]${ENDC} MyTonCtrl components update completed"
 exit 0
