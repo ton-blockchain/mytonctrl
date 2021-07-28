@@ -112,7 +112,7 @@ if [ ${cpuNumber} == 0 ]; then
 	cpuNumber=1
 fi
 echo "use ${cpuNumber} cpus"
-make -j ${cpuNumber} validator-engine lite-client pow-miner validator-engine-console
+make -j ${cpuNumber} validator-engine lite-client pow-miner validator-engine-console generate-random-id
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
