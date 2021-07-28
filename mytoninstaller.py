@@ -71,9 +71,10 @@ def Status(args):
 	mconfigPath = local.buffer["mconfigPath"]
 
 	tonBinDir = local.buffer["tonBinDir"]
-	server_key = tonBinDir + "validator-engine-console/server"
-	client_key = tonBinDir + "validator-engine-console/client"
-	liteserver_key = tonBinDir + "validator-engine-console/liteserver"
+	keysDir = local.buffer["keysDir"]
+	server_key = keysDir + "server"
+	client_key = keysDir + "client"
+	liteserver_key = keysDir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
 
@@ -96,8 +97,11 @@ def Enable(args):
 #end define
 
 def PrintLiteServerConfig(args):
+	keysDir = local.buffer["keysDir"]
+	liteserver_key = keysDir + "liteserver"
+	liteserver_pubkey = liteserver_key + ".pub"
 	result = dict()
-	file = open("/usr/bin/ton/validator-engine-console/liteserver.pub", 'rb')
+	file = open(liteserver_pubkey, 'rb')
 	data = file.read()
 	file.close()
 	key = base64.b64encode(data[4:])
@@ -146,6 +150,7 @@ def General():
 			EnableValidatorConsole()
 			EnableLiteServer()
 			BackupVconfig()
+			BackupMconfig()
 		#end if
 
 		# Создать символические ссылки
@@ -517,6 +522,14 @@ def BackupVconfig():
 	vconfigPath = local.buffer["vconfigPath"]
 	backupPath = vconfigPath + ".backup"
 	args = ["cp", vconfigPath, backupPath]
+	subprocess.run(args)
+#end define
+
+def BackupMconfig():
+	local.AddLog("Backup mytoncore config file 'mytoncore.db' to 'mytoncore.db.backup'", "debug")
+	mconfigPath = local.buffer["mconfigPath"]
+	backupPath = mconfigPath + ".backup"
+	args = ["cp", mconfigPath, backupPath]
 	subprocess.run(args)
 #end define
 
