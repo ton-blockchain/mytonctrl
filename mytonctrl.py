@@ -122,8 +122,8 @@ def Update(args):
 #end define
 
 def Upgrade(args):
-	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"])
-	exitCode += RunAsRoot(["python3", "/usr/src/mytonctrl/scripts/upgrade.py"])
+	exitCode = RunAsRoot(["python3", "/usr/src/mytonctrl/scripts/upgrade.py"])
+	exitCode += RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"])
 
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"

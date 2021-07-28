@@ -28,5 +28,5 @@ file = open("/etc/systemd/system/validator.service", 'wt')
 file.write(text)
 file.close()
 
-
-
+args = ["systemctl", "daemon-reload"]
+subprocess.run(args)
