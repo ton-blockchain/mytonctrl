@@ -31,7 +31,7 @@ systemctl stop validator && sleep 5
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000"
 cmake -DCMAKE_BUILD_TYPE=Release /usr/src/ton
-make -j ${cpuNumber} validator-engine lite-client pow-miner validator-engine-console generate-random-id
+make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id
 rm -f global.config.json
 wget https://newton-blockchain.github.io/global.config.json
 # cd /usr/bin/ton/lite-client
