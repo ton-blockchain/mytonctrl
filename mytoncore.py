@@ -2514,8 +2514,43 @@ class MyTonCore():
 		cpus = psutil.cpu_count()
 		numThreads = "-w{cpus}".format(cpus=cpus)
 		params = self.GetPowParams('kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN')
-		args = ["-vv", numThreads, "-t3", 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', params["seed"], params["complexity"], params["iterations"], 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', filePath]
+		args = ["-vv", numThreads, "-t10", 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', params["seed"], params["complexity"], params["iterations"], 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', filePath]
 		result = self.miner.Run(args)
+		return result
+	#end define
+
+	def EstimateMiningIncome(self):
+		local.AddLog("fetching 24h mining statistics", "debug")
+		try:
+			response = requests.get("https://ton.swisscops.com/statistics/statistics_1day.json")
+		except requests.exceptions.RequestException as e:
+			raise Exeption("error while fetching statistics: {}".format(e))
+
+		if response.ok:
+			statistics = response.json()
+
+		hashrate = re.match(r'.+speed: (.+) hps.+', self.GetHashrate(), re.MULTILINE | re.DOTALL)
+		if hashrate:
+			hashrate = round(float(hashrate[1]))
+
+		income = statistics["coins_per_hash"] * hashrate
+		earning = statistics["coins_per_hash"] * hashrate
+		if earning > 100:
+			chance = 100
+		else:
+			chance = round(earning)
+
+		result ="Mining income estimtations\n"
+		result+="-----------------------------------------------------------------\n"
+		result+="Total network 24h earnings:\t\t\t" + str(statistics["bleed_total"]) + " TON\n"
+		result+="Average network 24h hashrate:\t\t" + str(round(statistics["hashrate_average"])) + " HPS\n"
+		result+="Your machine hashrate:\t\t\t\t" + str(round(hashrate)) + " HPS\n"
+		result+="Est. 24h chance to mine a block:\t" + str(chance) + "%\n"
+		result+="Est. monthly income:\t\t\t\t" + str(round(earning,2) * 30) + " TON\n\n"
+		result+="Attention: Please note that above numbers are estimates!\n"
+		result+="Actual mining income depends on many factors such as \n"
+		result+="network hashrate increase, chosen giver as well as good portion of luck!"
+
 		return result
 	#end define
 

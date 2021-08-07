@@ -131,6 +131,10 @@
 		"en": "Get mining hashrate",
 		"ru": "Получить хешрейт сервера"
 	},
+	"emi_cmd": {
+		"en": "Estimate mining income",
+		"ru": "Оценить добычу от майнинга"
+	},
 	"mo_cmd": {
 		"en": "Enable mining",
 		"ru": "Включить майнинг"
