@@ -2533,7 +2533,6 @@ class MyTonCore():
 		if hashrate:
 			hashrate = round(float(hashrate[1]))
 
-		income = statistics["coins_per_hash"] * hashrate
 		earning = statistics["coins_per_hash"] * hashrate
 		if earning > 100:
 			chance = 100
