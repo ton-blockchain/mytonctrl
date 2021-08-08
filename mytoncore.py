@@ -2534,6 +2534,8 @@ class MyTonCore():
 		hashrate = re.match(r'.+speed: (.+) hps.+', self.GetHashrate(), re.MULTILINE | re.DOTALL)
 		if hashrate:
 			hashrate = round(float(hashrate[1]))
+		else:
+			raise Exception("error determining machine hashrate")
 
 		earning = statistics["coins_per_hash"] * hashrate
 		chance = earning * 0.75  # Lower expectations to account for success spread
