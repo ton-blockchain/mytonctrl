@@ -2540,7 +2540,7 @@ class MyTonCore():
 		else:
 			chance = round(earning)
 
-		result ="Mining income estimtations\n"
+		result ="Mining income estimations\n"
 		result+="-----------------------------------------------------------------\n"
 		result+="Total network 24h earnings:\t\t\t" + str(statistics["bleed_total"]) + " TON\n"
 		result+="Average network 24h hashrate:\t\t" + str(round(statistics["hashrate_average"])) + " HPS\n"
