@@ -2549,7 +2549,9 @@ class MyTonCore():
 		result+="Est. monthly income:\t\t\t\t" + str(round(earning,2) * 30) + " TON\n\n"
 		result+="Attention: Please note that above numbers are estimates!\n"
 		result+="Actual mining income depends on many factors such as \n"
-		result+="network hashrate increase, chosen giver as well as good portion of luck!"
+		result+="network hashrate increase, chosen giver as well as good portion of luck!\n"
+		result+="Visit https://ton.org/docs/#/howto/mining?id=hardware-estimates for more info"
+
 
 		return result
 	#end define
