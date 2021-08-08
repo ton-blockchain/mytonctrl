@@ -2524,10 +2524,12 @@ class MyTonCore():
 		try:
 			response = requests.get("https://ton.swisscops.com/statistics/statistics_1day.json")
 		except requests.exceptions.RequestException as e:
-			raise Exeption("error while fetching statistics: {}".format(e))
+			raise Exception("error while fetching statistics: {}".format(e))
 
 		if response.ok:
 			statistics = response.json()
+		else:
+			raise Exception("error while fetching statistics.")
 
 		hashrate = re.match(r'.+speed: (.+) hps.+', self.GetHashrate(), re.MULTILINE | re.DOTALL)
 		if hashrate:
