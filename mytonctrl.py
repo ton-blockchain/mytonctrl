@@ -68,6 +68,7 @@ def Init(argv):
 	# console.AddItem("pt", PrintTest, "PrintTest")
 
 	console.AddItem("hr", GetHashrate, local.Translate("hr_cmd"))
+	console.AddItem("emi", EstimateMiningIncome, local.Translate("emi_cmd"))
 	console.AddItem("mon", EnableMining, local.Translate("mo_cmd"))
 	console.AddItem("moff", DisableMining, local.Translate("moff_cmd"))
 
@@ -877,6 +878,11 @@ def GetHashrate(args):
 	result = ton.GetHashrate()
 	ColorPrint("Current Hashrate: ")
 	ColorPrint(result)
+#end define
+
+def EstimateMiningIncome(args):
+	ColorPrint("The data may be incorrect if mining is enabled during the test. Turn off mining before checking hashrate.")
+	ColorPrint(ton.EstimateMiningIncome())
 #end define
 
 def EnableMining(args):
