@@ -2540,7 +2540,7 @@ class MyTonCore():
 		earning = statistics["coins_per_hash"] * hashrate
 		chance = round((hashrate / statistics["hashrate_average"]) * 86400)
 		if chance > 99:
-			chance = 99
+			chance = 99 # Because life is a bitch
 
 		result ="Mining income estimations\n"
 		result+="-----------------------------------------------------------------\n"
