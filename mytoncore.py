@@ -2538,19 +2538,17 @@ class MyTonCore():
 			raise Exception("error determining machine hashrate")
 
 		earning = statistics["coins_per_hash"] * hashrate
-		chance = earning * 0.75  # Lower expectations to account for success spread
-		if chance > 100:
-			chance = 100
-		else:
-			chance = round(earning)
+		chance = round((hashrate / statistics["hashrate_average"]) * 86400)
+		if chance > 99:
+			chance = 99 # Because life is a bitch
 
 		result ="Mining income estimations\n"
 		result+="-----------------------------------------------------------------\n"
-		result+="Total network 24h earnings:\t\t\t" + str(statistics["bleed_total"]) + " TON\n"
-		result+="Average network 24h hashrate:\t\t" + str(round(statistics["hashrate_average"])) + " HPS\n"
-		result+="Your machine hashrate:\t\t\t\t" + str(round(hashrate)) + " HPS\n"
-		result+="Est. 24h chance to mine a block:\t" + str(chance) + "%\n"
-		result+="Est. monthly income:\t\t\t\t" + str(round(earning,2) * 30) + " TON\n\n"
+		result+="Total network 24h earnings:      " + str(statistics["bleed_total"]) + " TON\n"
+		result+="Average network 24h hashrate:    " + str(round(statistics["hashrate_average"])) + " HPS\n"
+		result+="Your machine hashrate:           " + str(round(hashrate)) + " HPS\n"
+		result+="Est. 24h chance to mine a block: " + str(chance) + "%\n"
+		result+="Est. monthly income:             " + str(round(earning,2) * 30) + " TON\n\n"
 		result+="Attention: Please note that above numbers are estimates!\n"
 		result+="Actual mining income depends on many factors such as \n"
 		result+="network hashrate increase, chosen giver as well as good portion of luck!\n"
