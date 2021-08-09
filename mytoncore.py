@@ -2538,11 +2538,9 @@ class MyTonCore():
 			raise Exception("error determining machine hashrate")
 
 		earning = statistics["coins_per_hash"] * hashrate
-		chance = earning * 0.75  # Lower expectations to account for success spread
-		if chance > 100:
-			chance = 100
-		else:
-			chance = round(earning)
+		chance = round((hashrate / statistics["hashrate_average"]) * 86400)
+		if chance > 99:
+			chance = 99
 
 		result ="Mining income estimations\n"
 		result+="-----------------------------------------------------------------\n"
