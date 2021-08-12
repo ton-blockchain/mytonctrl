@@ -86,10 +86,9 @@ mytonctrl
 ```
 
 ## Useful links
-1. https://ton.org/README.txt
-2. https://ton.org/HOWTO.txt
-3. https://ton.org/FullNode-HOWTO.txt
-4. https://ton.org/Validator-HOWTO.txt
-5. https://ton.org/TonSites-HOWTO.txt
-6. https://ton.org/DNS-HOWTO.txt
-7. https://ton.org/ConfigParam-HOWTO.txt
+1. https://ton.org/docs/#/howto/
+2. https://test.ton.org/FullNode-HOWTO.txt
+3. https://test.ton.org/Validator-HOWTO.txt
+4. https://test.ton.org/TonSites-HOWTO.txt
+5. https://test.ton.org/DNS-HOWTO.txt
+6. https://test.ton.org/ConfigParam-HOWTO.txt
