@@ -1,10 +1,12 @@
+import os
 from configparser import ConfigParser
 
-CONFIGS_DIR = './configs'
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+CONFIGS_DIR = f'{BASE_DIR}/configs'
 
 class MTCConfig:
-	MINING_SECTION_KEY = 'mining'
 	MTC_CONFIG = f'{CONFIGS_DIR}/mytoncore.ini'
+	MINING_SECTION_KEY = 'mining'
 
 	def __init__(self):
 		self.config = Config(self.MTC_CONFIG)
