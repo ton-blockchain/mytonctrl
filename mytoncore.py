@@ -9,8 +9,13 @@ import re
 import time
 import math
 from mypylib.mypylib import *
+from configparser import ConfigParser
 
 local = MyPyClass(__file__)
+
+CONFIGS_DIR = './configs'
+MYTONCORE_CONFIG = f'{CONFIGS_DIR}/mytoncore.ini'
+MINING_SECTION_KEY = 'mining'
 
 class LiteClient:
 	def __init__(self):
@@ -178,6 +183,9 @@ class MyTonCore():
 		self.tempDir = None
 		self.validatorWalletName = None
 		self.nodeName = None
+
+		self.config = ConfigParser()
+		self.config.read(MYTONCORE_CONFIG)
 
 		self.liteClient = LiteClient()
 		self.validatorConsole = ValidatorConsole()
@@ -2513,6 +2521,13 @@ class MyTonCore():
 	def GetHashrate(self):
 		filePath = self.tempDir + "mined.boc"
 		cpus = psutil.cpu_count()
+
+		# Override if value presented in config
+		threads_config_key = 'threads'
+		if self.config and MINING_SECTION_KEY in self.config and threads_config_key in self.config[MINING_SECTION_KEY]:
+			cpus = self.config.getint(MINING_SECTION_KEY, threads_config_key)
+		#
+
 		numThreads = "-w{cpus}".format(cpus=cpus)
 		params = self.GetPowParams('kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN')
 		args = ["-vv", numThreads, "-t10", 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', params["seed"], params["complexity"], params["iterations"], 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', filePath]

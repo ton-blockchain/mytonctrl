@@ -72,7 +72,7 @@ else
 fi
 
 # Установка компонентов python3
-pip3 install psutil crc16 requests
+pip3 install psutil crc16 requests configparser
 
 # Клонирование репозиториев с github.com
 echo -e "${COLOR}[2/6]${ENDC} Cloning github repository"

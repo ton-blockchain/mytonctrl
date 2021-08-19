@@ -2,3 +2,6 @@
 .idea/
 __pycache__/
 test.py
+configs/*
+!configs/.keep
+!configs/mytoncore.ini.sample
