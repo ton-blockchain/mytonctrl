@@ -7,6 +7,7 @@ import random
 import requests
 import re
 import time
+import math
 from mypylib.mypylib import *
 
 local = MyPyClass(__file__)
@@ -2538,16 +2539,15 @@ class MyTonCore():
 			raise Exception("error determining machine hashrate")
 
 		earning = statistics["coins_per_hash"] * hashrate
-		chance = round((hashrate / statistics["hashrate_average"]) * 86400)
-		if chance > 99:
-			chance = 99 # Because life is a bitch
+		chance = (1 - math.exp(-earning / 100.0)) * 100
+		displayChance = lambda chance: ">99.9" if chance > 99.9 else str(round(chance, 1))
 
 		result ="Mining income estimations\n"
 		result+="-----------------------------------------------------------------\n"
 		result+="Total network 24h earnings:      " + str(statistics["bleed_total"]) + " TON\n"
 		result+="Average network 24h hashrate:    " + str(round(statistics["hashrate_average"])) + " HPS\n"
 		result+="Your machine hashrate:           " + str(round(hashrate)) + " HPS\n"
-		result+="Est. 24h chance to mine a block: " + str(chance) + "%\n"
+		result+="Est. 24h chance to mine a block: " + displayChance(chance) + "%\n"
 		result+="Est. monthly income:             " + str(round(earning,2) * 30) + " TON\n\n"
 		result+="Attention: Please note that above numbers are estimates!\n"
 		result+="Actual mining income depends on many factors such as \n"
