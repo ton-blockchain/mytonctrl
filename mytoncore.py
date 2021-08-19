@@ -8,14 +8,11 @@ import requests
 import re
 import time
 import math
+import configs
 from mypylib.mypylib import *
-from configparser import ConfigParser
+
 
 local = MyPyClass(__file__)
-
-CONFIGS_DIR = './configs'
-MYTONCORE_CONFIG = f'{CONFIGS_DIR}/mytoncore.ini'
-MINING_SECTION_KEY = 'mining'
 
 class LiteClient:
 	def __init__(self):
@@ -183,10 +180,7 @@ class MyTonCore():
 		self.tempDir = None
 		self.validatorWalletName = None
 		self.nodeName = None
-
-		self.config = ConfigParser()
-		self.config.read(MYTONCORE_CONFIG)
-
+		self.config = configs.MTCConfig()
 		self.liteClient = LiteClient()
 		self.validatorConsole = ValidatorConsole()
 		self.fift = Fift()
@@ -2523,10 +2517,8 @@ class MyTonCore():
 		cpus = psutil.cpu_count()
 
 		# Override if value presented in config
-		threads_config_key = 'threads'
-		if self.config and MINING_SECTION_KEY in self.config and threads_config_key in self.config[MINING_SECTION_KEY]:
-			cpus = self.config.getint(MINING_SECTION_KEY, threads_config_key)
-		#
+		if self.config.mining:
+			cpus = self.config.mining_threads
 
 		numThreads = "-w{cpus}".format(cpus=cpus)
 		params = self.GetPowParams('kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN')
@@ -2869,6 +2861,7 @@ def Telemetry(ton):
 #end define
 
 def Mining(ton):
+	config = configs.MTCConfig()
 	powAddr = local.db.get("powAddr")
 	minerAddr = local.db.get("minerAddr")
 	miningTime = local.db.get("miningTime", 100)
@@ -2899,6 +2892,8 @@ def Mining(ton):
 	local.AddLog(powAddr, "debug")
 	filePath = ton.tempDir + "mined.boc"
 	cpus = psutil.cpu_count()-1
+	if config.mining:
+		cpus = config.mining_threads
 	params = ton.GetPowParams(powAddr)
 	args = ["-vv", "-w", cpus, "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
 	result = ton.miner.Run(args)
