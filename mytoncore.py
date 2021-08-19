@@ -2869,7 +2869,7 @@ def Mining(ton):
 				bestComplexity = params["complexity"]
 				bestPow = giver
 			#end if
-			if params["complexity"] < bestComplexity:
+			if params["complexity"] > bestComplexity:
 				bestPow = giver
 				bestComplexity = params["complexity"]
 			#end if
