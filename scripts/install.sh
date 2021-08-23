@@ -10,12 +10,14 @@ fi
 # Get arguments
 config="https://newton-blockchain.github.io/global.config.json"
 telemetry=true
-while getopts m:c:n flag
+ignore=false
+while getopts m:c:ni flag
 do
 	case "${flag}" in
 		m) mode=${OPTARG};;
 		c) config=${OPTARG};;
 		n) telemetry=false;;
+		i) ignore=true;;
 	esac
 done
 
@@ -29,11 +31,11 @@ fi
 # Проверка мощностей
 cpus=$(lscpu | grep "CPU(s)" | head -n 1 | awk '{print $2}')
 memory=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
-if [ "${mode}" = "lite" ] && ([ "${cpus}" -lt 2 ] || [ "${memory}" -lt 2000000 ]); then
+if [ "${mode}" = "lite" ] && [ "$ignore" = true ] && ([ "${cpus}" -lt 2 ] || [ "${memory}" -lt 2000000 ]); then
 	echo "Insufficient resources. Requires a minimum of 2 processors and 2Gb RAM."
 	exit 1
 fi
-if [ "${mode}" = "full" ] && ([ "${cpus}" -lt 8 ] || [ "${memory}" -lt 8000000 ]); then
+if [ "${mode}" = "full" ] && [ "$ignore" = true ] && ([ "${cpus}" -lt 8 ] || [ "${memory}" -lt 8000000 ]); then
 	echo "Insufficient resources. Requires a minimum of 8 processors and 8Gb RAM."
 	exit 1
 fi
