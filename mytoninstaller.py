@@ -31,6 +31,8 @@ def Init():
 	console.color = console.RED
 	console.AddItem("status", Status, "Print TON component status")
 	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver. Example: 'enable FN'")
+	console.AddItem("plsc", PrintLiteServerConfig, "Print LiteServer config")
+	console.AddItem("drvcf", DRVCF, "Dangerous recovery validator config file")
 
 	Refresh()
 #end define
@@ -54,10 +56,12 @@ def Refresh():
 	local.buffer["tonBinDir"] = tonBinDir
 	local.buffer["tonSrcDir"] = tonSrcDir
 	tonDbDir = tonWorkDir + "db/"
+	keysDir = tonWorkDir + "keys/"
 	local.buffer["tonDbDir"] = tonDbDir
+	local.buffer["keysDir"] = keysDir
 	local.buffer["tonLogPath"] = tonWorkDir + "log"
 	local.buffer["validatorAppPath"] = tonBinDir + "validator-engine/validator-engine"
-	local.buffer["globalConfigPath"] = tonBinDir + "validator-engine/ton-global.config.json"
+	local.buffer["globalConfigPath"] = tonBinDir + "global.config.json"
 	local.buffer["vconfigPath"] = tonDbDir + "config.json"
 #end define
 
@@ -68,9 +72,10 @@ def Status(args):
 	mconfigPath = local.buffer["mconfigPath"]
 
 	tonBinDir = local.buffer["tonBinDir"]
-	server_key = tonBinDir + "validator-engine-console/server"
-	client_key = tonBinDir + "validator-engine-console/client"
-	liteserver_key = tonBinDir + "validator-engine-console/liteserver"
+	keysDir = local.buffer["keysDir"]
+	server_key = keysDir + "server"
+	client_key = keysDir + "client"
+	liteserver_key = keysDir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
 
@@ -92,6 +97,35 @@ def Enable(args):
 	RunAsRoot(args)
 #end define
 
+def DRVCF(args):
+	user = local.buffer["user"]
+	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "drvcf"]
+	RunAsRoot(args)
+#end define
+
+def PrintLiteServerConfig(args):
+	keysDir = local.buffer["keysDir"]
+	liteserver_key = keysDir + "liteserver"
+	liteserver_pubkey = liteserver_key + ".pub"
+	result = dict()
+	file = open(liteserver_pubkey, 'rb')
+	data = file.read()
+	file.close()
+	key = base64.b64encode(data[4:])
+	ip = requests.get("https://ifconfig.me").text
+	mconfigPath = local.buffer["mconfigPath"]
+	mconfig = GetConfig(path=mconfigPath)
+	liteClient = mconfig.get("liteClient")
+	liteServer = liteClient.get("liteServer")
+	result["ip"] = ip2int(ip)
+	result["port"] = liteServer.get("port")
+	result["id"] = dict()
+	result["id"]["@type"]= "pub.ed25519"
+	result["id"]["key"]= key.decode()
+	text = json.dumps(result, indent=4)
+	print(text)
+#end define
+
 def Event(name):
 	if name == "enableFN":
 		FirstNodeSettings()
@@ -99,6 +133,8 @@ def Event(name):
 		EnableValidatorConsole()
 	if name == "enableLS":
 		EnableLiteServer()
+	if name == "drvcf":
+		DangerousRecoveryValidatorConfigFile()
 #end define
 
 def General():
@@ -123,6 +159,7 @@ def General():
 			EnableValidatorConsole()
 			EnableLiteServer()
 			BackupVconfig()
+			BackupMconfig()
 		#end if
 
 		# Создать символические ссылки
@@ -138,6 +175,7 @@ def FirstNodeSettings():
 	vuser = local.buffer["vuser"]
 	tonWorkDir = local.buffer["tonWorkDir"]
 	tonDbDir = local.buffer["tonDbDir"]
+	keysDir = local.buffer["keysDir"]
 	tonLogPath = local.buffer["tonLogPath"]
 	validatorAppPath = local.buffer["validatorAppPath"]
 	globalConfigPath = local.buffer["globalConfigPath"]
@@ -161,22 +199,23 @@ def FirstNodeSettings():
 
 	# Подготовить папки валидатора
 	os.makedirs(tonDbDir, exist_ok=True)
-	
+	os.makedirs(keysDir, exist_ok=True)
+
 	# Прописать автозагрузку
-	cmd = "{validatorAppPath} --daemonize --global-config {globalConfigPath} --db {tonDbDir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
-	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath)
+	cpus = psutil.cpu_count() - 1
+	cmd = "{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {tonDbDir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
+	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath, cpus=cpus)
 	Add2Systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
-	response = requests.get("https://ifconfig.me")
-	ip = response.text
+	ip = requests.get("https://ifconfig.me").text
 	vport = random.randint(2000, 65000)
 	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
 	local.AddLog("Use addr: " + addr, "debug")
 	
 	# Первый запуск
 	local.AddLog("First start validator - create config.json", "debug")
-	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", tonDbDir, "--ip", addr, "--logname", tonLogPath, "--sync-before", "3600000"]
+	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", tonDbDir, "--ip", addr, "--logname", tonLogPath]
 	subprocess.run(args)
 
 	# chown 1
@@ -202,9 +241,10 @@ def FirstMytoncoreSettings():
 		local.AddLog("mytoncore.db already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
 	#end if
-	
+
 	#amazon bugfix
 	path = "/home/{user}/.local/".format(user=user)
+	os.makedirs(path + "share/", exist_ok=True)
 	owner = pwd.getpwuid(os.stat(path).st_uid).pw_name
 	if owner != user:
 		local.AddLog("User does not have permission to access his `.local` folder", "warning")
@@ -239,7 +279,7 @@ def FirstMytoncoreSettings():
 	# lite-client
 	liteClient = dict()
 	liteClient["appPath"] = tonBinDir + "lite-client/lite-client"
-	liteClient["configPath"] = tonBinDir + "lite-client/ton-lite-client-test1.config.json"
+	liteClient["configPath"] = tonBinDir + "global.config.json"
 	mconfig["liteClient"] = liteClient
 
 	# miner
@@ -277,10 +317,11 @@ def EnableValidatorConsole():
 	tonBinDir = local.buffer["tonBinDir"]
 	vconfigPath = local.buffer["vconfigPath"]
 	generate_random_id = tonBinDir + "utils/generate-random-id"
-	server_key = tonBinDir + "validator-engine-console/server"
-	server_pubkey = server_key + ".pub"
-	client_key = tonBinDir + "validator-engine-console/client"
+	keysDir = local.buffer["keysDir"]
+	client_key = keysDir + "client"
+	server_key = keysDir + "server"
 	client_pubkey = client_key + ".pub"
+	server_pubkey = server_key + ".pub"
 
 	# Check if key exist
 	if os.path.isfile(server_key) or os.path.isfile(client_key):
@@ -343,8 +384,8 @@ def EnableValidatorConsole():
 	# edit mytoncore config file
 	validatorConsole = dict()
 	validatorConsole["appPath"] = tonBinDir + "validator-engine-console/validator-engine-console"
-	validatorConsole["privKeyPath"] = tonBinDir + "validator-engine-console/client"
-	validatorConsole["pubKeyPath"] = tonBinDir + "validator-engine-console/server.pub"
+	validatorConsole["privKeyPath"] = client_key
+	validatorConsole["pubKeyPath"] = server_pubkey
 	validatorConsole["addr"] = "127.0.0.1:{cport}".format(cport=cport)
 	mconfig["validatorConsole"] = validatorConsole
 
@@ -369,10 +410,11 @@ def EnableLiteServer():
 	lport = local.buffer["lport"]
 	srcDir = local.buffer["srcDir"]
 	tonDbDir = local.buffer["tonDbDir"]
+	keysDir = local.buffer["keysDir"]
 	tonBinDir = local.buffer["tonBinDir"]
 	vconfigPath = local.buffer["vconfigPath"]
 	generate_random_id = tonBinDir + "utils/generate-random-id"
-	liteserver_key = tonBinDir + "validator-engine-console/liteserver"
+	liteserver_key = keysDir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
 	# Check if key exist
@@ -492,6 +534,206 @@ def BackupVconfig():
 	subprocess.run(args)
 #end define
 
+def BackupMconfig():
+	local.AddLog("Backup mytoncore config file 'mytoncore.db' to 'mytoncore.db.backup'", "debug")
+	mconfigPath = local.buffer["mconfigPath"]
+	backupPath = mconfigPath + ".backup"
+	args = ["cp", mconfigPath, backupPath]
+	subprocess.run(args)
+#end define
+
+def GetPortsFromVconfig():
+	vconfigPath = local.buffer["vconfigPath"]
+	
+	# read vconfig
+	local.AddLog("read vconfig", "debug")
+	vconfig = GetConfig(path=vconfigPath)
+	
+	# read mconfig
+	local.AddLog("read mconfig", "debug")
+	mconfigPath = local.buffer["mconfigPath"]
+	mconfig = GetConfig(path=mconfigPath)
+	
+	# edit mytoncore config file
+	local.AddLog("edit mytoncore config file", "debug")
+	mconfig["liteClient"]["liteServer"]["port"] = mconfig["liteservers"][0]["port"]
+	mconfig["validatorConsole"]["addr"] = "127.0.0.1:{}".format(mconfig["control"][0]["port"])
+	
+	# write mconfig
+	local.AddLog("write mconfig", "debug")
+	SetConfig(path=mconfigPath, data=mconfig)
+	
+	# restart mytoncore
+	StartMytoncore()
+#end define
+
+def DangerousRecoveryValidatorConfigFile():
+	local.AddLog("start DangerousRecoveryValidatorConfigFile function", "info")
+	
+	# install and import cryptography library
+	args = ["pip3", "install", "cryptography"]
+	subprocess.run(args)
+	from cryptography.hazmat.primitives import serialization
+	from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+	
+	# Get keys from keyring
+	keys = list()
+	keyringDir = "/var/ton-work/db/keyring/"
+	keyring = os.listdir(keyringDir)
+	for item in keyring:
+		b64String = hex2b64(item)
+		keys.append(b64String)
+	#end for
+	
+	# Create config object
+	vconfig = dict()
+	vconfig["@type"] = "engine.validator.config"
+	vconfig["out_port"] = 3278
+	
+	# Create addrs object
+	buffer = dict()
+	buffer["@type"] = "engine.addr"
+	buffer["ip"] = ip2int(requests.get("https://ifconfig.me").text)
+	buffer["port"] = None
+	buffer["categories"] = [0, 1, 2, 3]
+	buffer["priority_categories"] = []
+	vconfig["addrs"] = [buffer]
+	
+	# Get liteserver fragment
+	mconfigPath = local.buffer["mconfigPath"]
+	mconfig = GetConfig(path=mconfigPath)
+	lkey = mconfig["liteClient"]["liteServer"]["pubkeyPath"]
+	lport = mconfig["liteClient"]["liteServer"]["port"]
+	
+	# Read lite server pubkey
+	file = open(lkey, 'rb')
+	data = file.read()
+	file.close()
+	lsPubkey = data[4:]
+	
+	# Search lite server priv key
+	for item in keyring:
+		path = keyringDir + item
+		file = open(path, 'rb')
+		data = file.read()
+		file.close()
+		peivkey = data[4:]
+		privkeyObject = Ed25519PrivateKey.from_private_bytes(peivkey)
+		pubkeyObject = privkeyObject.public_key()
+		pubkey = pubkeyObject.public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+		if pubkey == lsPubkey:
+			lsId = hex2b64(item)
+			keys.remove(lsId)
+	#end for
+	
+	# Create LS object
+	buffer = dict()
+	buffer["@type"] = "engine.liteServer"
+	buffer["id"] = lsId
+	buffer["port"] = lport
+	vconfig["liteservers"] = [buffer]
+	
+	# Get validator-console fragment
+	ckey = mconfig["validatorConsole"]["pubKeyPath"]
+	addr = mconfig["validatorConsole"]["addr"]
+	buff = addr.split(':')
+	cport = buff[1]
+	
+	# Read validator-console pubkey
+	file = open(ckey, 'rb')
+	data = file.read()
+	file.close()
+	vPubkey = data[4:]
+
+	# Search validator-console priv key
+	for item in keyring:
+		path = keyringDir + item
+		file = open(path, 'rb')
+		data = file.read()
+		file.close()
+		peivkey = data[4:]
+		privkeyObject = Ed25519PrivateKey.from_private_bytes(peivkey)
+		pubkeyObject = privkeyObject.public_key()
+		pubkey = pubkeyObject.public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+		if pubkey == vPubkey:
+			vcId = hex2b64(item)
+			keys.remove(vcId)
+	#end for
+	
+	# Create VC object
+	buffer = dict()
+	buffer2 = dict()
+	buffer["@type"] = "engine.controlInterface"
+	buffer["id"] = vcId
+	buffer["port"] = lport
+	buffer2["@type"] = "engine.controlProcess"
+	buffer2["id"] = None
+	buffer2["permissions"] = 15
+	buffer["allowed"] = buffer2
+	vconfig["control"] = [buffer]
+	
+	
+	# Get dht fragment
+	files = os.listdir("/var/ton-work/db")
+	for item in files:
+		if item[:3] == "dht":
+			dhtS = item[4:]
+			dhtS = dhtS.replace('_', '/')
+			dhtS = dhtS.replace('-', '+')
+			break
+	#end for
+	
+	# Get ght from keys
+	for item in keys:
+		if dhtS in item:
+			dhtId = item
+			keys.remove(dhtId)
+	#end for
+	
+	# Create dht object
+	buffer = dict()
+	buffer["@type"] = "engine.dht"
+	buffer["id"] = dhtId
+	vconfig["dht"] = [buffer]
+	
+	# Create adnl object
+	adnl1 = dict()
+	adnl1["@type"] = "engine.adnl"
+	adnl1["id"] = None
+	adnl1["category"] = 1
+	
+	# Create adnl object
+	adnl2 = dict()
+	adnl2["@type"] = "engine.adnl"
+	adnl2["id"] = dhtId
+	adnl2["category"] = 0
+	
+	# Create adnl object
+	adnl3 = dict()
+	adnl3["@type"] = "engine.adnl"
+	adnl3["id"] = None
+	adnl3["category"] = 0
+	
+	vconfig["adnl"] = [adnl1, adnl2, adnl3]
+	
+	print("vconfig:", json.dumps(vconfig, indent=4))
+	print("keys:", keys)
+#end define
+
+def hex2b64(input):
+	hexBytes = bytes.fromhex(input)
+	b64Bytes = base64.b64encode(hexBytes)
+	b64String = b64Bytes.decode()
+	return b64String
+#end define
+
+def b642hex(input):
+	b64Bytes = input.encode()
+	hexBytes = base64.b64decode(b64Bytes)
+	hexString = hexBytes.hex()
+	return hexString
+#end define
+
 def CreateSymlinks():
 	local.AddLog("start CreateSymlinks fuction", "debug")
 	cport = local.buffer["cport"]
@@ -508,11 +750,11 @@ def CreateSymlinks():
 	file.write("/usr/bin/ton/crypto/fift $@")
 	file.close()
 	file = open(liteclient_file, 'wt')
-	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/lite-client/ton-lite-client-test1.config.json $@")
+	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/global.config.json $@")
 	file.close()
 	if cport:
 		file = open(validator_console_file, 'wt')
-		file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /usr/bin/ton/validator-engine-console/client -p /usr/bin/ton/validator-engine-console/server.pub -a 127.0.0.1:" + str(cport) + " $@")
+		file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /var/ton-work/keys/client -p /var/ton-work/keys/server.pub -a 127.0.0.1:" + str(cport) + " $@")
 		file.close()
 		args = ["chmod", "+x", validator_console_file]
 		subprocess.run(args)

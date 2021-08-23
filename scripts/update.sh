@@ -15,8 +15,13 @@ cd /usr/src/mytonctrl
 git pull --recurse-submodules
 systemctl restart mytoncore
 
-# Скачать свежий конфиг
-wget https://newton-blockchain.github.io/global.config.json -O /usr/bin/ton/lite-client/ton-lite-client-test1.config.json
+#fix me
+mkdir -p /var/ton-work/keys
+cp -p /usr/bin/ton/validator-engine-console/client /var/ton-work/keys/client
+cp -p /usr/bin/ton/validator-engine-console/client.pub /var/ton-work/keys/client.pub
+cp -p /usr/bin/ton/validator-engine-console/server.pub /var/ton-work/keys/server.pub
+cp -p /usr/bin/ton/validator-engine-console/liteserver.pub /var/ton-work/keys/liteserver.pub
+
 
 # Конец
 echo -e "${COLOR}[1/1]${ENDC} MyTonCtrl components update completed"
