@@ -52,12 +52,12 @@
 		"ru": "Показать историю аккаунта"
 	},
 	"mg_cmd": {
-		"en": "Move grams to account",
-		"ru": "Перевод средств на кошелек"
+		"en": "Move coins to account",
+		"ru": "Перевод монет на кошелек"
 	},
 	"mgtp_cmd": {
-		"en": "Move grams through proxy",
-		"ru": "Перевод средств через прокси"
+		"en": "Move coins through proxy",
+		"ru": "Перевод монет через прокси"
 	},
 	"nb_cmd": {
 		"en": "Create new bookmark",

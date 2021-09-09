@@ -30,7 +30,7 @@ def Init():
 	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.AddItem("status", Status, "Print TON component status")
-	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver. Example: 'enable FN'")
+	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server. Example: 'enable FN'")
 	console.AddItem("plsc", PrintLiteServerConfig, "Print LiteServer config")
 	console.AddItem("drvcf", DRVCF, "Dangerous recovery validator config file")
 
@@ -133,6 +133,8 @@ def Event(name):
 		EnableValidatorConsole()
 	if name == "enableLS":
 		EnableLiteServer()
+	if name == "enableDS":
+		EnableDhtServer()
 	if name == "drvcf":
 		DangerousRecoveryValidatorConfigFile()
 #end define
@@ -709,9 +711,11 @@ def DangerousRecoveryValidatorConfigFile():
 	adnl2["category"] = 0
 	
 	# Create adnl object
+	adnlId = hex2b64(mconfig["adnlAddr"])
+	keys.remove(adnlId)
 	adnl3 = dict()
 	adnl3["@type"] = "engine.adnl"
-	adnl3["id"] = None
+	adnl3["id"] = adnlId
 	adnl3["category"] = 0
 	
 	vconfig["adnl"] = [adnl1, adnl2, adnl3]
@@ -768,6 +772,55 @@ def CreateSymlinks():
 	if fiftpath not in text:
 		file.write(fiftpath + '\n')
 	file.close()
+#end define
+
+def EnableDhtServer():
+	local.AddLog("start EnableDhtServer function", "debug")
+	vuser = local.buffer["vuser"]
+	tonBinDir = local.buffer["tonBinDir"]
+	globalConfigPath = local.buffer["globalConfigPath"]
+	dht_server = tonBinDir + "dht-server/dht-server"
+	generate_random_id = tonBinDir + "utils/generate-random-id"
+	tonDhtServerDir = "/var/ton-dht-server/"
+	
+	# Проверить конфигурацию
+	if os.path.isfile("/var/ton-dht-server/config.json"):
+		local.AddLog("DHT-Server config.json already exist. Break EnableDhtServer fuction", "warning")
+		return
+	#end if
+	
+	# Подготовить папку
+	os.makedirs(tonDhtServerDir, exist_ok=True)
+	
+	# Прописать автозагрузку
+	cmd = "{dht_server} -C {globalConfigPath} -D {tonDhtServerDir}"
+	cmd = cmd.format(dht_server=dht_server, globalConfigPath=globalConfigPath, tonDhtServerDir=tonDhtServerDir)
+	Add2Systemd(name="validator", user=vuser, start=cmd)
+	
+	# Получить внешний ip адрес
+	ip = requests.get("https://ifconfig.me").text
+	port = random.randint(2000, 65000)
+	addr = "{ip}:{port}".format(ip=ip, port=port)
+	
+	# Первый запуск
+	args = [dht_server, "-C", globalConfigPath, "-D", tonDhtServerDir, "-I", addr]
+	subprocess.run(args)
+	
+	# Получить вывод конфига
+	ip = ip2int(ip)
+	text = '{"@type": "adnl.addressList", "addrs": [{"@type": "adnl.address.udp", "ip": ' + str(ip) + ', "port": ' + str(port) + '}], "version": 0, "reinit_date": 0, "priority": 0, "expire_at": 0}'
+	args = [generate_random_id, "-m", "dht", "-k", tonDhtServerDir + "keyring/*", "-a", text]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	output = process.stdout.decode("utf-8")
+	print("output:", output)
+	
+	# chown 1
+	args = ["chown", "-R", vuser + ':' + vuser, tonDhtServerDir]
+	subprocess.run(args)
+	
+	# start DHT-Server
+	args = ["systemctl", "restart", "dht-server"]
+	subprocess.run(args)
 #end define
 
 

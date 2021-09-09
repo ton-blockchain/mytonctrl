@@ -1299,10 +1299,14 @@ class MyTonCore():
 			return
 		#end if
 		
+		timestamp = GetTimestamp()
 		elections = self.GetElectionEntries()
 		vconfig = self.GetValidatorConfig()
 		data = vconfig.get("validators")
 		for item in data:
+			start = item.get("election_date")
+			if start < timestamp:
+				continue
 			key_b64 = item.get("id")
 			key_hex = base64.b64decode(key_b64).hex().upper()
 			pubkey_b64 = self.GetPubKeyBase64(key_hex)
@@ -1316,8 +1320,8 @@ class MyTonCore():
 			#end for
 			
 			if result == False:
-				self.validatorConsole.Run("delpermkey {key_hex}".format(key_hex=key_hex))
 				local.AddLog("delpermkey {key_hex}".format(key_hex=key_hex), "warning")
+				#self.validatorConsole.Run("delpermkey {key_hex}".format(key_hex=key_hex))
 		#end for
 	#end define
 
@@ -2482,7 +2486,7 @@ class MyTonCore():
 		return destination
 	#end define
 
-	def HexAddr2Base64Addr(self, fullAddr, bounceable=True, testnet=True):
+	def HexAddr2Base64Addr(self, fullAddr, bounceable=True, testnet=False):
 		buff = fullAddr.split(':')
 		workchain = int(buff[0])
 		addr_hex = buff[1]
@@ -3014,28 +3018,6 @@ def ScanLiteServers(ton):
 	local.db["liteServers"] = result
 #end define
 
-def EnsurePeriodParams():
-	default_periods = {
-			"elections": 600,
-			"statistics": 10,
-			"offers": 600,
-			"complaints": 600,
-			"slashing": 600,
-			"domains": 600,
-			"telemetry": 60,
-			"mining": 1,
-			"scanBlocks": 1,
-			"readBlocks": 0.3,
-			"scanLiteServers": 60
-		};
-	if "periods" not in local.db:
-		local.db["periods"] = default_periods
-	else:
-		for periodType in default_periods:
-			if not periodType in local.db["periods"]:
-				local.db["periods"][periodType] = default_periods[periodType]
-	local.dbSave()
-
 def General():
 	local.AddLog("start General function", "debug")
 	ton = MyTonCore()
@@ -3051,6 +3033,7 @@ def General():
 	local.StartCycle(Mining, sec=1, args=(ton, ))
 	local.StartCycle(ScanBlocks, sec=1, args=(ton,))
 	local.StartCycle(ReadBlocks, sec=0.3, args=(ton,))
+	local.StartCycle(ScanLiteServers, sec=60, args=(ton,))
 	Sleep()
 #end define
 

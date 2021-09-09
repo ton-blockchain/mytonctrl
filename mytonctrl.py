@@ -34,7 +34,7 @@ def Init():
 	console.AddItem("vas", ViewAccountStatus, local.Translate("vas_cmd"))
 	console.AddItem("vah", ViewAccountHistory, local.Translate("vah_cmd"))
 	console.AddItem("mg", MoveCoins, local.Translate("mg_cmd"))
-	console.AddItem("mgtp", MoveGramsThroughProxy, local.Translate("mgtp_cmd"))
+	console.AddItem("mgtp", MoveCoinsThroughProxy, local.Translate("mgtp_cmd"))
 
 	console.AddItem("nb", CreatNewBookmark, local.Translate("nb_cmd"))
 	console.AddItem("bl", PrintBookmarksList, local.Translate("bl_cmd"))
@@ -62,6 +62,8 @@ def Init():
 
 	console.AddItem("get", GetSettings, local.Translate("get_cmd"))
 	console.AddItem("set", SetSettings, local.Translate("set_cmd"))
+	console.AddItem("xrestart", Xrestart, local.Translate("xrestart_cmd"))
+	console.AddItem("xlist", Xlist, local.Translate("xlist_cmd"))
 
 	# console.AddItem("test", Test, "Test")
 	# console.AddItem("pt", PrintTest, "PrintTest")
@@ -553,7 +555,7 @@ def GetHistoryTable(addr, limit):
 	history = ton.GetAccountHistory(account, limit)
 	table = list()
 	typeText = ColorText("{red}{bold}{endc}")
-	table += [["Time", typeText, "Grams", "From/To"]]
+	table += [["Time", typeText, "Coins", "From/To"]]
 	for item in history:
 		time = item.get("time")
 		grams = item.get("value")
@@ -589,7 +591,7 @@ def MoveCoins(args):
 	ColorPrint("MoveCoins - {green}OK{endc}")
 #end define
 
-def MoveGramsThroughProxy(args):
+def MoveCoinsThroughProxy(args):
 	try:
 		walletName = args[0]
 		destination = args[1]
@@ -599,8 +601,8 @@ def MoveGramsThroughProxy(args):
 		return
 	wallet = ton.GetLocalWallet(walletName)
 	destination = ton.GetDestinationAddr(destination)
-	ton.MoveGramsThroughProxy(wallet, destination, gram)
-	ColorPrint("MoveGramsThroughProxy - {green}OK{endc}")
+	ton.MoveCoinsThroughProxy(wallet, destination, gram)
+	ColorPrint("MoveCoinsThroughProxy - {green}OK{endc}")
 #end define
 
 def CreatNewBookmark(args):
@@ -925,6 +927,24 @@ def SetSettings(args):
 		return
 	result = ton.SetSettings(name, value)
 	ColorPrint("SetSettings - {green}OK{endc}")
+#end define
+
+def Xrestart(inputArgs):
+	if len(inputArgs) < 2:
+		ColorPrint("{red}Bad args. Usage:{endc} xrestart <timestamp> <args>")
+		return
+	args = ["python3", "/usr/src/mytonctrl/scripts/xrestart.py"]
+	args += inputArgs
+	exitCode = RunAsRoot(args)
+	if exitCode == 0:
+		text = "Xrestart - {green}OK{endc}"
+	else:
+		text = "Xrestart - {red}Error{endc}"
+	ColorPrint(text)
+#end define
+
+def Xlist(args):
+	ColorPrint("Xlist - {green}OK{endc}")
 #end define
 
 def GetHashrate(args):
