@@ -782,6 +782,7 @@ def EnableDhtServer():
 	dht_server = tonBinDir + "dht-server/dht-server"
 	generate_random_id = tonBinDir + "utils/generate-random-id"
 	tonDhtServerDir = "/var/ton-dht-server/"
+	tonDhtKeyringDir = tonDhtServerDir + "keyring/"
 	
 	# Проверить конфигурацию
 	if os.path.isfile("/var/ton-dht-server/config.json"):
@@ -795,7 +796,7 @@ def EnableDhtServer():
 	# Прописать автозагрузку
 	cmd = "{dht_server} -C {globalConfigPath} -D {tonDhtServerDir}"
 	cmd = cmd.format(dht_server=dht_server, globalConfigPath=globalConfigPath, tonDhtServerDir=tonDhtServerDir)
-	Add2Systemd(name="validator", user=vuser, start=cmd)
+	Add2Systemd(name="dht-server", user=vuser, start=cmd)
 	
 	# Получить внешний ip адрес
 	ip = requests.get("https://ifconfig.me").text
@@ -804,15 +805,23 @@ def EnableDhtServer():
 	
 	# Первый запуск
 	args = [dht_server, "-C", globalConfigPath, "-D", tonDhtServerDir, "-I", addr]
-	subprocess.run(args)
+	subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 	
 	# Получить вывод конфига
+	key = os.listdir(tonDhtKeyringDir)[0]
 	ip = ip2int(ip)
 	text = '{"@type": "adnl.addressList", "addrs": [{"@type": "adnl.address.udp", "ip": ' + str(ip) + ', "port": ' + str(port) + '}], "version": 0, "reinit_date": 0, "priority": 0, "expire_at": 0}'
-	args = [generate_random_id, "-m", "dht", "-k", tonDhtServerDir + "keyring/*", "-a", text]
+	args = [generate_random_id, "-m", "dht", "-k", tonDhtKeyringDir + key, "-a", text]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
 	output = process.stdout.decode("utf-8")
-	print("output:", output)
+	err = process.stderr.decode("utf-8")
+	if len(err) > 0:
+		raise Exeption(err)
+	#end if
+	
+	data = json.loads(output)
+	text = json.dumps(data, indent=4)
+	print(text)
 	
 	# chown 1
 	args = ["chown", "-R", vuser + ':' + vuser, tonDhtServerDir]
@@ -822,6 +831,7 @@ def EnableDhtServer():
 	args = ["systemctl", "restart", "dht-server"]
 	subprocess.run(args)
 #end define
+	
 
 
 ###

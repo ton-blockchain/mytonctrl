@@ -122,7 +122,7 @@ if [ ${cpuNumber} == 0 ]; then
 	cpuNumber=1
 fi
 echo "use ${cpuNumber} cpus"
-make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id
+make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
