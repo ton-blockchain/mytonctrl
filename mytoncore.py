@@ -1290,6 +1290,11 @@ class MyTonCore():
 	#end define
 	
 	def CheckElectionEntry(self):
+		isCheckElectionEntry = local.db.get("isCheckElectionEntry")
+		if isCheckElectionEntry is not True:
+			return
+		#end if
+	
 		local.AddLog("start CheckElectionEntry function", "debug")
 		fullElectorAddr = self.GetFullElectorAddr()
 		startWorkTime = self.GetActiveElectionId(fullElectorAddr)
