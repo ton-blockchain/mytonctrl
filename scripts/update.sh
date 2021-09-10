@@ -17,10 +17,13 @@ systemctl restart mytoncore
 
 #fix me
 mkdir -p /var/ton-work/keys
-cp -p /usr/bin/ton/validator-engine-console/client /var/ton-work/keys/client
-cp -p /usr/bin/ton/validator-engine-console/client.pub /var/ton-work/keys/client.pub
-cp -p /usr/bin/ton/validator-engine-console/server.pub /var/ton-work/keys/server.pub
-cp -p /usr/bin/ton/validator-engine-console/liteserver.pub /var/ton-work/keys/liteserver.pub
+if [ -e /usr/bin/ton/validator-engine-console/client ]; then
+	cp -p /usr/bin/ton/validator-engine-console/client /var/ton-work/keys/client
+	cp -p /usr/bin/ton/validator-engine-console/client.pub /var/ton-work/keys/client.pub
+	cp -p /usr/bin/ton/validator-engine-console/server.pub /var/ton-work/keys/server.pub
+	cp -p /usr/bin/ton/validator-engine-console/liteserver.pub /var/ton-work/keys/liteserver.pub
+fi
+
 
 
 # Конец
