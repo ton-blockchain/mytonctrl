@@ -2543,8 +2543,9 @@ class MyTonCore():
 	#end define
 
 	def SetSettings(self, name, data):
-		if type(data) == str:
+		try:
 			data = json.loads(data)
+		except: pass
 		local.db[name] = data
 		local.dbSave()
 	#end define

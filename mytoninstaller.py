@@ -30,9 +30,10 @@ def Init():
 	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.AddItem("status", Status, "Print TON component status")
-	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server. Example: 'enable FN'")
+	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc. Example: 'enable FN'")
 	console.AddItem("plsc", PrintLiteServerConfig, "Print LiteServer config")
 	console.AddItem("drvcf", DRVCF, "Dangerous recovery validator config file")
+	console.AddItem("setwebpass", SetWebPassword, "Set a password for the web admin interface")
 
 	Refresh()
 #end define
@@ -137,6 +138,8 @@ def Event(name):
 		EnableDhtServer()
 	if name == "drvcf":
 		DangerousRecoveryValidatorConfigFile()
+	if name == "enableJR":
+		EnableJsonRpc()
 #end define
 
 def General():
@@ -831,7 +834,23 @@ def EnableDhtServer():
 	args = ["systemctl", "restart", "dht-server"]
 	subprocess.run(args)
 #end define
-	
+
+def SetWebPassword(args):
+	args = ["python3", "/usr/src/mtc-jsonrpc/mtc-jsonrpc.py", "-p"]
+	subprocess.run(args)
+#end define
+
+def EnableJsonRpc():
+	local.AddLog("start EnableJsonRpc function", "debug")
+	user = os.getlogin()
+	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/jsonrpcinstaller.sh", "-u", user])
+	if exitCode == 0:
+		text = "EnableJsonRpc - {green}OK{endc}"
+	else:
+		text = "EnableJsonRpc - {red}Error{endc}"
+	ColorPrint(text)
+#end define
+
 
 
 ###
