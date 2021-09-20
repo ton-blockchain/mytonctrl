@@ -248,13 +248,16 @@ def FirstMytoncoreSettings():
 	#end if
 
 	#amazon bugfix
-	path = "/home/{user}/.local/".format(user=user)
-	os.makedirs(path + "share/", exist_ok=True)
-	owner = pwd.getpwuid(os.stat(path).st_uid).pw_name
-	if owner != user:
-		local.AddLog("User does not have permission to access his `.local` folder", "warning")
-		chownOwner = "{user}:{user}".format(user=user)
-		args = ["chown", "-R", chownOwner, path]
+	path1 = "/home/{user}/.local/".format(user=user)
+	path2 = path1 + "share/"
+	chownOwner = "{user}:{user}".format(user=user)
+	if os.path.isfile(path1):
+		os.makedirs(path1)
+		args = ["chown", chownOwner, path1]
+		subprocess.run(args)
+	if os.path.isfile(path2):
+		os.makedirs(path2)
+		args = ["chown", chownOwner, path2]
 		subprocess.run(args)
 	#end if
 
