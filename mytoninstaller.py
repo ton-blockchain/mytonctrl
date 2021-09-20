@@ -251,15 +251,10 @@ def FirstMytoncoreSettings():
 	path1 = "/home/{user}/.local/".format(user=user)
 	path2 = path1 + "share/"
 	chownOwner = "{user}:{user}".format(user=user)
-	if os.path.isfile(path1):
-		os.makedirs(path1)
-		args = ["chown", chownOwner, path1]
-		subprocess.run(args)
-	if os.path.isfile(path2):
-		os.makedirs(path2)
-		args = ["chown", chownOwner, path2]
-		subprocess.run(args)
-	#end if
+	os.makedirs(path1, exist_ok=True)
+	os.makedirs(path2, exist_ok=True)
+	args = ["chown", chownOwner, path1, path2]
+	subprocess.run(args)
 
 	# Подготовить папку mytoncore
 	mconfigPath = local.buffer["mconfigPath"]
