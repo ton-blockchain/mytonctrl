@@ -13,6 +13,7 @@ ENDC='\033[0m'
 # Остановка служб
 systemctl stop validator
 systemctl stop mytoncore
+systemctl stop dht-server
 
 # Переменные
 str=$(systemctl cat mytoncore | grep User | cut -d '=' -f2)
@@ -20,17 +21,16 @@ user=$(echo ${str})
 
 # Удаление служб
 rm -rf /etc/systemd/system/validator.service
-rm -rf /etc/systemd/system/validator2.service # fix me
 rm -rf /etc/systemd/system/mytoncore.service
+rm -rf /etc/systemd/system/dht-server.service
 systemctl daemon-reload
 
 # Удаление файлов
 rm -rf /usr/src/ton
-rm -rf /usr/src/ton2 # fix me
 rm -rf /usr/src/mytonctrl
 rm -rf /usr/bin/ton
-rm -rf /usr/bin/ton2 # fix me
 rm -rf /var/ton-work
+rm -rf /var/ton-dht-server
 rm -rf /tmp/myton*
 rm -rf /usr/local/bin/mytoninstaller/
 rm -rf /usr/local/bin/mytoncore/mytoncore.db

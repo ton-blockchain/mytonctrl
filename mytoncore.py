@@ -221,6 +221,7 @@ class MyTonCore():
 			if liteServer is not None:
 				self.liteClient.pubkeyPath = liteServer["pubkeyPath"]
 				self.liteClient.addr = "{0}:{1}".format(liteServer["ip"], liteServer["port"])
+		#end if
 
 		validatorConsole = local.db.get("validatorConsole")
 		if validatorConsole is not None:
@@ -228,18 +229,40 @@ class MyTonCore():
 			self.validatorConsole.privKeyPath = validatorConsole["privKeyPath"]
 			self.validatorConsole.pubKeyPath = validatorConsole["pubKeyPath"]
 			self.validatorConsole.addr = validatorConsole["addr"]
+		#end if
 
 		fift = local.db.get("fift")
 		if fift is not None:
 			self.fift.appPath = fift["appPath"]
 			self.fift.libsPath = fift["libsPath"]
 			self.fift.smartcontsPath = fift["smartcontsPath"]
+		#end if
 
 		miner = local.db.get("miner")
 		if miner is not None:
 			self.miner.appPath = miner["appPath"]
 			# set powAddr "kf8guqdIbY6kpMykR8WFeVGbZcP2iuBagXfnQuq0rGrxgE04"
 			# set minerAddr "kQAXRfNYUkFtecUg91zvbUkpy897CDcE2okhFxAlOLcM3_XD"
+		#end if
+
+		# Check config file
+		self.CheckConfigFile(fift, liteClient)
+	#end define
+
+	def CheckConfigFile(self, fift, liteClient):
+		mconfigPath = local.buffer.get("localdbFileName")
+		backupPath = mconfigPath + ".backup"
+		if fift is None or liteClient is None:
+			local.AddLog("The config file is broken", "warning")
+			if os.path.isfile(backupPath):
+				local.AddLog("Restoring the configuration file", "info")
+				args = ["cp", backupPath, mconfigPath]
+				subprocess.run(args)
+				self.Refresh()
+		elif os.path.isfile(backupPath) == False:
+			local.AddLog("Create backup config file", "info")
+			args = ["cp", mconfigPath, backupPath]
+			subprocess.run(args)
 	#end define
 
 	def GetVarFromWorkerOutput(self, text, search):
@@ -562,14 +585,26 @@ class MyTonCore():
 	#end define
 
 	def GetActiveElectionId(self, fullElectorAddr):
+		# get buffer
+		timestamp = GetTimestamp()
+		activeElectionId = local.buffer.get("activeElectionId")
+		activeElectionId_time = local.buffer.get("activeElectionId_time")
+		if activeElectionId:
+			diffTime = timestamp - activeElectionId_time
+			if diffTime < 10:
+				return activeElectionId
+		#end if
+
 		local.AddLog("start GetActiveElectionId function", "debug")
 		cmd = "runmethod {fullElectorAddr} active_election_id".format(fullElectorAddr=fullElectorAddr)
 		result = self.liteClient.Run(cmd)
-		active_election_id = self.GetVarFromWorkerOutput(result, "result")
-		active_election_id = active_election_id.replace(' ', '')
-		active_election_id = Pars(active_election_id, '[', ']')
-		active_election_id = int(active_election_id)
-		return active_election_id
+		activeElectionId = self.GetVarFromWorkerOutput(result, "result")
+		activeElectionId = activeElectionId.replace(' ', '')
+		activeElectionId = Pars(activeElectionId, '[', ']')
+		activeElectionId = int(activeElectionId)
+		local.buffer["activeElectionId"] = activeElectionId
+		local.buffer["activeElectionId_time"] = timestamp
+		return activeElectionId
 	#end define
 
 	def GetValidatorsElectedFor(self):
@@ -1290,6 +1325,47 @@ class MyTonCore():
 		return maxFactor
 	#end define
 
+	def CheckElectionEntry(self):
+		isCheckElectionEntry = local.db.get("isCheckElectionEntry")
+		if isCheckElectionEntry is not True:
+			return
+		#end if
+
+		local.AddLog("start CheckElectionEntry function", "debug")
+		fullElectorAddr = self.GetFullElectorAddr()
+		startWorkTime = self.GetActiveElectionId(fullElectorAddr)
+
+		# Check if elections started
+		if (startWorkTime == 0):
+			return
+		#end if
+
+		timestamp = GetTimestamp()
+		elections = self.GetElectionEntries()
+		vconfig = self.GetValidatorConfig()
+		data = vconfig.get("validators")
+		for item in data:
+			start = item.get("election_date")
+			if start < timestamp:
+				continue
+			key_b64 = item.get("id")
+			key_hex = base64.b64decode(key_b64).hex().upper()
+			pubkey_b64 = self.GetPubKeyBase64(key_hex)
+			buffer = base64.b64decode(pubkey_b64)[4:]
+			pubkey_hex = buffer.hex().upper()
+			result = False
+			for adnl, election in elections.items():
+				electionPubkey = election.get("pubkey")
+				if pubkey_hex == electionPubkey:
+					result = True
+			#end for
+
+			if result == False:
+				local.AddLog("delpermkey {key_hex}".format(key_hex=key_hex), "warning")
+				#self.validatorConsole.Run("delpermkey {key_hex}".format(key_hex=key_hex))
+		#end for
+	#end define
+
 	def ElectionEntry(self, args=None):
 		local.AddLog("start ElectionEntry function", "debug")
 		walletName = self.validatorWalletName
@@ -1313,6 +1389,9 @@ class MyTonCore():
 			return
 		#end if
 
+		# Check election entry
+		self.CheckElectionEntry()
+
 		# Check wether it is too early to participate
 		if "participateBeforeEnd" in local.db:
 			now = time.time()
@@ -1322,7 +1401,7 @@ class MyTonCore():
 		#end if
 
 		# Check if election entry is completed
-		vconfig = self.GetConfigFromValidator()
+		vconfig = self.GetValidatorConfig()
 		validators = vconfig.get("validators")
 		for item in validators:
 			if item.get("election_date") == startWorkTime:
@@ -1518,8 +1597,8 @@ class MyTonCore():
 					self.SendFile(wallet.bocFilePath, wallet)
 	#end define
 
-	def GetConfigFromValidator(self):
-		local.AddLog("start GetConfigFromValidator function", "debug")
+	def GetValidatorConfig(self):
+		local.AddLog("start GetValidatorConfig function", "debug")
 		result = self.validatorConsole.Run("getconfig")
 		string = Pars(result, "---------", "--------")
 		vconfig = json.loads(string)
@@ -1591,8 +1670,8 @@ class MyTonCore():
 	#end define
 
 	def GetValidatorKey(self):
-		data = self.GetConfigFromValidator()
-		validators = data["validators"]
+		vconfig = self.GetValidatorConfig()
+		validators = vconfig["validators"]
 		for validator in validators:
 			validatorId = validator["id"]
 			key_bytes = base64.b64decode(validatorId)
@@ -1624,7 +1703,7 @@ class MyTonCore():
 
 		# Get raw data
 		local.AddLog("start GetElectionEntries function", "debug")
-		cmd = "runmethod {fullElectorAddr} participant_list_extended".format(fullElectorAddr=fullElectorAddr)
+		cmd = "runmethodfull {fullElectorAddr} participant_list_extended".format(fullElectorAddr=fullElectorAddr)
 		result = self.liteClient.Run(cmd)
 		rawElectionEntries = self.Result2List(result)
 
@@ -1643,12 +1722,13 @@ class MyTonCore():
 
 			# Create dict
 			item = dict()
+			adnlAddr = Dec2HexAddr(entry[1][3])
+			item["adnlAddr"] = adnlAddr
 			item["pubkey"] = Dec2HexAddr(entry[0])
 			item["stake"] = ng2g(entry[1][0])
 			item["maxFactor"] = round(entry[1][1] / 655.36) / 100.0
 			item["walletAddr_hex"] = Dec2HexAddr(entry[1][2])
 			item["walletAddr"] = self.HexAddr2Base64Addr("-1:"+item["walletAddr_hex"])
-			adnlAddr = Dec2HexAddr(entry[1][3])
 			entries[adnlAddr] = item
 		#end for
 
@@ -1688,10 +1768,12 @@ class MyTonCore():
 		local.AddLog("start GetOffers function", "debug")
 		fullConfigAddr = self.GetFullConfigAddr()
 		# Get raw data
-		cmd = "runmethod {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
+		cmd = "runmethodfull {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
 		result = self.liteClient.Run(cmd)
 		rawOffers = self.Result2List(result)
 		rawOffers = rawOffers[0]
+		config34 = self.GetConfig34()
+		totalWeight = config34.get("totalWeight")
 
 		# Get json
 		offers = list()
@@ -1711,12 +1793,19 @@ class MyTonCore():
 			item["config"]["id"] = subdata[2][0] # *param_id*
 			item["config"]["value"] = subdata[2][1] # *param_val*
 			item["config"]["oldValueHash"] = subdata[2][2] # *param_hash*
-			# item["vsetId"] = subdata[3] # *vset_id*
+			item["vsetId"] = subdata[3] # *vset_id*
 			item["votedValidators"] = subdata[4] # *voters_list*
-			item["weightRemaining"] = subdata[5] # *weight_remaining*
+			weightRemaining = subdata[5] # *weight_remaining*
 			item["roundsRemaining"] = subdata[6] # *rounds_remaining*
 			item["wins"] = subdata[7] # *losses*
 			item["losses"] = subdata[8] # *wins*
+			requiredWeight = totalWeight * 3 / 4
+			if len(item["votedValidators"]) == 0:
+				weightRemaining = requiredWeight
+			availableWeight = requiredWeight - weightRemaining
+			item["weightRemaining"] = weightRemaining
+			item["approvedPercent"] = round(availableWeight / totalWeight * 100, 3)
+			item["isPassed"] = (weightRemaining < 0)
 			offers.append(item)
 		#end for
 		return offers
@@ -1739,7 +1828,7 @@ class MyTonCore():
 		time.sleep(1)
 
 		fullConfigAddr = self.GetFullConfigAddr()
-		cmd = "runmethod {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
+		cmd = "runmethodfull {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
 		process.stdin.write(cmd.encode() + b'\n')
 		process.stdin.flush()
 		time.sleep(1)
@@ -1946,7 +2035,7 @@ class MyTonCore():
 		votedValidators = complaint.get("votedValidators")
 		pubkey = complaint.get("pubkey")
 		if validatorIndex in votedValidators:
-			local.AddLog("Complaint already has been voted", "debug")
+			local.AddLog("Complaint already has been voted", "info")
 			return
 		var1 = self.CreateComplaintRequest(electionId, complaintHash, validatorIndex)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
@@ -2409,10 +2498,10 @@ class MyTonCore():
 
 	def GetSaveComplaints(self):
 		bname = "newSaveComplaints"
-		saveComplaints = local.buffer.get(bname)
+		saveComplaints = local.db.get(bname)
 		if saveComplaints is None:
 			saveComplaints = dict()
-			local.buffer[bname] = saveComplaints
+			local.db[bname] = saveComplaints
 		return saveComplaints
 	#end define
 
@@ -2452,7 +2541,7 @@ class MyTonCore():
 		return destination
 	#end define
 
-	def HexAddr2Base64Addr(self, fullAddr, bounceable=True, testnet=True):
+	def HexAddr2Base64Addr(self, fullAddr, bounceable=True, testnet=False):
 		buff = fullAddr.split(':')
 		workchain = int(buff[0])
 		addr_hex = buff[1]
@@ -2504,8 +2593,9 @@ class MyTonCore():
 	#end define
 
 	def SetSettings(self, name, data):
-		if type(data) == str:
+		try:
 			data = json.loads(data)
+		except: pass
 		local.db[name] = data
 		local.dbSave()
 	#end define
@@ -2883,7 +2973,7 @@ def Mining(ton):
 	local.AddLog("start Mining function", "debug")
 	local.AddLog(powAddr, "debug")
 	filePath = ton.tempDir + "mined.boc"
-	cpus = psutil.cpu_count()-1
+	cpus = psutil.cpu_count() - 1
 	params = ton.GetPowParams(powAddr)
 	args = ["-vv", "-w", cpus, "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
 	result = ton.miner.Run(args)
