@@ -844,13 +844,23 @@ class MyTonCore():
 		return configs
 	#end define
 
+	def GetConfigsTimestamps(self):
+		configsTimestamps = local.buffer.get("configsTimestamps")
+		if configsTimestamps is None:
+			configsTimestamps = dict()
+			local.buffer["configsTimestamps"] = configsTimestamps
+		return configsTimestamps
+	#end define
+
 	def GetConfig(self, configId):
 		# get buffer
 		timestamp = GetTimestamp()
 		configs = self.GetConfigs()
+		configsTimestamps = self.GetConfigsTimestamps()
 		config = configs.get(configId)
+		configTimestamp = configsTimestamps.get(configId)
 		if config:
-			diffTime = timestamp - config.get("_timestamp_")
+			diffTime = timestamp - configTimestamp
 			if diffTime < 60:
 				return config
 		#end if
@@ -864,7 +874,7 @@ class MyTonCore():
 		data = self.Tlb2Json(text)
 		# write buffer
 		configs[configId] = data
-		configs[configId]["_timestamp_"] = timestamp
+		configsTimestamps[configId] = timestamp
 		return data
 	#end define
 
@@ -1627,8 +1637,8 @@ class MyTonCore():
 		self.SendFile(savedFilePath, wallet, wait=wait)
 	#end define
 
-	def MoveGramsThroughProxy(self, wallet, dest, grams):
-		local.AddLog("start MoveGramsThroughProxy function", "debug")
+	def MoveCoinsThroughProxy(self, wallet, dest, grams):
+		local.AddLog("start MoveCoinsThroughProxy function", "debug")
 		wallet1 = self.CreateWallet("proxy_wallet1", 0)
 		wallet2 = self.CreateWallet("proxy_wallet2", 0)
 		self.MoveCoins(wallet, wallet1.addr_init, grams)
@@ -1640,13 +1650,13 @@ class MyTonCore():
 		wallet2.Delete()
 	#end define
 
-	def MoveGramsFromHW(self, wallet, destList, **kwargs):
-		local.AddLog("start MoveGramsFromHW function", "debug")
+	def MoveCoinsFromHW(self, wallet, destList, **kwargs):
+		local.AddLog("start MoveCoinsFromHW function", "debug")
 		flags = kwargs.get("flags")
 		wait = kwargs.get("wait", True)
 
 		if len(destList) == 0:
-			local.AddLog("MoveGramsFromHW warning: destList is empty, break function", "warning")
+			local.AddLog("MoveCoinsFromHW warning: destList is empty, break function", "warning")
 			return
 		#end if
 
@@ -2546,7 +2556,7 @@ class MyTonCore():
 		workchain = int(buff[0])
 		addr_hex = buff[1]
 		if len(addr_hex) != 64:
-			raise Exeption("HexAddr2Base64Addr error: Invalid length of hexadecimal address")
+			raise Exception("HexAddr2Base64Addr error: Invalid length of hexadecimal address")
 		#end if
 
 		# Create base64 address
@@ -2709,6 +2719,8 @@ class MyTonCore():
 			except json.JSONDecodeError as err:
 				if "Expecting ',' delimiter" in err.msg:
 					text = text[:err.pos] + ',' + text[err.pos:]
+				elif "Expecting property name enclosed in double quotes" in err.msg:
+					text = text[:err.pos] + '"_":' + text[err.pos:]
 				else:
 					raise err
 		#end while
@@ -2913,7 +2925,7 @@ def Telemetry(ton):
 	data["cpuLoad"] = GetLoadAvg()
 	data["netLoad"] = ton.GetNetLoadAvg()
 	data["tps"] = ton.GetTpsAvg()
-	elections = ton.GetElectionEntries()
+	elections = local.TryFunction(ton.GetElectionEntries)
 
 	# Get git hashes
 	gitHashes = dict()
