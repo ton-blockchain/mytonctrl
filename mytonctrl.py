@@ -35,7 +35,7 @@ def Init(argv):
 	console.AddItem("vas", ViewAccountStatus, local.Translate("vas_cmd"))
 	console.AddItem("vah", ViewAccountHistory, local.Translate("vah_cmd"))
 	console.AddItem("mg", MoveCoins, local.Translate("mg_cmd"))
-	console.AddItem("mgtp", MoveGramsThroughProxy, local.Translate("mgtp_cmd"))
+	console.AddItem("mgtp", MoveCoinsThroughProxy, local.Translate("mgtp_cmd"))
 
 	console.AddItem("nb", CreatNewBookmark, local.Translate("nb_cmd"))
 	console.AddItem("bl", PrintBookmarksList, local.Translate("bl_cmd"))
@@ -63,6 +63,8 @@ def Init(argv):
 
 	console.AddItem("get", GetSettings, local.Translate("get_cmd"))
 	console.AddItem("set", SetSettings, local.Translate("set_cmd"))
+	console.AddItem("xrestart", Xrestart, local.Translate("xrestart_cmd"))
+	console.AddItem("xlist", Xlist, local.Translate("xlist_cmd"))
 
 	# console.AddItem("test", Test, "Test")
 	# console.AddItem("pt", PrintTest, "PrintTest")
@@ -580,7 +582,7 @@ def GetHistoryTable(addr, limit):
 	history = ton.GetAccountHistory(account, limit)
 	table = list()
 	typeText = ColorText("{red}{bold}{endc}")
-	table += [["Time", typeText, "Grams", "From/To"]]
+	table += [["Time", typeText, "Coins", "From/To"]]
 	for item in history:
 		time = item.get("time")
 		grams = item.get("value")
@@ -616,7 +618,7 @@ def MoveCoins(args):
 	ColorPrint("MoveCoins - {green}OK{endc}")
 #end define
 
-def MoveGramsThroughProxy(args):
+def MoveCoinsThroughProxy(args):
 	try:
 		walletName = args[0]
 		destination = args[1]
@@ -626,8 +628,8 @@ def MoveGramsThroughProxy(args):
 		return
 	wallet = ton.GetLocalWallet(walletName)
 	destination = ton.GetDestinationAddr(destination)
-	ton.MoveGramsThroughProxy(wallet, destination, gram)
-	ColorPrint("MoveGramsThroughProxy - {green}OK{endc}")
+	ton.MoveCoinsThroughProxy(wallet, destination, gram)
+	ColorPrint("MoveCoinsThroughProxy - {green}OK{endc}")
 #end define
 
 def CreatNewBookmark(args):
@@ -705,7 +707,29 @@ def DeleteBookmark(args):
 
 def PrintOffersList(args):
 	offers = ton.GetOffers()
-	print(json.dumps(offers, indent=2))
+	if "--json" in args:
+		text = json.dumps(offers, indent=2)
+		print(text)
+	else:
+		table = list()
+		table += [["Hash", "Votes", "W/L", "Approved", "Is passed"]]
+		for item in offers:
+			hash = item.get("hash")
+			votedValidators = len(item.get("votedValidators"))
+			wins = item.get("wins")
+			losses = item.get("losses")
+			wl = "{0}/{1}".format(wins, losses)
+			approvedPercent = item.get("approvedPercent")
+			approvedPercent_text = "{0}%".format(approvedPercent)
+			isPassed = item.get("isPassed")
+			if "hash" not in args:
+				hash = Reduct(hash)
+			if isPassed == True:
+				isPassed = bcolors.Green("true")
+			if isPassed == False:
+				isPassed = bcolors.Red("false")
+			table += [[hash, votedValidators, wl, approvedPercent_text, isPassed]]
+		PrintTable(table)
 #end define
 
 def VoteOffer(args):
@@ -743,7 +767,7 @@ def GetConfig(args):
 
 def PrintComplaintsList(args):
 	complaints = ton.GetComplaints()
-	if len(args) > 0 and args[0] == "--json":
+	if "--json" in args:
 		text = json.dumps(complaints, indent=2)
 		print(text)
 	else:
@@ -752,7 +776,6 @@ def PrintComplaintsList(args):
 		for key, item in complaints.items():
 			electionId = item.get("electionId")
 			adnl = item.get("adnl")
-			adnl = adnl[0:6] + "..." + adnl[58:64]
 			suggestedFine = item.get("suggestedFine")
 			suggestedFinePart = item.get("suggestedFinePart")
 			Fine_text = "{0} ({1})".format(suggestedFine, suggestedFinePart)
@@ -760,6 +783,12 @@ def PrintComplaintsList(args):
 			approvedPercent = item.get("approvedPercent")
 			approvedPercent_text = "{0}%".format(approvedPercent)
 			isPassed = item.get("isPassed")
+			if "adnl" not in args:
+				adnl = Reduct(adnl)
+			if isPassed == True:
+				isPassed = bcolors.Green("true")
+			if isPassed == False:
+				isPassed = bcolors.Red("false")
 			table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
 		PrintTable(table)
 #end define
@@ -836,7 +865,26 @@ def DeleteDomain(args):
 
 def PrintElectionEntriesList(args):
 	entries = ton.GetElectionEntries()
-	print(json.dumps(entries, indent=2))
+	if "--json" in args:
+		text = json.dumps(entries, indent=2)
+		print(text)
+	else:
+		table = list()
+		table += [["ADNL", "Pubkey", "Wallet", "Stake", "Max-factor"]]
+		for key, item in entries.items():
+			adnl = item.get("adnlAddr")
+			pubkey = item.get("pubkey")
+			walletAddr = item.get("walletAddr")
+			stake = item.get("stake")
+			maxFactor = item.get("maxFactor")
+			if "adnl" not in args:
+				adnl = Reduct(adnl)
+			if "pubkey" not in args:
+				pubkey = Reduct(pubkey)
+			if "wallet" not in args:
+				walletAddr = Reduct(walletAddr)
+			table += [[adnl, pubkey, walletAddr, stake, maxFactor]]
+		PrintTable(table)
 #end define
 
 def VoteElectionEntry(args):
@@ -849,7 +897,42 @@ def VoteElectionEntry(args):
 
 def PrintValidatorList(args):
 	validators = ton.GetValidatorsList()
-	print(json.dumps(validators, indent=2))
+	if "--json" in args:
+		text = json.dumps(validators, indent=2)
+		print(text)
+	else:
+		table = list()
+		table += [["ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
+		for item in validators:
+			adnl = item.get("adnlAddr")
+			pubkey = item.get("pubkey")
+			walletAddr = item.get("walletAddr")
+			efficiency = item.get("efficiency")
+			online = item.get("online")
+			if "adnl" not in args:
+				adnl = Reduct(adnl)
+			if "pubkey" not in args:
+				pubkey = Reduct(pubkey)
+			if "wallet" not in args:
+				walletAddr = Reduct(walletAddr)
+			if "offline" in args and online != False:
+				continue
+			if online == True:
+				online = bcolors.Green("true")
+			if online == False:
+				online = bcolors.Red("false")
+			table += [[adnl, pubkey, walletAddr, efficiency, online]]
+		PrintTable(table)
+#end define
+
+def Reduct(item):
+	item = str(item)
+	if item is None:
+		result = None
+	else:
+		end = len(item)
+		result = item[0:6] + "..." + item[end-6:end]
+	return result
 #end define
 
 def GetSettings(args):
@@ -871,6 +954,24 @@ def SetSettings(args):
 		return
 	result = ton.SetSettings(name, value)
 	ColorPrint("SetSettings - {green}OK{endc}")
+#end define
+
+def Xrestart(inputArgs):
+	if len(inputArgs) < 2:
+		ColorPrint("{red}Bad args. Usage:{endc} xrestart <timestamp> <args>")
+		return
+	args = ["python3", "/usr/src/mytonctrl/scripts/xrestart.py"]
+	args += inputArgs
+	exitCode = RunAsRoot(args)
+	if exitCode == 0:
+		text = "Xrestart - {green}OK{endc}"
+	else:
+		text = "Xrestart - {red}Error{endc}"
+	ColorPrint(text)
+#end define
+
+def Xlist(args):
+	ColorPrint("Xlist - {green}OK{endc}")
 #end define
 
 def GetHashrate(args):

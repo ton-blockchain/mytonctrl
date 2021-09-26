@@ -85,6 +85,19 @@ su root -c 'bash install.sh -m <mode>'
 mytonctrl
 ```
 
+## Telemetry
+By default, `mytonctrl` sends validator statistics to the server https://toncenter.com
+This is necessary to identify anomalies in the network, as well as to quickly respond to developers.
+To disable telemetry during installation, use the `-t` flag:
+```sh
+sudo bash install.sh -m <mode> -t
+```
+
+To disable telemetry after installation:
+```sh
+MyTonCtrl> set sendTelemetry false
+```
+
 ## Useful links
 1. https://ton.org/docs/#/howto/
 2. https://test.ton.org/FullNode-HOWTO.txt
