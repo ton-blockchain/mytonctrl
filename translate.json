@@ -203,6 +203,10 @@
 		"en": "Network load average (Mbit/s): {0}, {1}, {2}",
 		"ru": "Средняя нагрузка сети (Mbit/s): {0}, {1}, {2}"
 	},
+	"local_status_disks_load": {
+		"en": "Disks load average (MB/s): {0}",
+		"ru": "Средняя нагрузка дисков (MB/s): {0}"
+	},
 	"local_status_mytoncore_status": {
 		"en": "Mytoncore status: {0}",
 		"ru": "Статус ядра mytoncore: {0}"

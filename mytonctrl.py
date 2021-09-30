@@ -197,14 +197,16 @@ def PrintStatus(args):
 	offersNumber = ton.GetOffersNumber()
 	complaintsNumber = ton.GetComplaintsNumber()
 	statistics = ton.GetSettings("statistics")
-	tpsAvg = ton.GetTpsAvg(statistics)
-	netLoadAvg = ton.GetNetLoadAvg(statistics)
+	tpsAvg = ton.GetStatistics("tpsAvg", statistics)
+	netLoadAvg = ton.GetStatistics("netLoadAvg", statistics)
+	disksLoadAvg = ton.GetStatistics("disksLoadAvg", statistics)
+	disksLoadPercentAvg = ton.GetStatistics("disksLoadPercentAvg", statistics)
 	if validatorWallet is not None:
 		validatorAccount = ton.GetAccount(validatorWallet.addr)
 	else:
 		validatorAccount = None
 	PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
-	PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, netLoadAvg)
+	PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, netLoadAvg, disksLoadAvg, disksLoadPercentAvg)
 	PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17)
 	PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
@@ -249,7 +251,7 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 	print()
 #end define
 
-def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, netLoadAvg):
+def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, netLoadAvg, disksLoadAvg, disksLoadPercentAvg):
 	if validatorWallet is None:
 		return
 	adnlAddr = ton.adnlAddr
@@ -287,6 +289,22 @@ def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, valid
 	netLoad5_text = GetColorInt(netLoad5, 300, logic="less")
 	netLoad15_text = GetColorInt(netLoad15, 300, logic="less")
 	netLoad_text = local.Translate("local_status_net_load").format(netLoad1_text, netLoad5_text, netLoad15_text)
+	
+	# Disks status
+	disksLoad_data = list()
+	for key, item in disksLoadAvg.items():
+		diskLoad1_text = bcolors.Green(item[0])
+		diskLoad5_text = bcolors.Green(item[1])
+		diskLoad15_text = bcolors.Green(item[2])
+		diskLoadPercent1_text = GetColorInt(disksLoadPercentAvg[key][0], 80, logic="less", ending="%")
+		diskLoadPercent5_text = GetColorInt(disksLoadPercentAvg[key][1], 80, logic="less", ending="%")
+		diskLoadPercent15_text = GetColorInt(disksLoadPercentAvg[key][2], 80, logic="less", ending="%")
+		buff = "{}, {}"
+		buff = "{}{}:[{}{}{}]{}".format(bcolors.cyan, key, bcolors.default, buff, bcolors.cyan, bcolors.endc)
+		disksLoad_buff = buff.format(diskLoad15_text, diskLoadPercent15_text)
+		disksLoad_data.append(disksLoad_buff)
+	disksLoad_data = ", ".join(disksLoad_data)
+	disksLoad_text = local.Translate("local_status_disks_load").format(disksLoad_data)
 
 	# Thread status
 	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(GetColorStatus(mytoncoreStatus_bool))
@@ -302,6 +320,7 @@ def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, valid
 	print(walletBalance_text)
 	print(cpuLoad_text)
 	print(netLoad_text)
+	print(disksLoad_text)
 	print(mytoncoreStatus_text)
 	print(validatorStatus_text)
 	print(validatorOutOfSync_text)

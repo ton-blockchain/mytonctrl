@@ -228,11 +228,11 @@ class MyTonCore():
 			# set powAddr "kf8guqdIbY6kpMykR8WFeVGbZcP2iuBagXfnQuq0rGrxgE04"
 			# set minerAddr "kQAXRfNYUkFtecUg91zvbUkpy897CDcE2okhFxAlOLcM3_XD"
 		#end if
-		
+
 		# Check config file
 		self.CheckConfigFile(fift, liteClient)
 	#end define
-	
+
 	def CheckConfigFile(self, fift, liteClient):
 		mconfigPath = local.buffer.get("localdbFileName")
 		backupPath = mconfigPath + ".backup"
@@ -578,7 +578,7 @@ class MyTonCore():
 			if diffTime < 10:
 				return activeElectionId
 		#end if
-	
+
 		local.AddLog("start GetActiveElectionId function", "debug")
 		cmd = "runmethod {fullElectorAddr} active_election_id".format(fullElectorAddr=fullElectorAddr)
 		result = self.liteClient.Run(cmd)
@@ -827,14 +827,24 @@ class MyTonCore():
 			local.buffer["configs"] = configs
 		return configs
 	#end define
+	
+	def GetConfigsTimestamps(self):
+		configsTimestamps = local.buffer.get("configsTimestamps")
+		if configsTimestamps is None:
+			configsTimestamps = dict()
+			local.buffer["configsTimestamps"] = configsTimestamps
+		return configsTimestamps
+	#end define
 
 	def GetConfig(self, configId):
 		# get buffer
 		timestamp = GetTimestamp()
 		configs = self.GetConfigs()
+		configsTimestamps = self.GetConfigsTimestamps()
 		config = configs.get(configId)
+		configTimestamp = configsTimestamps.get(configId)
 		if config:
-			diffTime = timestamp - config.get("_timestamp_")
+			diffTime = timestamp - configTimestamp
 			if diffTime < 60:
 				return config
 		#end if
@@ -848,7 +858,7 @@ class MyTonCore():
 		data = self.Tlb2Json(text)
 		# write buffer
 		configs[configId] = data
-		configs[configId]["_timestamp_"] = timestamp
+		configsTimestamps[configId] = timestamp
 		return data
 	#end define
 
@@ -1264,7 +1274,7 @@ class MyTonCore():
 		resultFilePath = Pars(result, "Saved to file ", '\n')
 		return resultFilePath
 	#end define
-	
+
 	def GetStake(self, account, validators):
 		stake = local.db.get("stake")
 		stakePercent = local.db.get("stakePercent", 99)
@@ -1288,13 +1298,13 @@ class MyTonCore():
 		maxFactor = round(maxFactor, 1)
 		return maxFactor
 	#end define
-	
+
 	def CheckElectionEntry(self):
 		isCheckElectionEntry = local.db.get("isCheckElectionEntry")
 		if isCheckElectionEntry is not True:
 			return
 		#end if
-	
+
 		local.AddLog("start CheckElectionEntry function", "debug")
 		fullElectorAddr = self.GetFullElectorAddr()
 		startWorkTime = self.GetActiveElectionId(fullElectorAddr)
@@ -1303,7 +1313,7 @@ class MyTonCore():
 		if (startWorkTime == 0):
 			return
 		#end if
-		
+
 		timestamp = GetTimestamp()
 		elections = self.GetElectionEntries()
 		vconfig = self.GetValidatorConfig()
@@ -1323,7 +1333,7 @@ class MyTonCore():
 				if pubkey_hex == electionPubkey:
 					result = True
 			#end for
-			
+
 			if result == False:
 				local.AddLog("delpermkey {key_hex}".format(key_hex=key_hex), "warning")
 				#self.validatorConsole.Run("delpermkey {key_hex}".format(key_hex=key_hex))
@@ -1334,7 +1344,15 @@ class MyTonCore():
 		local.AddLog("start ElectionEntry function", "debug")
 		walletName = self.validatorWalletName
 		wallet = self.GetLocalWallet(walletName)
-		
+
+		# Check if validator is not synchronized
+		validatorStatus = self.GetValidatorStatus()
+		validatorOutOfSync = validatorStatus.get("outOfSync")
+		if validatorOutOfSync > 60:
+			local.AddLog("Validator is not synchronized", "error")
+			return
+		#end if
+
 		# Get startWorkTime and endWorkTime
 		fullElectorAddr = self.GetFullElectorAddr()
 		startWorkTime = self.GetActiveElectionId(fullElectorAddr)
@@ -1344,18 +1362,10 @@ class MyTonCore():
 			local.AddLog("Elections have not yet begun", "info")
 			return
 		#end if
-		
+
 		# Check election entry
 		self.CheckElectionEntry()
 
-		# Check if validator is not synchronized
-		validatorStatus = self.GetValidatorStatus()
-		validatorOutOfSync = validatorStatus.get("outOfSync")
-		if validatorOutOfSync > 60:
-			local.AddLog("Validator is not synchronized", "error")
-			return
-		#end if
-		
 		# Check if election entry is completed
 		vconfig = self.GetValidatorConfig()
 		validators = vconfig.get("validators")
@@ -1371,7 +1381,7 @@ class MyTonCore():
 
 		# Calculate stake
 		stake = self.GetStake(account, validators)
-		
+
 		# Check if we have enough grams
 		balance = account.balance
 		if minStake > stake:
@@ -1577,8 +1587,8 @@ class MyTonCore():
 		self.SendFile(savedFilePath, wallet, wait=wait)
 	#end define
 
-	def MoveGramsThroughProxy(self, wallet, dest, grams):
-		local.AddLog("start MoveGramsThroughProxy function", "debug")
+	def MoveCoinsThroughProxy(self, wallet, dest, grams):
+		local.AddLog("start MoveCoinsThroughProxy function", "debug")
 		wallet1 = self.CreateWallet("proxy_wallet1", 0)
 		wallet2 = self.CreateWallet("proxy_wallet2", 0)
 		self.MoveCoins(wallet, wallet1.addr_init, grams)
@@ -1590,13 +1600,13 @@ class MyTonCore():
 		wallet2.Delete()
 	#end define
 
-	def MoveGramsFromHW(self, wallet, destList, **kwargs):
-		local.AddLog("start MoveGramsFromHW function", "debug")
+	def MoveCoinsFromHW(self, wallet, destList, **kwargs):
+		local.AddLog("start MoveCoinsFromHW function", "debug")
 		flags = kwargs.get("flags")
 		wait = kwargs.get("wait", True)
 
 		if len(destList) == 0:
-			local.AddLog("MoveGramsFromHW warning: destList is empty, break function", "warning")
+			local.AddLog("MoveCoinsFromHW warning: destList is empty, break function", "warning")
 			return
 		#end if
 
@@ -1753,7 +1763,7 @@ class MyTonCore():
 			if len(item["votedValidators"]) == 0:
 				weightRemaining = requiredWeight
 			availableWeight = requiredWeight - weightRemaining
-			item["weightRemaining"] = weightRemaining 
+			item["weightRemaining"] = weightRemaining
 			item["approvedPercent"] = round(availableWeight / totalWeight * 100, 3)
 			item["isPassed"] = (weightRemaining < 0)
 			offers.append(item)
@@ -2311,7 +2321,7 @@ class MyTonCore():
 		if domainEndTime > 0:
 			raise Exception("NewDomain error: domain is busy")
 		#end if
-		
+
 		fileName = self.tempDir + "dns-msg-body.boc"
 		args = ["auto-dns.fif", dnsAddr, "add", subdomain, expireInSec, "owner", wallet.addr, "cat", catId, "adnl", domain["adnlAddr"], "-o", fileName]
 		result = self.fift.Run(args)
@@ -2496,7 +2506,7 @@ class MyTonCore():
 		workchain = int(buff[0])
 		addr_hex = buff[1]
 		if len(addr_hex) != 64:
-			raise Exeption("HexAddr2Base64Addr error: Invalid length of hexadecimal address")
+			raise Exception("HexAddr2Base64Addr error: Invalid length of hexadecimal address")
 		#end if
 
 		# Create base64 address
@@ -2535,6 +2545,16 @@ class MyTonCore():
 			tpsAvg = [-1, -1, -1]
 		return tpsAvg
 	#end define
+	
+	def GetStatistics(self, name, statistics=None):
+		if statistics is None:
+			statistics = local.db.get("statistics")
+		if statistics:
+			data = statistics.get(name)
+		else:
+			data = [-1, -1, -1]
+		return data
+	#end define
 
 	def GetSettings(self, name):
 		local.dbLoad()
@@ -2555,7 +2575,7 @@ class MyTonCore():
 		cpus = psutil.cpu_count()
 		numThreads = "-w{cpus}".format(cpus=cpus)
 		params = self.GetPowParams('kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN')
-		args = ["-vv", numThreads, "-t3", 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', params["seed"], params["complexity"], params["iterations"], 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', filePath]
+		args = ["-vv", numThreads, "-t10", 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', params["seed"], params["complexity"], params["iterations"], 'kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN', filePath]
 		result = self.miner.Run(args)
 		return result
 	#end define
@@ -2621,6 +2641,8 @@ class MyTonCore():
 			except json.JSONDecodeError as err:
 				if "Expecting ',' delimiter" in err.msg:
 					text = text[:err.pos] + ',' + text[err.pos:]
+				elif "Expecting property name enclosed in double quotes" in err.msg:
+					text = text[:err.pos] + '"_":' + text[err.pos:]
 				else:
 					raise err
 		#end while
@@ -2654,6 +2676,8 @@ def Init():
 	local.buffer["blocksNum"] = 0
 	local.buffer["masterBlocksNum"] = 0
 	local.buffer["transNumList"] = [0]*15*6
+	
+	local.buffer["diskio"] = [None]*15*6
 #end define
 
 def Event(eventName):
@@ -2694,9 +2718,72 @@ def Elections(ton):
 
 def Statistics(ton):
 	ReadNetworkData()
-	SaveNetworStatistics(ton)
+	SaveNetworStatistics()
 	ReadTransNumData()
-	SaveTransNumStatistics(ton)
+	SaveTransNumStatistics()
+	ReadDiskData()
+	SaveDiskStatistics()
+#end define
+
+def ReadDiskData():
+	disks = GetDisksList()
+	buff = psutil.disk_io_counters(perdisk=True)
+	data = dict()
+	for name in disks:
+		data[name] = buff[name]
+	#end for
+	
+	local.buffer["diskio"].pop(0)
+	local.buffer["diskio"].append(data)
+#end define
+
+def SaveDiskStatistics():
+	data = local.buffer["diskio"]
+	data = data[::-1]
+	zerodata = data[0]
+	buff1 = data[1*6-1]
+	buff5 = data[5*6-1]
+	buff15 = data[15*6-1]
+	if buff1 is None:
+		buff1 = zerodata
+	if buff5 is None:
+		buff5 = zerodata
+	if buff15 is None:
+		buff15 = zerodata
+	#end if
+	
+	disksLoadAvg = dict()
+	disksLoadPercentAvg = dict()
+	disks = GetDisksList()
+	for name in disks:
+		buff = dict()
+		diskLoadPercent1 = round((zerodata[name].busy_time - buff1[name].busy_time) /1000 /(1*60) *100, 2) # /1000 - to second, *100 - to percent
+		diskLoadPercent5 = round((zerodata[name].busy_time - buff5[name].busy_time) /1000 /(5*60) *100, 2) # /1000 - to second, *100 - to percent
+		diskLoadPercent15 = round((zerodata[name].busy_time - buff15[name].busy_time) /1000 /(15*60) *100, 2) # /1000 - to second, *100 - to percent
+		diskRead1 = (zerodata[name].read_bytes - buff1[name].read_bytes) /(1*60)
+		diskWrite1 = (zerodata[name].write_bytes - buff1[name].write_bytes) /(1*60)
+		diskRead5 = (zerodata[name].read_bytes - buff5[name].read_bytes) /(5*60)
+		diskWrite5 = (zerodata[name].write_bytes - buff5[name].write_bytes) /(5*60)
+		diskRead15 = (zerodata[name].read_bytes - buff15[name].read_bytes) /(15*60)
+		diskWrite15 = (zerodata[name].write_bytes - buff15[name].write_bytes) /(15*60)
+		diskLoad1 = b2mb(diskRead1 + diskWrite1)
+		diskLoad5 = b2mb(diskRead5 + diskWrite5)
+		diskLoad15 = b2mb(diskRead15 + diskWrite15)
+		disksLoadAvg[name] = [diskLoad1, diskLoad5, diskLoad15]
+		disksLoadPercentAvg[name] = [diskLoadPercent1, diskLoadPercent5, diskLoadPercent15]
+	#end fore
+	
+	# save statistics
+	statistics = local.db.get("statistics", dict())
+	statistics["disksLoadAvg"] = disksLoadAvg
+	statistics["disksLoadPercentAvg"] = disksLoadPercentAvg
+	local.db["statistics"] = statistics
+#end define
+
+def GetDisksList():
+	data = os.listdir("/sys/block/")
+	data.sort()
+	return data
 #end define
 
 def ReadNetworkData():
@@ -2715,7 +2802,7 @@ def ReadNetworkData():
 	local.buffer["network"]["all"].append(network_all)
 #end define
 
-def SaveNetworStatistics(ton):
+def SaveNetworStatistics():
 	data = local.buffer["network"]["all"]
 	data = data[::-1]
 	zerodata = data[0]
@@ -2758,7 +2845,7 @@ def ReadTransNumData():
 	local.buffer["transNumList"].append(transNum)
 #end define
 
-def SaveTransNumStatistics(ton):
+def SaveTransNumStatistics():
 	data = local.buffer["transNumList"]
 	data = data[::-1]
 	zerodata = data[0]
@@ -2823,9 +2910,9 @@ def Telemetry(ton):
 	data["validatorStatus"] = ton.GetValidatorStatus()
 	data["cpuNumber"] = psutil.cpu_count()
 	data["cpuLoad"] = GetLoadAvg()
-	data["netLoad"] = ton.GetNetLoadAvg()
-	data["tps"] = ton.GetTpsAvg()
-	elections = ton.GetElectionEntries()
+	data["netLoad"] = ton.GetStatistics("netLoadAvg")
+	data["tps"] = ton.GetStatistics("tpsAvg")
+	elections = local.TryFunction(ton.GetElectionEntries)
 
 	# Get git hashes
 	gitHashes = dict()
@@ -2871,7 +2958,7 @@ def Mining(ton):
 				bestComplexity = params["complexity"]
 				bestPow = giver
 			#end if
-			if params["complexity"] < bestComplexity:
+			if params["complexity"] > bestComplexity:
 				bestPow = giver
 				bestComplexity = params["complexity"]
 			#end if
@@ -3002,7 +3089,6 @@ def Slashing(ton):
 #end define
 
 def ScanLiteServers(ton):
-	local.AddLog("start ScanLiteServers function", "debug")
 	# Считать список серверов
 	filePath = ton.liteClient.configPath
 	file = open(filePath, 'rt')
