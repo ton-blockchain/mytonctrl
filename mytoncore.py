@@ -1336,7 +1336,7 @@ class MyTonCore():
 
 			if result == False:
 				local.AddLog("delpermkey {key_hex}".format(key_hex=key_hex), "warning")
-				#self.validatorConsole.Run("delpermkey {key_hex}".format(key_hex=key_hex))
+				self.validatorConsole.Run("delpermkey {key_hex}".format(key_hex=key_hex))
 		#end for
 	#end define
 
@@ -2726,11 +2726,16 @@ def Statistics(ton):
 #end define
 
 def ReadDiskData():
+	timestamp = GetTimestamp()
 	disks = GetDisksList()
 	buff = psutil.disk_io_counters(perdisk=True)
 	data = dict()
 	for name in disks:
-		data[name] = buff[name]
+		data[name] = dict()
+		data[name]["timestamp"] = timestamp
+		data[name]["busyTime"] = buff[name].busy_time
+		data[name]["readBytes"] = buff[name].read_bytes
+		data[name]["writeBytes"] = buff[name].write_bytes
 	#end for
 	
 	local.buffer["diskio"].pop(0)
@@ -2744,31 +2749,21 @@ def SaveDiskStatistics():
 	buff1 = data[1*6-1]
 	buff5 = data[5*6-1]
 	buff15 = data[15*6-1]
-	if buff1 is None:
-		buff1 = zerodata
 	if buff5 is None:
-		buff5 = zerodata
+		buff5 = buff1
 	if buff15 is None:
-		buff15 = zerodata
+		buff15 = buff5
 	#end if
 	
 	disksLoadAvg = dict()
 	disksLoadPercentAvg = dict()
 	disks = GetDisksList()
 	for name in disks:
-		buff = dict()
-		diskLoadPercent1 = round((zerodata[name].busy_time - buff1[name].busy_time) /1000 /(1*60) *100, 2) # /1000 - to second, *100 - to percent
-		diskLoadPercent5 = round((zerodata[name].busy_time - buff5[name].busy_time) /1000 /(5*60) *100, 2) # /1000 - to second, *100 - to percent
-		diskLoadPercent15 = round((zerodata[name].busy_time - buff15[name].busy_time) /1000 /(15*60) *100, 2) # /1000 - to second, *100 - to percent
-		diskRead1 = (zerodata[name].read_bytes - buff1[name].read_bytes) /(1*60)
-		diskWrite1 = (zerodata[name].write_bytes - buff1[name].write_bytes) /(1*60)
-		diskRead5 = (zerodata[name].read_bytes - buff5[name].read_bytes) /(5*60)
-		diskWrite5 = (zerodata[name].write_bytes - buff5[name].write_bytes) /(5*60)
-		diskRead15 = (zerodata[name].read_bytes - buff15[name].read_bytes) /(15*60)
-		diskWrite15 = (zerodata[name].write_bytes - buff15[name].write_bytes) /(15*60)
-		diskLoad1 = b2mb(diskRead1 + diskWrite1)
-		diskLoad5 = b2mb(diskRead5 + diskWrite5)
-		diskLoad15 = b2mb(diskRead15 + diskWrite15)
+		if zerodata[name]["busyTime"] == 0:
+			continue
+		diskLoad1, diskLoadPercent1 = CalculateDiskStatistics(zerodata, buff1, name)
+		diskLoad5, diskLoadPercent5 = CalculateDiskStatistics(zerodata, buff5, name)
+		diskLoad15, diskLoadPercent15 = CalculateDiskStatistics(zerodata, buff15, name)
 		disksLoadAvg[name] = [diskLoad1, diskLoad5, diskLoad15]
 		disksLoadPercentAvg[name] = [diskLoadPercent1, diskLoadPercent5, diskLoadPercent15]
 	#end fore
@@ -2778,6 +2773,23 @@ def SaveDiskStatistics():
 	statistics["disksLoadAvg"] = disksLoadAvg
 	statistics["disksLoadPercentAvg"] = disksLoadPercentAvg
 	local.db["statistics"] = statistics
+#end define
+
+def CalculateDiskStatistics(zerodata, data, name):
+	if data is None:
+		return None, None
+	data = data[name]
+	zerodata = zerodata[name]
+	timeDiff = zerodata["timestamp"] - data["timestamp"]
+	busyTimeDiff = zerodata["busyTime"] - data["busyTime"]
+	diskReadDiff = zerodata["readBytes"] - data["readBytes"]
+	diskWriteDiff = zerodata["writeBytes"] - data["writeBytes"]
+	diskLoadPercent = busyTimeDiff /1000 /timeDiff *100 # /1000 - to second, *100 - to percent
+	diskLoadPercent = round(diskLoadPercent, 2)
+	diskRead = diskReadDiff /timeDiff
+	diskWrite = diskWriteDiff /timeDiff
+	diskLoad = b2mb(diskRead + diskWrite)
+	return diskLoad, diskLoadPercent
 #end define
 
 def GetDisksList():
