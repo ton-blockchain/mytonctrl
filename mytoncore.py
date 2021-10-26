@@ -1083,8 +1083,8 @@ class MyTonCore():
 		return params
 	#end define
 
-	def CreatNewKey(self):
-		local.AddLog("start CreatNewKey function", "debug")
+	def CreateNewKey(self):
+		local.AddLog("start CreateNewKey function", "debug")
 		result = self.validatorConsole.Run("newkey")
 		key = Pars(result, "created new key ", '\n')
 		return key
@@ -1275,9 +1275,11 @@ class MyTonCore():
 		return resultFilePath
 	#end define
 
-	def GetStake(self, account, validators):
+	def GetStake(self, account):
 		stake = local.db.get("stake")
 		stakePercent = local.db.get("stakePercent", 99)
+		vconfig = self.GetValidatorConfig()
+		validators = vconfig.get("validators")
 		if stake is None:
 			sp = stakePercent / 100
 			if sp > 1 or sp < 0:
@@ -1297,47 +1299,6 @@ class MyTonCore():
 			maxFactor = config17["maxStakeFactor"] / 65536
 		maxFactor = round(maxFactor, 1)
 		return maxFactor
-	#end define
-
-	def CheckElectionEntry(self):
-		isCheckElectionEntry = local.db.get("isCheckElectionEntry")
-		if isCheckElectionEntry is not True:
-			return
-		#end if
-
-		local.AddLog("start CheckElectionEntry function", "debug")
-		fullElectorAddr = self.GetFullElectorAddr()
-		startWorkTime = self.GetActiveElectionId(fullElectorAddr)
-
-		# Check if elections started
-		if (startWorkTime == 0):
-			return
-		#end if
-
-		timestamp = GetTimestamp()
-		elections = self.GetElectionEntries()
-		vconfig = self.GetValidatorConfig()
-		data = vconfig.get("validators")
-		for item in data:
-			start = item.get("election_date")
-			if start < timestamp:
-				continue
-			key_b64 = item.get("id")
-			key_hex = base64.b64decode(key_b64).hex().upper()
-			pubkey_b64 = self.GetPubKeyBase64(key_hex)
-			buffer = base64.b64decode(pubkey_b64)[4:]
-			pubkey_hex = buffer.hex().upper()
-			result = False
-			for adnl, election in elections.items():
-				electionPubkey = election.get("pubkey")
-				if pubkey_hex == electionPubkey:
-					result = True
-			#end for
-
-			if result == False:
-				local.AddLog("delpermkey {key_hex}".format(key_hex=key_hex), "warning")
-				self.validatorConsole.Run("delpermkey {key_hex}".format(key_hex=key_hex))
-		#end for
 	#end define
 
 	def ElectionEntry(self):
@@ -1362,25 +1323,23 @@ class MyTonCore():
 			local.AddLog("Elections have not yet begun", "info")
 			return
 		#end if
-
-		# Check election entry
-		self.CheckElectionEntry()
-
-		# Check if election entry is completed
-		vconfig = self.GetValidatorConfig()
-		validators = vconfig.get("validators")
-		for item in validators:
-			if item.get("election_date") == startWorkTime:
-				local.AddLog("Elections entry already completed", "info")
-				return
-		#end for
+		
+		# Get ADNL address
+		adnlAddr = self.GetAdnlAddr()
+		
+		# Check if election entry already completed
+		entries = self.GetElectionEntries()
+		if adnlAddr in entries:
+			local.AddLog("Elections entry already completed", "info")
+			return
+		#end if
 
 		# Get account balance and minimum stake
 		account = self.GetAccount(wallet.addr)
 		minStake = self.GetMinStake()
 
 		# Calculate stake
-		stake = self.GetStake(account, validators)
+		stake = self.GetStake(account)
 
 		# Check if we have enough grams
 		balance = account.balance
@@ -1399,15 +1358,10 @@ class MyTonCore():
 		endWorkTime = startWorkTime + validatorsElectedFor + 300 # 300 sec - margin of seconds
 
 		# Create keys
-		validatorKey = self.CreatNewKey()
+		validatorKey = self.GetValidatorKeyByTime(startWorkTime, endWorkTime)
 		validatorPubkey_b64  = self.GetPubKeyBase64(validatorKey)
 
-		# Add key to validator
-		self.AddKeyToValidator(validatorKey, startWorkTime, endWorkTime)
-		self.AddKeyToTemp(validatorKey, endWorkTime)
-
-		# Get ADNL address
-		adnlAddr = self.GetAdnlAddr()
+		# Attach ADNL addr to validator
 		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
 
 		# Create fift's
@@ -1423,10 +1377,27 @@ class MyTonCore():
 		# Save vars to json file
 		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
 
-		# Check is election entries successful and clear key if not ok
-		# self.validatorConsole.Run("delpermkey {validatorKey}".format(validatorKey=validatorKey))
-
 		local.AddLog("ElectionEntry completed. Start work time: " + str(startWorkTime))
+	#end define
+	
+	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
+		local.AddLog("start GetValidatorKeyByTime function", "debug")
+		# Check temp key
+		vconfig = self.GetValidatorConfig()
+		validators = vconfig.get("validators")
+		for item in validators:
+			if item.get("election_date") == startWorkTime:
+				validatorKey_b64 = item.get("id")
+				validatorKey = base64.b64decode(validatorKey_b64).hex()
+				validatorKey = validatorKey.upper()
+				return validatorKey
+		#end for
+		
+		# Create temp key
+		validatorKey = self.CreateNewKey()
+		self.AddKeyToValidator(validatorKey, startWorkTime, endWorkTime)
+		self.AddKeyToTemp(validatorKey, endWorkTime)
+		return validatorKey
 	#end define
 
 	def ReturnStake(self):
@@ -2696,7 +2667,7 @@ def EnableVcEvent():
 	local.db["validatorWalletName"] = wallet.name
 
 	# Создать новый ADNL адрес для валидатора
-	adnlAddr = ton.CreatNewKey()
+	adnlAddr = ton.CreateNewKey()
 	ton.AddAdnlAddrToValidator(adnlAddr)
 	local.db["adnlAddr"] = adnlAddr
 
