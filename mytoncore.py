@@ -2907,7 +2907,7 @@ def Telemetry(ton):
 	data["stake"] = local.db.get("stake")
 
 	# Send data to toncenter server
-	liteUrl_default = "https://toncenter.com/api/newton_test/status/report_status"
+	liteUrl_default = "https://validator.health.toncenter.com/report_status"
 	liteUrl = local.db.get("telemetryLiteUrl", liteUrl_default)
 	output = json.dumps(data)
 	resp = requests.post(liteUrl, data=output, timeout=3)
@@ -2918,7 +2918,7 @@ def Telemetry(ton):
 	#end if
 
 	# Send full telemetry
-	fullUrl_default = "https://toncenter.com/api/newton_test/status/report_validators"
+	fullUrl_default = "https://validator.health.toncenter.com/report_validators"
 	fullUrl = local.db.get("telemetryFullUrl", fullUrl_default)
 	data = dict()
 	config36 = ton.GetConfig36()
