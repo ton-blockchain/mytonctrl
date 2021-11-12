@@ -2895,6 +2895,8 @@ def Telemetry(ton):
 	data["cpuLoad"] = GetLoadAvg()
 	data["netLoad"] = ton.GetStatistics("netLoadAvg")
 	data["tps"] = ton.GetStatistics("tpsAvg")
+	data["disksLoad"] = ton.GetStatistics("disksLoadAvg")
+	data["disksLoadPercent"] = ton.GetStatistics("disksLoadPercentAvg")
 	elections = local.TryFunction(ton.GetElectionEntries)
 
 	# Get git hashes
@@ -2905,9 +2907,10 @@ def Telemetry(ton):
 	data["stake"] = local.db.get("stake")
 
 	# Send data to toncenter server
-	url = "https://toncenter.com/api/newton_test/status/report_status"
+	liteUrl_default = "https://toncenter.com/api/newton_test/status/report_status"
+	liteUrl = local.db.get("telemetryLiteUrl", liteUrl_default)
 	output = json.dumps(data)
-	resp = requests.post(url, data=output, timeout=3)
+	resp = requests.post(liteUrl, data=output, timeout=3)
 
 	sendFullTelemetry = local.db.get("sendFullTelemetry")
 	if sendFullTelemetry is not True:
@@ -2915,14 +2918,16 @@ def Telemetry(ton):
 	#end if
 
 	# Send full telemetry
+	fullUrl_default = "https://toncenter.com/api/newton_test/status/report_validators"
+	fullUrl = local.db.get("telemetryFullUrl", fullUrl_default)
 	data = dict()
 	config36 = ton.GetConfig36()
 	data["currentValidators"] = ton.GetValidatorsList()
 	data["nextValidators"] = config36.get("validators")
 	data["elections"] = elections
-	url = "https://toncenter.com/api/newton_test/status/report_validators"
+	
 	output = json.dumps(data)
-	resp = requests.post(url, data=output, timeout=3)
+	resp = requests.post(fullUrl, data=output, timeout=3)
 #end define
 
 def Mining(ton):
