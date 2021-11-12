@@ -11,12 +11,12 @@ fi
 config="https://newton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
-while getopts m:c:ni flag
+while getopts m:c:ti flag
 do
 	case "${flag}" in
 		m) mode=${OPTARG};;
 		c) config=${OPTARG};;
-		n) telemetry=false;;
+		t) telemetry=false;;
 		i) ignore=true;;
 	esac
 done

@@ -184,7 +184,6 @@ class MyTonCore():
 		self.fift = Fift()
 		self.miner = Miner()
 
-		local.dbLoad()
 		self.Refresh()
 		self.Init()
 	#end define
@@ -1099,8 +1098,8 @@ class MyTonCore():
 		return params
 	#end define
 
-	def CreatNewKey(self):
-		local.AddLog("start CreatNewKey function", "debug")
+	def CreateNewKey(self):
+		local.AddLog("start CreateNewKey function", "debug")
 		result = self.validatorConsole.Run("newkey")
 		key = Pars(result, "created new key ", '\n')
 		return key
@@ -1291,9 +1290,11 @@ class MyTonCore():
 		return resultFilePath
 	#end define
 
-	def GetStake(self, account, validators, args=None):
+	def GetStake(self, account, args=None):
 		stake = local.db.get("stake")
 		stakePercent = local.db.get("stakePercent", 99)
+		vconfig = self.GetValidatorConfig()
+		validators = vconfig.get("validators")
 
 		# Check if optional arguments have been passed to us
 		if args:
@@ -1335,47 +1336,6 @@ class MyTonCore():
 		return maxFactor
 	#end define
 
-	def CheckElectionEntry(self):
-		isCheckElectionEntry = local.db.get("isCheckElectionEntry")
-		if isCheckElectionEntry is not True:
-			return
-		#end if
-
-		local.AddLog("start CheckElectionEntry function", "debug")
-		fullElectorAddr = self.GetFullElectorAddr()
-		startWorkTime = self.GetActiveElectionId(fullElectorAddr)
-
-		# Check if elections started
-		if (startWorkTime == 0):
-			return
-		#end if
-
-		timestamp = GetTimestamp()
-		elections = self.GetElectionEntries()
-		vconfig = self.GetValidatorConfig()
-		data = vconfig.get("validators")
-		for item in data:
-			start = item.get("election_date")
-			if start < timestamp:
-				continue
-			key_b64 = item.get("id")
-			key_hex = base64.b64decode(key_b64).hex().upper()
-			pubkey_b64 = self.GetPubKeyBase64(key_hex)
-			buffer = base64.b64decode(pubkey_b64)[4:]
-			pubkey_hex = buffer.hex().upper()
-			result = False
-			for adnl, election in elections.items():
-				electionPubkey = election.get("pubkey")
-				if pubkey_hex == electionPubkey:
-					result = True
-			#end for
-
-			if result == False:
-				local.AddLog("delpermkey {key_hex}".format(key_hex=key_hex), "warning")
-				#self.validatorConsole.Run("delpermkey {key_hex}".format(key_hex=key_hex))
-		#end for
-	#end define
-
 	def ElectionEntry(self, args=None):
 		local.AddLog("start ElectionEntry function", "debug")
 		walletName = self.validatorWalletName
@@ -1399,8 +1359,8 @@ class MyTonCore():
 			return
 		#end if
 
-		# Check election entry
-		self.CheckElectionEntry()
+		# Get ADNL address
+		adnlAddr = self.GetAdnlAddr()
 
 		# Check wether it is too early to participate
 		if "participateBeforeEnd" in local.db:
@@ -1408,29 +1368,19 @@ class MyTonCore():
 			if (startWorkTime - now) > local.db["participateBeforeEnd"] and \
 			   (now + local.db["periods"]["elections"]) < startWorkTime:
 				return
+		# Check if election entry already completed
+		entries = self.GetElectionEntries()
+		if adnlAddr in entries:
+			local.AddLog("Elections entry already completed", "info")
+			return
 		#end if
-
-		# Check if election entry is completed
-		vconfig = self.GetValidatorConfig()
-		validators = vconfig.get("validators")
-		for item in validators:
-			if item.get("election_date") == startWorkTime:
-				local.AddLog("Elections entry already completed", "info")
-				return
-		#end for
 
 		# Get account balance and minimum stake
 		account = self.GetAccount(wallet.addr)
 		minStake = self.GetMinStake()
 
 		# Calculate stake
-		stake = self.GetStake(account, validators, args)
-
-		# Get rateMultiplier
-		rateMultiplier = 1
-		if args and len(args) > 1:
-			rateMultiplier = float(args[1])
-		#end if
+		stake = self.GetStake(account, args)
 
 		# Check if we have enough grams
 		balance = account.balance
@@ -1449,15 +1399,10 @@ class MyTonCore():
 		endWorkTime = startWorkTime + validatorsElectedFor + 300 # 300 sec - margin of seconds
 
 		# Create keys
-		validatorKey = self.CreatNewKey()
+		validatorKey = self.GetValidatorKeyByTime(startWorkTime, endWorkTime)
 		validatorPubkey_b64  = self.GetPubKeyBase64(validatorKey)
 
-		# Add key to validator
-		self.AddKeyToValidator(validatorKey, startWorkTime, endWorkTime)
-		self.AddKeyToTemp(validatorKey, endWorkTime)
-
-		# Get ADNL address
-		adnlAddr = self.GetAdnlAddr()
+		# Attach ADNL addr to validator
 		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
 
 		# Create fift's
@@ -1473,10 +1418,27 @@ class MyTonCore():
 		# Save vars to json file
 		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
 
-		# Check is election entries successful and clear key if not ok
-		# self.validatorConsole.Run("delpermkey {validatorKey}".format(validatorKey=validatorKey))
-
 		local.AddLog("ElectionEntry completed. Start work time: " + str(startWorkTime))
+	#end define
+
+	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
+		local.AddLog("start GetValidatorKeyByTime function", "debug")
+		# Check temp key
+		vconfig = self.GetValidatorConfig()
+		validators = vconfig.get("validators")
+		for item in validators:
+			if item.get("election_date") == startWorkTime:
+				validatorKey_b64 = item.get("id")
+				validatorKey = base64.b64decode(validatorKey_b64).hex()
+				validatorKey = validatorKey.upper()
+				return validatorKey
+		#end for
+
+		# Create temp key
+		validatorKey = self.CreateNewKey()
+		self.AddKeyToValidator(validatorKey, startWorkTime, endWorkTime)
+		self.AddKeyToTemp(validatorKey, endWorkTime)
+		return validatorKey
 	#end define
 
 	def ReturnStake(self):
@@ -2596,6 +2558,16 @@ class MyTonCore():
 		return tpsAvg
 	#end define
 
+	def GetStatistics(self, name, statistics=None):
+		if statistics is None:
+			statistics = local.db.get("statistics")
+		if statistics:
+			data = statistics.get(name)
+		else:
+			data = [-1, -1, -1]
+		return data
+	#end define
+
 	def GetSettings(self, name):
 		local.dbLoad()
 		result = local.db.get(name)
@@ -2754,6 +2726,8 @@ def Init():
 	local.buffer["blocksNum"] = 0
 	local.buffer["masterBlocksNum"] = 0
 	local.buffer["transNumList"] = [0]*15*6
+
+	local.buffer["diskio"] = [None]*15*6
 #end define
 
 def Event(eventName):
@@ -2772,7 +2746,7 @@ def EnableVcEvent():
 	local.db["validatorWalletName"] = wallet.name
 
 	# Создать новый ADNL адрес для валидатора
-	adnlAddr = ton.CreatNewKey()
+	adnlAddr = ton.CreateNewKey()
 	ton.AddAdnlAddrToValidator(adnlAddr)
 	local.db["adnlAddr"] = adnlAddr
 
@@ -2794,9 +2768,84 @@ def Elections(ton):
 
 def Statistics(ton):
 	ReadNetworkData()
-	SaveNetworStatistics(ton)
+	SaveNetworStatistics()
 	ReadTransNumData()
-	SaveTransNumStatistics(ton)
+	SaveTransNumStatistics()
+	ReadDiskData()
+	SaveDiskStatistics()
+#end define
+
+def ReadDiskData():
+	timestamp = GetTimestamp()
+	disks = GetDisksList()
+	buff = psutil.disk_io_counters(perdisk=True)
+	data = dict()
+	for name in disks:
+		data[name] = dict()
+		data[name]["timestamp"] = timestamp
+		data[name]["busyTime"] = buff[name].busy_time
+		data[name]["readBytes"] = buff[name].read_bytes
+		data[name]["writeBytes"] = buff[name].write_bytes
+	#end for
+
+	local.buffer["diskio"].pop(0)
+	local.buffer["diskio"].append(data)
+#end define
+
+def SaveDiskStatistics():
+	data = local.buffer["diskio"]
+	data = data[::-1]
+	zerodata = data[0]
+	buff1 = data[1*6-1]
+	buff5 = data[5*6-1]
+	buff15 = data[15*6-1]
+	if buff5 is None:
+		buff5 = buff1
+	if buff15 is None:
+		buff15 = buff5
+	#end if
+
+	disksLoadAvg = dict()
+	disksLoadPercentAvg = dict()
+	disks = GetDisksList()
+	for name in disks:
+		if zerodata[name]["busyTime"] == 0:
+			continue
+		diskLoad1, diskLoadPercent1 = CalculateDiskStatistics(zerodata, buff1, name)
+		diskLoad5, diskLoadPercent5 = CalculateDiskStatistics(zerodata, buff5, name)
+		diskLoad15, diskLoadPercent15 = CalculateDiskStatistics(zerodata, buff15, name)
+		disksLoadAvg[name] = [diskLoad1, diskLoad5, diskLoad15]
+		disksLoadPercentAvg[name] = [diskLoadPercent1, diskLoadPercent5, diskLoadPercent15]
+	#end fore
+
+	# save statistics
+	statistics = local.db.get("statistics", dict())
+	statistics["disksLoadAvg"] = disksLoadAvg
+	statistics["disksLoadPercentAvg"] = disksLoadPercentAvg
+	local.db["statistics"] = statistics
+#end define
+
+def CalculateDiskStatistics(zerodata, data, name):
+	if data is None:
+		return None, None
+	data = data[name]
+	zerodata = zerodata[name]
+	timeDiff = zerodata["timestamp"] - data["timestamp"]
+	busyTimeDiff = zerodata["busyTime"] - data["busyTime"]
+	diskReadDiff = zerodata["readBytes"] - data["readBytes"]
+	diskWriteDiff = zerodata["writeBytes"] - data["writeBytes"]
+	diskLoadPercent = busyTimeDiff /1000 /timeDiff *100 # /1000 - to second, *100 - to percent
+	diskLoadPercent = round(diskLoadPercent, 2)
+	diskRead = diskReadDiff /timeDiff
+	diskWrite = diskWriteDiff /timeDiff
+	diskLoad = b2mb(diskRead + diskWrite)
+	return diskLoad, diskLoadPercent
+#end define
+
+def GetDisksList():
+	data = os.listdir("/sys/block/")
+	data.sort()
+	return data
 #end define
 
 def ReadNetworkData():
@@ -2815,7 +2864,7 @@ def ReadNetworkData():
 	local.buffer["network"]["all"].append(network_all)
 #end define
 
-def SaveNetworStatistics(ton):
+def SaveNetworStatistics():
 	data = local.buffer["network"]["all"]
 	data = data[::-1]
 	zerodata = data[0]
@@ -2858,7 +2907,7 @@ def ReadTransNumData():
 	local.buffer["transNumList"].append(transNum)
 #end define
 
-def SaveTransNumStatistics(ton):
+def SaveTransNumStatistics():
 	data = local.buffer["transNumList"]
 	data = data[::-1]
 	zerodata = data[0]
@@ -2923,8 +2972,10 @@ def Telemetry(ton):
 	data["validatorStatus"] = ton.GetValidatorStatus()
 	data["cpuNumber"] = psutil.cpu_count()
 	data["cpuLoad"] = GetLoadAvg()
-	data["netLoad"] = ton.GetNetLoadAvg()
-	data["tps"] = ton.GetTpsAvg()
+	data["netLoad"] = ton.GetStatistics("netLoadAvg")
+	data["tps"] = ton.GetStatistics("tpsAvg")
+	data["disksLoad"] = ton.GetStatistics("disksLoadAvg")
+	data["disksLoadPercent"] = ton.GetStatistics("disksLoadPercentAvg")
 	elections = local.TryFunction(ton.GetElectionEntries)
 
 	# Get git hashes
@@ -2935,9 +2986,10 @@ def Telemetry(ton):
 	data["stake"] = local.db.get("stake")
 
 	# Send data to toncenter server
-	url = "https://toncenter.com/api/newton_test/status/report_status"
+	liteUrl_default = "https://validator.health.toncenter.com/report_status"
+	liteUrl = local.db.get("telemetryLiteUrl", liteUrl_default)
 	output = json.dumps(data)
-	resp = requests.post(url, data=output, timeout=3)
+	resp = requests.post(liteUrl, data=output, timeout=3)
 
 	sendFullTelemetry = local.db.get("sendFullTelemetry")
 	if sendFullTelemetry is not True:
@@ -2945,14 +2997,16 @@ def Telemetry(ton):
 	#end if
 
 	# Send full telemetry
+	fullUrl_default = "https://validator.health.toncenter.com/report_validators"
+	fullUrl = local.db.get("telemetryFullUrl", fullUrl_default)
 	data = dict()
 	config36 = ton.GetConfig36()
 	data["currentValidators"] = ton.GetValidatorsList()
 	data["nextValidators"] = config36.get("validators")
 	data["elections"] = elections
-	url = "https://toncenter.com/api/newton_test/status/report_validators"
+
 	output = json.dumps(data)
-	resp = requests.post(url, data=output, timeout=3)
+	resp = requests.post(fullUrl, data=output, timeout=3)
 #end define
 
 def Mining(ton):
@@ -3102,7 +3156,6 @@ def Slashing(ton):
 #end define
 
 def ScanLiteServers(ton):
-	local.AddLog("start ScanLiteServers function", "debug")
 	# Считать список серверов
 	filePath = ton.liteClient.configPath
 	file = open(filePath, 'rt')
