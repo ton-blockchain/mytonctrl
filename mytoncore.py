@@ -2984,6 +2984,7 @@ def Telemetry(ton):
 	gitHashes["validator"] = GetGitHash("/usr/src/ton")
 	data["gitHashes"] = gitHashes
 	data["stake"] = local.db.get("stake")
+	data["tag"] = local.db.get("telemetryTag")
 
 	# Send data to toncenter server
 	liteUrl_default = "https://validator.health.toncenter.com/report_status"
