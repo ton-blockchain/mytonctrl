@@ -104,7 +104,7 @@ def DRVCF(args):
 	RunAsRoot(args)
 #end define
 
-def PrintLiteServerConfig(args):
+def GetLiteServerConfig():
 	keysDir = local.buffer["keysDir"]
 	liteserver_key = keysDir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
@@ -124,6 +124,11 @@ def PrintLiteServerConfig(args):
 	result["id"]["@type"]= "pub.ed25519"
 	result["id"]["key"]= key.decode()
 	text = json.dumps(result, indent=4)
+	return text
+#end define
+
+def PrintLiteServerConfig(args):
+	text = GetLiteServerConfig()
 	print(text)
 #end define
 
@@ -140,6 +145,8 @@ def Event(name):
 		DangerousRecoveryValidatorConfigFile()
 	if name == "enableJR":
 		EnableJsonRpc()
+	if name == "enablePT":
+		EnablePytonv3()
 #end define
 
 def General():
@@ -846,6 +853,21 @@ def EnableJsonRpc():
 		text = "EnableJsonRpc - {green}OK{endc}"
 	else:
 		text = "EnableJsonRpc - {red}Error{endc}"
+	ColorPrint(text)
+#end define
+
+def EnablePytonv3():
+	local.AddLog("start EnablePytonv3 function", "debug")
+	text = GetLiteServerConfig()
+	file = open("/usr/bin/ton/local.config.json", 'wt')
+	file.write(text)
+	file.close()
+	user = os.getlogin()
+	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/pytonv3installer.sh", "-u", user])
+	if exitCode == 0:
+		text = "EnablePytonv3 - {green}OK{endc}"
+	else:
+		text = "EnablePytonv3 - {red}Error{endc}"
 	ColorPrint(text)
 #end define
 
