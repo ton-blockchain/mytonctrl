@@ -629,6 +629,24 @@ class MyTonCore():
 				break
 		return block
 	#end define
+	
+	def GetInitBlock(self):
+		block = self.GetLastBlock()
+		cmd = "gethead " + block
+		result = self.liteClient.Run(cmd)
+		seqno =  Pars(result, "prev_key_block_seqno=", '\n')
+		cmd = "byseqno -1:8000000000000000 " + seqno
+		result = self.liteClient.Run(cmd)
+		buff =  Pars(result, "block header of ", ' ')
+		buff = buff.split(':')
+		rootHash = hex2base64(buff[1])
+		fileHash = hex2base64(buff[2])
+		data = dict()
+		data["seqno"] = seqno
+		data["rootHash"] = rootHash
+		data["fileHash"] = fileHash
+		return data
+	#end define
 
 	def GetTransactions(self, block):
 		transactions = list()
@@ -827,7 +845,7 @@ class MyTonCore():
 			local.buffer["configs"] = configs
 		return configs
 	#end define
-	
+
 	def GetConfigsTimestamps(self):
 		configsTimestamps = local.buffer.get("configsTimestamps")
 		if configsTimestamps is None:
@@ -1323,10 +1341,10 @@ class MyTonCore():
 			local.AddLog("Elections have not yet begun", "info")
 			return
 		#end if
-		
+
 		# Get ADNL address
 		adnlAddr = self.GetAdnlAddr()
-		
+
 		# Check if election entry already completed
 		entries = self.GetElectionEntries()
 		if adnlAddr in entries:
@@ -1379,7 +1397,7 @@ class MyTonCore():
 
 		local.AddLog("ElectionEntry completed. Start work time: " + str(startWorkTime))
 	#end define
-	
+
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
 		local.AddLog("start GetValidatorKeyByTime function", "debug")
 		# Check temp key
@@ -1392,7 +1410,7 @@ class MyTonCore():
 				validatorKey = validatorKey.upper()
 				return validatorKey
 		#end for
-		
+
 		# Create temp key
 		validatorKey = self.CreateNewKey()
 		self.AddKeyToValidator(validatorKey, startWorkTime, endWorkTime)
@@ -2516,7 +2534,7 @@ class MyTonCore():
 			tpsAvg = [-1, -1, -1]
 		return tpsAvg
 	#end define
-	
+
 	def GetStatistics(self, name, statistics=None):
 		if statistics is None:
 			statistics = local.db.get("statistics")
@@ -2647,7 +2665,7 @@ def Init():
 	local.buffer["blocksNum"] = 0
 	local.buffer["masterBlocksNum"] = 0
 	local.buffer["transNumList"] = [0]*15*6
-	
+
 	local.buffer["diskio"] = [None]*15*6
 #end define
 
@@ -2708,7 +2726,7 @@ def ReadDiskData():
 		data[name]["readBytes"] = buff[name].read_bytes
 		data[name]["writeBytes"] = buff[name].write_bytes
 	#end for
-	
+
 	local.buffer["diskio"].pop(0)
 	local.buffer["diskio"].append(data)
 #end define
@@ -2725,7 +2743,7 @@ def SaveDiskStatistics():
 	if buff15 is None:
 		buff15 = buff5
 	#end if
-	
+
 	disksLoadAvg = dict()
 	disksLoadPercentAvg = dict()
 	disks = GetDisksList()
@@ -2738,7 +2756,7 @@ def SaveDiskStatistics():
 		disksLoadAvg[name] = [diskLoad1, diskLoad5, diskLoad15]
 		disksLoadPercentAvg[name] = [diskLoadPercent1, diskLoadPercent5, diskLoadPercent15]
 	#end fore
-	
+
 	# save statistics
 	statistics = local.db.get("statistics", dict())
 	statistics["disksLoadAvg"] = disksLoadAvg
@@ -2925,7 +2943,7 @@ def Telemetry(ton):
 	data["currentValidators"] = ton.GetValidatorsList()
 	data["nextValidators"] = config36.get("validators")
 	data["elections"] = elections
-	
+
 	output = json.dumps(data)
 	resp = requests.post(fullUrl, data=output, timeout=3)
 #end define
@@ -3141,6 +3159,13 @@ def xhex2hex(x):
 		return h
 	except:
 		return None
+#end define
+
+def hex2base64(h):
+	b = bytes.fromhex(h)
+	b64 = base64.b64encode(b)
+	s = b64.decode("utf-8")
+	return s
 #end define
 
 

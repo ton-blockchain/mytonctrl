@@ -30,7 +30,7 @@ def Init():
 	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.AddItem("status", Status, "Print TON component status")
-	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc. Example: 'enable FN'")
+	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'PT' - pyTONv3. Example: 'enable FN'")
 	console.AddItem("plsc", PrintLiteServerConfig, "Print LiteServer config")
 	console.AddItem("drvcf", DRVCF, "Dangerous recovery validator config file")
 	console.AddItem("setwebpass", SetWebPassword, "Set a password for the web admin interface")
@@ -123,12 +123,46 @@ def GetLiteServerConfig():
 	result["id"] = dict()
 	result["id"]["@type"]= "pub.ed25519"
 	result["id"]["key"]= key.decode()
-	text = json.dumps(result, indent=4)
-	return text
+	return result
+#end define
+
+def CreateLocalConfig():
+	# get init block
+	from mytoncore import MyTonCore
+	ton = MyTonCore()
+	initBlock = ton.GetInitBlock()
+	
+	# read global config file
+	file = open("/usr/bin/ton/global.config.json", 'rt')
+	text = file.read()
+	data = json.loads(text)
+	file.close()
+	
+	# edit config
+	result = GetLiteServerConfig()
+	data["liteservers"] = [result]
+	data["validator"]["init_block"]["seqno"] = initBlock["seqno"]
+	data["validator"]["init_block"]["root_hash"] = initBlock["rootHash"]
+	data["validator"]["init_block"]["file_hash"] = initBlock["fileHash"]
+	text = json.dumps(data, indent=4)
+	
+	# write local config file
+	filePath = "/usr/bin/ton/local.config.json"
+	file = open(filePath, 'wt')
+	file.write(text)
+	file.close()
+	
+	# chown
+	user = os.getlogin()
+	args = ["chown", "-R", user + ':' + user, filePath]
+	
+	print("Local config file created:", filePath)
 #end define
 
 def PrintLiteServerConfig(args):
-	text = GetLiteServerConfig()
+	CreateLocalConfig()
+	data = GetLiteServerConfig()
+	text = json.dumps(data, indent=4)
 	print(text)
 #end define
 
@@ -858,10 +892,7 @@ def EnableJsonRpc():
 
 def EnablePytonv3():
 	local.AddLog("start EnablePytonv3 function", "debug")
-	text = GetLiteServerConfig()
-	file = open("/usr/bin/ton/local.config.json", 'wt')
-	file.write(text)
-	file.close()
+	CreateLocalConfig()
 	user = os.getlogin()
 	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/pytonv3installer.sh", "-u", user])
 	if exitCode == 0:

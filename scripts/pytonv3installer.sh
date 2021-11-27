@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Проверить sudo
@@ -27,23 +27,21 @@ pip3 install pipenv
 echo -e "${COLOR}[2/4]${ENDC} Cloning github repository"
 cd /usr/src
 rm -rf pytonv3
-git clone https://github.com/EmelyanenkoK/pytonv3
+#git clone https://github.com/EmelyanenkoK/pytonv3
+git clone https://github.com/igroman787/pytonv3
 
 # Установка модуля
 cd /usr/src/pytonv3
 python3 setup.py install
 
-# Скомпилировать и скопировать недостающий бинарник
+# Скомпилировать недостающий бинарник
 cd /usr/bin/ton && make tonlibjson
-cp /usr/bin/ton/tonlib/libtonlibjson.so.0.5 /usr/src/pytonv3/pyTON/distlib/linux/libtonlibjson.so
 
 # Прописать автозагрузку
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
-cmd="from sys import path; path.append('/usr/src/mytonctrl/'); from mypylib.mypylib import *; Add2Systemd(name='pytonv3', user='${user}', start='/usr/bin/python3 -m pyTON --liteserverconfig /usr/bin/ton/local.config.json')"
+cmd="from sys import path; path.append('/usr/src/mytonctrl/'); from mypylib.mypylib import *; Add2Systemd(name='pytonv3', user='${user}', start='/usr/bin/python3 -m pyTON --liteserverconfig /usr/bin/ton/local.config.json --libtonlibjson /usr/bin/ton/tonlib/libtonlibjson.so')"
 python3 -c "${cmd}"
 systemctl restart pytonv3
-
-
 
 # Конец
 echo -e "${COLOR}[4/4]${ENDC} pyTONv3 installation complete"
