@@ -32,6 +32,7 @@ def Init():
 	console.AddItem("status", Status, "Print TON component status")
 	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'PT' - pyTONv3. Example: 'enable FN'")
 	console.AddItem("plsc", PrintLiteServerConfig, "Print LiteServer config")
+	console.AddItem("clcf", CreateLocalConfigFile, "CreateLocalConfigFile")
 	console.AddItem("drvcf", DRVCF, "Dangerous recovery validator config file")
 	console.AddItem("setwebpass", SetWebPassword, "Set a password for the web admin interface")
 
@@ -94,6 +95,8 @@ def Status(args):
 def Enable(args):
 	name = args[0]
 	user = local.buffer["user"]
+	if name == "PT":
+		CreateLocalConfigFile(args)
 	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "enable{name}".format(name=name)]
 	RunAsRoot(args)
 #end define
@@ -126,12 +129,14 @@ def GetLiteServerConfig():
 	return result
 #end define
 
-def CreateLocalConfig():
-	# get init block
+def GetInitBlock():
 	from mytoncore import MyTonCore
 	ton = MyTonCore()
 	initBlock = ton.GetInitBlock()
-	
+	return initBlock
+#end define
+
+def CreateLocalConfig(initBlock):
 	# read global config file
 	file = open("/usr/bin/ton/global.config.json", 'rt')
 	text = file.read()
@@ -139,8 +144,8 @@ def CreateLocalConfig():
 	file.close()
 	
 	# edit config
-	result = GetLiteServerConfig()
-	data["liteservers"] = [result]
+	liteServerConfig = GetLiteServerConfig()
+	data["liteservers"] = [liteServerConfig]
 	data["validator"]["init_block"]["seqno"] = initBlock["seqno"]
 	data["validator"]["init_block"]["root_hash"] = initBlock["rootHash"]
 	data["validator"]["init_block"]["file_hash"] = initBlock["fileHash"]
@@ -153,17 +158,24 @@ def CreateLocalConfig():
 	file.close()
 	
 	# chown
-	user = os.getlogin()
+	user = local.buffer["user"]
 	args = ["chown", "-R", user + ':' + user, filePath]
 	
 	print("Local config file created:", filePath)
 #end define
 
 def PrintLiteServerConfig(args):
-	CreateLocalConfig()
-	data = GetLiteServerConfig()
-	text = json.dumps(data, indent=4)
+	liteServerConfig = GetLiteServerConfig()
+	text = json.dumps(liteServerConfig, indent=4)
 	print(text)
+#end define
+
+def CreateLocalConfigFile(args):
+	initBlock = GetInitBlock()
+	initBlock_b64 = dict2b64(initBlock)
+	user = local.buffer["user"]
+	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "clc", "-i", initBlock_b64]
+	RunAsRoot(args)
 #end define
 
 def Event(name):
@@ -181,6 +193,11 @@ def Event(name):
 		EnableJsonRpc()
 	if name == "enablePT":
 		EnablePytonv3()
+	if name == "clc":
+		ix = sys.argv.index("-i")
+		initBlock_b64 = sys.argv[ix+1]
+		initBlock = b642dict(initBlock_b64)
+		CreateLocalConfig(initBlock)
 #end define
 
 def General():
@@ -881,7 +898,7 @@ def SetWebPassword(args):
 
 def EnableJsonRpc():
 	local.AddLog("start EnableJsonRpc function", "debug")
-	user = os.getlogin()
+	user = local.buffer["user"]
 	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/jsonrpcinstaller.sh", "-u", user])
 	if exitCode == 0:
 		text = "EnableJsonRpc - {green}OK{endc}"
@@ -892,14 +909,39 @@ def EnableJsonRpc():
 
 def EnablePytonv3():
 	local.AddLog("start EnablePytonv3 function", "debug")
-	CreateLocalConfig()
-	user = os.getlogin()
+	user = local.buffer["user"]
 	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/pytonv3installer.sh", "-u", user])
 	if exitCode == 0:
 		text = "EnablePytonv3 - {green}OK{endc}"
 	else:
 		text = "EnablePytonv3 - {red}Error{endc}"
 	ColorPrint(text)
+#end define
+
+def str2b64(s):
+	b = s.encode("utf-8")
+	b64 = base64.b64encode(b)
+	b64 = b64.decode("utf-8")
+	return b64
+#end define
+
+def b642str(b64):
+	b64 = b64.encode("utf-8")
+	b = base64.b64decode(b64)
+	s = b.decode("utf-8")
+	return s
+#end define
+
+def dict2b64(d):
+	s = json.dumps(d)
+	b64 = str2b64(s)
+	return b64
+#end define
+
+def b642dict(b64):
+	s = b642str(b64)
+	d = json.loads(s)
+	return d
 #end define
 
 
