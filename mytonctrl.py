@@ -87,14 +87,22 @@ def Installer(args):
 	subprocess.run(args)
 #end define
 
-def Update(args):
-	runArgs = ["bash", "/usr/src/mytonctrl/scripts/update.sh"]
+def SetArgsByArgs(runArgs, args):
 	if len(args) == 1:
-		runArgs += ["-r", args[0]]
+		buff = args[0]
+		if "https://" in buff:
+			runArgs += ["-r", buff]
+		else:
+			runArgs += ["-b", buff]
 	elif len(args) == 2:
 		runArgs += ["-r", args[0]]
-		runArgs += ["-i", args[1]]
-	#end if
+		runArgs += ["-b", args[1]]
+	return runArgs
+#end define
+
+def Update(args):
+	runArgs = ["bash", "/usr/src/mytonctrl/scripts/update.sh"]
+	runArgs = SetArgsByArgs(runArgs, args)
 	
 	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
@@ -107,13 +115,7 @@ def Update(args):
 
 def Upgrade(args):
 	runArgs = ["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"]
-	if len(args) == 1:
-		runArgs += ["-r", args[0]]
-	elif len(args) == 2:
-		runArgs += ["-r", args[0]]
-		runArgs += ["-i", args[1]]
-	#end if
-	
+	runArgs = SetArgsByArgs(runArgs, args)
 	
 	exitCode = RunAsRoot(["python3", "/usr/src/mytonctrl/scripts/upgrade.py"])
 	exitCode += RunAsRoot(runArgs)

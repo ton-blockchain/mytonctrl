@@ -27,14 +27,14 @@ cd /usr/src/ton
 if [ -z ${repo+x} ]; then
 	echo "repo without changes"
 else
-	git remote set-url origin repo
+	git remote set-url origin ${repo}
 fi
 
 # Adjust branch
 if [ -z ${branch+x} ]; then
 	echo "branch without changes"
 else
-	git checkout branch
+	git checkout ${branch}
 fi
 
 # Update code
