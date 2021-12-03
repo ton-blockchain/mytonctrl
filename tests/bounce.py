@@ -5,6 +5,7 @@ from sys import path
 path.append("/usr/src/mytonctrl/")
 from mytoncore import *
 
+
 Local = MyPyClass(__file__)
 ton = MyTonCore()
 
@@ -49,14 +50,14 @@ def Init():
 			need = need * -1
 			buff_wallet = wallet
 			buff_wallet.oldseqno = ton.GetSeqno(wallet)
-			ton.MoveGramsFromHW(wallet, [[testsWallet.addr, need]], wait=False)
+			ton.MoveCoinsFromHW(wallet, [[testsWallet.addr, need]], wait=False)
 			Local.AddLog(testsWallet.name + " <<< " + str(wallet.subwallet))
 	if buff_wallet:
 		ton.WaitTransaction(buff_wallet)
 	#end for
 
 	# Move grams from highload wallet
-	ton.MoveGramsFromHW(testsWallet, destList)
+	ton.MoveCoinsFromHW(testsWallet, destList)
 
 	# Activate wallets
 	for wallet in wallets:
@@ -70,11 +71,10 @@ def Init():
 def Work():
 	wallets = Local.buffer["wallets"]
 	destList = list()
-	for i in range(load):
-		destList.append([wallets[i].addr, 0.1])
+	destList.append(["EQAY_2_A88HD43S96hbVGbCLB21e6_k1nbaqICwS3ZCrMBaZ", 2])
 	for wallet in wallets:
 		wallet.oldseqno = ton.GetSeqno(wallet)
-		ton.MoveGramsFromHW(wallet, destList, wait=False)
+		ton.MoveCoinsFromHW(wallet, destList, wait=False)
 		Local.AddLog(str(wallet.subwallet) + " " + wallet.addr + " >>> ")
 	ton.WaitTransaction(wallets[-1])
 #end define
@@ -93,16 +93,11 @@ def General():
 ###
 ### Start test
 ###
-Local.db["config"]["logLevel"] = "info"
 Local.Run()
-
-local.db["config"]["logLevel"] = "info"
-load = 10
+load = 200
 
 Local.StartCycle(General, sec=1)
 while True:
 	time.sleep(60)
-	hour_str = time.strftime("%H")
-	hour = int(hour_str)
-	load = hour * 4
+	#load += 10
 #end while

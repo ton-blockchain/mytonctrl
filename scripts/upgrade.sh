@@ -7,16 +7,43 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
+# Get arguments
+while getopts r:b: flag
+do
+	case "${flag}" in
+		r) repo=${OPTARG};;
+		b) branch=${OPTARG};;
+	esac
+done
+
 # Цвета
 COLOR='\033[92m'
 ENDC='\033[0m'
 
+# Go to work dir
 cd /usr/src/ton
+
+# Adjust repo
+if [ -z ${repo+x} ]; then
+	echo "repo without changes"
+else
+	git remote set-url origin repo
+fi
+
+# Adjust branch
+if [ -z ${branch+x} ]; then
+	echo "branch without changes"
+else
+	git checkout branch
+fi
+
+# Update code
 git pull --recurse-submodules
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
 export CCACHE_DISABLE=1
 
+# Update binary
 cd /usr/bin/ton
 rm -f CMakeCache.txt
 systemctl stop validator && sleep 5

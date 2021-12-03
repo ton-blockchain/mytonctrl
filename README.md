@@ -1,6 +1,6 @@
 ## Что это
 Данная консольная программа является оберткой над `fift`, `lite-client` и `validator-engine-console`. Она была создана для облегчения управления кошельками, доменами и валидатором на операционной системе `Linux`.
-![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-status.png)
+![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-status_ru.png)
 
 ## Функционал
 - [x] Показать статус сети TON
@@ -20,6 +20,7 @@
 	- [x] Перевод всей суммы (all)
 	- [x] Перевод всей суммы с диактивацией кошелька (alld)
 	- [x] Перевод средств на кошелек из закладок
+	- [x] Перевод средств на кошелек через цепочку самоудаляемых кошельков
 - [x] Управление закладками
 	- [x] Добавить аккаунт в закладки
 	- [x] Показать закладки
@@ -45,6 +46,8 @@
 Ubuntu 16.04 LTS (Xenial Xerus) - Error: TON compilation error
 Ubuntu 18.04 LTS (Bionic Beaver) - OK
 Ubuntu 20.04 LTS (Focal Fossa) - OK
+Debian 8 - Error: Unable to locate package libgsl-dev
+Debian 9 - Error: TON compilation error
 Debian 10 - OK
 ```
 
@@ -67,7 +70,6 @@ sudo bash install.sh -m <mode>
 mytonctrl
 ```
 
-
 ## Установка (Debian)
 1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки. В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
 ```sh
@@ -78,6 +80,19 @@ su root -c 'bash install.sh -m <mode>'
 2. Готово. Можете пробовать запустить программу `mytonctrl`.
 ```sh
 mytonctrl
+```
+
+## Телеметрия
+По умолчанию `mytonctrl` отправляет статистику валидатора на сервер https://toncenter.com
+Это необходимо для выявления аномалий в сети а так же для быстрого реагирования разработчиков.
+Для отключения телеметрии при установке воспользуйтесь флагом `-t`:
+```sh
+sudo bash install.sh -m <mode> -t
+```
+
+Для отключения телеметрии после установки:
+```sh
+MyTonCtrl> set sendTelemetry false
 ```
 
 ## Полезные ссылки
