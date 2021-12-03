@@ -1,10 +1,12 @@
-# Говнокод ON
-from sys import path
-from os.path import dirname as dir
-path.append(dir(path[0]))
-# Говнокод OFF
+#!/usr/bin/env python3
+# -*- coding: utf_8 -*-l
 
+from sys import path
+path.append("/usr/src/mytonctrl/")
 from mytoncore import *
+
+Local = MyPyClass(__file__)
+ton = MyTonCore()
 
 
 def Init():

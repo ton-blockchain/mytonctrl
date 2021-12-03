@@ -645,6 +645,24 @@ class MyTonCore():
 		return block
 	#end define
 
+	def GetInitBlock(self):
+		block = self.GetLastBlock()
+		cmd = "gethead " + block
+		result = self.liteClient.Run(cmd)
+		seqno =  Pars(result, "prev_key_block_seqno=", '\n')
+		cmd = "byseqno -1:8000000000000000 " + seqno
+		result = self.liteClient.Run(cmd)
+		buff =  Pars(result, "block header of ", ' ')
+		buff = buff.split(':')
+		rootHash = hex2base64(buff[1])
+		fileHash = hex2base64(buff[2])
+		data = dict()
+		data["seqno"] = seqno
+		data["rootHash"] = rootHash
+		data["fileHash"] = fileHash
+		return data
+	#end define
+
 	def GetTransactions(self, block):
 		transactions = list()
 		cmd = "listblocktrans {block} 999".format(block=block)
@@ -2984,7 +3002,6 @@ def Telemetry(ton):
 	gitHashes["validator"] = GetGitHash("/usr/src/ton")
 	data["gitHashes"] = gitHashes
 	data["stake"] = local.db.get("stake")
-	data["tag"] = local.db.get("telemetryTag")
 
 	# Send data to toncenter server
 	liteUrl_default = "https://validator.health.toncenter.com/report_status"
@@ -3240,6 +3257,13 @@ def xhex2hex(x):
 		return h
 	except:
 		return None
+#end define
+
+def hex2base64(h):
+	b = bytes.fromhex(h)
+	b64 = base64.b64encode(b)
+	s = b64.decode("utf-8")
+	return s
 #end define
 
 
