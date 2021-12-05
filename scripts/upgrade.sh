@@ -28,6 +28,7 @@ if [ -z ${repo+x} ]; then
 	echo "repo without changes"
 else
 	git remote set-url origin ${repo}
+	git pull --rebase
 fi
 
 # Adjust branch
@@ -35,6 +36,7 @@ if [ -z ${branch+x} ]; then
 	echo "branch without changes"
 else
 	git checkout ${branch}
+	git pull --rebase
 fi
 
 # Update code
