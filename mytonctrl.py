@@ -114,6 +114,19 @@ def Installer(args):
 	subprocess.run(args)
 #end define
 
+def SetArgsByArgs(runArgs, args):
+	if len(args) == 1:
+		buff = args[0]
+		if "https://" in buff:
+			runArgs += ["-r", buff]
+		else:
+			runArgs += ["-b", buff]
+	elif len(args) == 2:
+		runArgs += ["-r", args[0]]
+		runArgs += ["-b", args[1]]
+	return runArgs
+#end define
+
 def Update(args):
 	runArgs = ["bash", "/usr/src/mytonctrl/scripts/update.sh"]
 	runArgs = SetArgsByArgs(runArgs, args)
