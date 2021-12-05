@@ -115,7 +115,10 @@ def Installer(args):
 #end define
 
 def Update(args):
-	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/update.sh"])
+	runArgs = ["bash", "/usr/src/mytonctrl/scripts/update.sh"]
+	runArgs = SetArgsByArgs(runArgs, args)
+	
+	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
 		text = "Update - {green}OK{endc}"
 	else:
@@ -125,9 +128,11 @@ def Update(args):
 #end define
 
 def Upgrade(args):
+	runArgs = ["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"]
+	runArgs = SetArgsByArgs(runArgs, args)
+	
 	exitCode = RunAsRoot(["python3", "/usr/src/mytonctrl/scripts/upgrade.py"])
-	exitCode += RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"])
-
+	exitCode += RunAsRoot(runArgs)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
