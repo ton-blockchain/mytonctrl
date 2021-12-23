@@ -3,7 +3,7 @@
 ### 1. Устанавливаем mytonctrl:
 Скачиваем установочный скрипт от имени того пользователя, на чьё имя будет установлен mytonctrl. Настоятельно не советую устанавливать mytonctrl от имени root. В нашем случае от имени user:
 
-```
+```sh
 wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
 ```
 
@@ -11,25 +11,15 @@ wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/insta
 
 Запускаем установочный скрипт от имени администратора:
 
-```
+```sh
 sudo bash install.sh -m full
 ```
-
-Или, если нужна lite-версия:
-
-```
-sudo bash install.sh -m lite
-```
-
-
-Вот так выглядит успешная установка mytonctrl
-(скрин)
 
 
 ### 2. Проверяем, что всё установилось правильно:
 Запускаем mytonctrl от имени того пользователя, на чьё имя установили:
 
-```
+```sh
 mytonctrl
 ```
 
@@ -68,18 +58,3 @@ mytoncore будет автоматически участвовать в выб
 Логи mytoncrl можно смотреть в `~/.local/share/mytoncore/mytoncore.log` если он был установлен не от лица root, иначе в `/usr/local/bin/mytoncore/mytoncore.log`.
 
 ![logs](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/manual-ubuntu_mytoncore-log.png)
-
-
-### 5. Бонус.
-Если вы запускаете валидатор в тестовой сети, то можно помайнить немного монет у PoW-гиверов. Для этого нужно установить несколько параметров. Майнинг начнется автоматически.
-
-Устанавливаем адрес PoW-гивера (список можно взять отсюда https://test.ton.org/TestGrams-HOWTO.txt):
-
-```
-set powAddr "kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN"
-```
-
-Устанавливаем адрес своего кошелька, на который будет зачисляться вознаграждение:
-```
-set minerAddr "EQB1eouuAYyQogT7Sd4KzzBLBoSdLm77wVL10CrHjJON8w7E"
-```

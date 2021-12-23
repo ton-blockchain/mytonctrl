@@ -98,10 +98,21 @@ To disable telemetry after installation:
 MyTonCtrl> set sendTelemetry false
 ```
 
+## Web admin panel
+To be able to control the node/validator through the browser, you need to install an additional module:
+`mytonctrl` -> `installer` -> `enable JR`
+
+Next, you need to create a password for the connection:
+`mytonctrl` -> `installer` -> `setwebpass`
+
+Ready. Now you can go to the site https://tonadmin.org and log in using your data.
+
+## Local copy of toncenter
+In order to raise a local copy of https://toncenter.com on the server, you need to install an additional module:
+`mytonctrl` ->` installer` -> `enable PT`
+
+Ready. A local copy of toncenter is available at `http://<server-ip-address>:8000`
+
 ## Useful links
-1. https://ton.org/docs/#/howto/
-2. https://test.ton.org/FullNode-HOWTO.txt
-3. https://test.ton.org/Validator-HOWTO.txt
-4. https://test.ton.org/TonSites-HOWTO.txt
-5. https://test.ton.org/DNS-HOWTO.txt
-6. https://test.ton.org/ConfigParam-HOWTO.txt
+1. https://github.com/igroman787/mytonctrl/blob/master/docs/en/manual-ubuntu.md
+2. https://ton.org/docs/

@@ -95,11 +95,21 @@ sudo bash install.sh -m <mode> -t
 MyTonCtrl> set sendTelemetry false
 ```
 
+## Веб админка
+Для возможности управления нодой/валидатором через браузер нужно установить дополнительный модуль:
+`mytonctrl` -> `installer` -> `enable JR`
+
+Далее нужно создать пароль для подключения:
+`mytonctrl` -> `installer` -> `setwebpass`
+
+Готово. Теперь можно идти на сайт https://tonadmin.org и войти используя свои данные.
+
+## Локальная копия toncenter
+Для того что бы поднять на сервере локальную копию https://toncenter.com нужно установить дополнительный модуль:
+`mytonctrl` -> `installer` -> `enable PT`
+
+Готово. Локальная копия toncenter доступна по адресу `http://<server-ip-address>:8000`
+
 ## Полезные ссылки
-1. https://ton.org/README.txt
-2. https://ton.org/HOWTO.txt
-3. https://ton.org/FullNode-HOWTO.txt
-4. https://ton.org/Validator-HOWTO.txt
-5. https://ton.org/TonSites-HOWTO.txt
-6. https://ton.org/DNS-HOWTO.txt
-7. https://ton.org/ConfigParam-HOWTO.txt
+1. https://github.com/igroman787/mytonctrl/blob/master/docs/ru/manual-ubuntu.md
+2. https://ton.org/docs/
