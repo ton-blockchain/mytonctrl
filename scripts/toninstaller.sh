@@ -40,12 +40,12 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 	elif [ -f /etc/SuSE-release ]; then
 		echo "Suse Linux detected."
 		echo "This OS is not supported with this script at present. Sorry."
-		echo "Please refer to https://github.com/igroman787/mytonctrl for setup information."
+		echo "Please refer to https://github.com/ton-blockchain/mytonctrl for setup information."
 		exit 1
 	elif [ -f /etc/arch-release ]; then
 		echo "Arch Linux detected."
 		echo "This OS is not supported with this script at present. Sorry."
-		echo "Please refer to https://github.com/igroman787/mytonctrl for setup information."
+		echo "Please refer to https://github.com/ton-blockchain/mytonctrl for setup information."
 		exit 1
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
@@ -54,7 +54,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 	else
 		echo "Unknown Linux distribution."
 		echo "This OS is not supported with this script at present. Sorry."
-		echo "Please refer to https://github.com/igroman787/mytonctrl for setup information."
+		echo "Please refer to https://github.com/ton-blockchain/mytonctrl for setup information."
 		exit 1
 	fi
 elif [ "$OSTYPE" == "darwin"* ]; then
@@ -89,7 +89,7 @@ cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
 rm -rf $SOURCES_DIR/mytonctrl
 git clone --recursive https://github.com/newton-blockchain/ton.git
-git clone --recursive https://github.com/igroman787/mytonctrl.git
+git clone --recursive https://github.com/ton-blockchain/mytonctrl.git
 
 
 # Подготавливаем папки для компиляции

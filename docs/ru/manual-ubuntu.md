@@ -4,10 +4,10 @@
 Скачиваем установочный скрипт от имени того пользователя, на чьё имя будет установлен mytonctrl. Настоятельно не советую устанавливать mytonctrl от имени root. В нашем случае от имени user:
 
 ```sh
-wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
+wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
 ```
 
-![wget output](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/manual-ubuntu_wget-ls_ru.png)
+![wget output](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_wget-ls_ru.png)
 
 Запускаем установочный скрипт от имени администратора:
 
@@ -29,11 +29,11 @@ mytonctrl
 - Статус локального валидатора. Должен быть зелёным.
 - Рассинхронизация локального валидатора. Вначале будет огромное число. После того, как валидатор свяжется с остальными валидаторами, число станет около 250к. Затем, по мере синхронизации валидатора, число будет уменьшаться. Как только число станет меньше 20 — значит, валидатор синхронизировался.
 
-![status](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/manual-ubuntu_mytonctrl-status_ru.png)
+![status](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-status_ru.png)
 
 Смотрим доступные кошельки. Кошелек validator_wallet_001 был создан при установке mytonctrl:
 
-![wallet list](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/manual-ubuntu_mytonctrl-wl_ru.png)
+![wallet list](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-wl_ru.png)
 
 
 ### 3. Закидываем необходимое количество монет на кошелёк валидатора и активируем кошелёк:
@@ -41,7 +41,7 @@ mytonctrl
 
 На скрине команда `vas` отображает историю переводов, а команда `aw` активирует кошелек:
 
-![account history](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/manual-ubuntu_mytonctrl-vas-aw_ru.png)
+![account history](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-vas-aw_ru.png)
 
 
 ### 4. На данном этапе всё уже готово для работы валидатора
@@ -49,12 +49,12 @@ mytoncore будет автоматически участвовать в выб
 
 `set stake 50000` — установили размер стейка в 50к монет. Если ставка была принята и мы стали валидатором, то забрать свою ставку мы сможем только на вторые выборы — таковы правила электора.
 
-![setting stake](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/manual-ubuntu_mytonctrl-set_ru.png)
+![setting stake](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-set_ru.png)
 
 Не стесняйтесь команды help:
 
-![help command](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/manual-ubuntu_mytonctrl-help_ru.png)
+![help command](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-help_ru.png)
 
 Логи mytoncrl можно смотреть в `~/.local/share/mytoncore/mytoncore.log` если он был установлен не от лица root, иначе в `/usr/local/bin/mytoncore/mytoncore.log`.
 
-![logs](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/manual-ubuntu_mytoncore-log.png)
+![logs](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytoncore-log.png)
