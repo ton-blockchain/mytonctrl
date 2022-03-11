@@ -1,6 +1,6 @@
 ## Что это
 Данная консольная программа является оберткой над `fift`, `lite-client` и `validator-engine-console`. Она была создана для облегчения управления кошельками, доменами и валидатором на операционной системе `Linux`.
-![](https://raw.githubusercontent.com/igroman787/mytonctrl/master/screens/mytonctrl-status_ru.png)
+![](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/mytonctrl-status_ru.png)
 
 ## Функционал
 - [x] Показать статус сети TON
@@ -56,12 +56,12 @@ Debian 10 - OK
 - `mytoninstaller.py` - Данный скрипт производит настройку валидатора, `mytonctrl` и создание ключей для подключения к валидатору.
 
 ## Режимы установки
-Есть два режима установки: `lite` и `full`. Оба они **компилируют** и устанавливают компоненты `TON`. Однако `lite` версия не настраивает и не запускает валидатор.
+Есть два режима установки: `lite` и `full`. Оба они **компилируют** и устанавливают компоненты `TON`. Однако `lite` версия не настраивает и не запускает ноду/валидатор.
 
 ## Установка (Ubuntu)
 1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки (`<mode>`). В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
 ```sh
-wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
+wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
 sudo bash install.sh -m <mode>
 ```
 
@@ -73,7 +73,7 @@ mytonctrl
 ## Установка (Debian)
 1. Скачайте и выполните скрипт `install.sh` с нужным вам режимом установки. В ходе установки у вас будет несколько раз запрошен пароль суперпользователя.
 ```sh
-wget https://raw.githubusercontent.com/igroman787/mytonctrl/master/scripts/install.sh
+wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
 su root -c 'bash install.sh -m <mode>'
 ```
 
@@ -95,11 +95,23 @@ sudo bash install.sh -m <mode> -t
 MyTonCtrl> set sendTelemetry false
 ```
 
+## Веб админка
+Для возможности управления нодой/валидатором через браузер нужно установить дополнительный модуль:
+`mytonctrl` -> `installer` -> `enable JR`
+
+Далее нужно создать пароль для подключения:
+`mytonctrl` -> `installer` -> `setwebpass`
+
+Готово. Теперь можно идти на сайт https://tonadmin.org и войти используя свои данные.
+git: https://github.com/igroman787/mtc-jsonrpc
+
+## Локальная копия toncenter
+Для того что бы поднять на сервере локальную копию https://toncenter.com нужно установить дополнительный модуль:
+`mytonctrl` -> `installer` -> `enable PT`
+
+Готово. Локальная копия toncenter доступна по адресу `http://<server-ip-address>:8000`
+git: https://github.com/igroman787/pytonv3
+
 ## Полезные ссылки
-1. https://ton.org/README.txt
-2. https://ton.org/HOWTO.txt
-3. https://ton.org/FullNode-HOWTO.txt
-4. https://ton.org/Validator-HOWTO.txt
-5. https://ton.org/TonSites-HOWTO.txt
-6. https://ton.org/DNS-HOWTO.txt
-7. https://ton.org/ConfigParam-HOWTO.txt
+1. https://github.com/ton-blockchain/mytonctrl/blob/master/docs/ru/manual-ubuntu.md
+2. https://ton.org/docs/

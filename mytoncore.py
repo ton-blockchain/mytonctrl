@@ -34,7 +34,7 @@ class LiteClient:
 			args = [self.appPath, "--addr", self.addr, "--pub", self.pubkeyPath, "--verbosity", "0", "--cmd", cmd]
 		else:
 			liteServers = local.db.get("liteServers")
-			if liteServers is not None:
+			if liteServers is not None and len(liteServers):
 				index = random.choice(liteServers)
 				index = str(index)
 				args += ["-i", index]

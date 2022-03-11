@@ -36,6 +36,7 @@ if [ -z ${branch+x} ]; then
 	echo "branch without changes"
 else
 	git checkout ${branch}
+	git branch --set-upstream-to=origin/${branch} ${branch}
 	git pull --rebase
 fi
 
