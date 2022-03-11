@@ -44,9 +44,8 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 		exit 1
 	elif [ -f /etc/arch-release ]; then
 		echo "Arch Linux detected."
-		echo "This OS is not supported with this script at present. Sorry."
-		echo "Please refer to https://github.com/ton-blockchain/mytonctrl for setup information."
-		exit 1
+		pacman -Syuy
+		pacman -S --noconfirm git make cmake clang gflags zlib openssl readline libmicrohttpd python python-pip
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
 		apt-get update
