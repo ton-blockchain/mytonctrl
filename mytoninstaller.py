@@ -31,6 +31,7 @@ def Init():
 	console.color = console.RED
 	console.AddItem("status", Status, "Print TON component status")
 	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'PT' - pyTONv3. Example: 'enable FN'")
+	console.AddItem("update", Enable, "Update some function: 'JR' - jsonrpc.  Example: 'update JR'") 
 	console.AddItem("plsc", PrintLiteServerConfig, "Print LiteServer config")
 	console.AddItem("clcf", CreateLocalConfigFile, "CreateLocalConfigFile")
 	console.AddItem("drvcf", DRVCF, "Dangerous recovery validator config file")
@@ -213,7 +214,7 @@ def General():
 	if "-m" in sys.argv:
 		mx = sys.argv.index("-m")
 		mode = sys.argv[mx+1]
-	
+
 		# Создать настройки для mytoncore.py
 		FirstMytoncoreSettings()
 
@@ -275,7 +276,7 @@ def FirstNodeSettings():
 	vport = random.randint(2000, 65000)
 	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
 	local.AddLog("Use addr: " + addr, "debug")
-	
+
 	# Первый запуск
 	local.AddLog("First start validator - create config.json", "debug")
 	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", tonDbDir, "--ip", addr, "--logname", tonLogPath]
@@ -296,7 +297,7 @@ def FirstMytoncoreSettings():
 
 	# Прописать mytoncore.py в автозагрузку
 	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")
-	
+
 	# Проверить конфигурацию
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
@@ -397,7 +398,7 @@ def EnableValidatorConsole():
 	output_arr = output.split(' ')
 	server_key_hex = output_arr[0]
 	server_key_b64 = output_arr[1].replace('\n', '')
-	
+
 	# move key
 	newKeyPath = tonDbDir + "/keyring/" + server_key_hex
 	args = ["mv", server_key, newKeyPath]
@@ -414,7 +415,7 @@ def EnableValidatorConsole():
 	# chown 1
 	args = ["chown", vuser + ':' + vuser, newKeyPath]
 	subprocess.run(args)
-	
+
 	# chown 2
 	args = ["chown", user + ':' + user, server_pubkey, client_key, client_pubkey]
 	subprocess.run(args)
@@ -457,7 +458,7 @@ def EnableValidatorConsole():
 	cmd = "python3 {srcDir}mytonctrl/mytoncore.py -e \"enableVC\"".format(srcDir=srcDir)
 	args = ["su", "-l", user, "-c", cmd]
 	subprocess.run(args)
-	
+
 	# restart mytoncore
 	StartMytoncore()
 #end define
@@ -544,7 +545,7 @@ def EnableLiteServer():
 	# write mconfig
 	local.AddLog("write mconfig", "debug")
 	SetConfig(path=mconfigPath, data=mconfig)
-	
+
 	# restart mytoncore
 	StartMytoncore()
 #end define
