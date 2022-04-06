@@ -9,6 +9,7 @@ from mypyconsole.mypyconsole import *
 
 local = MyPyClass(__file__)
 console = MyPyConsole()
+defaultLocalConfigPath = "/usr/bin/ton/local.config.json"
 
 
 def Init():
@@ -137,7 +138,7 @@ def GetInitBlock():
 	return initBlock
 #end define
 
-def CreateLocalConfig(initBlock):
+def CreateLocalConfig(initBlock, localConfigPath=defaultLocalConfigPath):
 	# read global config file
 	file = open("/usr/bin/ton/global.config.json", 'rt')
 	text = file.read()
@@ -153,16 +154,15 @@ def CreateLocalConfig(initBlock):
 	text = json.dumps(data, indent=4)
 
 	# write local config file
-	filePath = "/usr/bin/ton/local.config.json"
-	file = open(filePath, 'wt')
+	file = open(localConfigPath, 'wt')
 	file.write(text)
 	file.close()
 
 	# chown
 	user = local.buffer["user"]
-	args = ["chown", "-R", user + ':' + user, filePath]
+	args = ["chown", "-R", user + ':' + user, localConfigPath]
 
-	print("Local config file created:", filePath)
+	print("Local config file created:", localConfigPath)
 #end define
 
 def PrintLiteServerConfig(args):
