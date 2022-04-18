@@ -2,6 +2,7 @@
 
 ## What is it?
 This console is a wrapper over `fift`,`lite-client` and `validator-engine-console`. It was created to facilitate wallet, domain and validator management on Linux OS.
+
 ![](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/mytonctrl-status.png)
 
 ## Functionality
