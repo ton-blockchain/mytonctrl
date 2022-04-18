@@ -1,10 +1,10 @@
 [Данный текст доступен на русском языке.](https://github.com/ton-blockchain/mytonctrl/blob/master/README.Ru.md)
 
-## What is it
-This console program is a wrapper over `fift`,`lite-client` and `validator-engine-console`. It was created to facilitate the management of wallets, domains and a validator on the Linux operating system.
+## What is it?
+This console is a wrapper over `fift`,`lite-client` and `validator-engine-console`. It was created to facilitate wallet, domain and validator management on Linux OS.
 ![](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/mytonctrl-status.png)
 
-## Functional
+## Functionality
 - [x] Show TON network status
 - [x] Management of local wallets
 	- [x] Create local wallet
@@ -53,12 +53,12 @@ Debian 9 - Error: TON compilation error
 Debian 10 - OK
 ```
 
-## Description of installation scripts
-- `toninstaller.sh` - This script clones the sources of `TON` and` mytonctrl` in the folders `/usr/src/ton` and`/usr/src/mytonctrl`, compiles programs from sources and writes them to `/usr/bin/`.
-- `mytoninstaller.py` - This script configures the validator, `mytonctrl` and creates keys for connecting to the validator.
+## Installation scripts overview
+- `toninstaller.sh`: clones `TON` and` mytonctrl` sources to `/usr/src/ton` and`/usr/src/mytonctrl` folders, compiles programs from sources and writes them to `/usr/bin/`.
+- `mytoninstaller.py`: configures the validator and `mytonctrl`; generates validator connection keys.
 
 ## Installation modes
-There are two installation modes: `lite` and` full`. They both **compile** and install the `TON` components. However, the `lite` version does not configure or run the node/validator.
+There are two installation modes: `lite` and` full`. They both **compile** and install `TON` components. However, the `lite` version does not configure or run the node/validator.
 
 ## Installation (Ubuntu)
 1. Download and execute the script `install.sh` with the desired installation mode. During installation, you will be prompted for the superuser password several times.
