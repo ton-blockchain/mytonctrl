@@ -141,8 +141,11 @@ def GetAuthorRepoBranchFromArgs(args):
 #end define
 
 def Update(args):
-	# Get author, repo, branch
+	# add safe directory to git
 	gitPath = "/usr/src/mytonctrl"
+	subprocess.run(["git", "config", "--global", "--add", "safe.directory", gitPath])
+	
+	# Get author, repo, branch
 	author, repo = GetGitAuthorAndRepo(gitPath)
 	branch = GetGitBranch(gitPath)
 	
@@ -164,8 +167,11 @@ def Update(args):
 #end define
 
 def Upgrade(args):
-	# Get author, repo, branch
+	# add safe directory to git
 	gitPath = "/usr/src/ton"
+	subprocess.run(["git", "config", "--global", "--add", "safe.directory", gitPath])
+	
+	# Get author, repo, branch
 	author, repo = GetGitAuthorAndRepo(gitPath)
 	branch = GetGitBranch(gitPath)
 	
