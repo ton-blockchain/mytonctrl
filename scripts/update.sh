@@ -7,10 +7,18 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
+# Set default arguments
+author="ton-blockchain"
+repo="mytonctrl"
+branch="master"
+srcdir="/usr/src/"
+bindir="/usr/bin/"
+
 # Get arguments
-while getopts r:b: flag
+while getopts a:r:b: flag
 do
 	case "${flag}" in
+		a) author=${OPTARG};;
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
 	esac
@@ -21,27 +29,13 @@ COLOR='\033[92m'
 ENDC='\033[0m'
 
 # Go to work dir
-cd /usr/src/mytonctrl
-
-# Adjust repo
-if [ -z ${repo+x} ]; then
-	echo "repo without changes"
-else
-	git remote set-url origin ${repo}
-	git pull --rebase
-fi
-
-# Adjust branch
-if [ -z ${branch+x} ]; then
-	echo "branch without changes"
-else
-	git checkout ${branch}
-	git branch --set-upstream-to=origin/${branch} ${branch}
-	git pull --rebase
-fi
+cd ${srcdir}
+rm -rf ${srcdir}/${repo}
 
 # Update code
-git pull --recurse-submodules
+echo "https://github.com/${author}/${repo}.git -> ${branch}"
+git clone --recursive https://github.com/${author}/${repo}.git
+cd ${repo} && git checkout ${branch} && git submodule update --init --recursive
 systemctl restart mytoncore
 
 # Конец
