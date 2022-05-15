@@ -114,23 +114,46 @@ def Installer(args):
 	subprocess.run(args)
 #end define
 
-def SetArgsByArgs(runArgs, args):
-	if len(args) == 1:
-		buff = args[0]
-		if "https://" in buff:
-			runArgs += ["-r", buff]
+def GetItemFromList(data, index):
+	try:
+		return data[index]
+	except: pass
+#end define
+
+def GetAuthorRepoBranchFromArgs(args):
+	data = dict()
+	arg1 = GetItemFromList(args, 0)
+	arg2 = GetItemFromList(args, 1)
+	if arg1:
+		if "https://" in arg1:
+			buff = arg1[8:].split('/')
+			print(f"buff: {buff}")
+			data["author"] = buff[1]
+			data["repo"] = buff[2]
+			tree = GetItemFromList(buff, 3)
+			if tree:
+				data["branch"] = GetItemFromList(buff, 4)
 		else:
-			runArgs += ["-b", buff]
-	elif len(args) == 2:
-		runArgs += ["-r", args[0]]
-		runArgs += ["-b", args[1]]
-	return runArgs
+			data["branch"] = arg1
+	if arg2:
+		data["branch"] = arg2
+	return data
 #end define
 
 def Update(args):
-	runArgs = ["bash", "/usr/src/mytonctrl/scripts/update.sh"]
-	runArgs = SetArgsByArgs(runArgs, args)
+	# Get author, repo, branch
+	gitPath = "/usr/src/mytonctrl"
+	author, repo = GetGitAuthorAndRepo(gitPath)
+	branch = GetGitBranch(gitPath)
 	
+	# Set author, repo, branch
+	data = GetAuthorRepoBranchFromArgs(args)
+	author = data.get("author", author)
+	repo = data.get("repo", repo)
+	branch = data.get("branch", branch)
+
+	# Run script
+	runArgs = ["bash", "/usr/src/mytonctrl/scripts/update.sh", "-a", author, "-r", repo, "-b", branch]
 	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
 		text = "Update - {green}OK{endc}"
@@ -141,11 +164,20 @@ def Update(args):
 #end define
 
 def Upgrade(args):
-	runArgs = ["bash", "/usr/src/mytonctrl/scripts/upgrade.sh"]
-	runArgs = SetArgsByArgs(runArgs, args)
+	# Get author, repo, branch
+	gitPath = "/usr/src/ton"
+	author, repo = GetGitAuthorAndRepo(gitPath)
+	branch = GetGitBranch(gitPath)
 	
-	exitCode = RunAsRoot(["python3", "/usr/src/mytonctrl/scripts/upgrade.py"])
-	exitCode += RunAsRoot(runArgs)
+	# Set author, repo, branch
+	data = GetAuthorRepoBranchFromArgs(args)
+	author = data.get("author", author)
+	repo = data.get("repo", repo)
+	branch = data.get("branch", branch)
+
+	# Run script
+	runArgs = ["bash", "/usr/src/mytonctrl/scripts/upgrade.sh", "-a", author, "-r", repo, "-b", branch]
+	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
