@@ -28,8 +28,9 @@ def Init(argv):
 	console.AddItem("nw", CreatNewWallet, local.Translate("nw_cmd"))
 	console.AddItem("aw", ActivateWallet, local.Translate("aw_cmd"))
 	console.AddItem("wl", PrintWalletsList, local.Translate("wl_cmd"))
-	console.AddItem("iw", ImportWalletFromFile, local.Translate("iw_cmd"))
-	console.AddItem("swa", SaveWalletAddressToFile, local.Translate("swa_cmd"))
+	console.AddItem("iw", ImportWallet, local.Translate("iw_cmd"))
+	console.AddItem("swv", SetWalletVersion, local.Translate("swv_cmd"))
+	console.AddItem("ew", ExportWallet, local.Translate("ex_cmd"))
 	console.AddItem("dw", DeleteWallet, local.Translate("dw_cmd"))
 
 	console.AddItem("vas", ViewAccountStatus, local.Translate("vas_cmd"))
@@ -60,19 +61,32 @@ def Init(argv):
 	console.AddItem("cl", PrintComplaintsList, local.Translate("cl_cmd"))
 	console.AddItem("vc", VoteComplaint, local.Translate("vc_cmd"))
 
-
 	console.AddItem("get", GetSettings, local.Translate("get_cmd"))
 	console.AddItem("set", SetSettings, local.Translate("set_cmd"))
 	console.AddItem("xrestart", Xrestart, local.Translate("xrestart_cmd"))
 	console.AddItem("xlist", Xlist, local.Translate("xlist_cmd"))
+	#console.AddItem("gpk", GetPubKey, local.Translate("gpk_cmd"))
+	#console.AddItem("ssoc", SignShardOverlayCert, local.Translate("ssoc_cmd"))
+	#console.AddItem("isoc", ImportShardOverlayCert, local.Translate("isoc_cmd"))
 
-	# console.AddItem("test", Test, "Test")
+	#console.AddItem("new_nomination_controller", NewNominationController, local.Translate("new_controller_cmd"))
+	#console.AddItem("get_nomination_controller_data", GetNominationControllerData, local.Translate("get_nomination_controller_data_cmd"))
+	#console.AddItem("deposit_to_nomination_controller", DepositToNominationController, local.Translate("deposit_to_controller_cmd"))
+	#console.AddItem("withdraw_from_nomination_controller", WithdrawFromNominationController, local.Translate("withdraw_from_nomination_controller_cmd"))
+	#console.AddItem("request_to_nomination_controller", SendRequestToNominationController, local.Translate("request_to_nomination_controller_cmd"))
+	#console.AddItem("new_restricted_wallet", NewRestrictedWallet, local.Translate("new_restricted_wallet_cmd"))
+
+	console.AddItem("new_pool", NewPool, local.Translate("new_pool_cmd"))
+	console.AddItem("pools_list", PrintPoolsList, local.Translate("pools_list_cmd"))
+	console.AddItem("get_pool_data", GetPoolData, local.Translate("get_pool_data_cmd"))
+	console.AddItem("activate_pool", ActivatePool, local.Translate("activate_pool_cmd"))
+	console.AddItem("deposit_to_pool", DepositToPool, local.Translate("deposit_to_pool_cmd"))
+	console.AddItem("withdraw_from_pool", WithdrawFromPool, local.Translate("withdraw_from_pool_cmd"))
+	console.AddItem("delete_pool", DeletePool, local.Translate("delete_pool_cmd"))
+	#console.AddItem("update_validator_set", UpdateValidatorSet, local.Translate("update_validator_set_cmd"))
+
 	# console.AddItem("pt", PrintTest, "PrintTest")
-
-	console.AddItem("hr", GetHashrate, local.Translate("hr_cmd"))
-	console.AddItem("emi", EstimateMiningIncome, local.Translate("emi_cmd"))
-	console.AddItem("mon", EnableMining, local.Translate("mo_cmd"))
-	console.AddItem("moff", DisableMining, local.Translate("moff_cmd"))
+	# console.AddItem("sl", sl, "sl")
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -144,7 +158,7 @@ def Update(args):
 	# add safe directory to git
 	gitPath = "/usr/src/mytonctrl"
 	subprocess.run(["git", "config", "--global", "--add", "safe.directory", gitPath])
-	
+
 	# Get author, repo, branch
 	author, repo = GetGitAuthorAndRepo(gitPath)
 	branch = GetGitBranch(gitPath)
@@ -170,7 +184,7 @@ def Upgrade(args):
 	# add safe directory to git
 	gitPath = "/usr/src/ton"
 	subprocess.run(["git", "config", "--global", "--add", "safe.directory", gitPath])
-	
+
 	# Get author, repo, branch
 	author, repo = GetGitAuthorAndRepo(gitPath)
 	branch = GetGitBranch(gitPath)
@@ -209,50 +223,15 @@ def PrintTest(args):
 	print(json.dumps(local.buffer, indent=2))
 #end define
 
-def Test(args):
-	start = "kf8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIue"
-	ok_arr = list()
-	pending_arr = list()
-	pending_arr.append(start)
-	while True:
-		try:
-			TestWork(ok_arr, pending_arr)
-		except KeyboardInterrupt:
-			buff = ok_arr + pending_arr
-			data = json.dumps(buff)
-			file = open("testoutput.txt", "wt")
-			file.write(data)
-			file.close()
-			break
-		except:
-			buff = ok_arr + pending_arr
-			data = json.dumps(buff)
-			file = open("testoutput.txt", "wt")
-			file.write(data)
-			file.close()
-#end define
-
-def TestWork(ok_arr, pending_arr):
-	addr = pending_arr.pop(0)
-	account = ton.GetAccount(addr)
-	history = ton.GetAccountHistory(account, 1000)
-	for item in history:
-		outmsg = item.get("outmsg")
-		if outmsg == 1:
-			haddr = item.get("to")
-		else:
-			haddr = item.get("from")
-		haddr = ton.HexAddr2Base64Addr(haddr)
-		if haddr not in pending_arr and haddr not in ok_arr:
-			pending_arr.append(haddr)
-	ok_arr.append(addr)
-	print(addr, len(ok_arr), len(pending_arr))
+def sl(args):
+	Slashing(ton)
 #end define
 
 def PrintStatus(args):
 	opt = None
 	if len(args) == 1:
 		opt = args[0]
+	adnlAddr = ton.GetAdnlAddr()
 	rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
 	config34 = ton.GetConfig34()
 	config36 = ton.GetConfig36()
@@ -275,8 +254,11 @@ def PrintStatus(args):
 	fullElectorAddr = ton.GetFullElectorAddr()
 	startWorkTime = ton.GetActiveElectionId(fullElectorAddr)
 	validatorIndex = ton.GetValidatorIndex()
-	validatorWallet = ton.GetLocalWallet(ton.validatorWalletName)
+	validatorWallet = ton.GetValidatorWallet()
 	dbSize = ton.GetDbSize()
+	dbUsage = ton.GetDbUsage()
+	memoryInfo = GetMemoryInfo()
+	swapInfo = GetSwapInfo()
 	offersNumber = ton.GetOffersNumber()
 	complaintsNumber = ton.GetComplaintsNumber()
 	statistics = ton.GetSettings("statistics")
@@ -285,11 +267,11 @@ def PrintStatus(args):
 	disksLoadAvg = ton.GetStatistics("disksLoadAvg", statistics)
 	disksLoadPercentAvg = ton.GetStatistics("disksLoadPercentAvg", statistics)
 	if validatorWallet is not None:
-		validatorAccount = ton.GetAccount(validatorWallet.addr)
+		validatorAccount = ton.GetAccount(validatorWallet.addrB64)
 	else:
 		validatorAccount = None
 	PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
-	PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, netLoadAvg, disksLoadAvg, disksLoadPercentAvg)
+	PrintLocalStatus(adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg)
 	PrintTonConfig(fullConfigAddr, fullElectorAddr, config15, config17)
 	PrintTimes(rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
@@ -334,11 +316,10 @@ def PrintTonStatus(startWorkTime, totalValidators, onlineValidators, shardsNumbe
 	print()
 #end define
 
-def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, netLoadAvg, disksLoadAvg, disksLoadPercentAvg):
+def PrintLocalStatus(adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg):
 	if validatorWallet is None:
 		return
-	adnlAddr = ton.adnlAddr
-	walletAddr = validatorWallet.addr
+	walletAddr = validatorWallet.addrB64
 	walletBalance = validatorAccount.balance
 	cpuNumber = psutil.cpu_count()
 	loadavg = GetLoadAvg()
@@ -367,6 +348,18 @@ def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, valid
 	cpuLoad15_text = GetColorInt(cpuLoad15, cpuNumber, logic="less")
 	cpuLoad_text = local.Translate("local_status_cpu_load").format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text)
 
+	# Memory status
+	memoryUsage = memoryInfo.get("usage")
+	memoryUsagePercent = memoryInfo.get("usagePercent")
+	swapUsage = swapInfo.get("usage")
+	swapUsagePercent = swapInfo.get("usagePercent")
+	memoryUsage_text = GetColorInt(memoryUsage, 100, logic="less", ending=" Gb")
+	memoryUsagePercent_text = GetColorInt(memoryUsagePercent, 90, logic="less", ending="%")
+	swapUsage_text = GetColorInt(swapUsage, 100, logic="less", ending=" Gb")
+	swapUsagePercent_text = GetColorInt(swapUsagePercent, 90, logic="less", ending="%")
+	memory_text = local.Translate("local_status_memory_load").format(memoryUsage_text, memoryUsagePercent_text)
+	swap_text = local.Translate("local_status_swap_load").format(swapUsage_text, swapUsagePercent_text)
+
 	# Network status
 	netLoad1_text = GetColorInt(netLoad1, 300, logic="less")
 	netLoad5_text = GetColorInt(netLoad5, 300, logic="less")
@@ -393,7 +386,9 @@ def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, valid
 	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(GetColorStatus(mytoncoreStatus_bool))
 	validatorStatus_text = local.Translate("local_status_validator_status").format(GetColorStatus(validatorStatus_bool))
 	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, logic="less", ending=" s"))
-	dbSize_text = local.Translate("local_status_db_size").format(GetColorInt(dbSize, 1000, logic="less", ending=" Gb"))
+	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
+	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
+	dbStatus_text = local.Translate("local_status_db").format(dbSize_text, dbUsage_text, cyan=bcolors.cyan, endc=bcolors.endc)
 
 	ColorPrint(local.Translate("local_status_head"))
 	print(validatorIndex_text)
@@ -407,7 +402,9 @@ def PrintLocalStatus(validatorIndex, validatorEfficiency, validatorWallet, valid
 	print(mytoncoreStatus_text)
 	print(validatorStatus_text)
 	print(validatorOutOfSync_text)
-	print(dbSize_text)
+	print(dbStatus_text)
+	print(memory_text)
+	print(swap_text)
 	print()
 #end define
 
@@ -524,6 +521,8 @@ def Seqno(args):
 #end define
 
 def CreatNewWallet(args):
+	version = "v1"
+	subwallet = 698983191 + wallet.workchain # 0x29A9A317 + workchain
 	try:
 		if len(args) == 0:
 			walletName = ton.GenerateWalletName()
@@ -531,13 +530,17 @@ def CreatNewWallet(args):
 		else:
 			workchain = args[0]
 			walletName = args[1]
+		if len(args) > 2:
+			version = args[2]
+		if len(args) == 4:
+			subwallet = args[3]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} nw <workchain-id> <wallet-name>")
+		ColorPrint("{red}Bad args. Usage:{endc} nw <workchain-id> <wallet-name> [<version> <subwallet>]")
 		return
-	wallet = ton.CreateWallet(walletName, workchain)
+	wallet = ton.CreateWallet(walletName, workchain, version, subwallet)
 	table = list()
 	table += [["Name", "Workchain", "Address"]]
-	table += [[wallet.name, wallet.workchain, wallet.addr_init]]
+	table += [[wallet.name, wallet.workchain, wallet.addrB64_init]]
 	PrintTable(table)
 #end define
 
@@ -559,16 +562,16 @@ def ActivateWallet(args):
 
 def PrintWalletsList(args):
 	table = list()
-	table += [["Name", "Status", "Balance", "Workchain", "Address"]]
+	table += [["Name", "Status", "Balance", "Ver", "Wch", "Address"]]
 	data = ton.GetWallets()
 	if (data is None or len(data) == 0):
 		print("No data")
 		return
 	for wallet in data:
-		account = ton.GetAccount(wallet.addr)
+		account = ton.GetAccount(wallet.addrB64)
 		if account.status != "active":
-			wallet.addr = wallet.addr_init
-		table += [[wallet.name, account.status, account.balance, wallet.workchain, wallet.addr]]
+			wallet.addrB64 = wallet.addrB64_init
+		table += [[wallet.name, account.status, account.balance, wallet.version, wallet.workchain, wallet.addrB64]]
 	PrintTable(table)
 #end define
 
@@ -597,19 +600,38 @@ def ImportWalletFromFile(args):
 	ColorPrint("ImportWalletFromFile - {green}OK{endc}")
 #end define
 
-def SaveWalletAddressToFile(args):
+def ImportWallet(args):
 	try:
-		walletName = args[0]
+		addr = args[0]
+		key = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} sw <wallet-name>")
+		ColorPrint("{red}Bad args. Usage:{endc} iw <wallet-addr> <wallet-secret-key>")
 		return
-	wallet = ton.GetLocalWallet(walletName)
-	wjson = {"name":wallet.name, "workchain":wallet.workchain, "addr":wallet.addr, "addr_hex":wallet.addr_hex, "addr_init":wallet.addr_init}
-	text = json.dumps(wjson)
-	file = open(walletName + "-addr.json", 'w')
-	file.write(text)
-	file.close()
-	ColorPrint("SaveWalletAddressToFile - {green}OK{endc}")
+	name = ton.ImportWallet(addr, key)
+	print("Wallet name:", name)
+#end define
+
+def SetWalletVersion(args):
+	try:
+		addr = args[0]
+		version = args[1]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} swv <wallet-addr> <wallet-version>")
+		return
+	ton.SetWalletVersion(addr, version)
+	ColorPrint("SetWalletVersion - {green}OK{endc}")
+#end define
+
+def ExportWallet(args):
+	try:
+		name = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} ew <wallet-name>")
+		return
+	addr, key = ton.ExportWallet(name)
+	print("Wallet name:", name)
+	print("Address:", addr)
+	print("Secret key:", key)
 #end define
 
 def DeleteWallet(args):
@@ -625,16 +647,17 @@ def DeleteWallet(args):
 
 def ViewAccountStatus(args):
 	try:
-		addr = args[0]
+		addrB64 = args[0]
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} vas <account-addr>")
 		return
-	addr = ton.GetDestinationAddr(addr)
-	account = ton.GetAccount(addr)
+	addrB64 = ton.GetDestinationAddr(addrB64)
+	account = ton.GetAccount(addrB64)
+	version = ton.GetWalletVersionFromHash(account.codeHash)
 	statusTable = list()
-	statusTable += [["Address", "Status", "Balance"]]
-	statusTable += [[addr, account.status, account.balance]]
-	historyTable = GetHistoryTable(addr, 10)
+	statusTable += [["Address", "Status", "Version", "Balance"]]
+	statusTable += [[addrB64, account.status, version, account.balance]]
+	historyTable = GetHistoryTable(addrB64, 10)
 	PrintTable(statusTable)
 	print()
 	PrintTable(historyTable)
@@ -658,20 +681,21 @@ def GetHistoryTable(addr, limit):
 	table = list()
 	typeText = ColorText("{red}{bold}{endc}")
 	table += [["Time", typeText, "Coins", "From/To"]]
-	for item in history:
-		time = item.get("time")
-		grams = item.get("value")
-		outmsg = item.get("outmsg")
-		if outmsg == 1:
+	for message in history:
+		if message.srcAddr is None:
+			continue
+		srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
+		destAddFull = f"{message.destWorkchain}:{message.destAddr}"
+		if srcAddrFull == account.addrFull:
 			type = ColorText("{red}{bold}>>>{endc}")
-			fromto = item.get("to")
+			fromto = destAddFull
 		else:
 			type = ColorText("{blue}{bold}<<<{endc}")
-			fromto = item.get("from")
-		fromto = ton.HexAddr2Base64Addr(fromto)
-		#datetime = Timestamp2Datetime(time, "%Y.%m.%d %H:%M:%S")
-		datetime = timeago(time)
-		table += [[datetime, type, grams, fromto]]
+			fromto = srcAddrFull
+		fromto = ton.AddrFull2AddrB64(fromto)
+		#datetime = Timestamp2Datetime(message.time, "%Y.%m.%d %H:%M:%S")
+		datetime = timeago(message.time)
+		table += [[datetime, type, message.value, fromto]]
 	return table
 #end define
 
@@ -679,17 +703,17 @@ def MoveCoins(args):
 	try:
 		walletName = args[0]
 		destination = args[1]
-		gram = args[2]
+		amount = int(args[2])
 		if len(args) > 3:
 			flags = args[3:]
 		else:
 			flags = list()
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <gram-amount>")
+		ColorPrint("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <amount>")
 		return
 	wallet = ton.GetLocalWallet(walletName)
 	destination = ton.GetDestinationAddr(destination)
-	ton.MoveCoins(wallet, destination, gram, flags=flags)
+	ton.MoveCoins(wallet, destination, amount, flags=flags)
 	ColorPrint("MoveCoins - {green}OK{endc}")
 #end define
 
@@ -697,13 +721,13 @@ def MoveCoinsThroughProxy(args):
 	try:
 		walletName = args[0]
 		destination = args[1]
-		gram = args[2]
+		amount = int(args[2])
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <gram-amount>")
+		ColorPrint("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <amount>")
 		return
 	wallet = ton.GetLocalWallet(walletName)
 	destination = ton.GetDestinationAddr(destination)
-	ton.MoveCoinsThroughProxy(wallet, destination, gram)
+	ton.MoveCoinsThroughProxy(wallet, destination, amount)
 	ColorPrint("MoveCoinsThroughProxy - {green}OK{endc}")
 #end define
 
@@ -714,7 +738,12 @@ def CreatNewBookmark(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} nb <bookmark-name> <account-addr | domain-name>")
 		return
-	type = ton.GetStrType(addr)
+	if ton.IsAddr(addr):
+		type = "account"
+	else:
+		type = "domain"
+	#end if
+
 	bookmark = dict()
 	bookmark["name"] = name
 	bookmark["type"] = type
@@ -808,13 +837,12 @@ def PrintOffersList(args):
 #end define
 
 def VoteOffer(args):
-	try:
-		offerHash = args[0]
-		offerHash = int(offerHash)
-	except:
+	if len(args) == 0:
 		ColorPrint("{red}Bad args. Usage:{endc} vo <offer-hash>")
 		return
-	ton.VoteOffer(offerHash)
+	for offerHash in args:
+		offerHash = int(offerHash)
+		ton.VoteOffer(offerHash)
 	ColorPrint("VoteOffer - {green}OK{endc}")
 #end define
 
@@ -841,7 +869,8 @@ def GetConfig(args):
 #end define
 
 def PrintComplaintsList(args):
-	complaints = ton.GetComplaints()
+	past = "past" in args
+	complaints = ton.GetComplaints(past=past)
 	if "--json" in args:
 		text = json.dumps(complaints, indent=2)
 		print(text)
@@ -939,7 +968,8 @@ def DeleteDomain(args):
 #end define
 
 def PrintElectionEntriesList(args):
-	entries = ton.GetElectionEntries()
+	past = "past" in args
+	entries = ton.GetElectionEntries(past=past)
 	if "--json" in args:
 		text = json.dumps(entries, indent=2)
 		print(text)
@@ -963,15 +993,13 @@ def PrintElectionEntriesList(args):
 #end define
 
 def VoteElectionEntry(args):
-	if ton.validatorWalletName is None:
-		ColorPrint("{red}You are not a validator, or this utility is not configured correctly.{endc}")
-	ton.ReturnStake()
-	ton.ElectionEntry(args)
+	Elections(ton)
 	ColorPrint("VoteElectionEntry - {green}OK{endc}")
 #end define
 
 def PrintValidatorList(args):
-	validators = ton.GetValidatorsList()
+	past = "past" in args
+	validators = ton.GetValidatorsList(past=past)
 	if "--json" in args:
 		text = json.dumps(validators, indent=2)
 		print(text)
@@ -1049,44 +1077,208 @@ def Xlist(args):
 	ColorPrint("Xlist - {green}OK{endc}")
 #end define
 
-def GetHashrate(args):
-	ColorPrint("The data may be incorrect if mining is enabled during the test. Turn off mining before checking hashrate.")
-	result = ton.GetHashrate()
-	ColorPrint("Current Hashrate: ")
-	ColorPrint(result)
+def GetPubKey(args):
+	adnlAddr = ton.GetAdnlAddr()
+	pubkey = ton.GetPubKey(adnlAddr)
+	print("pubkey:", pubkey)
 #end define
 
-def EstimateMiningIncome(args):
-	ColorPrint("The data may be incorrect if mining is enabled during the test. Turn off mining before checking hashrate.")
-	ColorPrint(ton.EstimateMiningIncome())
+def SignShardOverlayCert(args):
+	try:
+		adnl = args[0]
+		pubkey = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} ssoc <pubkey>")
+		return
+	ton.SignShardOverlayCert(adnl, pubkey)
 #end define
 
-def EnableMining(args):
-	powAddr = ton.GetSettings('powAddr')
-	minerAddr = ton.GetSettings('minerAddr')
-
-	if powAddr is None:
-		ColorPrint("{yellow}powAddr is null. Set to auto select{endc}")
-		ton.SetSettings('powAddr', '"auto"')
-	#end if
-
-	if minerAddr is None:
-		ColorPrint("{yellow}minerAddr is null. Creating new address{endc}")
-		data = ton.GetWallets()
-		if (data is None or len(data) == 0):
-			ton.nw()
-			data = ton.GetWallets()
-		ColorPrint("Your miner address is: {addr}".format(addr=data[0].addr))
-		ton.SetSettings('minerAddr', '"'+data[0].addr+'"')
-	#end if
-
-	ColorPrint("Mining was enabled")
+def ImportShardOverlayCert(args):
+	ton.ImportShardOverlayCert()
 #end define
 
-def DisableMining(args):
-	ton.SetSettings('powAddr', 'null')
-	ColorPrint("Mining was disabled. The shutdown process may take up to 100 seconds.")
+def NewNominationController(args):
+	try:
+		name = args[0]
+		nominatorAddr = args[1]
+		rewardShare = args[2]
+		coverAbility = args[3]
+		workchain = -1
+		subwallet = 0
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} new_controller <controller-name> <nominator-addr> <reward-share> <cover-ability>")
+		return
+	ton.CreateNominationController(name, nominatorAddr, workchain, subwallet, rewardShare, coverAbility)
+	ColorPrint("NewNominationController - {green}OK{endc}")
 #end define
+
+def GetNominationControllerData(args):
+	try:
+		addrB64 = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} get_nomination_controller_data <controller-name | controller-addr>")
+		return
+	addrB64 = ton.GetDestinationAddr(addrB64)
+	controllerData = ton.GetControllerData(addrB64)
+	print(json.dumps(controllerData, indent=4))
+#end define
+
+def DepositToNominationController(args):
+	try:
+		walletName = args[0]
+		destination = args[1]
+		amount = args[2]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} add_to_nomination_controller <wallet-name> <controller-addr> <amount>")
+		return
+	destination = ton.GetDestinationAddr(destination)
+	ton.DepositToNominationController(walletName, destination, amount)
+	ColorPrint("DepositToNominationController - {green}OK{endc}")
+#end define
+
+def WithdrawFromNominationController(args):
+	try:
+		walletName = args[0]
+		destination = args[1]
+		amount = args[2]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_nomination_controller <wallet-name> <controller-addr> <amount>")
+		return
+	destination = ton.GetDestinationAddr(destination)
+	ton.WithdrawFromNominationController(walletName, destination, amount)
+	ColorPrint("WithdrawFromNominationController - {green}OK{endc}")
+#end define
+
+def SendRequestToNominationController(args):
+	try:
+		walletName = args[0]
+		destination = args[1]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} request_to_nomination_controller <wallet-name> <controller-addr>")
+		return
+	destination = ton.GetDestinationAddr(destination)
+	ton.SendRequestToNominationController(walletName, destination)
+	ColorPrint("SendRequestToNominationController - {green}OK{endc}")
+#end define
+
+def NewRestrictedWallet(args):
+	try:
+		workchain = args[0]
+		name = args[1]
+		ownerAddr = args[2]
+		subwallet = 0
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} new_restricted_wallet <workchain-id> <wallet-name> <owner-addr>")
+		return
+	ton.CreateRestrictedWallet(name, ownerAddr, workchain, subwallet)
+	ColorPrint("NewRestrictedWallet - {green}OK{endc}")
+#end define
+
+def NewPool(args):
+	try:
+		poolName = args[0]
+		validatorRewardShare = args[1]
+		maxNominatorsCount = args[2]
+		minValidatorStake = args[3]
+		minNominatorStake = args[4]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} new_pool <pool-name> <validator-reward-share> <max-nominators-count> <min-validator-stake> <min-nominator-stake>")
+		return
+	ton.CreatePool(poolName, validatorRewardShare, maxNominatorsCount, minValidatorStake, minNominatorStake)
+	ColorPrint("NewPool - {green}OK{endc}")
+#end define
+
+def ActivatePool(args):
+	try:
+		poolName = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} activate_pool <pool-name>")
+		return
+	pool = ton.GetLocalPool(poolName)
+	if not os.path.isfile(pool.bocFilePath):
+		local.AddLog(f"Pool {poolName} already activated", "warning")
+		return
+	ton.ActivatePool(pool)
+	ColorPrint("ActivatePool - {green}OK{endc}")
+#end define
+
+def PrintPoolsList(args):
+	table = list()
+	table += [["Name", "Status", "Balance", "Address"]]
+	data = ton.GetPools()
+	if (data is None or len(data) == 0):
+		print("No data")
+		return
+	for pool in data:
+		account = ton.GetAccount(pool.addrB64)
+		if account.status != "active":
+			pool.addrB64 = pool.addrB64_init
+		table += [[pool.name, account.status, account.balance, pool.addrB64]]
+	PrintTable(table)
+#end define
+
+def GetPoolData(args):
+	try:
+		poolName = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} get_pool_data <pool-name | pool-addr>")
+		return
+	if ton.IsAddr(poolName):
+		poolAddr = poolName
+	else:
+		pool = ton.GetLocalPool(poolName)
+		poolAddr = pool.addrB64
+	poolData = ton.GetPoolData(poolAddr)
+	print(json.dumps(poolData, indent=4))
+#end define
+
+def DepositToPool(args):
+	try:
+		walletName = args[0]
+		pollAddr = args[1]
+		amount = int(args[2])
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} deposit_to_pool <wallet-name> <pool-addr> <amount>")
+		return
+	ton.DepositToPool(walletName, pollAddr, amount)
+	ColorPrint("DepositToPool - {green}OK{endc}")
+#end define
+
+def WithdrawFromPool(args):
+	try:
+		walletName = args[0]
+		poolAddr = args[1]
+		amount = args[2]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_pool <wallet-name> <pool-addr> <amount>")
+		return
+	poolAddr = ton.GetDestinationAddr(poolAddr)
+	ton.WithdrawFromPool(walletName, poolAddr, amount)
+	ColorPrint("WithdrawFromPool - {green}OK{endc}")
+#end define
+
+def DeletePool(args):
+	try:
+		poolName = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} delete_pool <pool-name>")
+		return
+	pool = ton.GetLocalPool(poolName)
+	pool.Delete()
+	ColorPrint("DeletePool - {green}OK{endc}")
+#end define
+
+def UpdateValidatorSet(args):
+	try:
+		poolAddr = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} update_validator_set <pool-addr>")
+		return
+	wallet = self.GetValidatorWallet()
+	self.PoolUpdateValidatorSet(poolAddr, wallet)
+	ColorPrint("DeletePool - {green}OK{endc}")
+#end define
+
 
 ###
 ### Start of the program
