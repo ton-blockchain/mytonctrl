@@ -1535,7 +1535,7 @@ class MyTonCore():
 		#end if
 
 		if stake is None and usePool:
-			stake = account.balance - 1
+			stake = account.balance - 20
 		if stake is None:
 			sp = stakePercent / 100
 			if sp > 1 or sp < 0:
