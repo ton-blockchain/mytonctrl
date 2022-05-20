@@ -1553,12 +1553,12 @@ class MyTonCore():
 			stake = config17["maxStake"]
 		if config17["minStake"] > stake:
 			text = "Stake less than the minimum stake. Minimum stake: {minStake}".format(minStake=config17["minStake"])
-			local.AddLog(text, "error")
-			return
+			#local.AddLog(text, "error")
+			raise Exception(text)
 		if stake > account.balance:
 			text = "Don't have enough coins. stake: {stake}, account balance: {balance}".format(stake=stake, balance=account.balance)
-			local.AddLog(text, "error")
-			return
+			#local.AddLog(text, "error")
+			raise Exception(text)
 		#end if
 
 		return stake

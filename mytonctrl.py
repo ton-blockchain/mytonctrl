@@ -522,22 +522,23 @@ def Seqno(args):
 
 def CreatNewWallet(args):
 	version = "v1"
-	subwallet = 698983191 + wallet.workchain # 0x29A9A317 + workchain
 	try:
 		if len(args) == 0:
 			walletName = ton.GenerateWalletName()
 			workchain = 0
 		else:
-			workchain = args[0]
+			workchain = int(args[0])
 			walletName = args[1]
 		if len(args) > 2:
 			version = args[2]
 		if len(args) == 4:
 			subwallet = args[3]
+		else:
+			subwallet = 698983191 + workchain # 0x29A9A317 + workchain
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} nw <workchain-id> <wallet-name> [<version> <subwallet>]")
 		return
-	wallet = ton.CreateWallet(walletName, workchain, version, subwallet)
+	wallet = ton.CreateWallet(walletName, workchain, version, subwallet=subwallet)
 	table = list()
 	table += [["Name", "Workchain", "Address"]]
 	table += [[wallet.name, wallet.workchain, wallet.addrB64_init]]
@@ -700,14 +701,12 @@ def GetHistoryTable(addr, limit):
 #end define
 
 def MoveCoins(args):
+	print(f"args: {args}")
 	try:
 		walletName = args[0]
 		destination = args[1]
-		amount = int(args[2])
-		if len(args) > 3:
-			flags = args[3:]
-		else:
-			flags = list()
+		amount = float(args[2])
+		flags = args[3:]
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <amount>")
 		return
@@ -721,7 +720,7 @@ def MoveCoinsThroughProxy(args):
 	try:
 		walletName = args[0]
 		destination = args[1]
-		amount = int(args[2])
+		amount = float(args[2])
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <amount>")
 		return
