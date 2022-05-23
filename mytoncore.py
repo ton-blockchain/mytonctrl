@@ -1785,6 +1785,7 @@ class MyTonCore():
 		#en if
 
 		timeNow = int(time.time())
+		config34 = self.GetConfig34()
 		fullElectorAddr = self.GetFullElectorAddr()
 		returnedStake = self.GetReturnedStake(fullElectorAddr, poolAddr)
 		if (poolData["state"] == 2 and
@@ -3541,7 +3542,7 @@ class MyTonCore():
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-withdraw.fif"
 		args = [fiftScript, amount, bocPath]
 		result = self.fift.Run(args)
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, pollAddr, 1.3)
+		resultFilePath = self.SignBocWithWallet(wallet, bocPath, pollAddr, 1.35)
 		self.SendFile(resultFilePath, wallet)
 	#end define
 
