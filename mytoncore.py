@@ -1498,8 +1498,8 @@ class MyTonCore():
 		return returnedStake
 	#end define
 
-	def RecoverStake(self):
-		local.AddLog("start RecoverStake function", "debug")
+	def ProcessRecoverStake(self):
+		local.AddLog("start ProcessRecoverStake function", "debug")
 		resultFilePath = self.tempDir + self.nodeName + "recover-query"
 		args = ["recover-stake.fif", resultFilePath]
 		result = self.fift.Run(args)
@@ -1730,7 +1730,7 @@ class MyTonCore():
 		return validatorKey
 	#end define
 
-	def ReturnStake(self):
+	def RecoverStake(self):
 		usePool = local.db.get("usePool")
 		if usePool == True:
 			return
@@ -1741,7 +1741,7 @@ class MyTonCore():
 			raise Exception("Validator wallet not found")
 		#end if
 
-		local.AddLog("start ReturnStake function", "debug")
+		local.AddLog("start RecoverStake function", "debug")
 		fullElectorAddr = self.GetFullElectorAddr()
 		returnedStake = self.GetReturnedStake(fullElectorAddr, wallet.addrB64)
 		if returnedStake == 0:
@@ -1749,23 +1749,23 @@ class MyTonCore():
 			return
 		#end if
 
-		resultFilePath = self.RecoverStake()
+		resultFilePath = self.ProcessRecoverStake()
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, fullElectorAddr, 1)
 		self.SendFile(resultFilePath, wallet)
-		local.AddLog("ReturnStake completed")
+		local.AddLog("RecoverStake completed")
 	#end define
 
-	def ReturnStakeWithPool(self, poolAddr):
+	def PoolRecoverStake(self, poolAddr):
 		wallet = self.GetValidatorWallet()
 		if wallet is None:
 			raise Exception("Validator wallet not found")
 		#end if
 
-		local.AddLog("start ReturnStakeWithPool function", "debug")
-		resultFilePath = self.RecoverStakeWithPool()
+		local.AddLog("start PoolRecoverStake function", "debug")
+		resultFilePath = self.PoolProcessRecoverStake()
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, poolAddr, 1.2)
 		self.SendFile(resultFilePath, wallet)
-		local.AddLog("ReturnStakeWithPool completed")
+		local.AddLog("PoolRecoverStake completed")
 	#end define
 
 	def PoolsUpdateValidatorSet(self):
@@ -1785,8 +1785,6 @@ class MyTonCore():
 		#en if
 
 		timeNow = int(time.time())
-		config15 = self.GetConfig15()
-		config34 = self.GetConfig34()
 		fullElectorAddr = self.GetFullElectorAddr()
 		returnedStake = self.GetReturnedStake(fullElectorAddr, poolAddr)
 		if (poolData["state"] == 2 and
@@ -1796,8 +1794,8 @@ class MyTonCore():
 		if (returnedStake > 0 and
 			poolData["state"] == 2 and
 			poolData["validator_set_changes_count"] >= 2 and
-			timeNow - config34["startWorkTime"] > config15["stakeHeldFor"]):
-			self.ReturnStakeWithPool(poolAddr)
+			timeNow - poolData["validator_set_change_time"] > poolData["stake_held_for"] + 60):
+			self.PoolRecoverStake(poolAddr)
 		if (poolData["state"] == 0 and self.HasPoolWithdrawRequests(pool)):
 			self.PoolWithdrawRequests(pool, wallet)
 	#end define
@@ -2024,6 +2022,7 @@ class MyTonCore():
 			mode = 160
 			coins = 0
 		else:
+			coins = float(coins)
 			mode = 3
 		#end if
 
@@ -3557,8 +3556,8 @@ class MyTonCore():
 		return pubkey, fileName
 	#end define
 
-	def RecoverStakeWithPool(self):
-		local.AddLog("start RecoverStakeWithPool function", "debug")
+	def PoolProcessRecoverStake(self):
+		local.AddLog("start PoolProcessRecoverStake function", "debug")
 		resultFilePath = self.tempDir + "recover-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/recover-stake.fif"
 		args = [fiftScript, resultFilePath]
@@ -4004,7 +4003,7 @@ def Elections(ton):
 		ton.PoolsUpdateValidatorSet()
 		ton.ElectionEntry()
 	else:
-		ton.ReturnStake()
+		ton.RecoverStake()
 		ton.ElectionEntry()
 #end define
 

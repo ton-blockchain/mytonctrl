@@ -705,7 +705,7 @@ def MoveCoins(args):
 	try:
 		walletName = args[0]
 		destination = args[1]
-		amount = float(args[2])
+		amount = args[2]
 		flags = args[3:]
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <amount>")
@@ -720,7 +720,7 @@ def MoveCoinsThroughProxy(args):
 	try:
 		walletName = args[0]
 		destination = args[1]
-		amount = float(args[2])
+		amount = args[2]
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <amount>")
 		return
