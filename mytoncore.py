@@ -3493,7 +3493,7 @@ class MyTonCore():
 		self.SetWalletVersion(wallet.addrB64, version)
 	#end define
 
-	def CreatePool(self, poolName, validatorRewardShare, maxNominatorsCount, minValidatorStake, minNominatorStake):
+	def CreatePool(self, poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake):
 		local.AddLog("start CreatePool function", "debug")
 		contractPath = self.contractsDir + "nominator-pool/"
 		if not os.path.isdir(contractPath):
@@ -3505,6 +3505,7 @@ class MyTonCore():
 			local.AddLog("CreatePool error: Pool already exists: " + filePath, "warning")
 		#end if
 
+		validatorRewardShare = int(validatorRewardSharePercent * 100)
 		fiftScript = self.contractsDir + "nominator-pool/func/new-pool.fif"
 		wallet = self.GetValidatorWallet()
 		args = [fiftScript, wallet.addrB64, validatorRewardShare, maxNominatorsCount, minValidatorStake, minNominatorStake, filePath]

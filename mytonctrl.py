@@ -701,7 +701,6 @@ def GetHistoryTable(addr, limit):
 #end define
 
 def MoveCoins(args):
-	print(f"args: {args}")
 	try:
 		walletName = args[0]
 		destination = args[1]
@@ -1176,14 +1175,14 @@ def NewRestrictedWallet(args):
 def NewPool(args):
 	try:
 		poolName = args[0]
-		validatorRewardShare = args[1]
+		validatorRewardSharePercent = args[1]
 		maxNominatorsCount = args[2]
 		minValidatorStake = args[3]
 		minNominatorStake = args[4]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} new_pool <pool-name> <validator-reward-share> <max-nominators-count> <min-validator-stake> <min-nominator-stake>")
+		ColorPrint("{red}Bad args. Usage:{endc} new_pool <pool-name> <validator-reward-share-percent> <max-nominators-count> <min-validator-stake> <min-nominator-stake>")
 		return
-	ton.CreatePool(poolName, validatorRewardShare, maxNominatorsCount, minValidatorStake, minNominatorStake)
+	ton.CreatePool(poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake)
 	ColorPrint("NewPool - {green}OK{endc}")
 #end define
 
