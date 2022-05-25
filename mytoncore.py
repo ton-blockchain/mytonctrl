@@ -1430,28 +1430,42 @@ class MyTonCore():
 		return pubkey, fileName
 	#end define
 
-	def SignBocWithWallet(self, wallet, bocPath, destAddr, coins, **kwargs):
+	def SignBocWithWallet(self, wallet, bocPath, dest, coins, **kwargs):
 		local.AddLog("start SignBocWithWallet function", "debug")
+		flags = kwargs.get("flags", list())
+		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
+		subwallet = kwargs.get("subwallet", subwalletDefault)
 
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
 		if account.balance < coins + 0.1:
 			raise Exception("Wallet balance is less than requested coins")
 		#end if
+		
+		# Bounceable checking
+		destAccount = self.GetAccount(dest)
+		bounceable = self.IsBounceableAddrB64(dest)
+		if bounceable == False and destAccount.status == "active":
+			flags += ["-b"]
+			text = "Find non-bounceable flag, but destination account already active. Using bounceable flag"
+			local.AddLog(text, "warning")
+		elif "-n" not in flags and bounceable == True and destAccount.status != "active":
+			raise Exception("Find bounceable flag, but destination account is not active. Use non-bounceable address or flag -n")
+		#end if
 
-		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
 		seqno = self.GetSeqno(wallet)
 		resultFilePath = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
 		if "v1" in wallet.version:
 			fiftScript = "wallet.fif"
-			args = [fiftScript, wallet.path, destAddr, seqno, coins, "-B", bocPath, resultFilePath]
+			args = [fiftScript, wallet.path, dest, seqno, coins, "-B", bocPath, resultFilePath]
 		elif "v2" in wallet.version:
 			fiftScript = "wallet-v2.fif"
-			args = [fiftScript, wallet.path, destAddr, seqno, coins, "-B", bocPath, resultFilePath]
+			args = [fiftScript, wallet.path, dest, seqno, coins, "-B", bocPath, resultFilePath]
 		elif "v3" in wallet.version:
 			fiftScript = "wallet-v3.fif"
-			args = [fiftScript, wallet.path, destAddr, subwallet, seqno, coins, "-B", bocPath, resultFilePath]
+			args = [fiftScript, wallet.path, dest, subwallet, seqno, coins, "-B", bocPath, resultFilePath]
+		if flags:
+			args += flags
 		result = self.fift.Run(args)
 		resultFilePath = Pars(result, "Saved to file ", ")")
 		return resultFilePath
@@ -1918,7 +1932,7 @@ class MyTonCore():
 	#end define
 
 	def ImportWallet(self, addrB64, key):
-		workchain, addr = self.ParseAddrB64(addrB64)
+		workchain, addr, bounceable = self.ParseAddrB64(addrB64)
 		workchain_bytes = int.to_bytes(workchain, 4, "big", signed=True)
 		addr_bytes = bytes.fromhex(addr)
 		key_bytes = base64.b64decode(key)
@@ -2012,7 +2026,7 @@ class MyTonCore():
 
 	def MoveCoins(self, wallet, dest, coins, **kwargs):
 		local.AddLog("start MoveCoins function", "debug")
-		flags = kwargs.get("flags")
+		flags = kwargs.get("flags", list())
 		timeout = kwargs.get("timeout", 30)
 		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
 		subwallet = kwargs.get("subwallet", subwalletDefault)
@@ -2031,6 +2045,17 @@ class MyTonCore():
 		account = self.GetAccount(wallet.addrB64)
 		if account.balance < coins + 0.1:
 			raise Exception("Wallet balance is less than requested coins")
+		#end if
+		
+		# Bounceable checking
+		destAccount = self.GetAccount(dest)
+		bounceable = self.IsBounceableAddrB64(dest)
+		if bounceable == False and destAccount.status == "active":
+			flags += ["-b"]
+			text = "Find non-bounceable flag, but destination account already active. Using bounceable flag"
+			local.AddLog(text, "warning")
+		elif "-n" not in flags and bounceable == True and destAccount.status != "active":
+			raise Exception("Find bounceable flag, but destination account is not active. Use non-bounceable address or flag -n")
 		#end if
 
 		seqno = self.GetSeqno(wallet)
@@ -3184,7 +3209,7 @@ class MyTonCore():
 
 		workchain = int.from_bytes(workchain_bytes, "big", signed=True)
 		addr = addr_bytes.hex()
-		return workchain, addr
+		return workchain, addr, bounceable
 	#end define
 
 	def ParseAddrFull(self, addrFull):
@@ -3199,7 +3224,7 @@ class MyTonCore():
 
 	def ParseInputAddr(self, inputAddr):
 		if self.IsAddrB64(inputAddr):
-			workchain, addr = self.ParseAddrB64(inputAddr)
+			workchain, addr, bounceable = self.ParseAddrB64(inputAddr)
 			return workchain, addr
 		elif self.IsAddrFull(inputAddr):
 			workchain, addr = self.ParseAddrFull(inputAddr)
@@ -3207,6 +3232,14 @@ class MyTonCore():
 		else:
 			raise Exception(f"ParseInputAddr error: input address is not a adress: {inputAddr}")
 	#end define
+	
+	def IsBounceableAddrB64(self, inputAddr):
+		bounceable = None
+		try:
+			workchain, addr, bounceable = self.ParseAddrB64(inputAddr)
+		except: pass
+		return bounceable
+	#en define
 
 	def GetNetLoadAvg(self, statistics=None):
 		if statistics is None:
