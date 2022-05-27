@@ -2551,6 +2551,8 @@ class MyTonCore():
 			online = validator.get("online")
 			if online is True:
 				onlineValidators.append(validator)
+		if len(onlineValidators) == 0:
+			onlineValidators = None
 		return onlineValidators
 	#end define
 
