@@ -23,7 +23,7 @@ ENDC='\033[0m'
 # На OSX нет такой директории по-умолчанию, поэтому создаем...
 SOURCES_DIR=/usr/src
 BIN_DIR=/usr/bin
-if [ "$OSTYPE" == "darwin"* ]; then
+if [[ "$OSTYPE" =~ darwin.* ]]; then
 	SOURCES_DIR=/usr/local/src
 	BIN_DIR=/usr/local/bin
 	mkdir -p $SOURCES_DIR
@@ -56,7 +56,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 		echo "Please refer to https://github.com/ton-blockchain/mytonctrl for setup information."
 		exit 1
 	fi
-elif [ "$OSTYPE" == "darwin"* ]; then
+elif [[ "$OSTYPE" =~ darwin.* ]]; then
 	echo "Mac OS (Darwin) detected."
 	if [ ! which brew >/dev/null 2>&1 ]; then
 		$BIN_DIR/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -98,7 +98,7 @@ mkdir $BIN_DIR/ton
 cd $BIN_DIR/ton
 
 # Подготовиться к компиляции
-if [ "$OSTYPE" == "darwin"* ]; then
+if [[ "$OSTYPE" =~ darwin.* ]]; then
 	export CMAKE_C_COMPILER=$(which clang)
 	export CMAKE_CXX_COMPILER=$(which clang++)
 	export CCACHE_DISABLE=1
@@ -109,16 +109,30 @@ else
 fi
 
 # Подготовиться к компиляции
-cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
+if [[ "$OSTYPE" =~ darwin.* ]]; then
+	if [[ $(uname -p) == 'arm' ]]; then
+		echo M1
+		CC="clang -mcpu=apple-a14" CXX="clang++ -mcpu=apple-a14" cmake $SOURCES_DIR/ton -DCMAKE_BUILD_TYPE=Release -DTON_ARCH= -Wno-dev
+	else
+		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
+	fi
+else
+	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
+fi
 
 # Компилируем из исходников
 echo -e "${COLOR}[4/6]${ENDC} Source Compilation"
-memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
-let "cpuNumber = memory / 2100000"
-if [ ${cpuNumber} == 0 ]; then
-	echo "Warning! insufficient RAM"
-	cpuNumber=1
+if [[ "$OSTYPE" =~ darwin.* ]]; then
+	cpuNumber=$(sysctl -n hw.logicalcpu)
+else
+	memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
+	let "cpuNumber = memory / 2100000"
+	if [ ${cpuNumber} == 0 ]; then
+		echo "Warning! insufficient RAM"
+		cpuNumber=1
+	fi
 fi
+
 echo "use ${cpuNumber} cpus"
 make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server
 
