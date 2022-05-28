@@ -8,7 +8,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Get arguments
-config="https://newton-blockchain.github.io/global.config.json"
+config="https://ton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
 while getopts m:c:ti flag
