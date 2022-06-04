@@ -51,7 +51,7 @@ mydir=$(pwd)
 # На OSX нет такой директории по-умолчанию, поэтому создаем...
 SOURCES_DIR=/usr/src
 BIN_DIR=/usr/bin
-if [ "$OSTYPE" == "darwin"* ]; then
+if [[ "$OSTYPE" =~ darwin.* ]]; then
 	SOURCES_DIR=/usr/local/src
 	BIN_DIR=/usr/local/bin
 	mkdir -p ${SOURCES_DIR}
