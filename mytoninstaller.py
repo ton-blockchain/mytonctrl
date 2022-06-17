@@ -139,6 +139,9 @@ def GetInitBlock():
 #end define
 
 def CreateLocalConfig(initBlock, localConfigPath=defaultLocalConfigPath):
+	# dirty hack, but GetInitBlock() function uses the same technique
+	from mytoncore import hex2base64
+
 	# read global config file
 	file = open("/usr/bin/ton/global.config.json", 'rt')
 	text = file.read()
@@ -149,8 +152,8 @@ def CreateLocalConfig(initBlock, localConfigPath=defaultLocalConfigPath):
 	liteServerConfig = GetLiteServerConfig()
 	data["liteservers"] = [liteServerConfig]
 	data["validator"]["init_block"]["seqno"] = initBlock["seqno"]
-	data["validator"]["init_block"]["root_hash"] = initBlock["rootHash"]
-	data["validator"]["init_block"]["file_hash"] = initBlock["fileHash"]
+	data["validator"]["init_block"]["root_hash"] = hex2base64(initBlock["rootHash"])
+	data["validator"]["init_block"]["file_hash"] = hex2base64(initBlock["fileHash"])
 	text = json.dumps(data, indent=4)
 
 	# write local config file
