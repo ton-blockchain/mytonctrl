@@ -843,7 +843,6 @@ class MyTonCore():
 		dnsRootAddr_hex = self.GetVarFromWorkerOutput(result, "dns_root_addr:x")
 		fullDnsRootAddr = "-1:{dnsRootAddr_hex}".format(dnsRootAddr_hex=dnsRootAddr_hex)
 		
-		
 		# Set buffer
 		self.SetFunctionBuffer(bname, fullDnsRootAddr)
 		return fullDnsRootAddr
@@ -1077,7 +1076,7 @@ class MyTonCore():
 			validatorStatus["unixtime"] = GetTimestamp()
 			validatorStatus["masterchainblocktime"] = 0
 		validatorStatus["outOfSync"] = validatorStatus["unixtime"] - validatorStatus["masterchainblocktime"]
-		
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, validatorStatus)
 		return validatorStatus
@@ -1987,12 +1986,25 @@ class MyTonCore():
 		return vconfig
 	#end define
 
+	def GetWalletId(self, wallet):
+		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
+		cmd = f"runmethodfull {wallet.addrB64} wallet_id"
+		result = self.liteClient.Run(cmd)
+		result = self.GetVarFromWorkerOutput(result, "result")
+		if result is None or "error" in result:
+			return subwalletDefault
+		subwallet = Pars(result, '[', ']')
+		subwallet = int(subwallet)
+		return subwallet
+	#end define
+
 	def MoveCoins(self, wallet, dest, coins, **kwargs):
 		local.AddLog("start MoveCoins function", "debug")
 		flags = kwargs.get("flags", list())
 		timeout = kwargs.get("timeout", 30)
-		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
+		subwallet = kwargs.get("subwallet")
+		if "v3" in wallet.version and subwallet is None:
+			subwallet = self.GetWalletId(wallet)
 		if coins == "all":
 			mode = 130
 			coins = 0
@@ -3407,9 +3419,10 @@ class MyTonCore():
 		if not os.path.isfile(gitPath + "build.sh"):
 			return
 		if not os.path.isfile("/usr/bin/func"):
-			file = open("/usr/bin/func", 'wt')
-			file.write("/usr/bin/ton/crypto/func $@")
-			file.close()
+			return
+		#	file = open("/usr/bin/func", 'wt')
+		#	file.write("/usr/bin/ton/crypto/func $@")
+		#	file.close()
 		#end if
 
 		os.makedirs(gitPath + "build", exist_ok=True)
