@@ -1764,17 +1764,20 @@ class MyTonCore():
 		config34 = self.GetConfig34()
 		fullElectorAddr = self.GetFullElectorAddr()
 		returnedStake = self.GetReturnedStake(fullElectorAddr, poolAddr)
+		pendingWithdraws = self.GetPendingWithdraws()
 		if (poolData["state"] == 2 and
-			poolData["validator_set_changes_count"] < 2 and
-			poolData["validator_set_change_time"] < config34["startWorkTime"]):
+			poolData["validatorSetChangesCount"] < 2 and
+			poolData["validatorSetChangeTime"] < config34["startWorkTime"]):
 			self.PoolProcessUpdateValidatorSet(poolAddr, wallet)
 		if (returnedStake > 0 and
 			poolData["state"] == 2 and
-			poolData["validator_set_changes_count"] >= 2 and
-			timeNow - poolData["validator_set_change_time"] > poolData["stake_held_for"] + 60):
+			poolData["validatorSetChangesCount"] >= 2 and
+			timeNow - poolData["validatorSetChangeTime"] > poolData["stakeHeldFor"] + 60):
 			self.PoolRecoverStake(poolAddr)
 		if (poolData["state"] == 0 and self.HasPoolWithdrawRequests(pool)):
 			self.PoolWithdrawRequests(pool, wallet)
+		if (poolData["state"] == 0 and poolAddr in pendingWithdraws):
+			self.HandlePendingWithdraw(pendingWithdraws, poolAddr)
 	#end define
 
 	def PoolProcessUpdateValidatorSet(self, poolAddr, wallet):
@@ -1981,9 +1984,22 @@ class MyTonCore():
 	def GetValidatorConfig(self):
 		local.AddLog("start GetValidatorConfig function", "debug")
 		result = self.validatorConsole.Run("getconfig")
-		string = Pars(result, "---------", "--------")
-		vconfig = json.loads(string)
+		text = Pars(result, "---------", "--------")
+		vconfig = json.loads(text)
 		return vconfig
+	#end define
+	
+	def GetOverlaysStats(self):
+		local.AddLog("start GetOverlaysStats function", "debug")
+		resultFilePath = local.buffer.get("myTempDir") + "getoverlaysstats.json"
+		result = self.validatorConsole.Run(f"getoverlaysstatsjson {resultFilePath}")
+		if "wrote stats" not in result:
+			raise Exception(f"GetOverlaysStats error: {result}")
+		file = open(resultFilePath)
+		text = file.read()
+		file.close()
+		data = json.loads(text)
+		return data
 	#end define
 
 	def GetWalletId(self, wallet):
@@ -3502,23 +3518,29 @@ class MyTonCore():
 
 	def CreatePool(self, poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake):
 		local.AddLog("start CreatePool function", "debug")
+		validatorRewardShare = int(validatorRewardSharePercent * 100)
 		contractPath = self.contractsDir + "nominator-pool/"
 		if not os.path.isdir(contractPath):
 			self.DownloadContract("https://github.com/ton-blockchain/nominator-pool")
 		#end if
 
-		filePath = self.poolsDir + poolName
-		if os.path.isfile(filePath + ".addr"):
-			local.AddLog("CreatePool error: Pool already exists: " + filePath, "warning")
-		#end if
+		pools = self.GetPools()
+		for pool in pools:
+			poolData = self.GetPoolData(pool.addrB64)
+			poolConfig = poolData.get("config")
+			if (validatorRewardShare == poolConfig["validatorRewardShare"] and
+				maxNominatorsCount == poolConfig["maxNominatorsCount"] and
+				minValidatorStake == poolConfig["minValidatorStake"] and
+				minNominatorStake == poolConfig["minNominatorStake"]):
+				raise Exception("CreatePool error: Pool with the same parameters already exists.")
+		#end for
 
-		validatorRewardShare = int(validatorRewardSharePercent * 100)
 		fiftScript = self.contractsDir + "nominator-pool/func/new-pool.fif"
 		wallet = self.GetValidatorWallet()
 		args = [fiftScript, wallet.addrB64, validatorRewardShare, maxNominatorsCount, minValidatorStake, minNominatorStake, filePath]
 		result = self.fift.Run(args)
 		if "Saved pool" not in result:
-			raise Exception("CreatePool error")
+			raise Exception("CreatePool error: " + result)
 		#end if
 	#end define
 
@@ -3534,24 +3556,55 @@ class MyTonCore():
 			raise Exception("ActivatePool error: time out")
 	#end define
 
-	def DepositToPool(self, walletName, pollAddr, amount):
+	def DepositToPool(self, walletName, poolAddr, amount):
 		wallet = self.GetLocalWallet(walletName)
 		bocPath = local.buffer.get("myTempDir") + wallet.name + "validator-deposit-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-deposit.fif"
 		args = [fiftScript, bocPath]
 		result = self.fift.Run(args)
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, pollAddr, amount)
+		resultFilePath = self.SignBocWithWallet(wallet, bocPath, poolAddr, amount)
 		self.SendFile(resultFilePath, wallet)
 	#end define
+	
+	def WithdrawFromPool(self, walletName, poolAddr, amount):
+		poolData = self.GetPoolData(poolAddr)
+		if poolData["state"] == 0:
+			self.WithdrawFromPoolProcess(walletName, poolAddr, amount)
+		else:
+			self.PendWithdrawFromPool(walletName, poolAddr, amount)
+	#end define
 
-	def WithdrawFromPool(self, walletName, pollAddr, amount):
+	def WithdrawFromPoolProcess(self, walletName, poolAddr, amount):
+		local.AddLog("start WithdrawFromPoolProcess function", "debug")
 		wallet = self.GetLocalWallet(walletName)
 		bocPath = local.buffer.get("myTempDir") + wallet.name + "validator-withdraw-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-withdraw.fif"
 		args = [fiftScript, amount, bocPath]
 		result = self.fift.Run(args)
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, pollAddr, 1.35)
+		resultFilePath = self.SignBocWithWallet(wallet, bocPath, poolAddr, 1.35)
 		self.SendFile(resultFilePath, wallet)
+	#end define
+	
+	def PendWithdrawFromPool(self, walletName, poolAddr, amount):
+		local.AddLog("start PendWithdrawFromPool function", "debug")
+		pendingWithdraws = self.GetPendingWithdraws()
+		pendingWithdraws[poolAddr] = (walletName, amount)
+		local.dbSave()
+	#end define
+	
+	def HandlePendingWithdraw(self, pendingWithdraws, poolAddr):
+		walletName, amount = pendingWithdraws.get(poolAddr)
+		self.WithdrawFromPoolProcess(walletName, poolAddr, amount)
+		pendingWithdraws.pop(poolAddr)
+	#end define
+	
+	def GetPendingWithdraws(self):
+		bname = "pendingWithdraws"
+		pendingWithdraws = local.db.get(bname)
+		if pendingWithdraws is None:
+			pendingWithdraws = dict()
+			local.db[bname] = pendingWithdraws
+		return pendingWithdraws
 	#end define
 
 	def SignElectionRequestWithPoolWithValidator(self, pool, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor, stake):
@@ -3654,7 +3707,7 @@ class MyTonCore():
 
 	def GetPoolLastSentStakeTime(self, addrB64):
 		poolData = self.GetPoolData(addrB64)
-		return poolData["stake_at"]
+		return poolData["stakeAt"]
 	#end define
 
 	def IsPoolReadyToStake(self, addrB64):
@@ -3673,26 +3726,33 @@ class MyTonCore():
 		return result
 	#end define
 
-	def GetPoolData(self, poolAddr):
+	def GetPoolData(self, addrB64):
 		local.AddLog("start GetPoolData function", "debug")
-		cmd = f"runmethodfull {poolAddr} get_pool_data"
+		cmd = f"runmethodfull {addrB64} get_pool_data"
 		result = self.liteClient.Run(cmd)
 		data = self.Result2List(result)
 		if data is None:
 			return
+		poolConfig = dict()
+		poolConfig["validatorAddress"] = data[4]
+		poolConfig["validatorRewardShare"] = data[5]
+		poolConfig["validatorRewardSharePercent"] = data[5] / 100
+		poolConfig["maxNominatorsCount"] = data[6]
+		poolConfig["minValidatorStake"] = ng2g(data[7])
+		poolConfig["minNominatorStake"] = ng2g(data[8])
 		poolData = dict()
 		poolData["state"] = data[0]
-		poolData["nominators_count"] = data[1]
-		poolData["stake_amount_sent"] = data[2]
-		poolData["validator_amount"] = data[3]
-		poolData["config"] = data[4:9]
+		poolData["nominatorsCount"] = data[1]
+		poolData["stakeAmountSent"] = ng2g(data[2])
+		poolData["validatorAmount"] = ng2g(data[3])
+		poolData["config"] = poolConfig
 		poolData["nominators"] = data[9]
-		poolData["withdraw_requests"] = data[10]
-		poolData["stake_at"] = data[11]
-		poolData["saved_validator_set_hash"] = data[12]
-		poolData["validator_set_changes_count"] = data[13]
-		poolData["validator_set_change_time"] = data[14]
-		poolData["stake_held_for"] = data[15]
+		poolData["withdrawRequests"] = data[10]
+		poolData["stakeAt"] = data[11]
+		poolData["savedValidatorSetHash"] = data[12]
+		poolData["validatorSetChangesCount"] = data[13]
+		poolData["validatorSetChangeTime"] = data[14]
+		poolData["stakeHeldFor"] = data[15]
 		return poolData
 	#end define
 
@@ -4363,28 +4423,28 @@ def Telemetry(ton):
 	data["stake"] = local.db.get("stake")
 
 	# Send data to toncenter server
-	liteUrl_default = "https://validator.health.toncenter.com/report_status"
+	liteUrl_default = "https://telemetry.toncenter.com/report_status"
 	liteUrl = local.db.get("telemetryLiteUrl", liteUrl_default)
 	output = json.dumps(data)
 	resp = requests.post(liteUrl, data=output, timeout=3)
+#end define
 
-	sendFullTelemetry = local.db.get("sendFullTelemetry")
-	if sendFullTelemetry is not True:
+def OverlayTelemetry(ton):
+	sendTelemetry = local.db.get("sendTelemetry")
+	if sendTelemetry is not True:
 		return
 	#end if
 
-	# Send full telemetry
-	fullUrl_default = "https://validator.health.toncenter.com/report_validators"
-	fullUrl = local.db.get("telemetryFullUrl", fullUrl_default)
+	# Get validator status
 	data = dict()
-	config36 = ton.GetConfig36()
-	data["currentValidators"] = ton.GetValidatorsList()
-	data["nextValidators"] = config36.get("validators")
-	data["elections"] = elections
-	data["complaints"] = complaints
+	data["adnlAddr"] = ton.GetAdnlAddr()
+	data["overlaysStats"] = ton.GetOverlaysStats()
 
+	# Send data to toncenter server
+	overlayUrl_default = "https://telemetry.toncenter.com/report_overlays"
+	overlayUrl = local.db.get("overlayTelemetryUrl", overlayUrl_default)
 	output = json.dumps(data)
-	resp = requests.post(fullUrl, data=output, timeout=3)
+	resp = requests.post(overlayUrl, data=output, timeout=3)
 #end define
 
 def Complaints(ton):
@@ -4459,6 +4519,7 @@ def General():
 	local.StartCycle(Slashing, sec=600, args=(ton, ))
 	local.StartCycle(Domains, sec=600, args=(ton, ))
 	local.StartCycle(Telemetry, sec=60, args=(ton, ))
+	local.StartCycle(OverlayTelemetry, sec=7200, args=(ton, ))
 	local.StartCycle(ScanLiteServers, sec=60, args=(ton,))
 	Sleep()
 #end define
