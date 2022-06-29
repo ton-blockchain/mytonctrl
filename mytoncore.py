@@ -1707,11 +1707,6 @@ class MyTonCore():
 	#end define
 
 	def RecoverStake(self):
-		usePool = local.db.get("usePool")
-		if usePool == True:
-			return
-		#end if
-
 		wallet = self.GetValidatorWallet()
 		if wallet is None:
 			raise Exception("Validator wallet not found")
@@ -4090,6 +4085,7 @@ def Elections(ton):
 	usePool = local.db.get("usePool")
 	if usePool == True:
 		ton.PoolsUpdateValidatorSet()
+		ton.RecoverStake()
 		ton.ElectionEntry()
 	else:
 		ton.RecoverStake()

@@ -207,13 +207,9 @@
 		"en": "Load average[{0}]: {1}, {2}, {3}",
 		"ru": "Средняя нагрузка[{0}]: {1}, {2}, {3}"
 	},
-	"local_status_memory_load": {
+	"local_status_memory": {
 		"en": "Memory load: {0}, {1}",
 		"ru": "Загрузка памяти: {0}, {1}"
-	},
-	"local_status_swap_load": {
-		"en": "Swap load: {0}, {1}",
-		"ru": "Загрузка подкачки: {0}, {1}"
 	},
 	"local_status_net_load": {
 		"en": "Network load average (Mbit/s): {0}, {1}, {2}",
@@ -224,12 +220,12 @@
 		"ru": "Средняя нагрузка дисков (MB/s): {0}"
 	},
 	"local_status_mytoncore_status": {
-		"en": "Mytoncore status: {0}",
-		"ru": "Статус ядра mytoncore: {0}"
+		"en": "Mytoncore status: {0}, {1}",
+		"ru": "Статус ядра mytoncore: {0}, {1}"
 	},
 	"local_status_validator_status": {
-		"en": "Local validator status: {0}",
-		"ru": "Статус локального валидатора: {0}"
+		"en": "Local validator status: {0}, {1}",
+		"ru": "Статус локального валидатора: {0}, {1}"
 	},
 	"local_status_validator_out_of_sync": {
 		"en": "Local validator out of sync: {0}",
@@ -238,6 +234,14 @@
 	"local_status_db": {
 		"en": "Local validator database size: {0}, {1}",
 		"ru": "Размер БД локального валидатора: {0}, {1}"
+	},
+	"local_status_version_mtc": {
+		"en": "Version mytonctrl: {0} ({1})",
+		"ru": "Версия mytonctrl: {0} ({1})"
+	},
+	"local_status_version_validator": {
+		"en": "Version validator: {0} ({1})",
+		"ru": "Версия валидатора: {0} ({1})"
 	},
 	"ton_config_head": {
 		"en": "{cyan}===[ TON network configuration ]==={endc}",

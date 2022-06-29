@@ -330,8 +330,6 @@ def PrintLocalStatus(adnlAddr, validatorIndex, validatorEfficiency, validatorWal
 	netLoad5 = netLoadAvg[1]
 	netLoad15 = netLoadAvg[2]
 	validatorOutOfSync = validatorStatus.get("outOfSync")
-	mytoncoreStatus_bool = GetServiceStatus("mytoncore")
-	validatorStatus_bool = GetServiceStatus("validator")
 
 	validatorIndex_text = GetColorInt(validatorIndex, 0, logic="more")
 	validatorIndex_text = local.Translate("local_status_validator_index").format(validatorIndex_text)
@@ -349,16 +347,19 @@ def PrintLocalStatus(adnlAddr, validatorIndex, validatorEfficiency, validatorWal
 	cpuLoad_text = local.Translate("local_status_cpu_load").format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text)
 
 	# Memory status
-	memoryUsage = memoryInfo.get("usage")
-	memoryUsagePercent = memoryInfo.get("usagePercent")
+	ramUsage = memoryInfo.get("usage")
+	ramUsagePercent = memoryInfo.get("usagePercent")
 	swapUsage = swapInfo.get("usage")
 	swapUsagePercent = swapInfo.get("usagePercent")
-	memoryUsage_text = GetColorInt(memoryUsage, 100, logic="less", ending=" Gb")
-	memoryUsagePercent_text = GetColorInt(memoryUsagePercent, 90, logic="less", ending="%")
+	ramUsage_text = GetColorInt(ramUsage, 100, logic="less", ending=" Gb")
+	ramUsagePercent_text = GetColorInt(ramUsagePercent, 90, logic="less", ending="%")
 	swapUsage_text = GetColorInt(swapUsage, 100, logic="less", ending=" Gb")
 	swapUsagePercent_text = GetColorInt(swapUsagePercent, 90, logic="less", ending="%")
-	memory_text = local.Translate("local_status_memory_load").format(memoryUsage_text, memoryUsagePercent_text)
-	swap_text = local.Translate("local_status_swap_load").format(swapUsage_text, swapUsagePercent_text)
+	ramLoad_text = "{cyan}ram:[{default}{data}, {percent}{cyan}]{endc}"
+	ramLoad_text = ramLoad_text.format(cyan=bcolors.cyan, default=bcolors.default, endc=bcolors.endc, data=ramUsage_text, percent=ramUsagePercent_text)
+	swapLoad_text = "{cyan}swap:[{default}{data}, {percent}{cyan}]{endc}"
+	swapLoad_text = swapLoad_text.format(cyan=bcolors.cyan, default=bcolors.default, endc=bcolors.endc, data=swapUsage_text, percent=swapUsagePercent_text)
+	memoryLoad_text = local.Translate("local_status_memory").format(ramLoad_text, swapLoad_text)
 
 	# Network status
 	netLoad1_text = GetColorInt(netLoad1, 300, logic="less")
@@ -383,12 +384,34 @@ def PrintLocalStatus(adnlAddr, validatorIndex, validatorEfficiency, validatorWal
 	disksLoad_text = local.Translate("local_status_disks_load").format(disksLoad_data)
 
 	# Thread status
-	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(GetColorStatus(mytoncoreStatus_bool))
-	validatorStatus_text = local.Translate("local_status_validator_status").format(GetColorStatus(validatorStatus_bool))
+	mytoncoreStatus_bool = GetServiceStatus("mytoncore")
+	validatorStatus_bool = GetServiceStatus("validator")
+	mytoncoreUptime = GetServiceUptime("mytoncore")
+	validatorUptime = GetServiceUptime("validator")
+	mytoncoreUptime_text = bcolors.Green(time2human(mytoncoreUptime))
+	validatorUptime_text = bcolors.Green(time2human(validatorUptime))
+	mytoncoreStatus = GetColorStatus(mytoncoreStatus_bool)
+	validatorStatus = GetColorStatus(validatorStatus_bool)
+	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(mytoncoreStatus, mytoncoreUptime_text)
+	validatorStatus_text = local.Translate("local_status_validator_status").format(validatorStatus, validatorUptime_text)
 	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, logic="less", ending=" s"))
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
-	dbStatus_text = local.Translate("local_status_db").format(dbSize_text, dbUsage_text, cyan=bcolors.cyan, endc=bcolors.endc)
+	dbStatus_text = local.Translate("local_status_db").format(dbSize_text, dbUsage_text)
+	
+	# Mytonctrl and validator git hash
+	mtcGitPath = "/usr/src/mytonctrl"
+	validatorGitPath = "/usr/src/ton"
+	mtcGitHash = GetGitHash(mtcGitPath, short=True)
+	validatorGitHash = GetGitHash(validatorGitPath, short=True)
+	mtcGitBranch = GetGitBranch(mtcGitPath)
+	validatorGitBranch = GetGitBranch(validatorGitPath)
+	mtcGitHash_text = bcolors.Yellow(mtcGitHash)
+	validatorGitHash_text = bcolors.Yellow(validatorGitHash)
+	mtcGitBranch_text = bcolors.Yellow(mtcGitBranch)
+	validatorGitBranch_text = bcolors.Yellow(validatorGitBranch)
+	mtcVersion_text = local.Translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
+	validatorVersion_text = local.Translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
 
 	ColorPrint(local.Translate("local_status_head"))
 	print(validatorIndex_text)
@@ -398,13 +421,15 @@ def PrintLocalStatus(adnlAddr, validatorIndex, validatorEfficiency, validatorWal
 	print(walletBalance_text)
 	print(cpuLoad_text)
 	print(netLoad_text)
+	print(memoryLoad_text)
+	
 	print(disksLoad_text)
 	print(mytoncoreStatus_text)
 	print(validatorStatus_text)
 	print(validatorOutOfSync_text)
 	print(dbStatus_text)
-	print(memory_text)
-	print(swap_text)
+	print(mtcVersion_text)
+	print(validatorVersion_text)
 	print()
 #end define
 
