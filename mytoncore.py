@@ -3530,6 +3530,12 @@ class MyTonCore():
 				raise Exception("CreatePool error: Pool with the same parameters already exists.")
 		#end for
 
+		filePath = self.poolsDir + poolName
+		if os.path.isfile(filePath + ".addr"):
+			local.AddLog("CreatePool warning: Pool already exists: " + filePath, "warning")
+			return
+		#end if
+
 		fiftScript = self.contractsDir + "nominator-pool/func/new-pool.fif"
 		wallet = self.GetValidatorWallet()
 		args = [fiftScript, wallet.addrB64, validatorRewardShare, maxNominatorsCount, minValidatorStake, minNominatorStake, filePath]
