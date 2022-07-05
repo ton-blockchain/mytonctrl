@@ -1071,7 +1071,7 @@ class MyTonCore():
 			validatorStatus["transNum"] = local.buffer.get("transNum", -1)
 			validatorStatus["blocksNum"] = local.buffer.get("blocksNum", -1)
 			validatorStatus["masterBlocksNum"] = local.buffer.get("masterBlocksNum", -1)
-		except:
+		except subprocess.TimeoutExpired:
 			validatorStatus["isWorking"] = False
 			validatorStatus["unixtime"] = GetTimestamp()
 			validatorStatus["masterchainblocktime"] = 0
@@ -1436,6 +1436,7 @@ class MyTonCore():
 	def SendFile(self, filePath, wallet=None, **kwargs):
 		local.AddLog("start SendFile function: " + filePath, "debug")
 		timeout = kwargs.get("timeout", 30)
+		remove = kwargs.get("remove", True)
 		duplicateSendfile = local.db.get("duplicateSendfile", True)
 		if not os.path.isfile(filePath):
 			raise Exception("SendFile error: no such file '{filePath}'".format(filePath=filePath))
@@ -1447,7 +1448,8 @@ class MyTonCore():
 			self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
 		if timeout and wallet:
 			self.WaitTransaction(wallet, timeout)
-		os.remove(filePath)
+		if remove == True:
+			os.remove(filePath)
 	#end define
 
 	def WaitTransaction(self, wallet, timeout=30):
@@ -1881,14 +1883,11 @@ class MyTonCore():
 		local.AddLog("start ActivateWallet function", "debug")
 		account = self.GetAccount(wallet.addrB64)
 		if account.status == "empty":
-			local.AddLog("ActivateWallet error: account status is empty", "warning")
-			return
+			raise Exception("ActivateWallet error: account status is empty")
 		elif account.status == "active":
-			local.AddLog("ActivateWallet error: account status is active", "warning")
-			return
+			local.AddLog("ActivateWallet warning: account status is active", "warning")
 		else:
-			self.SendFile(wallet.bocFilePath, wallet)
-			return
+			self.SendFile(wallet.bocFilePath, wallet, remove=False)
 	#end define
 
 	def ImportWallet(self, addrB64, key):
@@ -2031,6 +2030,8 @@ class MyTonCore():
 		account = self.GetAccount(wallet.addrB64)
 		if account.balance < coins + 0.1:
 			raise Exception("Wallet balance is less than requested coins")
+		if account.status != "active":
+			raise Exception("Wallet account is uninitialized")
 		#end if
 		
 		# Bounceable checking
@@ -3519,17 +3520,6 @@ class MyTonCore():
 			self.DownloadContract("https://github.com/ton-blockchain/nominator-pool")
 		#end if
 
-		pools = self.GetPools()
-		for pool in pools:
-			poolData = self.GetPoolData(pool.addrB64)
-			poolConfig = poolData.get("config")
-			if (validatorRewardShare == poolConfig["validatorRewardShare"] and
-				maxNominatorsCount == poolConfig["maxNominatorsCount"] and
-				minValidatorStake == poolConfig["minValidatorStake"] and
-				minNominatorStake == poolConfig["minNominatorStake"]):
-				raise Exception("CreatePool error: Pool with the same parameters already exists.")
-		#end for
-
 		filePath = self.poolsDir + poolName
 		if os.path.isfile(filePath + ".addr"):
 			local.AddLog("CreatePool warning: Pool already exists: " + filePath, "warning")
@@ -3543,6 +3533,14 @@ class MyTonCore():
 		if "Saved pool" not in result:
 			raise Exception("CreatePool error: " + result)
 		#end if
+		
+		pools = self.GetPools()
+		newPool = self.GetLocalPool(poolName)
+		for pool in pools:
+			if pool.name != newPool.name and pool.addrB64 == newPool.addrB64:
+				newPool.Delete()
+				raise Exception("CreatePool error: Pool with the same parameters already exists.")
+		#end for
 	#end define
 
 	def ActivatePool(self, pool, ex=True):
@@ -3864,6 +3862,13 @@ class TonBlocksScanner():
 		else:
 			self.StartThread(func, args)
 	#end define
+	
+	def AddLog(self, text, type):
+		if self.local:
+			self.local.AddLog(text, type)
+		else:
+			print(text)
+	#end define
 
 	def Try(self, func, **kwargs):
 		err = None
@@ -3875,10 +3880,7 @@ class TonBlocksScanner():
 				return result
 			except Exception as err:
 				text = f"{func.__name__} step: {step}, error: {err}"
-				if self.local:
-					self.local.AddLog(text, "error")
-				else:
-					print(text)
+				self.AddLog(text, "error")
 		raise Exception(err)
 	#end define
 
@@ -3931,12 +3933,12 @@ class TonBlocksScanner():
 				self.working = False
 				self.closing = True
 				text = "TonBlocksScanner error: local liteserver is not configured, stop thread."
-				self.local.AddLog(text, "error")
+				self.AddLog(text, "error")
 				exit()
 			if validatorOutOfSync > 20:
 				self.working = False
 				text = f"TonBlocksScanner warning: local liteserver is out of sync: {validatorOutOfSync}."
-				self.local.AddLog(text, "warning")
+				self.AddLog(text, "warning")
 			else:
 				self.working = True
 			time.sleep(10)
@@ -4510,7 +4512,7 @@ def ScanLiteServers(ton):
 def General():
 	local.AddLog("start General function", "debug")
 	ton = MyTonCore()
-	scanner = TonBlocksScanner(ton)
+	scanner = TonBlocksScanner(ton, local=local)
 	scanner.Run()
 
 	# Запустить потоки
