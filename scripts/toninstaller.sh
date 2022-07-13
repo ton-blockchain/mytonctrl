@@ -126,7 +126,7 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
 	cpuNumber=$(sysctl -n hw.logicalcpu)
 else
 	memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
-	let "cpuNumber = memory / 2100000"
+	cpuNumber=$(($memory/2100000))
 	if [ ${cpuNumber} == 0 ]; then
 		echo "Warning! insufficient RAM"
 		cpuNumber=1
@@ -134,7 +134,7 @@ else
 fi
 
 echo "use ${cpuNumber} cpus"
-make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server
+make -j ${cpuNumber} #fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"

@@ -11,13 +11,15 @@ fi
 config="https://ton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
-while getopts m:c:ti flag
+dump=false
+while getopts m:c:tid flag
 do
 	case "${flag}" in
 		m) mode=${OPTARG};;
 		c) config=${OPTARG};;
 		t) telemetry=false;;
 		i) ignore=true;;
+		d) dump=true;;
 	esac
 done
 
@@ -77,11 +79,7 @@ fi
 # Запускаю установщик mytoninstaller.py
 echo -e "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
 user=$(ls -lh ${mydir}/${0} | cut -d ' ' -f 3)
-if ${telemetry}; then
-	python3 ${SOURCES_DIR}/mytonctrl/mytoninstaller.py -m ${mode} -u ${user} --no_send_telemetry
-else
-	python3 ${SOURCES_DIR}/mytonctrl/mytoninstaller.py -m ${mode} -u ${user}
-fi
+python3 ${SOURCES_DIR}/mytonctrl/mytoninstaller.py -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
 
 # Выход из программы
 echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
