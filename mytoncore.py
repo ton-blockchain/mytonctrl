@@ -1071,7 +1071,8 @@ class MyTonCore():
 			validatorStatus["transNum"] = local.buffer.get("transNum", -1)
 			validatorStatus["blocksNum"] = local.buffer.get("blocksNum", -1)
 			validatorStatus["masterBlocksNum"] = local.buffer.get("masterBlocksNum", -1)
-		except subprocess.TimeoutExpired:
+		except Exception as ex:
+			local.AddLog(f"GetValidatorStatus warning: {ex}", "warning")
 			validatorStatus["isWorking"] = False
 			validatorStatus["unixtime"] = GetTimestamp()
 			validatorStatus["masterchainblocktime"] = 0
