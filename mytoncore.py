@@ -1000,24 +1000,6 @@ class MyTonCore():
 		return messageList
 	#end define
 
-	def TryGetTransactionsNumber(self, block):
-		errText = None
-		for i in range(3):
-			time.sleep(i)
-			try:
-				transNum = self.GetTransactionsNumber(block)
-				return transNum
-			except Exception as err:
-				errText = str(err)
-		local.AddLog("TryGetTransactionsNumber error: " + errText, "error")
-	#end define
-
-	def GetTransactionsNumber(self, block):
-		transactions = self.GetTransactions(block)
-		transNum = len(transactions)
-		return transNum
-	#end define
-
 	def GetShards(self, block=None):
 		shards = list()
 		if block:
@@ -3872,14 +3854,14 @@ class TonBlocksScanner():
 	#end define
 
 	def Try(self, func, **kwargs):
-		err = None
 		args = kwargs.get("args", tuple())
 		for step in range(10):
 			time.sleep(step)
 			try:
 				result = func(*args)
 				return result
-			except Exception as err:
+			except Exception as ex:
+				err = ex
 				text = f"{func.__name__} step: {step}, error: {err}"
 				self.AddLog(text, "error")
 		raise Exception(err)
@@ -4514,7 +4496,7 @@ def General():
 	local.AddLog("start General function", "debug")
 	ton = MyTonCore()
 	scanner = TonBlocksScanner(ton, local=local)
-	scanner.Run()
+	#scanner.Run()
 
 	# Запустить потоки
 	local.StartCycle(Elections, sec=600, args=(ton, ))
