@@ -1,3 +1,4 @@
+
 #!/bin/bash
 set -e
 
@@ -134,7 +135,7 @@ else
 fi
 
 echo "use ${cpuNumber} cpus"
-make -j ${cpuNumber} #fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
+make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"

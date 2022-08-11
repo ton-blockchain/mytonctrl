@@ -4405,7 +4405,7 @@ def Telemetry(ton):
 	# Get git hashes
 	gitHashes = dict()
 	gitHashes["mytonctrl"] = GetGitHash("/usr/src/mytonctrl")
-	gitHashes["validator"] = GetGitHash("/usr/src/ton")
+	gitHashes["validator"] = GetBinGitHash("/usr/bin/ton/validator-engine/validator-engine")
 	data["gitHashes"] = gitHashes
 	data["stake"] = local.db.get("stake")
 
@@ -4414,6 +4414,20 @@ def Telemetry(ton):
 	liteUrl = local.db.get("telemetryLiteUrl", liteUrl_default)
 	output = json.dumps(data)
 	resp = requests.post(liteUrl, data=output, timeout=3)
+#end define
+
+def GetBinGitHash(path):
+	if not os.path.isfile(path):
+		return
+	args = [path, "--version"]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	output = process.stdout.decode("utf-8")
+	if "build information" not in output:
+		return
+	buff = output.split(' ')
+	start = buff.index("Commit:") + 1
+	result = buff[start].replace(',', '')
+	return result
 #end define
 
 def OverlayTelemetry(ton):
