@@ -1749,13 +1749,16 @@ class MyTonCore():
 			poolData["validatorSetChangesCount"] < 2 and
 			poolData["validatorSetChangeTime"] < config34["startWorkTime"]):
 			self.PoolProcessUpdateValidatorSet(poolAddr, wallet)
+			poolData = self.GetPoolData(poolAddr)
 		if (returnedStake > 0 and
 			poolData["state"] == 2 and
 			poolData["validatorSetChangesCount"] >= 2 and
 			timeNow - poolData["validatorSetChangeTime"] > poolData["stakeHeldFor"] + 60):
 			self.PoolRecoverStake(poolAddr)
+			poolData = self.GetPoolData(poolAddr)
 		if (poolData["state"] == 0 and self.HasPoolWithdrawRequests(pool)):
 			self.PoolWithdrawRequests(pool, wallet)
+			poolData = self.GetPoolData(poolAddr)
 		if (poolData["state"] == 0 and poolAddr in pendingWithdraws):
 			self.HandlePendingWithdraw(pendingWithdraws, poolAddr)
 	#end define
