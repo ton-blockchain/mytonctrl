@@ -1,3 +1,4 @@
+
 #!/bin/bash
 set -e
 
@@ -8,7 +9,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Get arguments
-config="https://ton-blockchain.github.io/global.config.json"
+config=https://ton-blockchain.github.io/global.config.json
 while getopts c: flag
 do
 	case "${flag}" in
@@ -32,55 +33,20 @@ fi
 # Установка требуемых пакетов
 echo -e "${COLOR}[1/6]${ENDC} Installing required packages"
 if [ "$OSTYPE" == "linux-gnu" ]; then
-
-	# Determine if it is a CentOS system
-	if cat /etc/*release | grep ^NAME | grep CentOS ; then
-		echo "CentOS Linux detected."
-		yum update -y
+	if [ hash yum 2>/dev/null ]; then
+		echo "RHEL-based Linux detected."
 		yum install -y epel-release
-		yum install -y git gflags gflags-devel zlib zlib-devel openssl-devel openssl-libs readline-devel libmicrohttpd python3 python3-pip python36-devel g++ gcc libstdc++-devel zlib1g-dev libssl-dev which make gcc-c++ libstdc++-devel 
-		
-		# Upgrade make and gcc in CentOS system
-		yum install centos-release-scl -y
-		yum install devtoolset-10 -y
-		echo "source /opt/rh/devtoolset-10/enable" >> /etc/bashrc
-		source /opt/rh/devtoolset-10/enable
-
-		# Install the new version of CMake
-		yum remove cmake -y
-		wget https://cmake.org/files/v3.24/cmake-3.24.2.tar.gz
-		tar -zxvf cmake-3.24.2.tar.gz
-		cd cmake-3.24.2 && ./bootstrap && make -j -j$(nproc) && make install
-		yum remove cmake -y
-		ln -s /usr/local/bin/cmake /usr/bin/cmake
-		source ~/.bashrc
-		cmake --version
-
-		# Install ninja
-		yum install -y ninja-build
-
-	# Red Hat systems are not supported
-	elif cat /etc/*release | grep ^NAME | grep Red ; then
-		echo "Red Hat Linux detected."
-		echo "This OS is not supported with this script at present. Sorry."
-		echo "Please refer to https://github.com/ton-blockchain/mytonctrl for setup information."
-		exit 1
-	
-	# Suse systems are not supported
+		dnf config-manager --set-enabled PowerTools
+		yum install -y git make cmake clang gflags gflags-devel zlib zlib-devel openssl-devel openssl-libs readline-devel libmicrohttpd python3 python3-pip python36-devel
 	elif [ -f /etc/SuSE-release ]; then
 		echo "Suse Linux detected."
 		echo "This OS is not supported with this script at present. Sorry."
 		echo "Please refer to https://github.com/ton-blockchain/mytonctrl for setup information."
 		exit 1
-
 	elif [ -f /etc/arch-release ]; then
 		echo "Arch Linux detected."
-		pacman -Syuy  --noconfirm
-		pacman -S --noconfirm git cmake clang gflags zlib openssl readline libmicrohttpd python python-pip
-
-		# Install ninja
-		pacman -S  --noconfirm ninja
-
+		pacman -Syuy
+		pacman -S --noconfirm git make cmake clang gflags zlib openssl readline libmicrohttpd python python-pip
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
 		apt-get update
@@ -95,8 +61,6 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 		echo "Please refer to https://github.com/ton-blockchain/mytonctrl for setup information."
 		exit 1
 	fi
-
-# Detected mac os system.	
 elif [[ "$OSTYPE" =~ darwin.* ]]; then
 	echo "Mac OS (Darwin) detected."
 	if [ ! which brew >/dev/null 2>&1 ]; then
@@ -108,34 +72,27 @@ elif [[ "$OSTYPE" =~ darwin.* ]]; then
 	
 	su $LOCAL_USERNAME -c "brew update"
 	su $LOCAL_USERNAME -c "brew install openssl cmake llvm"
-
-	# Install ninja
-	su $LOCAL_USERNAME -c "brew install ninja"
-
 elif [ "$OSTYPE" == "freebsd"* ]; then
 	echo "FreeBSD detected."
 	echo "This OS is not supported with this script at present. Sorry."
-	echo "Please refer to https://github.com/paritytech/substrate for setup information."
+	echo "Please refer to https://github.com/paritytech/substrate for setup information."  # TODO: remove links
 	exit 1
 else
 	echo "Unknown operating system."
 	echo "This OS is not supported with this script at present. Sorry."
-	echo "Please refer to https://github.com/paritytech/substrate for setup information."
+	echo "Please refer to https://github.com/paritytech/substrate for setup information."  # TODO: remove links
 	exit 1
 fi
 
 # Установка компонентов python3
-pip3 install psutil fastcrc requests
+pip3 install psutil crc16 requests
 
 # Клонирование репозиториев с github.com
 echo -e "${COLOR}[2/6]${ENDC} Cloning github repository"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
-rm -rf $SOURCES_DIR/mytonctrl
 git clone --recursive https://github.com/ton-blockchain/ton.git
-git clone --recursive https://github.com/ton-blockchain/mytonctrl.git
 git config --global --add safe.directory $SOURCES_DIR/ton
-git config --global --add safe.directory $SOURCES_DIR/mytonctrl
 
 # Подготавливаем папки для компиляции
 echo -e "${COLOR}[3/6]${ENDC} Preparing for compilation"
@@ -158,12 +115,12 @@ fi
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	if [[ $(uname -p) == 'arm' ]]; then
 		echo M1
-		CC="clang -mcpu=apple-a14" CXX="clang++ -mcpu=apple-a14" cmake $SOURCES_DIR/ton -DCMAKE_BUILD_TYPE=Release -DTON_ARCH= -Wno-dev -GNinja
+		CC="clang -mcpu=apple-a14" CXX="clang++ -mcpu=apple-a14" cmake $SOURCES_DIR/ton -DCMAKE_BUILD_TYPE=Release -DTON_ARCH= -Wno-dev
 	else
-		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja
+		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
 	fi
 else
-	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja 
+	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
 fi
 
 # Компилируем из исходников
@@ -180,7 +137,7 @@ else
 fi
 
 echo "use ${cpuNumber} cpus"
-ninja -j ${cpuNumber} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
+make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
