@@ -42,6 +42,10 @@ else
     cp /usr/bin/ton/validator-engine-console/client.pub /var/ton-work/keys/client.pub
     cp /usr/bin/ton/validator-engine-console/server.pub /var/ton-work/keys/server.pub
     cp /usr/bin/ton/validator-engine-console/liteserver.pub /var/ton-work/keys/liteserver.pub
+
+	# fix validator.service
+	sed -i 's/validator-engine\/ton-global.config.json/global.config.json/' /etc/systemd/system/validator.service
+	systemctl daemon-reload
 fi
 
 # Go to work dir

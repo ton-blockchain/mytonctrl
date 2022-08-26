@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-
 
-import sys
-sys.path.append("/usr/src/mytonctrl/")
-from mypylib.mypylib import bcolors, Sleep
+from mypylib.mypylib import bcolors, Sleep, MyPyClass
 from mytoncore import MyTonCore, TonBlocksScanner
 
 def NewBlockReaction(block):
@@ -19,7 +17,8 @@ def NewMessageReaction(message):
 #end define
 
 
-ton = MyTonCore()
+local = MyPyClass('./tests')
+ton = MyTonCore(local)
 scanner = TonBlocksScanner(ton, nbr=NewBlockReaction, ntr=NewTransReaction, nmr=NewMessageReaction)
 scanner.Run()
 Sleep()

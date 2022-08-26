@@ -27,7 +27,7 @@ iw <адрес-кошелька> <секретный-ключ-кошелька>
     ```
     node index.js word1 word2 ... word24 [address]
     ```
-4. Скрипт сгенерирует `wallet.pk` и `wallet.addr`. Переименуйте их в `imported_wallet.pk` и `imported_wallet.addr`.
+4. Скрипт сгенерирует `wallet.pk` и `wallet.addr`. Переименуйте их в `imported_wallet.pk` и `imported_wallet.addr`.
 5. Скопируйте оба файла в каталог `~/.local/share/mytoncore/wallets/`.
 6. Откройте консоль mytonctrl и перечислите кошельки с помощью команды `wl`.
 7. Убедитесь, что кошелек был импортирован и отображает правильный баланс.

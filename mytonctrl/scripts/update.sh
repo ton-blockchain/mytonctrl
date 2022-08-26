@@ -28,17 +28,23 @@ done
 COLOR='\033[92m'
 ENDC='\033[0m'
 
-# Установка компонентов python3
-pip3 install fastcrc
-
 # Go to work dir
 cd ${srcdir}
 rm -rf ${srcdir}/${repo}
 
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone --recursive https://github.com/${author}/${repo}.git
-cd ${repo} && git checkout ${branch} && git submodule update --init --recursive
+git clone https://github.com/${author}/${repo}.git
+cd ${repo}
+git checkout ${branch} 
+git submodule update --init --recursive
+
+# FIXME: add __init__.py in these repos
+touch mypyconsole/__init__.py
+touch mypylib/__init__.py
+
+pip3 install -U .
+
 systemctl restart mytoncore
 
 # Конец
