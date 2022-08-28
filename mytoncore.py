@@ -6,14 +6,16 @@ import struct
 import random
 import hashlib
 import requests
+import subprocess
 import re
+
 from mypylib.mypylib import *
 
-local = MyPyClass(__file__)
+# local = MyPyClass(__file__)
 
 class LiteClient:
 	def __init__(self, local):
-		self.local = local
+		self.local = local or MyPyClass(__file__)
 		self.appPath = None
 		self.configPath = None
 		self.pubkeyPath = None
@@ -53,7 +55,7 @@ class LiteClient:
 
 class ValidatorConsole:
 	def __init__(self, local):
-		self.local = local
+		self.local = local or MyPyClass(__file__)
 		self.appPath = None
 		self.privKeyPath = None
 		self.pubKeyPath = None
@@ -76,7 +78,8 @@ class ValidatorConsole:
 #end class
 
 class Fift:
-	def __init__(self):
+	def __init__(self, local):
+		self.local = local or MyPyClass(__file__)
 		self.appPath = None
 		self.libsPath = None
 		self.smartcontsPath = None
@@ -224,6 +227,7 @@ class Message():
 		self.fwd_fee = None
 		self.total_fees = None
 		self.ihr_disabled = None
+		self.hash = None
 	#end define
 
 	def GetFullAddr(self, workchain, addr):
@@ -268,7 +272,7 @@ class Pool:
 
 class MyTonCore():
 	def __init__(self, local):
-		self.local = local
+		self.local = local or MyPyClass(__file__)
 		self.walletsDir = None
 		self.dbFile = None
 		self.contractsDir = None
@@ -276,9 +280,9 @@ class MyTonCore():
 		self.tempDir = None
 		self.nodeName = None
 
-		self.liteClient = LiteClient()
-		self.validatorConsole = ValidatorConsole()
-		self.fift = Fift()
+		self.liteClient = LiteClient(self.local)
+		self.validatorConsole = ValidatorConsole(self.local)
+		self.fift = Fift(self.local)
 
 		self.Refresh()
 		self.Init()
@@ -4033,12 +4037,12 @@ def ng2g(ng):
 	return int(ng)/10**9
 #end define
 
-def Init():
+def Init(local):
 	# Event reaction
 	if ("-e" in sys.argv):
 		x = sys.argv.index("-e")
 		eventName = sys.argv[x+1]
-		Event(eventName)
+		Event(local, eventName)
 	#end if
 
 	local.Run()
@@ -4055,18 +4059,18 @@ def Init():
 	local.buffer["transNum"] = 0
 #end define
 
-def Event(eventName):
+def Event(local, eventName):
 	if eventName == "enableVC":
-		EnableVcEvent()
+		EnableVcEvent(local)
 	elif eventName == "validator down":
-		ValidatorDownEvent()
+		ValidatorDownEvent(local)
 	local.Exit()
 #end define
 
-def EnableVcEvent():
+def EnableVcEvent(local):
 	local.AddLog("start EnableVcEvent function", "debug")
 	# Создать новый кошелек для валидатора
-	ton = MyTonCore()
+	ton = MyTonCore(local)
 	wallet = ton.CreateWallet("validator_wallet_001", -1)
 	local.db["validatorWalletName"] = wallet.name
 
@@ -4079,12 +4083,12 @@ def EnableVcEvent():
 	local.dbSave()
 #end define
 
-def ValidatorDownEvent():
+def ValidatorDownEvent(local):
 	local.AddLog("start ValidatorDownEvent function", "debug")
 	local.AddLog("Validator is down", "error")
 #end define
 
-def Elections(ton):
+def Elections(local, ton):
 	usePool = local.db.get("usePool")
 	if usePool == True:
 		ton.PoolsUpdateValidatorSet()
@@ -4095,16 +4099,16 @@ def Elections(ton):
 		ton.ElectionEntry()
 #end define
 
-def Statistics(scanner):
-	ReadNetworkData()
-	SaveNetworkStatistics()
-	ReadTransData(scanner)
-	SaveTransStatistics()
-	ReadDiskData()
-	SaveDiskStatistics()
+def Statistics(local, scanner):
+	ReadNetworkData(local)
+	SaveNetworkStatistics(local)
+	ReadTransData(local, scanner)
+	SaveTransStatistics(local)
+	ReadDiskData(local)
+	SaveDiskStatistics(local)
 #end define
 
-def ReadDiskData():
+def ReadDiskData(local):
 	timestamp = GetTimestamp()
 	disks = GetDisksList()
 	buff = psutil.disk_io_counters(perdisk=True)
@@ -4123,7 +4127,7 @@ def ReadDiskData():
 	local.buffer["diskio"].append(data)
 #end define
 
-def SaveDiskStatistics():
+def SaveDiskStatistics(local):
 	data = local.buffer["diskio"]
 	data = data[::-1]
 	zerodata = data[0]
@@ -4193,7 +4197,7 @@ def GetDisksList():
 	return data
 #end define
 
-def ReadNetworkData():
+def ReadNetworkData(local):
 	timestamp = GetTimestamp()
 	interfaceName = GetInternetInterfaceName()
 	buff = psutil.net_io_counters(pernic=True)
@@ -4210,7 +4214,7 @@ def ReadNetworkData():
 	local.buffer["network"].append(data)
 #end define
 
-def SaveNetworkStatistics():
+def SaveNetworkStatistics(local):
 	data = local.buffer["network"]
 	data = data[::-1]
 	zerodata = data[0]
@@ -4255,7 +4259,7 @@ def CalculateNetworkStatistics(zerodata, data):
 	return netLoadAvg, ppsAvg
 #end define
 
-def ReadTransData(scanner):
+def ReadTransData(local, scanner):
 	transData = local.buffer.get("transData")
 	SetToTimeData(transData, scanner.transNum)
 	ShortTimeData(transData)
@@ -4276,10 +4280,10 @@ def ShortTimeData(data, max=120, diff=20):
 		data[item] = buff[item]
 #end define
 
-def SaveTransStatistics():
-	tps1 = GetTps(60)
-	tps5 = GetTps(60*5)
-	tps15 = GetTps(60*15)
+def SaveTransStatistics(local):
+	tps1 = GetTps(local, 60)
+	tps5 = GetTps(local, 60*5)
+	tps15 = GetTps(local, 60*15)
 
 	# save statistics
 	statistics = local.db.get("statistics", dict())
@@ -4310,20 +4314,20 @@ def GetItemFromTimeData(data, timeneed):
 #end define
 
 
-def GetTps(timediff):
+def GetTps(local, timediff):
 	data = local.buffer["transData"]
 	tps = GetDataPerSecond(data, timediff)
 	return tps
 #end define
 
-def GetBps(timediff):
+def GetBps(local, timediff):
 	data = local.buffer["blocksData"]
 	bps = GetDataPerSecond(data, timediff)
 	return bps
 #end define
 
-def GetBlockTimeAvg(timediff):
-	bps = GetBps(timediff)
+def GetBlockTimeAvg(local, timediff):
+	bps = GetBps(local, timediff)
 	if bps is None or bps == 0:
 		return
 	result = 1/bps
@@ -4331,7 +4335,7 @@ def GetBlockTimeAvg(timediff):
 	return result
 #end define
 
-def Offers(ton):
+def Offers(local, ton):
 	saveOffers = ton.GetSaveOffers()
 	offers = ton.GetOffers()
 	for offer in offers:
@@ -4342,7 +4346,7 @@ def Offers(ton):
 			ton.VoteOffer(offerHash)
 #end define
 
-def Domains(ton):
+def Domains(local, ton):
 	pass
 #end define
 
@@ -4390,7 +4394,7 @@ def GetValidatorProcessInfo():
 	return result
 #end define
 
-def Telemetry(ton):
+def Telemetry(local, ton):
 	sendTelemetry = local.db.get("sendTelemetry")
 	if sendTelemetry is not True:
 		return
@@ -4444,7 +4448,7 @@ def GetBinGitHash(path):
 	return result
 #end define
 
-def OverlayTelemetry(ton):
+def OverlayTelemetry(local, ton):
 	sendTelemetry = local.db.get("sendTelemetry")
 	if sendTelemetry is not True:
 		return
@@ -4462,7 +4466,7 @@ def OverlayTelemetry(ton):
 	resp = requests.post(overlayUrl, data=output, timeout=3)
 #end define
 
-def Complaints(ton):
+def Complaints(local, ton):
 	validatorIndex = ton.GetValidatorIndex()
 	if validatorIndex < 0:
 		return
@@ -4480,7 +4484,7 @@ def Complaints(ton):
 			ton.VoteComplaint(electionId, complaintHash)
 #end define
 
-def Slashing(ton):
+def Slashing(local, ton):
 	isSlashing = local.db.get("isSlashing")
 	if isSlashing is not True:
 		return
@@ -4498,7 +4502,7 @@ def Slashing(ton):
 		local.buffer["slashTime"] = start
 #end define
 
-def ScanLiteServers(ton):
+def ScanLiteServers(local, ton):
 	# Считать список серверов
 	filePath = ton.liteClient.configPath
 	file = open(filePath, 'rt')
@@ -4520,22 +4524,22 @@ def ScanLiteServers(ton):
 	local.db["liteServers"] = result
 #end define
 
-def General():
+def General(local):
 	local.AddLog("start General function", "debug")
-	ton = MyTonCore()
+	ton = MyTonCore(local)
 	scanner = TonBlocksScanner(ton, local=local)
 	#scanner.Run()
 
 	# Запустить потоки
-	local.StartCycle(Elections, sec=600, args=(ton, ))
-	local.StartCycle(Statistics, sec=10, args=(scanner,))
-	local.StartCycle(Offers, sec=600, args=(ton, ))
-	local.StartCycle(Complaints, sec=600, args=(ton, ))
-	local.StartCycle(Slashing, sec=600, args=(ton, ))
-	local.StartCycle(Domains, sec=600, args=(ton, ))
-	local.StartCycle(Telemetry, sec=60, args=(ton, ))
-	local.StartCycle(OverlayTelemetry, sec=7200, args=(ton, ))
-	local.StartCycle(ScanLiteServers, sec=60, args=(ton,))
+	local.StartCycle(Elections, sec=600, args=(local, ton, ))
+	local.StartCycle(Statistics, sec=10, args=(local, scanner,))
+	local.StartCycle(Offers, sec=600, args=(local, ton, ))
+	local.StartCycle(Complaints, sec=600, args=(local, ton, ))
+	local.StartCycle(Slashing, sec=600, args=(local, ton, ))
+	local.StartCycle(Domains, sec=600, args=(local, ton, ))
+	local.StartCycle(Telemetry, sec=60, args=(local, ton, ))
+	local.StartCycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
+	local.StartCycle(ScanLiteServers, sec=60, args=(local, ton,))
 	Sleep()
 #end define
 
@@ -4570,6 +4574,7 @@ def hex2base64(h):
 ###
 
 if __name__ == "__main__":
-	Init()
-	General()
+	local = MyPyClass(__file__)
+	Init(local)
+	General(local)
 #end if

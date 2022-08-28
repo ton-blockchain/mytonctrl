@@ -3,13 +3,13 @@
 
 import sys
 import time
-sys.path.append("/usr/src/mytonctrl/")
+
 from mypylib.mypylib import bcolors, Sleep
 from mytoncore import MyTonCore
 from mypylib.mypylib import MyPyClass
 
-ton = MyTonCore()
 local = MyPyClass(__file__)
+ton = MyTonCore(local)
 
 def TestMoveCoins(wallet, dest, coins, **kwargs):
 	start = time.time()
