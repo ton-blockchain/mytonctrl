@@ -120,3 +120,4 @@ __pycache__/
 test.py
 .vscode/
 venv/
+venv38/
