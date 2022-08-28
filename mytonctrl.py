@@ -41,22 +41,18 @@ import sys, getopt, os
 
 
 def Init(local, ton, console, argv):
-	
-
-
 	# Load translate table
 	local.InitTranslator(local.buffer.get("myDir") + "translate.json")
 
 	# this function substitutes local and ton instances if function has this args
 	def inject_globals(func):
-		arg_names = inspect.getfullargspec(func)[0]
-		kwargs = {}
-		if 'local' in arg_names:
-			kwargs['local'] = local
-		if 'ton' in arg_names:
-			kwargs['ton'] = ton
-		return partial(func, **kwargs)
-
+		args = []
+		for arg_name in inspect.getfullargspec(func)[0]:
+			if arg_name == 'local':
+				args.append(local)
+			elif arg_name == 'ton':
+				args.append(ton)
+		return partial(func, *args)
 
 	# Create user console
 	console.name = "MyTonCtrl"

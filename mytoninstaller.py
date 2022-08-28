@@ -44,11 +44,11 @@ def Init(local, console):
 
 	# this funciton injects MyPyClass instance
 	def inject_globals(func):
-		arg_names = inspect.getfullargspec(func)[0]
-		kwargs = {}
-		if 'local' in arg_names:
-			kwargs['local'] = local
-		return partial(func, **kwargs)
+		args = []
+		for arg_name in inspect.getfullargspec(func)[0]:
+			if arg_name == 'local':
+				args.append(local)
+		return partial(func, *args)
 
 	# Create user console
 	console.name = "MyTonInstaller"
