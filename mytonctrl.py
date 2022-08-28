@@ -1345,7 +1345,6 @@ def UpdateValidatorSet(ton, args):
 ###
 
 def main():
-	print(__file__)
 	local = MyPyClass(__file__)
 	ton = MyTonCore(None)
 	console = MyPyConsole()
