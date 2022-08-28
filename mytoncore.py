@@ -752,7 +752,7 @@ class MyTonCore():
 	def SetWalletVersion(self, addrB64, version):
 		walletsVersionList = self.GetWalletsVersionList()
 		walletsVersionList[addrB64] = version
-		local.dbSave()
+		self.local.dbSave()
 	#end define
 
 	def GetWalletVersionFromHash(self, inputHash):
@@ -1578,11 +1578,11 @@ class MyTonCore():
 
 	def GetValidatorWallet(self, mode="stake"):
 		self.local.AddLog("start GetValidatorWallet function", "debug")
-		useNominationController = local.db.get("useNominationController")
+		useNominationController = self.local.db.get("useNominationController")
 		if useNominationController is True:
 			wallet = self.GetNominationController(mode)
 		else:
-			walletName = local.db.get("validatorWalletName")
+			walletName = self.local.db.get("validatorWalletName")
 			wallet = self.GetLocalWallet(walletName)
 		return wallet
 	#end define
@@ -1978,7 +1978,7 @@ class MyTonCore():
 	
 	def GetOverlaysStats(self):
 		self.local.AddLog("start GetOverlaysStats function", "debug")
-		resultFilePath = local.buffer.get("myTempDir") + "getoverlaysstats.json"
+		resultFilePath = self.local.buffer.get("myTempDir") + "getoverlaysstats.json"
 		result = self.validatorConsole.Run(f"getoverlaysstatsjson {resultFilePath}")
 		if "wrote stats" not in result:
 			raise Exception(f"GetOverlaysStats error: {result}")
