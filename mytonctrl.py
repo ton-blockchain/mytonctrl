@@ -39,12 +39,11 @@ from mytoncore import (
 )
 import sys, getopt, os
 
-# local = MyPyClass(__file__)
-# console = MyPyConsole()
-# ton = MyTonCore(local)
-
 
 def Init(local, ton, console, argv):
+	
+
+
 	# Load translate table
 	local.InitTranslator(local.buffer.get("myDir") + "translate.json")
 
@@ -268,8 +267,8 @@ def PrintTest(local, args):
 	print(json.dumps(local.buffer, indent=2))
 #end define
 
-def sl(local, ton, args):
-	Slashing(local, ton)
+def sl(ton, args):
+	Slashing(ton.local, ton)
 #end define
 
 def PrintStatus(local, ton, args):
@@ -1059,8 +1058,8 @@ def PrintElectionEntriesList(ton, args):
 		PrintTable(table)
 #end define
 
-def VoteElectionEntry(local, ton, args):
-	Elections(local, ton)
+def VoteElectionEntry(ton, args):
+	Elections(ton.local, ton)
 	ColorPrint("VoteElectionEntry - {green}OK{endc}")
 #end define
 
@@ -1352,9 +1351,8 @@ def UpdateValidatorSet(ton, args):
 def main():
 	print(__file__)
 	local = MyPyClass(__file__)
-	# mytoncore_local = MyPyClass(__file__)
+	ton = MyTonCore(None)
 	console = MyPyConsole()
-	ton = MyTonCore(local)
 
 	Init(local, ton, console, sys.argv[1:])
 	console.Run()
