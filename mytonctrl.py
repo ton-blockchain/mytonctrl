@@ -42,10 +42,6 @@ def Init(argv):
 	console.AddItem("bl", PrintBookmarksList, local.Translate("bl_cmd"))
 	console.AddItem("db", DeleteBookmark, local.Translate("db_cmd"))
 
-	# console.AddItem("nr", CreatNewAutoTransferRule, local.Translate("nr_cmd")) # "Добавить правило автопереводов в расписание / Create new auto transfer rule"
-	# console.AddItem("rl", PrintAutoTransferRulesList, local.Translate("rl_cmd")) # "Показать правила автопереводов / Show auto transfer rule list"
-	# console.AddItem("dr", DeleteAutoTransferRule, local.Translate("dr_cmd")) # "Удалить правило автопереводов из расписания / Delete auto transfer rule"
-
 	console.AddItem("nd", NewDomain, local.Translate("nd_cmd"))
 	console.AddItem("dl", PrintDomainsList, local.Translate("dl_cmd"))
 	console.AddItem("vds", ViewDomainStatus, local.Translate("vds_cmd"))
@@ -65,16 +61,6 @@ def Init(argv):
 	console.AddItem("set", SetSettings, local.Translate("set_cmd"))
 	console.AddItem("xrestart", Xrestart, local.Translate("xrestart_cmd"))
 	console.AddItem("xlist", Xlist, local.Translate("xlist_cmd"))
-	#console.AddItem("gpk", GetPubKey, local.Translate("gpk_cmd"))
-	#console.AddItem("ssoc", SignShardOverlayCert, local.Translate("ssoc_cmd"))
-	#console.AddItem("isoc", ImportShardOverlayCert, local.Translate("isoc_cmd"))
-
-	#console.AddItem("new_nomination_controller", NewNominationController, local.Translate("new_controller_cmd"))
-	#console.AddItem("get_nomination_controller_data", GetNominationControllerData, local.Translate("get_nomination_controller_data_cmd"))
-	#console.AddItem("deposit_to_nomination_controller", DepositToNominationController, local.Translate("deposit_to_controller_cmd"))
-	#console.AddItem("withdraw_from_nomination_controller", WithdrawFromNominationController, local.Translate("withdraw_from_nomination_controller_cmd"))
-	#console.AddItem("request_to_nomination_controller", SendRequestToNominationController, local.Translate("request_to_nomination_controller_cmd"))
-	#console.AddItem("new_restricted_wallet", NewRestrictedWallet, local.Translate("new_restricted_wallet_cmd"))
 
 	console.AddItem("new_pool", NewPool, local.Translate("new_pool_cmd"))
 	console.AddItem("pools_list", PrintPoolsList, local.Translate("pools_list_cmd"))
@@ -83,10 +69,6 @@ def Init(argv):
 	console.AddItem("deposit_to_pool", DepositToPool, local.Translate("deposit_to_pool_cmd"))
 	console.AddItem("withdraw_from_pool", WithdrawFromPool, local.Translate("withdraw_from_pool_cmd"))
 	console.AddItem("delete_pool", DeletePool, local.Translate("delete_pool_cmd"))
-	#console.AddItem("update_validator_set", UpdateValidatorSet, local.Translate("update_validator_set_cmd"))
-
-	# console.AddItem("pt", PrintTest, "PrintTest")
-	# console.AddItem("sl", sl, "sl")
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -802,36 +784,6 @@ def DeleteBookmark(args):
 	ColorPrint("DeleteBookmark - {green}OK{endc}")
 #end define
 
-# def CreatNewAutoTransferRule(args):
-# 	try:
-# 		name = args[0]
-# 		addr = args[1]
-# 	except:
-# 		ColorPrint("{red}Bad args. Usage:{endc} nr <rule-name> <account-addr | domain-name>")
-# 		return
-# 	rule = dict()
-# 	rule["name"] = name
-# 	rule["addr"] = addr
-# 	ton.AddAutoTransferRule(rule)
-# 	ColorPrint("CreatNewAutoTransferRule - {green}OK{endc}")
-# #end define
-
-# def PrintAutoTransferRulesList(args):
-# 	data = ton.GetRules()
-# 	if (data is None or len(data) == 0):
-# 		print("No data")
-# 		return
-# 	table = list()
-# 	table += [["Name", "fix me"]]
-# 	for item in data:
-# 		table += [[item.get("name"), item.get("fix me")]]
-# 	PrintTable(table)
-# #end define
-
-# def DeleteAutoTransferRule(args):
-# 	print("fix me")
-# #end define
-
 def PrintOffersList(args):
 	offers = ton.GetOffers()
 	if "--json" in args:
@@ -1098,101 +1050,6 @@ def Xrestart(inputArgs):
 
 def Xlist(args):
 	ColorPrint("Xlist - {green}OK{endc}")
-#end define
-
-def GetPubKey(args):
-	adnlAddr = ton.GetAdnlAddr()
-	pubkey = ton.GetPubKey(adnlAddr)
-	print("pubkey:", pubkey)
-#end define
-
-def SignShardOverlayCert(args):
-	try:
-		adnl = args[0]
-		pubkey = args[0]
-	except:
-		ColorPrint("{red}Bad args. Usage:{endc} ssoc <pubkey>")
-		return
-	ton.SignShardOverlayCert(adnl, pubkey)
-#end define
-
-def ImportShardOverlayCert(args):
-	ton.ImportShardOverlayCert()
-#end define
-
-def NewNominationController(args):
-	try:
-		name = args[0]
-		nominatorAddr = args[1]
-		rewardShare = args[2]
-		coverAbility = args[3]
-	except:
-		ColorPrint("{red}Bad args. Usage:{endc} new_controller <controller-name> <nominator-addr> <reward-share> <cover-ability>")
-		return
-	ton.CreateNominationController(name, nominatorAddr, rewardShare=rewardShare, coverAbility=coverAbility)
-	ColorPrint("NewNominationController - {green}OK{endc}")
-#end define
-
-def GetNominationControllerData(args):
-	try:
-		addrB64 = args[0]
-	except:
-		ColorPrint("{red}Bad args. Usage:{endc} get_nomination_controller_data <controller-name | controller-addr>")
-		return
-	addrB64 = ton.GetDestinationAddr(addrB64)
-	controllerData = ton.GetControllerData(addrB64)
-	print(json.dumps(controllerData, indent=4))
-#end define
-
-def DepositToNominationController(args):
-	try:
-		walletName = args[0]
-		destination = args[1]
-		amount = float(args[2])
-	except:
-		ColorPrint("{red}Bad args. Usage:{endc} add_to_nomination_controller <wallet-name> <controller-addr> <amount>")
-		return
-	destination = ton.GetDestinationAddr(destination)
-	ton.DepositToNominationController(walletName, destination, amount)
-	ColorPrint("DepositToNominationController - {green}OK{endc}")
-#end define
-
-def WithdrawFromNominationController(args):
-	try:
-		walletName = args[0]
-		destination = args[1]
-		amount = float(args[2])
-	except:
-		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_nomination_controller <wallet-name> <controller-addr> <amount>")
-		return
-	destination = ton.GetDestinationAddr(destination)
-	ton.WithdrawFromNominationController(walletName, destination, amount)
-	ColorPrint("WithdrawFromNominationController - {green}OK{endc}")
-#end define
-
-def SendRequestToNominationController(args):
-	try:
-		walletName = args[0]
-		destination = args[1]
-	except:
-		ColorPrint("{red}Bad args. Usage:{endc} request_to_nomination_controller <wallet-name> <controller-addr>")
-		return
-	destination = ton.GetDestinationAddr(destination)
-	ton.SendRequestToNominationController(walletName, destination)
-	ColorPrint("SendRequestToNominationController - {green}OK{endc}")
-#end define
-
-def NewRestrictedWallet(args):
-	try:
-		workchain = int(args[0])
-		name = args[1]
-		ownerAddr = args[2]
-		#subwallet = args[3]
-	except:
-		ColorPrint("{red}Bad args. Usage:{endc} new_restricted_wallet <workchain-id> <wallet-name> <owner-addr>")
-		return
-	ton.CreateRestrictedWallet(name, ownerAddr, workchain)
-	ColorPrint("NewRestrictedWallet - {green}OK{endc}")
 #end define
 
 def NewPool(args):
