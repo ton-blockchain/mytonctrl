@@ -37,7 +37,7 @@ git clone --recursive https://github.com/igroman787/mtc-jsonrpc.git
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 echo "Script dir: ${SCRIPT_DIR}"
-${SCRIPT_DIR}/add2systemd -n mtc-jsonrpc -s "/usr/bin/python3 /usr/src/mtc-jsonrpc/mtc-jsonrpc.py" -u ${user} -g ${user}
+${SCRIPT_DIR}/add2systemd.sh -n mtc-jsonrpc -s "/usr/bin/python3 /usr/src/mtc-jsonrpc/mtc-jsonrpc.py" -u ${user} -g ${user}
 systemctl restart mtc-jsonrpc
 
 # Выход из программы

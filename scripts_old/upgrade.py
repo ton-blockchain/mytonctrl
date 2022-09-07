@@ -1,12 +1,13 @@
-# Говнокод ON
-import os
-from sys import path
-from os.path import dirname as dir
-path.append(dir(path[0]))
-# Говнокод OFF
+# # Говнокод ON
+# import os
+# from sys import path
+# from os.path import dirname as dir
+# path.append(dir(path[0]))
+# # Говнокод OFF
+# from mypylib.mypylib import *
 
-from mypylib.mypylib import *
-
+import psutil
+import subprocess
 
 file = open("/etc/systemd/system/validator.service", 'rt')
 text = file.read()

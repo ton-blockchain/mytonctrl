@@ -1126,7 +1126,7 @@ def Xrestart(inputArgs):
 	if len(inputArgs) < 2:
 		ColorPrint("{red}Bad args. Usage:{endc} xrestart <timestamp> <args>")
 		return
-	args = ["python3", "/usr/src/mytonctrl/scripts/xrestart.py"]
+	args = ["python3", "/usr/src/mytonctrl/scripts/xrestart.py"]  # TODO: Fix path
 	args += inputArgs
 	exitCode = RunAsRoot(args)
 	if exitCode == 0:
