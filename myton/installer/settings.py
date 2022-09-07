@@ -5,8 +5,9 @@ import subprocess
 import requests
 import random
 import json
+import pkg_resources
 
-from myton.mypylib import Add2Systemd, GetDirFromPath, RunAsRoot, ColorPrint, ip2int
+from mypylib.mypylib import Add2Systemd, GetDirFromPath, RunAsRoot, ColorPrint, ip2int
 from myton.installer.utils import StartValidator, StartMytoncore
 from myton.installer.config import SetConfig, GetConfig
 from myton.utils import hex2b64
@@ -50,6 +51,7 @@ def FirstNodeSettings(local):
 	cpus = psutil.cpu_count() - 1
 	cmd = "{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {tonDbDir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
 	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath, cpus=cpus)
+	local.AddLog(cmd, 'error')
 	Add2Systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
@@ -107,7 +109,7 @@ def FirstMytoncoreSettings(local):
 	user = local.buffer["user"]
 
 	# Прописать mytoncore.py в автозагрузку
-	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")
+	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
 
 	# Проверить конфигурацию
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
@@ -420,7 +422,10 @@ def EnableDhtServer(local):
 def EnableJsonRpc(local):
 	local.AddLog("start EnableJsonRpc function", "debug")
 	user = local.buffer["user"]
-	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/jsonrpcinstaller.sh", "-u", user])
+
+	jsonrpcinstaller_path = pkg_resources.resource_filename('myton.installer.scripts', 'jsonrpcinstaller.sh')
+	local.AddLog(f"Running script: {jsonrpcinstaller_path}", "debug")
+	exitCode = RunAsRoot(["bash", jsonrpcinstaller_path, "-u", user])  # TODO: fix path
 	if exitCode == 0:
 		text = "EnableJsonRpc - {green}OK{endc}"
 	else:
@@ -432,7 +437,10 @@ def EnableJsonRpc(local):
 def EnablePytonv3(local):
 	local.AddLog("start EnablePytonv3 function", "debug")
 	user = local.buffer["user"]
-	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/pytonv3installer.sh", "-u", user])
+
+	pythonv3installer_path = pkg_resources.resource_filename('myton.installer.scripts', 'pytonv3installer.sh')
+	local.AddLog(f"Running script: {pythonv3installer_path}", "debug")
+	exitCode = RunAsRoot(["bash", pythonv3installer_path, "-u", user])
 	if exitCode == 0:
 		text = "EnablePytonv3 - {green}OK{endc}"
 	else:
@@ -657,7 +665,7 @@ def CreateSymlinks(local):
 	validator_console_file = "/usr/bin/validator-console"
 	env_file = "/etc/environment"
 	file = open(mytonctrl_file, 'wt')
-	file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")
+	file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")  # TODO: fix path
 	file.close()
 	file = open(fift_file, 'wt')
 	file.write("/usr/bin/ton/crypto/fift $@")

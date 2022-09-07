@@ -7,12 +7,14 @@ import random
 import json
 import subprocess
 
-from myton.mypylib import RunAsRoot
-from mytoninstaller.config import GetLiteServerConfig
-from mytoninstaller.utils import GetInitBlock
+from mypylib.mypylib import MyPyClass, RunAsRoot
+from mypyconsole.mypyconsole import MyPyConsole
+
+from myton.installer.config import GetLiteServerConfig
+from myton.installer.utils import GetInitBlock
 from myton.utils import dict2b64, str2bool, b642dict
 
-from mytoninstaller.setup import (
+from myton.installer.settings import (
     FirstNodeSettings,
     FirstMytoncoreSettings,
     EnableValidatorConsole,
@@ -23,7 +25,7 @@ from mytoninstaller.setup import (
     DangerousRecoveryValidatorConfigFile,
     CreateSymlinks,
 )
-from mytoninstaller.config import (
+from myton.installer.config import (
     CreateLocalConfig,
     BackupVconfig,
     BackupMconfig,
@@ -130,14 +132,14 @@ def Enable(local, args):
 	user = local.buffer["user"]
 	if name == "PT":
 		CreateLocalConfigFile(local, args)
-	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "enable{name}".format(name=name)]
+	args = ["python3", "-m", "myton.installer", "-u", user, "-e", "enable{name}".format(name=name)]
 	RunAsRoot(args)
 #end define
 
 
 def DRVCF(local, args):
 	user = local.buffer["user"]
-	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "drvcf"]
+	args = ["python3", "-m", "myton.installer", "-u", user, "-e", "drvcf"]
 	RunAsRoot(args)
 #end define
 
@@ -159,7 +161,7 @@ def CreateLocalConfigFile(local, args):
 	initBlock = GetInitBlock()
 	initBlock_b64 = dict2b64(initBlock)
 	user = local.buffer["user"]
-	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "clc", "-i", initBlock_b64]
+	args = ["python3", "-m", "myton.installer", "-u", user, "-e", "clc", "-i", initBlock_b64]
 	RunAsRoot(args)
 #end define
 
@@ -231,9 +233,6 @@ def General(local):
 ### Start of the program
 ###
 def mytoninstaller():
-    from mypylib.mypylib import MyPyClass
-    from mypyconsole.mypyconsole import MyPyConsole
-
     local = MyPyClass(__file__)
     console = MyPyConsole()
 
