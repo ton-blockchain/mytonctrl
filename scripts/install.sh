@@ -75,7 +75,7 @@ echo -e "${COLOR}[3/5]${ENDC} Installing MyTonCtrl"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/mytonctrl
 
-git clone --recursive https://github.com/${author}/${repo}.git mytonctrl
+git clone https://github.com/${author}/${repo}.git mytonctrl  # TODO: return --recursive back when fix libraries
 cd $SOURCES_DIR/mytonctrl
 git checkout ${branch}
 

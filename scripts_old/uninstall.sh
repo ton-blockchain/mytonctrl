@@ -26,9 +26,9 @@ rm -rf /etc/systemd/system/dht-server.service
 systemctl daemon-reload
 
 # Удаление файлов
-rm -rf /usr/src/ton
+# rm -rf /usr/src/ton
+# rm -rf /usr/bin/ton
 rm -rf /usr/src/mytonctrl
-rm -rf /usr/bin/ton
 rm -rf /var/ton-work
 rm -rf /var/ton-dht-server
 rm -rf /tmp/myton*
@@ -38,9 +38,9 @@ rm -rf /home/${user}/.local/share/mytonctrl
 rm -rf /home/${user}/.local/share/mytoncore/mytoncore.db
 
 # Удаление ссылок
-rm -rf /usr/bin/fift
-rm -rf /usr/bin/liteclient
-rm -rf /usr/bin/validator-console
+# rm -rf /usr/bin/fift
+# rm -rf /usr/bin/liteclient
+# rm -rf /usr/bin/validator-console
 rm -rf /usr/bin/mytonctrl
 
 # Конец
