@@ -6,7 +6,7 @@ import base64
 
 from myton.utils import hex2b64, dict2b64
 from myton.installer.utils import StartMytoncore, GetInitBlock
-from myton.mypylib import ip2int, RunAsRoot
+from mypylib.mypylib import ip2int
 
 
 defaultLocalConfigPath = "/usr/bin/ton/local.config.json"

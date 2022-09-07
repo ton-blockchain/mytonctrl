@@ -29,7 +29,7 @@ from mypylib.mypylib import (
 from mypyconsole.mypyconsole import (
 	MyPyConsole
 )
-from mytoncore import (
+from myton.core.mytoncore import (
 	GetLoadAvg,
 	GetMemoryInfo,
 	GetSwapInfo,

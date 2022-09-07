@@ -15,6 +15,10 @@ do
 	esac
 done
 
+
+echo "User: $user"
+echo "Workdir: `pwd`"
+
 # Цвета
 COLOR='\033[95m'
 ENDC='\033[0m'
@@ -31,8 +35,9 @@ git clone --recursive https://github.com/igroman787/mtc-jsonrpc.git
 
 # Прописать автозагрузку
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
-cmd="from sys import path; path.append('/usr/src/mytonctrl/'); from mypylib.mypylib import *; Add2Systemd(name='mtc-jsonrpc', user='${user}', start='/usr/bin/python3 /usr/src/mtc-jsonrpc/mtc-jsonrpc.py')"
-python3 -c "${cmd}"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+echo "Script dir: ${SCRIPT_DIR}"
+${SCRIPT_DIR}/add2systemd -n mtc-jsonrpc -s "/usr/bin/python3 /usr/src/mtc-jsonrpc/mtc-jsonrpc.py" -u ${user} -g ${user}
 systemctl restart mtc-jsonrpc
 
 # Выход из программы
