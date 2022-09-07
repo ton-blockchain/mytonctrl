@@ -29,7 +29,7 @@ def FirstNodeSettings(local):
 
 	# Проверить конфигурацию
 	if os.path.isfile(vconfigPath):
-		local.AddLog("Validators config.json already exist. Break FirstNodeSettings fuction", "warning")
+		local.AddLog(f"Validators config '{vconfigPath}' already exist. Break FirstNodeSettings fuction", "warning")
 		return
 	#end if
 
@@ -113,9 +113,14 @@ def FirstMytoncoreSettings(local):
 
 	# Проверить конфигурацию
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
+	if os.path.isfile(path):
+		local.AddLog(f"{path} already exist. Break FirstMytoncoreSettings fuction", "warning")
+		return
+	#end if
+
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
-	if os.path.isfile(path) or os.path.isfile(path2):
-		local.AddLog("mytoncore.db already exist. Break FirstMytoncoreSettings fuction", "warning")
+	if os.path.isfile(path2):
+		local.AddLog(f"{path2}.db already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
 	#end if
 
@@ -195,8 +200,13 @@ def EnableValidatorConsole(local):
 	server_pubkey = server_key + ".pub"
 
 	# Check if key exist
-	if os.path.isfile(server_key) or os.path.isfile(client_key):
-		local.AddLog("Server or client key already exist. Break EnableValidatorConsole fuction", "warning")
+	if os.path.isfile(server_key):
+		local.AddLog(f"Server key '{server_key}' already exist. Break EnableValidatorConsole fuction", "warning")
+		return
+	#end if
+
+	if os.path.isfile(client_key):
+		local.AddLog(f"Client key '{client_key}' already exist. Break EnableValidatorConsole fuction", "warning")
 		return
 	#end if
 
@@ -290,7 +300,7 @@ def EnableLiteServer(local):
 
 	# Check if key exist
 	if os.path.isfile(liteserver_pubkey):
-		local.AddLog("Liteserver key already exist. Break EnableLiteServer fuction", "warning")
+		local.AddLog(f"Liteserver key '{liteserver_pubkey}' already exist. Break EnableLiteServer fuction", "warning")
 		return
 	#end if
 
@@ -371,8 +381,9 @@ def EnableDhtServer(local):
 	tonDhtKeyringDir = tonDhtServerDir + "keyring/"
 
 	# Проверить конфигурацию
-	if os.path.isfile("/var/ton-dht-server/config.json"):
-		local.AddLog("DHT-Server config.json already exist. Break EnableDhtServer fuction", "warning")
+	dht_config_path = "/var/ton-dht-server/config.json"
+	if os.path.isfile(dht_config_path):
+		local.AddLog(f"DHT-Server '{dht_config_path}' already exist. Break EnableDhtServer fuction", "warning")
 		return
 	#end if
 

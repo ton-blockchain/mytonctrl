@@ -8,6 +8,7 @@ import struct
 import psutil
 import crc16
 import subprocess
+import traceback
 
 from myton.utils import xhex2hex, ng2g
 from myton.core.liteclient import LiteClient
@@ -806,6 +807,7 @@ class MyTonCore():
 		try:
 			validatorStatus["isWorking"] = True
 			result = self.validatorConsole.Run("getstats")
+			self.local.AddLog(f"getstats result:\n{result}")
 			validatorStatus["unixtime"] = int(Pars(result, "unixtime", '\n'))
 			validatorStatus["masterchainblocktime"] = int(Pars(result, "masterchainblocktime", '\n'))
 			validatorStatus["stateserializermasterchainseqno"] = int(Pars(result, "stateserializermasterchainseqno", '\n'))
@@ -823,6 +825,7 @@ class MyTonCore():
 			validatorStatus["masterBlocksNum"] = self.local.buffer.get("masterBlocksNum", -1)
 		except Exception as ex:
 			self.local.AddLog(f"GetValidatorStatus warning: {ex}", "warning")
+			self.local.AddLog(f"GetValidatorStatus debug: {traceback.format_exc()}", "debug")
 			validatorStatus["isWorking"] = False
 			validatorStatus["unixtime"] = GetTimestamp()
 			validatorStatus["masterchainblocktime"] = 0
