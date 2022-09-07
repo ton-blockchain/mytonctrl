@@ -51,7 +51,6 @@ def FirstNodeSettings(local):
 	cpus = psutil.cpu_count() - 1
 	cmd = "{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {tonDbDir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
 	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath, cpus=cpus)
-	local.AddLog(cmd, 'error')
 	Add2Systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
@@ -233,10 +232,12 @@ def EnableValidatorConsole(local):
 
 	# chown 1
 	args = ["chown", vuser + ':' + vuser, newKeyPath]
+	print(args)
 	subprocess.run(args)
 
 	# chown 2
 	args = ["chown", user + ':' + user, server_pubkey, client_key, client_pubkey]
+	print(args)
 	subprocess.run(args)
 
 	# read vconfig
