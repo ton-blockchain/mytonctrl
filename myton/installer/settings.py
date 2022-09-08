@@ -108,7 +108,8 @@ def FirstMytoncoreSettings(local):
 	user = local.buffer["user"]
 
 	# Прописать mytoncore.py в автозагрузку
-	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
+	# Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
+	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m myton.core")  # TODO: fix path
 
 	# Проверить конфигурацию
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
@@ -232,12 +233,10 @@ def EnableValidatorConsole(local):
 
 	# chown 1
 	args = ["chown", vuser + ':' + vuser, newKeyPath]
-	print(args)
 	subprocess.run(args)
 
 	# chown 2
 	args = ["chown", user + ':' + user, server_pubkey, client_key, client_pubkey]
-	print(args)
 	subprocess.run(args)
 
 	# read vconfig

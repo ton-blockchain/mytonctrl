@@ -807,7 +807,9 @@ class MyTonCore():
 		try:
 			validatorStatus["isWorking"] = True
 			result = self.validatorConsole.Run("getstats")
-			self.local.AddLog(f"getstats result:\n{result}")
+
+			self.local.AddLog(f"getstats result:\n{result}")  # Debug
+
 			validatorStatus["unixtime"] = int(Pars(result, "unixtime", '\n'))
 			validatorStatus["masterchainblocktime"] = int(Pars(result, "masterchainblocktime", '\n'))
 			validatorStatus["stateserializermasterchainseqno"] = int(Pars(result, "stateserializermasterchainseqno", '\n'))
