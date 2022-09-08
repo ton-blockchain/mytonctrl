@@ -4,6 +4,7 @@ import subprocess
 import json
 import psutil
 import inspect
+import pkg_resources
 
 from shutil import copyfile
 from functools import partial
@@ -15,6 +16,7 @@ from mypylib.mypylib import (
 	CheckGitUpdate,
 	GetServiceStatus,
 	GetServiceUptime,
+	GetLoadAvg,
 	RunAsRoot,
 	time2human,
 	timeago,
@@ -24,25 +26,25 @@ from mypylib.mypylib import (
 	ColorPrint,
 	ColorText,
 	bcolors,
-	MyPyClass
+	MyPyClass,
 )
-from mypyconsole.mypyconsole import (
-	MyPyConsole
-)
-from myton.core.mytoncore import (
-	GetLoadAvg,
+
+from mypyconsole.mypyconsole import MyPyConsole
+from myton.core.mytoncore import MyTonCore
+from myton.core.functions import (
+	Slashing, 
+	Elections,
 	GetMemoryInfo,
 	GetSwapInfo,
-	Slashing,
-	Elections,
-	MyTonCore
 )
+
 import sys, getopt, os
 
 
 def Init(local, ton, console, argv):
 	# Load translate table
-	local.InitTranslator(local.buffer.get("myDir") + "translate.json")
+	translate_path = pkg_resources.resource_filename('myton.ctrl', 'resources/translate.json')
+	local.InitTranslator(translate_path)
 
 	# this function substitutes local and ton instances if function has this args
 	def inject_globals(func):
@@ -1345,14 +1347,12 @@ def UpdateValidatorSet(ton, args):
 ### Start of the program
 ###
 
-def main():
-	local = MyPyClass(__file__)
-	ton = MyTonCore(None)
+def mytonctrl():
+	local = MyPyClass('mytonctrl.py')
+	mytoncore_local = MyPyClass('mytoncore.py')
+	ton = MyTonCore(mytoncore_local)
 	console = MyPyConsole()
 
 	Init(local, ton, console, sys.argv[1:])
 	console.Run()
-
-if __name__ == "__main__":
-	main()
-#end if
+#end define

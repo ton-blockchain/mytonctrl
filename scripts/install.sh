@@ -75,18 +75,23 @@ echo -e "${COLOR}[3/5]${ENDC} Installing MyTonCtrl"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/mytonctrl
 
-git clone https://github.com/${author}/${repo}.git mytonctrl  # TODO: return --recursive back when fix libraries
-cd $SOURCES_DIR/mytonctrl
-git checkout ${branch}
+# git clone https://github.com/${author}/${repo}.git mytonctrl  # TODO: return --recursive back when fix libraries
+# cd $SOURCES_DIR/mytonctrl
+# git checkout ${branch}
+pip3 install git+https://github.com/${author}/${repo}.git@${branch}
 
 echo -e "${COLOR}[3/5]${ENDC} Running myton.installer"
+# DEBUG
+
 # check installation mode
 if [ "${mode}" != "lite" ] && [ "${mode}" != "full" ]; then
 	echo "Run script with flag '-m lite' or '-m full'"
 	exit 1
 fi
 
+mydir=`pwd`
 user=$(ls -lh ${mydir}/${0} | cut -d ' ' -f 3)
+echo "User: $user"
 python3 -m myton.installer -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
 
 echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
