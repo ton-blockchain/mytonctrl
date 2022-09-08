@@ -4,6 +4,7 @@ set -e
 # colors
 COLOR='\033[92m'
 ENDC='\033[0m'
+mydir=`pwd`
 
 # check sudo permissions
 if [ "$(id -u)" != "0" ]; then
@@ -89,7 +90,6 @@ if [ "${mode}" != "lite" ] && [ "${mode}" != "full" ]; then
 	exit 1
 fi
 
-mydir=`pwd`
 user=$(ls -lh ${mydir}/${0} | cut -d ' ' -f 3)
 echo "User: $user"
 python3 -m myton.installer -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
