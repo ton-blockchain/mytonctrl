@@ -12,9 +12,9 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
-author=${TON_AUTHOR:-ton-blockchain}
-repo=${TON_REPO:-mytonctrl}
-branch=${TON_BRANCH:-master}
+author="ton-blockchain"
+repo="mytonctrl"
+branch="master"
 
 # node install parameters
 config="https://ton-blockchain.github.io/global.config.json"
@@ -30,6 +30,9 @@ do
 		t) telemetry=false;;
 		i) ignore=true;;
 		d) dump=true;;
+		a) author=${OPTARG};;
+		r) repo=${OPTARG};;
+		b) branch=${OPTARG};;
 	esac
 done
 
@@ -76,10 +79,10 @@ echo -e "${COLOR}[3/5]${ENDC} Installing MyTonCtrl"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/mytonctrl
 
-# git clone https://github.com/${author}/${repo}.git mytonctrl  # TODO: return --recursive back when fix libraries
-# cd $SOURCES_DIR/mytonctrl
-# git checkout ${branch}
-pip3 install git+https://github.com/${author}/${repo}.git@${branch}
+git clone https://github.com/${author}/${repo}.git ${repo}  # TODO: return --recursive back when fix libraries
+cd $SOURCES_DIR/${repo}
+git checkout ${branch}
+pip3 install -U .  # TODO: make installation from git directly
 
 echo -e "${COLOR}[3/5]${ENDC} Running myton.installer"
 # DEBUG

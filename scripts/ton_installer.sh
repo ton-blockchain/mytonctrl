@@ -9,7 +9,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Get arguments
-config=${TON_CONFIG:-https://ton-blockchain.github.io/global.config.json}
+config=https://ton-blockchain.github.io/global.config.json
 while getopts c: flag
 do
 	case "${flag}" in

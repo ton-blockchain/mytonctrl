@@ -166,7 +166,8 @@ def PreUp(local):
 #end define
 
 def Installer(args):
-	args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
+	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
+	args = ["python3", "-m", "myton.installer"]
 	subprocess.run(args)
 #end define
 
@@ -212,7 +213,8 @@ def Update(local, args):
 	branch = data.get("branch", branch)
 
 	# Run script
-	runArgs = ["bash", "/usr/src/mytonctrl/scripts/update.sh", "-a", author, "-r", repo, "-b", branch]
+	update_script_path = pkg_resources.resource_filename('myton.ctrl', 'scripts/update.sh')
+	runArgs = ["bash", update_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
 		text = "Update - {green}OK{endc}"
@@ -238,7 +240,8 @@ def Upgrade(args):
 	branch = data.get("branch", branch)
 
 	# Run script
-	runArgs = ["bash", "/usr/src/mytonctrl/scripts/upgrade.sh", "-a", author, "-r", repo, "-b", branch]
+	upgrade_script_path = pkg_resources.resource_filename('myton.ctrl', 'scripts/upgrade.sh')
+	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
@@ -1127,7 +1130,8 @@ def Xrestart(inputArgs):
 	if len(inputArgs) < 2:
 		ColorPrint("{red}Bad args. Usage:{endc} xrestart <timestamp> <args>")
 		return
-	args = ["python3", "/usr/src/mytonctrl/scripts/xrestart.py"]  # TODO: Fix path
+	xrestart_script_path = pkg_resources.resource_filename('myton.ctrl', 'scripts/xrestart.py')
+	args = ["python3", xrestart_script_path]  # TODO: Fix path
 	args += inputArgs
 	exitCode = RunAsRoot(args)
 	if exitCode == 0:
