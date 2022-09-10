@@ -2,3 +2,4 @@ crc16
 requests
 psutil
 cryptography
+fastcrc

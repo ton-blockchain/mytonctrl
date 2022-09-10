@@ -22,7 +22,7 @@ telemetry=true
 ignore=false
 dump=false
 
-while getopts m:c:tid flag
+while getopts m:c:tida:r:b: flag
 do
 	case "${flag}" in
 		m) mode=${OPTARG};;

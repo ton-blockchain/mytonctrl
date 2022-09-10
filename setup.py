@@ -18,6 +18,7 @@ setup(
         'requests',
         'psutil',
         'cryptography',
+        'fastcrc',
     ],
     package_data={
         'myton.installer.scripts': ['*.sh'],
