@@ -6,7 +6,8 @@ import json
 import hashlib
 import struct
 import psutil
-import crc16
+import crc16  # TODO: check this library!
+import fastcrc
 import subprocess
 import traceback
 
@@ -2904,7 +2905,8 @@ class MyTonCore():
 		b[1] = workchain % 256
 		b[2:34] = bytearray.fromhex(addr)
 		buff = bytes(b[:34])
-		crc = crc16.xmodem(buff)
+		# crc = crc16.crc16xmodem(buff)
+		crc = fastcrc.crc16.xmodem(buff)  # TODO: check this library!
 		b[34] = crc >> 8
 		b[35] = crc & 0xff
 		result = base64.b64encode(b)
@@ -2948,7 +2950,8 @@ class MyTonCore():
 		crc_bytes = b[34:36]
 		crc_data = bytes(b[:34])
 		crc = int.from_bytes(crc_bytes, "big")
-		check_crc = crc16.xmodem(crc_data)
+		# check_crc = crc16.crc16xmodem(crc_data)
+		check_crc = fastcrc.crc16.xmodem(crc_data)  # TODO: check this library!
 		if crc != check_crc:
 			raise Exception("ParseAddrB64 error: crc do not match")
 		#end if
