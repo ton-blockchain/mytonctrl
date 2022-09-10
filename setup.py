@@ -21,7 +21,7 @@ setup(
     ],
     package_data={
         'myton.installer.scripts': ['*.sh'],
-        'myton.ctrl': ['resources/*'],
+        'myton.ctrl': ['resources/*', 'scripts/*.sh'],
         '': ['requirements.txt'],
     },
     zip_safe=True,
@@ -36,7 +36,7 @@ setup(
          "Topic :: Software Development :: Libraries"
     ],
     # url="https://github.com/toncenter/pytonlib",
-    description="MyTONCtrl",
+    description="MyTonCtrl",
     long_description_content_type="text/markdown",
     long_description=long_description,
 )

@@ -109,7 +109,7 @@ def FirstMytoncoreSettings(local):
 
 	# Прописать mytoncore.py в автозагрузку
 	# Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
-	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m myton.core")  # TODO: fix path
+	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m myton.core")
 
 	# Проверить конфигурацию
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
@@ -274,7 +274,8 @@ def EnableValidatorConsole(local):
 	SetConfig(path=mconfigPath, data=mconfig)
 
 	# Подтянуть событие в mytoncore.py
-	cmd = "python3 {srcDir}mytonctrl/mytoncore.py -e \"enableVC\"".format(srcDir=srcDir)
+	# cmd = "python3 {srcDir}mytonctrl/mytoncore.py -e \"enableVC\"".format(srcDir=srcDir)
+	cmd = 'python3 -m myton.core -e "enableVC"'
 	args = ["su", "-l", user, "-c", cmd]
 	subprocess.run(args)
 
@@ -676,7 +677,8 @@ def CreateSymlinks(local):
 	validator_console_file = "/usr/bin/validator-console"
 	env_file = "/etc/environment"
 	file = open(mytonctrl_file, 'wt')
-	file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")  # TODO: fix path
+	# file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")  # TODO: fix path
+	file.write("/usr/bin/python3 -m myton.ctrl $@")  # TODO: fix path
 	file.close()
 	file = open(fift_file, 'wt')
 	file.write("/usr/bin/ton/crypto/fift $@")
