@@ -4,6 +4,7 @@ import subprocess
 import json
 import psutil
 import inspect
+import pkg_resources
 
 from shutil import copyfile
 from functools import partial
@@ -15,6 +16,7 @@ from mypylib.mypylib import (
 	CheckGitUpdate,
 	GetServiceStatus,
 	GetServiceUptime,
+	GetLoadAvg,
 	RunAsRoot,
 	time2human,
 	timeago,
@@ -24,25 +26,25 @@ from mypylib.mypylib import (
 	ColorPrint,
 	ColorText,
 	bcolors,
-	MyPyClass
+	MyPyClass,
 )
-from mypyconsole.mypyconsole import (
-	MyPyConsole
-)
-from mytoncore import (
-	GetLoadAvg,
+
+from mypyconsole.mypyconsole import MyPyConsole
+from myton.core.mytoncore import MyTonCore
+from myton.core.functions import (
+	Slashing, 
+	Elections,
 	GetMemoryInfo,
 	GetSwapInfo,
-	Slashing,
-	Elections,
-	MyTonCore
 )
+
 import sys, getopt, os
 
 
 def Init(local, ton, console, argv):
 	# Load translate table
-	local.InitTranslator(local.buffer.get("myDir") + "translate.json")
+	translate_path = pkg_resources.resource_filename('myton.ctrl', 'resources/translate.json')
+	local.InitTranslator(translate_path)
 
 	# this function substitutes local and ton instances if function has this args
 	def inject_globals(func):
@@ -164,7 +166,8 @@ def PreUp(local):
 #end define
 
 def Installer(args):
-	args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
+	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
+	args = ["python3", "-m", "myton.installer"]
 	subprocess.run(args)
 #end define
 
@@ -210,7 +213,8 @@ def Update(local, args):
 	branch = data.get("branch", branch)
 
 	# Run script
-	runArgs = ["bash", "/usr/src/mytonctrl/scripts/update.sh", "-a", author, "-r", repo, "-b", branch]
+	update_script_path = pkg_resources.resource_filename('myton.ctrl', 'scripts/update.sh')
+	runArgs = ["bash", update_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
 		text = "Update - {green}OK{endc}"
@@ -236,7 +240,8 @@ def Upgrade(args):
 	branch = data.get("branch", branch)
 
 	# Run script
-	runArgs = ["bash", "/usr/src/mytonctrl/scripts/upgrade.sh", "-a", author, "-r", repo, "-b", branch]
+	upgrade_script_path = pkg_resources.resource_filename('myton.ctrl', 'scripts/upgrade.sh')
+	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
@@ -1126,7 +1131,8 @@ def Xrestart(inputArgs):
 	if len(inputArgs) < 2:
 		ColorPrint("{red}Bad args. Usage:{endc} xrestart <timestamp> <args>")
 		return
-	args = ["python3", "/usr/src/mytonctrl/scripts/xrestart.py"]
+	xrestart_script_path = pkg_resources.resource_filename('myton.ctrl', 'scripts/xrestart.py')
+	args = ["python3", xrestart_script_path]  # TODO: Fix path
 	args += inputArgs
 	exitCode = RunAsRoot(args)
 	if exitCode == 0:
@@ -1345,14 +1351,12 @@ def UpdateValidatorSet(ton, args):
 ### Start of the program
 ###
 
-def main():
-	local = MyPyClass(__file__)
-	ton = MyTonCore(None)
+def mytonctrl():
+	local = MyPyClass('mytonctrl.py')
+	mytoncore_local = MyPyClass('mytoncore.py')
+	ton = MyTonCore(mytoncore_local)
 	console = MyPyConsole()
 
 	Init(local, ton, console, sys.argv[1:])
 	console.Run()
-
-if __name__ == "__main__":
-	main()
-#end if
+#end define
