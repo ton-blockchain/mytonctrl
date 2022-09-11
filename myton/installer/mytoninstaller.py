@@ -22,6 +22,7 @@ from myton.installer.settings import (
     EnableDhtServer,
     EnableJsonRpc,
     EnablePytonv3,
+	EnableTonHttpApi,
     DangerousRecoveryValidatorConfigFile,
     CreateSymlinks,
 )
@@ -180,7 +181,8 @@ def Event(local, name):
 	if name == "enableJR":
 		EnableJsonRpc(local)
 	if name == "enablePT":
-		EnablePytonv3(local)
+		# EnablePytonv3(local)
+		EnableTonHttpApi(local)
 	if name == "clc":
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]
