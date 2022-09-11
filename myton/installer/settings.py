@@ -461,6 +461,19 @@ def EnablePytonv3(local):
 #end define
 
 
+def EnableTonHttpApi(local):
+	local.AddLog("start EnablePytonv3 function", "debug")
+	user = local.buffer["user"]
+
+	ton_http_api_installer_path = pkg_resources.resource_filename('myton.installer.scripts', 'tonhttpapiinstaller.sh')
+	exitCode = RunAsRoot(["bash", ton_http_api_installer_path, "-u", user])
+	if exitCode == 0:
+		text = "EnableTonHttpApi - {green}OK{endc}"
+	else:
+		text = "EnableTonHttpApi - {red}Error{endc}"
+	ColorPrint(text)
+
+
 def DangerousRecoveryValidatorConfigFile(local):
 	local.AddLog("start DangerousRecoveryValidatorConfigFile function", "info")
 
