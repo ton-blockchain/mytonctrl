@@ -71,7 +71,7 @@ def Init(argv):
 	console.AddItem("delete_pool", DeletePool, local.Translate("delete_pool_cmd"))
 
 	# Process input parameters
-	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
+	opts, args = getopt.getopt(argv,"hc:w:mg",["config=","wallets="])
 	for opt, arg in opts:
 		if opt == '-h':
 			print ('mytonctrl.py -c <configfile> -w <wallets>')
@@ -98,6 +98,7 @@ def Init(argv):
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isLocaldbSaving"] = True
 	local.Run()
+
 #end define
 
 def PreUp():
@@ -579,7 +580,10 @@ def PrintWalletsList(args):
 		account = ton.GetAccount(wallet.addrB64)
 		if account.status != "active":
 			wallet.addrB64 = wallet.addrB64_init
-		table += [[wallet.name, account.status, account.balance, wallet.version, wallet.workchain, wallet.addrB64]]
+		table += [[
+			wallet.name, account.status, account.balance,
+			wallet.version, wallet.workchain, wallet.addrB64
+		]]
 	PrintTable(table)
 #end define
 
