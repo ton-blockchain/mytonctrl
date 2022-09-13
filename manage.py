@@ -1,20 +1,21 @@
-import re
-
 import click
+import mytoncore
 
 from decimal import Decimal
 from typing import Dict, Final, List, Optional
+from enum import Enum
 
 from pydantic.main import BaseModel
-from mytoncore import MyTonCore, Wallet
 from mypylib.mypylib import MyPyClass
 
-from src.exceptions import BalanceIsTooLow, WalletAccountNotInitialized
+from src.ton.factory import get_ton_controller
+from src.utils.click import comma_separated
+from src.utils.click_messages import error, message
+from src.utils.exceptions import BalanceIsTooLow, WalletAccountNotInitialized
 
 main: Final[click.Group] = click.Group()
 
 AMOUNT_MIN_VALUE: Final[int] = 0
-VALID_ADDRESS_REGEXP: Final[re.Pattern] = re.compile(r'[0-9A-Za-z-_/]{48}$')
 
 # Disable logging
 MyPyClass.AddLog = lambda *args, **kwargs: None
@@ -35,57 +36,9 @@ class FlagArguments(BaseModel):
     sub_wallet: Optional[str]
 
 
-def get_ton_controller() -> MyTonCore:
-    ton = MyTonCore()
-    ton.Init()
-    return ton
-
-
-def validate_address(wallet_address: str) -> bool:
-    return VALID_ADDRESS_REGEXP.match(wallet_address) is not None
-
-
-def comma_separated(
-    _: click.Context,
-    __: click.Option,
-    values: str,
-) -> List[str]:
-    if ',' not in values:
-        return [values]
-    return values.split(',')
-
-
-def error(message: str, *additional_messages: str) -> SystemExit:
-    formatted_messages = []
-    for additional_message in additional_messages:
-        formatted_messages.append(f'  ↳ {additional_message}')
-    built_message = f'{message}\n' + '\n'.join(formatted_messages)
-    click.secho(built_message, fg='red')
-    return SystemExit(1)
-
-
-def warning(message: str, *additional_messages: str) -> None:
-    formatted_messages = []
-    for additional_message in additional_messages:
-        formatted_messages.append(f'  ↳ {additional_message}')
-    built_message = f'{message}\n' + '\n'.join(formatted_messages)
-    click.secho(built_message, fg='yellow')
-
-
-def message(
-    message: str,
-    *additional_messages: str,
-    exit_after: bool = False,
-) -> Optional[SystemExit]:
-    formatted_messages = []
-    for additional_message in additional_messages:
-        formatted_messages.append(f'  ↳ {additional_message}')
-    built_message = None
-    if formatted_messages:
-        built_message = f'{message}' + '\n'.join(formatted_messages)
-    click.secho(built_message or message)
-    if exit_after is True:
-        return SystemExit(0)
+class WalletStatusInfoGetEnum(str, Enum):
+    fast = 'fast'
+    slow = 'slow'
 
 
 @main.command(
@@ -127,20 +80,20 @@ def move_coins(
         timeout=timeout,
         sub_wallet=sub_wallet,
     )
-    ton_controller: MyTonCore = get_ton_controller()
+    ton_controller: mytoncore.MyTonCore = get_ton_controller()
     if wallet_name == target_address:
         raise error('Given WALLET-ADDRESS & TARGET-ADDRESS are identical.')
     if amount < AMOUNT_MIN_VALUE:
         raise error(f'Amount to transfer cannot be lower than "{AMOUNT_MIN_VALUE}"')
     try:
-        source_wallet: Wallet = ton_controller.GetLocalWallet(wallet_name)
+        source_wallet: mytoncore.Wallet = ton_controller.GetLocalWallet(wallet_name)
     except Exception as err:
         raise error(
             f'Failed to get wallet with name/address "{wallet_name}"',
             *err.args,
         )
     try:
-        target_wallet: Wallet = ton_controller.GetLocalWallet(target_address)
+        target_wallet: mytoncore.Wallet = ton_controller.GetLocalWallet(target_address)
     except Exception as err:
         raise error(
             f'Failed to get wallet with name/address "{target_address}"',
@@ -165,8 +118,8 @@ def move_coins(
     help='Wallets list of your account.',
 )
 def wallets_list():
-    ton_controller: MyTonCore = get_ton_controller()
-    wallets: List[Wallet] = ton_controller.GetWallets()
+    ton_controller: mytoncore.MyTonCore = get_ton_controller()
+    wallets: List[mytoncore.Wallet] = ton_controller.GetWallets()
     if wallets is None or not wallets:
         raise message('Not found any wallets.', exit_after=True)
     wallets_map = []
@@ -188,16 +141,15 @@ def wallets_list():
 
 @main.command(
     'status',
-    help='Get wallet status information.',
+    help='Get wallet status information. ',
 )
 @click.argument(
     'status_type',
-    default=None,
-    type=click.STRING,
-    help='Type of information getter speed.',
+    default=WalletStatusInfoGetEnum.fast,
+    type=WalletStatusInfoGetEnum,
 )
 def get_status(status_type: Optional[str]) -> None:
-    ton_controller: MyTonCore = get_ton_controller()
+    ton_controller: mytoncore.MyTonCore = get_ton_controller()
     adnl_address: Dict = ton_controller.GetAdnlAddr()
     root_workchain_enabled_time_int: int = ton_controller.GetRootWorkchainEnabledTime()
     config34: Dict = ton_controller.GetConfig34()
@@ -205,9 +157,41 @@ def get_status(status_type: Optional[str]) -> None:
     total_validators = config34['totalValidators']
     online_validators = None
     validator_efficiency = None
-    if status_type != 'fast':
-        # TODO: Created ENUM for status type
-        raise
+    if status_type != WalletStatusInfoGetEnum.fast:
+        online_validators = ton_controller.GetOnlineValidators()
+        validator_efficiency = ton_controller.GetValidatorEfficiency()
+    
+    if online_validators is not None:
+        online_validators = len(online_validators)
+    
+    old_start_work_time = config36.get('startWorkTime')
+    if old_start_work_time is None:
+        old_start_work_time = config34.get('startWorkTime')
+    
+    shards_number = ton_controller.GetShardsNumber()
+    validator_status = ton_controller.GetValidatorStatus()
+    config15 = ton_controller.GetConfig15()
+    config17 = ton_controller.GetConfig17()
+    full_config_address = ton_controller.GetFullConfigAddr()
+    full_elector_address = ton_controller.GetFullElectorAddr()
+    start_work_time = ton_controller.GetActiveElectionId(full_elector_address)
+    validator_index = ton_controller.GetValidatorIndex()
+    validator_wallet = ton_controller.GetValidatorWallet()
+    database_size = ton_controller.GetDbSize()
+    database_usage = ton_controller.GetDbUsage()
+    memory_info = mytoncore.GetMemoryInfo()
+    swap_info = mytoncore.GetSwapInfo()
+    offset_number = ton_controller.GetOffersNumber()
+    complaints_number = ton_controller.GetComplaintsNumber()
+    statistics = ton_controller.GetSettings('statistics')
+    tps_average = ton_controller.GetStatistics('tpsAvg', statistics)
+    network_load_average = ton_controller.GetStatistics('netLoadAvg', statistics)
+    disks_load_average = ton_controller.GetStatistics('disksLoadAvg', statistics)
+    disks_load_percent_average = ton_controller.GetStatistics('disksLoadPercentAvg', statistics)
+    if validator_wallet is not None:
+        validator_account = ton_controller.GetAccount(validator_wallet.addrB64)
+    else:
+        validator_account = None
 
 
 if __name__ == '__main__':

@@ -2,11 +2,8 @@
 # -*- coding: utf_8 -*-l
 
 import crc16
-import struct
 import random
-import hashlib
 import requests
-import re
 from mypylib.mypylib import *
 
 local = MyPyClass(__file__)
@@ -1957,7 +1954,7 @@ class MyTonCore():
 	#end define
 
 	def MoveCoins(self, wallet, dest, coins, **kwargs):
-		from src.exceptions import BalanceIsTooLow, WalletAccountNotInitialized
+		from src.utils.exceptions import BalanceIsTooLow, WalletAccountNotInitialized
 		local.AddLog("start MoveCoins function", "debug")
 		flags = kwargs.get("flags", list())
 		timeout = kwargs.get("timeout", 30)
