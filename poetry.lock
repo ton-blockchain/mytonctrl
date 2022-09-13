@@ -42,8 +42,8 @@ python-versions = ">=3.7"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.10"
-content-hash = "7e87ac4fbca988046bafd8241bd85a9101012711f7fe04535895e2e1b1eb45c0"
+python-versions = "3.8.12"
+content-hash = "19e4a5af65ec46e9896fa2e74879e517834a338121b2dfdfb296b6ac26516e1f"
 
 [metadata.files]
 click = [
