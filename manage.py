@@ -309,11 +309,14 @@ def vote(offer_hashes: str):
                 *err.args,
             )
             continue
-    raise message(
-        'Successfully applied offers:',
-        ', '.join(applied_offers),
-        exit_after=True,
-    )
+    if applied_offers:
+        raise message(
+            'Successfully applied offers:',
+            ', '.join(applied_offers),
+            exit_after=True,
+        )
+    else:
+        raise message('Not offers was applied!', exit_after=True)
 
 
 @main.command(
