@@ -7,8 +7,10 @@ def error(message: str, *additional_messages: str) -> SystemExit:
     formatted_messages = []
     for additional_message in additional_messages:
         formatted_messages.append(f'  ↳ {additional_message}')
-    built_message = f'{message}\n' + '\n'.join(formatted_messages)
-    click.secho(built_message, fg='red')
+    built_message = None
+    if formatted_messages:
+        built_message = f'{message}\n' + '\n'.join(formatted_messages)
+    click.secho(f'{built_message or message}\n', fg='red')
     return SystemExit(1)
 
 
@@ -16,8 +18,10 @@ def warning(message: str, *additional_messages: str) -> None:
     formatted_messages = []
     for additional_message in additional_messages:
         formatted_messages.append(f'  ↳ {additional_message}')
-    built_message = f'{message}\n' + '\n'.join(formatted_messages)
-    click.secho(built_message, fg='yellow')
+    built_message = None
+    if formatted_messages:
+        built_message = f'{message}\n' + '\n'.join(formatted_messages)
+    click.secho(f'{built_message or message}\n', fg='yellow')
 
 
 def message(
@@ -30,7 +34,7 @@ def message(
         formatted_messages.append(f'  ↳ {additional_message}')
     built_message = None
     if formatted_messages:
-        built_message = f'{message}' + '\n'.join(formatted_messages)
-    click.secho(built_message or message)
+        built_message = f'{message}\n' + '\n'.join(formatted_messages)
+    click.secho(f'{built_message or message}\n')
     if exit_after is True:
         return SystemExit(0)

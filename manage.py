@@ -1,16 +1,19 @@
 import click
+
+import mytonctrl
 import mytoncore
 
 from decimal import Decimal
-from typing import Dict, Final, List, Optional
+from typing import Any, Dict, Final, List, Optional
 from enum import Enum
 
 from pydantic.main import BaseModel
 from mypylib.mypylib import MyPyClass
 
 from src.ton.factory import get_ton_controller
+from src.ton import status_messages
 from src.utils.click import comma_separated
-from src.utils.click_messages import error, message
+from src.utils.click_messages import error, message, warning
 from src.utils.exceptions import BalanceIsTooLow, WalletAccountNotInitialized
 
 main: Final[click.Group] = click.Group()
@@ -150,48 +153,217 @@ def wallets_list():
 )
 def get_status(status_type: Optional[str]) -> None:
     ton_controller: mytoncore.MyTonCore = get_ton_controller()
-    adnl_address: Dict = ton_controller.GetAdnlAddr()
-    root_workchain_enabled_time_int: int = ton_controller.GetRootWorkchainEnabledTime()
     config34: Dict = ton_controller.GetConfig34()
     config36: Dict = ton_controller.GetConfig36()
-    total_validators = config34['totalValidators']
-    online_validators = None
-    validator_efficiency = None
-    if status_type != WalletStatusInfoGetEnum.fast:
-        online_validators = ton_controller.GetOnlineValidators()
-        validator_efficiency = ton_controller.GetValidatorEfficiency()
-    
-    if online_validators is not None:
-        online_validators = len(online_validators)
-    
-    old_start_work_time = config36.get('startWorkTime')
-    if old_start_work_time is None:
-        old_start_work_time = config34.get('startWorkTime')
-    
-    shards_number = ton_controller.GetShardsNumber()
-    validator_status = ton_controller.GetValidatorStatus()
-    config15 = ton_controller.GetConfig15()
-    config17 = ton_controller.GetConfig17()
-    full_config_address = ton_controller.GetFullConfigAddr()
+    statistics = ton_controller.GetSettings('statistics')
+
     full_elector_address = ton_controller.GetFullElectorAddr()
     start_work_time = ton_controller.GetActiveElectionId(full_elector_address)
-    validator_index = ton_controller.GetValidatorIndex()
-    validator_wallet = ton_controller.GetValidatorWallet()
+    validator_efficiency = None
+    online_validators_count = 0
+    if status_type != WalletStatusInfoGetEnum.fast:
+        online_validators: Optional[List[Dict]] = ton_controller.GetOnlineValidators()
+        validator_efficiency = ton_controller.GetValidatorEfficiency()
+        if online_validators is not None:
+            online_validators_count = len(online_validators)
+    
+    total_validators = config34['totalValidators']
+    shards_count = ton_controller.GetShardsNumber()
+    offers_count: Dict[str, int] = ton_controller.GetOffersNumber()
+    complaints_count: Dict[str, int] = ton_controller.GetComplaintsNumber()
+    tx_per_second_average = ton_controller.GetStatistics('tpsAvg', statistics)
+    message(
+        status_messages.build_status_message(
+            start_work_time,
+            online_validators_count,
+            total_validators,
+            shards_count,
+            offers_count,
+            complaints_count,
+            tx_per_second_average,
+        ),
+    )
+
+    adnl_address: str = ton_controller.GetAdnlAddr()
+    validator_index: int = ton_controller.GetValidatorIndex()
+    validator_wallet: mytonctrl.Wallet = ton_controller.GetValidatorWallet()
+    validator_status = ton_controller.GetValidatorStatus()
     database_size = ton_controller.GetDbSize()
     database_usage = ton_controller.GetDbUsage()
     memory_info = mytoncore.GetMemoryInfo()
     swap_info = mytoncore.GetSwapInfo()
-    offset_number = ton_controller.GetOffersNumber()
-    complaints_number = ton_controller.GetComplaintsNumber()
-    statistics = ton_controller.GetSettings('statistics')
-    tps_average = ton_controller.GetStatistics('tpsAvg', statistics)
     network_load_average = ton_controller.GetStatistics('netLoadAvg', statistics)
     disks_load_average = ton_controller.GetStatistics('disksLoadAvg', statistics)
     disks_load_percent_average = ton_controller.GetStatistics('disksLoadPercentAvg', statistics)
-    if validator_wallet is not None:
-        validator_account = ton_controller.GetAccount(validator_wallet.addrB64)
-    else:
-        validator_account = None
+    message(
+        status_messages.build_local_validator_status_message(
+            adnl_address,
+            validator_index,
+            validator_efficiency,
+            validator_wallet,
+            ton_controller.GetAccount(validator_wallet.addrB64) if validator_wallet is not None else None,
+            validator_status,
+            database_size,
+            database_usage,
+            memory_info,
+            swap_info,
+            network_load_average,
+            disks_load_average,
+            disks_load_percent_average,
+        ),
+    )
+
+    full_config_address = ton_controller.GetFullConfigAddr()
+    config15 = ton_controller.GetConfig15()
+    config17 = ton_controller.GetConfig17()
+    message(
+        status_messages.build_network_configuration_message(
+            full_config_address,
+            full_elector_address,
+            config15,
+            config17,
+        )
+    )
+    
+    root_work_chain_enabled_time: int = ton_controller.GetRootWorkchainEnabledTime()
+    old_start_work_time = config36.get('startWorkTime', config34.get('startWorkTime'))
+    raise message(
+        status_messages.build_ton_timestamps_message(
+            root_work_chain_enabled_time,
+            start_work_time,
+            old_start_work_time,
+            config15,
+        ),
+        exit_after=True,
+    )
+
+
+@main.command(
+    'get-settings',
+    help='Get network settings.',
+)
+@click.argument(
+    'name',
+    required=True,
+    type=click.STRING,
+)
+def get_settings(name: str) -> None:
+    ton_controller: mytoncore.MyTonCore = get_ton_controller()
+    value = ton_controller.GetSettings(name)
+    raise message(
+        f'Settings:',
+        f'{name} = {value}',
+        exit_after=True,
+    )
+
+
+@main.command(
+    'set-settings',
+    help='Set network settings.',
+)
+@click.argument(
+    'name',
+    required=True,
+    type=click.STRING,
+)
+@click.argument(
+    'value',
+    required=True,
+)
+def get_settings(name: str, value: Any) -> None:
+    ton_controller: mytoncore.MyTonCore = get_ton_controller()
+    ton_controller.SetSettings(name, value)
+    value = ton_controller.GetSettings(name)
+    raise message(
+        'Successfully set setting:',
+        f'{name} = {value}',
+        exit_after=True,
+    )
+
+
+@main.command(
+    help='Vote offer. Type comma separated. Ex: <offer-hash-1>,<offer-hash-2>',
+)
+@click.argument(
+    'offer-hashes',
+    required=True,
+    type=click.STRING,
+    callback=comma_separated,
+)
+def vote(offer_hashes: str):
+    ton_controller: mytoncore.MyTonCore = get_ton_controller()
+    applied_offers: List[str] = []
+    for offer_hash in offer_hashes:
+        try:
+            ton_controller.VoteOffer(int(offer_hash))
+            applied_offers.append(offer_hash)
+        except ValueError as err:
+            warning(
+                f'Offer-hash with value "{offer_hash}" is skipped due:',
+                *err.args,
+            )
+            continue
+        except Exception as err:
+            warning(
+                f'Offer-hash with value "{offer_hash}" is skipped due:',
+                *err.args,
+            )
+            continue
+    raise message(
+        'Successfully applied offers:',
+        ', '.join(applied_offers),
+        exit_after=True,
+    )
+
+
+@main.command(
+    help='Update "mytonctrl" to actual version',
+)
+@click.argument(
+    'URL',
+    type=click.STRING,
+    default=None,
+)
+@click.argument(
+    'BRANCH',
+    type=click.STRING,
+    default=None,
+)
+def update(url: str, branch: str) -> None:
+    # Patching base exit to use custom
+    mytonctrl.local.Exit = lambda: None
+    try:
+        mytonctrl.Update((url, branch))
+    except Exception as err:
+        raise error(
+            'Failed to update "mytonctrl" due errors:',
+            *err.args,
+        )
+    raise message('Successfully updated!', exit_after=True)
+
+
+@main.command(
+    help='Upgrade TON sources to the latest version. Will re-compile existing binaries.',
+)
+@click.argument(
+    'URL',
+    type=click.STRING,
+    default=None,
+)
+@click.argument(
+    'BRANCH',
+    type=click.STRING,
+    default=None,
+)
+def upgrade(url: str, branch: str) -> None:
+    try:
+        mytonctrl.Upgrade((url, branch))
+    except Exception as err:
+        raise error(
+            'Failed to upgrade TON sources due errors:',
+            *err.args,
+        )
+    raise message('Successfully upgraded!', exit_after=True)
 
 
 if __name__ == '__main__':
