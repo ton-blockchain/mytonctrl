@@ -1,5 +1,7 @@
 [Данный текст доступен на русском языке.](https://github.com/ton-blockchain/mytonctrl/blob/master/README.Ru.md)
 
+**Current fork updates** [here](#cli-wrapper-for-mytonctrlfork-updates) 
+
 ## What is it?
 This console is a wrapper over `fift`,`lite-client` and `validator-engine-console`. It was created to facilitate wallet, domain and validator management on Linux OS.
 
@@ -119,3 +121,51 @@ git: https://github.com/igroman787/pytonv3
 ## Useful links
 1. https://github.com/ton-blockchain/mytonctrl/blob/master/docs/en/manual-ubuntu.md
 2. https://ton.org/docs/
+
+
+# [Cli wrapper for "mytonctrl"](#fork-updates)
+
+1. As first step you must clone repository to your machine:
+```bash
+git clone git@github.com:tonbakers/mytonctrl.git
+```
+2. When repository is copied type next commands:
+```bash
+poetry shell
+poetry install
+```
+3. To run cli wrapper type a:
+```bash
+poetry run python manage.py
+# or
+python manage.py
+```
+You will get the next message with application description:
+```bash
+> poetry run python manage.py 
+Usage: manage.py [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  get-settings  Get network settings.
+  move-coins    Move coins to specified account/wallet.
+  set-settings  Set network settings.
+  status        Get wallet status information.
+  update        Update "mytonctrl" to actual version
+  upgrade       Upgrade TON sources to the latest version.
+  vote          Vote offer.
+  wallets-list  Wallets list of your account.
+```
+To get more information about **cli** commands, you need to type a command and flag `--help` after:
+```bash
+# Example:
+> python manage.py status --help
+Usage: manage.py status [OPTIONS] [STATUS_TYPE]
+
+  Get wallet status information.
+
+Options:
+  --help  Show this message and exit.
+```
