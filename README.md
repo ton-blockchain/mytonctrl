@@ -1,6 +1,6 @@
 [Данный текст доступен на русском языке.](https://github.com/ton-blockchain/mytonctrl/blob/master/README.Ru.md)
 
-**Current fork updates** [here](#cli-wrapper-for-mytonctrlfork-updates) 
+**Current fork updates** [here](#cli-wrapper-for-mytonctrl) 
 
 ## What is it?
 This console is a wrapper over `fift`,`lite-client` and `validator-engine-console`. It was created to facilitate wallet, domain and validator management on Linux OS.
@@ -123,7 +123,7 @@ git: https://github.com/igroman787/pytonv3
 2. https://ton.org/docs/
 
 
-# [Cli wrapper for "mytonctrl"](#fork-updates)
+# Cli wrapper for "mytonctrl"
 
 1. As first step you must clone repository to your machine:
 ```bash
