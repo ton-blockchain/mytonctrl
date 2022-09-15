@@ -8,7 +8,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Set default arguments
-author="ton-blockchain"
+author="tonbakers"
 repo="mytonctrl"
 branch="master"
 srcdir="/usr/src/"

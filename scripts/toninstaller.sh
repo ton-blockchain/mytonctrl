@@ -89,7 +89,7 @@ cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
 rm -rf $SOURCES_DIR/mytonctrl
 git clone --recursive https://github.com/ton-blockchain/ton.git
-git clone --recursive https://github.com/ton-blockchain/mytonctrl.git
+git clone --recursive https://github.com/tonbakers/mytonctrl.git
 
 
 # Подготавливаем папки для компиляции
