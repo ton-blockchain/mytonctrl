@@ -2,11 +2,8 @@
 # -*- coding: utf_8 -*-l
 
 import crc16
-import struct
 import random
-import hashlib
 import requests
-import re
 from mypylib.mypylib import *
 
 local = MyPyClass(__file__)
@@ -1957,6 +1954,7 @@ class MyTonCore():
 	#end define
 
 	def MoveCoins(self, wallet, dest, coins, **kwargs):
+		from src.utils.exceptions import BalanceIsTooLow, WalletAccountNotInitialized
 		local.AddLog("start MoveCoins function", "debug")
 		flags = kwargs.get("flags", list())
 		timeout = kwargs.get("timeout", 30)
@@ -1977,9 +1975,9 @@ class MyTonCore():
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
 		if account.balance < coins + 0.1:
-			raise Exception("Wallet balance is less than requested coins")
+			raise BalanceIsTooLow("Wallet balance is less than requested coins")
 		if account.status != "active":
-			raise Exception("Wallet account is uninitialized")
+			raise WalletAccountNotInitialized("Wallet account is uninitialized")
 		#end if
 		
 		# Bounceable checking
