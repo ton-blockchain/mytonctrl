@@ -38,6 +38,8 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 		yum install -y epel-release
 		dnf config-manager --set-enabled PowerTools
 		yum install -y git make cmake clang gflags gflags-devel zlib zlib-devel openssl-devel openssl-libs readline-devel libmicrohttpd python3 python3-pip python36-devel
+		# Install ninja
+		yum install -y ninja-build
 	elif [ -f /etc/SuSE-release ]; then
 		echo "Suse Linux detected."
 		echo "This OS is not supported with this script at present. Sorry."
@@ -47,10 +49,14 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 		echo "Arch Linux detected."
 		pacman -Syuy
 		pacman -S --noconfirm git make cmake clang gflags zlib openssl readline libmicrohttpd python python-pip
+		# install ninja
+		pacman -S  --noconfirm ninja
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
 		apt-get update
 		apt-get install -y build-essential git make cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip
+		# Install ninja
+		apt-get install -y ninja-build
 	else
 		echo "Unknown Linux distribution."
 		echo "This OS is not supported with this script at present. Sorry."
@@ -68,6 +74,8 @@ elif [[ "$OSTYPE" =~ darwin.* ]]; then
 	
 	su $LOCAL_USERNAME -c "brew update"
 	su $LOCAL_USERNAME -c "brew install openssl cmake llvm"
+	# Install ninja
+	su $LOCAL_USERNAME -c "brew install ninja"
 elif [ "$OSTYPE" == "freebsd"* ]; then
 	echo "FreeBSD detected."
 	echo "This OS is not supported with this script at present. Sorry."
@@ -113,12 +121,12 @@ fi
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	if [[ $(uname -p) == 'arm' ]]; then
 		echo M1
-		CC="clang -mcpu=apple-a14" CXX="clang++ -mcpu=apple-a14" cmake $SOURCES_DIR/ton -DCMAKE_BUILD_TYPE=Release -DTON_ARCH= -Wno-dev
+		CC="clang -mcpu=apple-a14" CXX="clang++ -mcpu=apple-a14" cmake $SOURCES_DIR/ton -DCMAKE_BUILD_TYPE=Release -DTON_ARCH= -Wno-dev -GNinja
 	else
-		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
+		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja
 	fi
 else
-	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
+	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja
 fi
 
 # Компилируем из исходников
@@ -135,7 +143,7 @@ else
 fi
 
 echo "use ${cpuNumber} cpus"
-make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
+ninja -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
