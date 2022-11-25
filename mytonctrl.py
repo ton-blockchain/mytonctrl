@@ -816,7 +816,6 @@ def VoteOffer(args):
 		ColorPrint("{red}Bad args. Usage:{endc} vo <offer-hash>")
 		return
 	for offerHash in args:
-		offerHash = int(offerHash)
 		ton.VoteOffer(offerHash)
 	ColorPrint("VoteOffer - {green}OK{endc}")
 #end define

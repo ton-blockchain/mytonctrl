@@ -2175,7 +2175,7 @@ class MyTonCore():
 		for offer in rawOffers:
 			if len(offer) == 0:
 				continue
-			hash = offer[0]
+			hash = str(offer[0])
 			subdata = offer[1]
 
 			# Create dict
@@ -2186,7 +2186,8 @@ class MyTonCore():
 			item["endTime"] = subdata[0] # *expires*
 			item["critFlag"] = subdata[1] # *critical*
 			item["config"]["id"] = subdata[2][0] # *param_id*
-			item["config"]["value"] = subdata[2][1] # *param_val*
+			param_val = subdata[2][1] # *param_val*
+			item["config"]["value"] = param_val
 			item["config"]["hash"] = subdata[2][2] # *param_hash*
 			item["vsetId"] = subdata[3] # *vset_id*
 			item["votedValidators"] = subdata[4] # *voters_list*
@@ -2201,6 +2202,7 @@ class MyTonCore():
 			item["weightRemaining"] = weightRemaining
 			item["approvedPercent"] = round(availableWeight / totalWeight * 100, 3)
 			item["isPassed"] = (weightRemaining < 0)
+			item["pseudohash"] = hashlib.sha256(param_val.encode()).hexdigest()
 			offers.append(item)
 		#end for
 		return offers
@@ -3028,17 +3030,18 @@ class MyTonCore():
 	def GetSaveOffers(self):
 		bname = "saveOffers"
 		saveOffers = local.db.get(bname)
-		if saveOffers is None:
-			saveOffers = list()
+		if type(saveOffers) != dict:
+			saveOffers = dict()
 			local.db[bname] = saveOffers
 		return saveOffers
 	#end define
 
 	def AddSaveOffer(self, offer):
 		offerHash = offer.get("hash")
+		offerPseudohash = offer.get("pseudohash")
 		saveOffers = self.GetSaveOffers()
 		if offerHash not in saveOffers:
-			saveOffers.append(offerHash)
+			saveOffers[offerHash] = offerPseudohash
 			local.dbSave()
 	#end define
 
@@ -4194,7 +4197,9 @@ def Offers(ton):
 	offers = ton.GetOffers()
 	for offer in offers:
 		offerHash = offer.get("hash")
-		if offerHash in saveOffers:
+		offerPseudohash = offer.get("pseudohash")
+		saveOfferPseudohash = saveOffers.get(offerHash)
+		if offerPseudohash == saveOfferPseudohash:
 			ton.VoteOffer(offerHash)
 #end define
 
