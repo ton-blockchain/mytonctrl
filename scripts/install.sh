@@ -7,12 +7,27 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
+show_help_and_exit() {
+    echo 'Supported argumets:'
+    echo ' -m [lite|full]   Choose installation mode'
+    echo ' -c  PATH         Provide custom config for toninstaller.sh'
+    echo ' -t               Disable telemetry'
+    echo ' -i               Ignore minimum reqiurements'
+    echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
+    echo ' -h               Show this help'
+    exit
+}
+
+if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
+    show_help_and_exit
+fi
+
 # Get arguments
 config="https://ton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
 dump=false
-while getopts m:c:tid flag
+while getopts m:c:tidh flag
 do
 	case "${flag}" in
 		m) mode=${OPTARG};;
@@ -20,6 +35,10 @@ do
 		t) telemetry=false;;
 		i) ignore=true;;
 		d) dump=true;;
+        h) show_help_and_exit;;
+        *)
+            echo "Flag -${flag} is not recognized. Aborting"
+            exit 1 ;;
 	esac
 done
 
@@ -32,7 +51,7 @@ fi
 
 # Проверка мощностей
 cpus=$(lscpu | grep "CPU(s)" | head -n 1 | awk '{print $2}')
-memory=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
+memory=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 if [ "${mode}" = "lite" ] && [ "$ignore" = false ] && ([ "${cpus}" -lt 2 ] || [ "${memory}" -lt 2000000 ]); then
 	echo "Insufficient resources. Requires a minimum of 2 processors and 2Gb RAM."
 	exit 1
@@ -72,7 +91,7 @@ if [ -f "${file1}" ] && [ -f "${file2}" ] && [ -f "${file3}" ]; then
 else
 	rm -f toninstaller.sh
 	wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/toninstaller.sh
-	bash toninstaller.sh -c ${config}
+	bash toninstaller.sh -c "${config}"
 	rm -f toninstaller.sh
 fi
 
