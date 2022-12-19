@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-l
 
-import crc16
+from fastcrc import crc16
 import struct
 import random
 import hashlib
@@ -3090,7 +3090,7 @@ class MyTonCore():
 		b[1] = workchain % 256
 		b[2:34] = bytearray.fromhex(addr)
 		buff = bytes(b[:34])
-		crc = crc16.crc16xmodem(buff)
+		crc = crc16.xmodem(buff)
 		b[34] = crc >> 8
 		b[35] = crc & 0xff
 		result = base64.b64encode(b)
@@ -3134,7 +3134,7 @@ class MyTonCore():
 		crc_bytes = b[34:36]
 		crc_data = bytes(b[:34])
 		crc = int.from_bytes(crc_bytes, "big")
-		check_crc = crc16.crc16xmodem(crc_data)
+		check_crc = crc16.xmodem(crc_data)
 		if crc != check_crc:
 			raise Exception("ParseAddrB64 error: crc do not match")
 		#end if
