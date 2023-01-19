@@ -2862,12 +2862,7 @@ class MyTonCore():
 		b[1] = workchain % 256
 		b[2:34] = bytearray.fromhex(addr)
 		buff = bytes(b[:34])
-<<<<<<< HEAD:myton/core/mytoncore.py
-		# crc = crc16.crc16xmodem(buff)
-		crc = fastcrc.crc16.xmodem(buff)  # TODO: check this library!
-=======
 		crc = crc16.xmodem(buff)
->>>>>>> upstream/master:mytoncore.py
 		b[34] = crc >> 8
 		b[35] = crc & 0xff
 		result = base64.b64encode(b)
