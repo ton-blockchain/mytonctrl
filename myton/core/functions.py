@@ -350,7 +350,9 @@ def Offers(local, ton):
     offers = ton.GetOffers()
     for offer in offers:
         offerHash = offer.get("hash")
-        if offerHash in saveOffers:
+        offerPseudohash = offer.get("pseudohash")
+        saveOfferPseudohash = saveOffers.get(offerHash)
+        if offerPseudohash == saveOfferPseudohash:
             ton.VoteOffer(offerHash)
 # end define
 

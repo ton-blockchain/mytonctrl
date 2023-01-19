@@ -17,12 +17,28 @@ repo="mytonctrl"
 branch="master"
 
 # node install parameters
+show_help_and_exit() {
+    echo 'Supported argumets:'
+    echo ' -m [lite|full]   Choose installation mode'
+    echo ' -c  PATH         Provide custom config for toninstaller.sh'
+    echo ' -t               Disable telemetry'
+    echo ' -i               Ignore minimum reqiurements'
+    echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
+    echo ' -h               Show this help'
+    exit
+}
+
+if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
+    show_help_and_exit
+fi
+
+# Get arguments
 config="https://ton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
 dump=false
 
-while getopts m:c:tida:r:b: flag
+while getopts m:c:tida:r:b:h flag
 do
 	case "${flag}" in
 		m) mode=${OPTARG};;
@@ -33,6 +49,10 @@ do
 		a) author=${OPTARG};;
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
+        h) show_help_and_exit;;
+        *)
+            echo "Flag -${flag} is not recognized. Aborting"
+            exit 1 ;;
 	esac
 done
 
@@ -40,9 +60,9 @@ done
 echo -e "${COLOR}[1/5]${ENDC} Checking system requirements"
 
 cpus=$(lscpu | grep "CPU(s)" | head -n 1 | awk '{print $2}')
-memory=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
-
+memory=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 echo "This machine has ${cpus} CPUs and ${memory}KB of Memory"
+
 if [ "${mode}" = "lite" ] && [ "$ignore" = false ] && ([ "${cpus}" -lt 2 ] || [ "${memory}" -lt 2000000 ]); then
 	echo "Insufficient resources. Requires a minimum of 2 processors and 2Gb RAM."
 	exit 1
