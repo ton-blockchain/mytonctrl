@@ -104,7 +104,7 @@ cd $SOURCES_DIR/${repo}
 git checkout ${branch}
 pip3 install -U .  # TODO: make installation from git directly
 
-echo -e "${COLOR}[3/5]${ENDC} Running myton.installer"
+echo -e "${COLOR}[4/5]${ENDC} Running MyTonInstaller"
 # DEBUG
 
 # check installation mode
@@ -113,9 +113,14 @@ if [ "${mode}" != "lite" ] && [ "${mode}" != "full" ]; then
 	exit 1
 fi
 
-user=$(ls -lh ${mydir}/${0} | cut -d ' ' -f 3)
+parent_name=$(ps -p $PPID -o comm=)
+user=$(whoami)
+if [ "$parent_name" = "sudo" ]; then
+    user=$(logname)
+fi
+
 echo "User: $user"
 python3 -m myton.installer -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
 
-echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
+echo -e "${COLOR}[5/5]${ENDC} Mytonctrl installation completed"
 exit 0

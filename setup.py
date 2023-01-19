@@ -14,7 +14,6 @@ setup(
     version=version,
     packages=find_packages('.', exclude=['tests']),
     install_requires=[
-        'crc16',
         'requests',
         'psutil',
         'cryptography',

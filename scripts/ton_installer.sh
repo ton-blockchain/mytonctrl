@@ -125,7 +125,7 @@ else
 fi
 
 # Установка компонентов python3
-pip3 install psutil crc16 requests
+pip3 install psutil fastcrc requests
 
 # Клонирование репозиториев с github.com
 echo -e "${COLOR}[2/6]${ENDC} Cloning github repository"
