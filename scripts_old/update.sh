@@ -28,6 +28,9 @@ done
 COLOR='\033[92m'
 ENDC='\033[0m'
 
+# Установка компонентов python3
+pip3 install fastcrc
+
 # Go to work dir
 cd ${srcdir}
 rm -rf ${srcdir}/${repo}
