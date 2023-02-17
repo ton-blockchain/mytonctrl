@@ -15,6 +15,9 @@ do
 	esac
 done
 
+author=kdimentionaltree
+repo=mtc-jsonrpc
+branch=master
 
 echo "User: $user"
 echo "Workdir: `pwd`"
@@ -31,7 +34,7 @@ pip3 install Werkzeug json-rpc cloudscraper pyotp
 echo -e "${COLOR}[2/4]${ENDC} Cloning github repository"
 cd /usr/src/
 rm -rf mtc-jsonrpc
-git clone --recursive https://github.com/igroman787/mtc-jsonrpc.git
+git clone --branch=${branch} --recursive https://github.com/${author}/${repo}.git
 
 # Прописать автозагрузку
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
