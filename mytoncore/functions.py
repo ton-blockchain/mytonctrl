@@ -8,8 +8,8 @@ import json
 import requests
 import subprocess
 
-from myton.core.mytoncore import MyTonCore, Dec2HexAddr
-from myton.core.tonblocksscanner import TonBlocksScanner
+from mytoncore.mytoncore import MyTonCore, Dec2HexAddr
+from mytoncore.tonblocksscanner import TonBlocksScanner
 from mypylib.mypylib import (
     GetTimestamp,
     GetInternetInterfaceName,

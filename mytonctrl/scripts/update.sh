@@ -35,7 +35,14 @@ rm -rf ${srcdir}/${repo}
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
 git clone https://github.com/${author}/${repo}.git
-cd ${repo} && git checkout ${branch} && git submodule update --init --recursive
+cd ${repo}
+git checkout ${branch} 
+git submodule update --init --recursive
+
+# FIXME: add __init__.py in these repos
+touch mypyconsole/__init__.py
+touch mypylib/__init__.py
+
 pip3 install -U .
 
 systemctl restart mytoncore

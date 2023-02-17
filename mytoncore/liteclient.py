@@ -1,8 +1,6 @@
 import random
 import subprocess
 
-from mypylib.mypylib import MyPyClass
-
 
 class LiteClient:
 	def __init__(self, local):

@@ -20,8 +20,8 @@ setup(
         'fastcrc',
     ],
     package_data={
-        'myton.installer.scripts': ['*.sh'],
-        'myton.ctrl': ['resources/*', 'scripts/*.sh'],
+        'mytoninstaller.scripts': ['*.sh'],
+        'mytonctrl': ['resources/*', 'scripts/*.sh'],
         '': ['requirements.txt'],
     },
     zip_safe=True,

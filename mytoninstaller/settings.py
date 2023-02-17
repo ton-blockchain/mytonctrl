@@ -8,9 +8,9 @@ import json
 import pkg_resources
 
 from mypylib.mypylib import Add2Systemd, GetDirFromPath, RunAsRoot, ColorPrint, ip2int
-from myton.installer.utils import StartValidator, StartMytoncore
-from myton.installer.config import SetConfig, GetConfig
-from myton.utils import hex2b64
+from mytoninstaller.utils import StartValidator, StartMytoncore
+from mytoninstaller.config import SetConfig, GetConfig
+from mytoncore.utils import hex2b64
 
 
 def FirstNodeSettings(local):
@@ -109,7 +109,7 @@ def FirstMytoncoreSettings(local):
 
 	# Прописать mytoncore.py в автозагрузку
 	# Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
-	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m myton.core")
+	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m mytoncore")
 
 	# Проверить конфигурацию
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
@@ -275,7 +275,7 @@ def EnableValidatorConsole(local):
 
 	# Подтянуть событие в mytoncore.py
 	# cmd = "python3 {srcDir}mytonctrl/mytoncore.py -e \"enableVC\"".format(srcDir=srcDir)
-	cmd = 'python3 -m myton.core -e "enableVC"'
+	cmd = 'python3 -m mytoncore -e "enableVC"'
 	args = ["su", "-l", user, "-c", cmd]
 	subprocess.run(args)
 
@@ -435,7 +435,7 @@ def EnableJsonRpc(local):
 	local.AddLog("start EnableJsonRpc function", "debug")
 	user = local.buffer["user"]
 
-	jsonrpcinstaller_path = pkg_resources.resource_filename('myton.installer.scripts', 'jsonrpcinstaller.sh')
+	jsonrpcinstaller_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'jsonrpcinstaller.sh')
 	local.AddLog(f"Running script: {jsonrpcinstaller_path}", "debug")
 	exitCode = RunAsRoot(["bash", jsonrpcinstaller_path, "-u", user])  # TODO: fix path
 	if exitCode == 0:
@@ -450,7 +450,7 @@ def EnablePytonv3(local):
 	local.AddLog("start EnablePytonv3 function", "debug")
 	user = local.buffer["user"]
 
-	pythonv3installer_path = pkg_resources.resource_filename('myton.installer.scripts', 'pytonv3installer.sh')
+	pythonv3installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'pytonv3installer.sh')
 	local.AddLog(f"Running script: {pythonv3installer_path}", "debug")
 	exitCode = RunAsRoot(["bash", pythonv3installer_path, "-u", user])
 	if exitCode == 0:
@@ -465,7 +465,7 @@ def EnableTonHttpApi(local):
 	local.AddLog("start EnablePytonv3 function", "debug")
 	user = local.buffer["user"]
 
-	ton_http_api_installer_path = pkg_resources.resource_filename('myton.installer.scripts', 'tonhttpapiinstaller.sh')
+	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'tonhttpapiinstaller.sh')
 	exitCode = RunAsRoot(["bash", ton_http_api_installer_path, "-u", user])
 	if exitCode == 0:
 		text = "EnableTonHttpApi - {green}OK{endc}"
@@ -691,7 +691,7 @@ def CreateSymlinks(local):
 	env_file = "/etc/environment"
 	file = open(mytonctrl_file, 'wt')
 	# file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")  # TODO: fix path
-	file.write("/usr/bin/python3 -m myton.ctrl $@")  # TODO: fix path
+	file.write("/usr/bin/python3 -m mytonctrl $@")  # TODO: fix path
 	file.close()
 	file = open(fift_file, 'wt')
 	file.write("/usr/bin/ton/crypto/fift $@")

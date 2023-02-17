@@ -1,7 +1,7 @@
 import threading
 import time
 
-from myton.core.models import Block
+from mytoncore.models import Block
 
 
 class TonBlocksScanner():

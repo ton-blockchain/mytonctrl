@@ -30,8 +30,8 @@ from mypylib.mypylib import (
 )
 
 from mypyconsole.mypyconsole import MyPyConsole
-from myton.core.mytoncore import MyTonCore
-from myton.core.functions import (
+from mytoncore.mytoncore import MyTonCore
+from mytoncore.functions import (
 	Slashing, 
 	Elections,
 	GetMemoryInfo,
@@ -43,7 +43,7 @@ import sys, getopt, os
 
 def Init(local, ton, console, argv):
 	# Load translate table
-	translate_path = pkg_resources.resource_filename('myton.ctrl', 'resources/translate.json')
+	translate_path = pkg_resources.resource_filename('mytonctrl', 'resources/translate.json')
 	local.InitTranslator(translate_path)
 
 	# this function substitutes local and ton instances if function has this args
@@ -149,7 +149,7 @@ def PreUp(local):
 
 def Installer(args):
 	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
-	args = ["python3", "-m", "myton.installer"]
+	args = ["python3", "-m", "mytoninstaller"]
 	subprocess.run(args)
 #end define
 
@@ -195,7 +195,7 @@ def Update(local, args):
 	branch = data.get("branch", branch)
 
 	# Run script
-	update_script_path = pkg_resources.resource_filename('myton.ctrl', 'scripts/update.sh')
+	update_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/update.sh')
 	runArgs = ["bash", update_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
@@ -222,7 +222,7 @@ def Upgrade(args):
 	branch = data.get("branch", branch)
 
 	# Run script
-	upgrade_script_path = pkg_resources.resource_filename('myton.ctrl', 'scripts/upgrade.sh')
+	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
@@ -1082,7 +1082,7 @@ def Xrestart(inputArgs):
 	if len(inputArgs) < 2:
 		ColorPrint("{red}Bad args. Usage:{endc} xrestart <timestamp> <args>")
 		return
-	xrestart_script_path = pkg_resources.resource_filename('myton.ctrl', 'scripts/xrestart.py')
+	xrestart_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/xrestart.py')
 	args = ["python3", xrestart_script_path]  # TODO: Fix path
 	args += inputArgs
 	exitCode = RunAsRoot(args)

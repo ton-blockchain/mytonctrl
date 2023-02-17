@@ -1,4 +1,4 @@
-from myton.core.functions import mytoncore
+from mytoncore.functions import mytoncore
 
 
 if __name__ == '__main__':

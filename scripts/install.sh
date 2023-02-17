@@ -96,12 +96,20 @@ fi
 
 # Cloning mytonctrl
 echo -e "${COLOR}[3/5]${ENDC} Installing MyTonCtrl"
+echo "https://github.com/${author}/${repo}.git -> ${branch}"
+
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/mytonctrl
 
 git clone https://github.com/${author}/${repo}.git ${repo}  # TODO: return --recursive back when fix libraries
 cd $SOURCES_DIR/${repo}
 git checkout ${branch}
+git submodule update --init --recursive
+
+# FIXME: add __init__.py in these repos
+touch mypyconsole/__init__.py
+touch mypylib/__init__.py
+
 pip3 install -U .  # TODO: make installation from git directly
 
 echo -e "${COLOR}[4/5]${ENDC} Running MyTonInstaller"
@@ -120,7 +128,7 @@ if [ "$parent_name" = "sudo" ]; then
 fi
 
 echo "User: $user"
-python3 -m myton.installer -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
+python3 -m mytoninstaller -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
 
 echo -e "${COLOR}[5/5]${ENDC} Mytonctrl installation completed"
 exit 0
