@@ -32,6 +32,8 @@ pip3 install Werkzeug json-rpc cloudscraper pyotp
 
 # Клонирование репозиториев с github.com
 echo -e "${COLOR}[2/4]${ENDC} Cloning github repository"
+echo "https://github.com/${author}/${repo}.git -> ${branch}"
+
 cd /usr/src/
 rm -rf mtc-jsonrpc
 git clone --branch=${branch} --recursive https://github.com/${author}/${repo}.git
