@@ -9,13 +9,14 @@ import psutil
 import crc16  # TODO: check this library!
 import fastcrc
 import subprocess
-import traceback
 
-from myton.utils import xhex2hex, ng2g
-from myton.core.liteclient import LiteClient
-from myton.core.validator_console import ValidatorConsole
-from myton.core.fift import Fift
-from myton.core.models import (
+from fastcrc import crc16
+
+from mytoncore.utils import xhex2hex, ng2g
+from mytoncore.liteclient import LiteClient
+from mytoncore.validator_console import ValidatorConsole
+from mytoncore.fift import Fift
+from mytoncore.models import (
     Wallet,
     Account,
     Domain,

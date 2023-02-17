@@ -4,8 +4,8 @@ import subprocess
 import requests
 import base64
 
-from myton.utils import hex2b64, dict2b64
-from myton.installer.utils import StartMytoncore, GetInitBlock
+from mytoncore.utils import hex2b64, dict2b64
+from mytoninstaller.utils import StartMytoncore, GetInitBlock
 from mypylib.mypylib import ip2int
 
 

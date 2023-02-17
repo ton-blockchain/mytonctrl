@@ -10,11 +10,11 @@ import subprocess
 from mypylib.mypylib import MyPyClass, RunAsRoot
 from mypyconsole.mypyconsole import MyPyConsole
 
-from myton.installer.config import GetLiteServerConfig
-from myton.installer.utils import GetInitBlock
-from myton.utils import dict2b64, str2bool, b642dict
+from mytoninstaller.config import GetLiteServerConfig
+from mytoninstaller.utils import GetInitBlock
+from mytoncore.utils import dict2b64, str2bool, b642dict
 
-from myton.installer.settings import (
+from mytoninstaller.settings import (
     FirstNodeSettings,
     FirstMytoncoreSettings,
     EnableValidatorConsole,
@@ -26,7 +26,7 @@ from myton.installer.settings import (
     DangerousRecoveryValidatorConfigFile,
     CreateSymlinks,
 )
-from myton.installer.config import (
+from mytoninstaller.config import (
     CreateLocalConfig,
     BackupVconfig,
     BackupMconfig,
@@ -133,14 +133,14 @@ def Enable(local, args):
 	user = local.buffer["user"]
 	if name == "PT":
 		CreateLocalConfigFile(local, args)
-	args = ["python3", "-m", "myton.installer", "-u", user, "-e", "enable{name}".format(name=name)]
+	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "enable{name}".format(name=name)]
 	RunAsRoot(args)
 #end define
 
 
 def DRVCF(local, args):
 	user = local.buffer["user"]
-	args = ["python3", "-m", "myton.installer", "-u", user, "-e", "drvcf"]
+	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "drvcf"]
 	RunAsRoot(args)
 #end define
 
@@ -162,7 +162,7 @@ def CreateLocalConfigFile(local, args):
 	initBlock = GetInitBlock()
 	initBlock_b64 = dict2b64(initBlock)
 	user = local.buffer["user"]
-	args = ["python3", "-m", "myton.installer", "-u", user, "-e", "clc", "-i", initBlock_b64]
+	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "clc", "-i", initBlock_b64]
 	RunAsRoot(args)
 #end define
 

@@ -121,3 +121,4 @@ test.py
 .vscode/
 venv/
 venv38/
+sandbox/
