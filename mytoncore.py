@@ -2185,9 +2185,9 @@ class MyTonCore():
 			item["hash"] = hash
 			item["endTime"] = subdata[0] # *expires*
 			item["critFlag"] = subdata[1] # *critical*
-			item["config"]["id"] = subdata[2][0] # *param_id*
-			param_val = subdata[2][1] # *param_val*
-			item["config"]["value"] = param_val
+			param_id = subdata[2][0] # *param_id*
+			item["config"]["id"] = param_id
+			item["config"]["value"] = subdata[2][1] # *param_val*
 			item["config"]["hash"] = subdata[2][2] # *param_hash*
 			item["vsetId"] = subdata[3] # *vset_id*
 			item["votedValidators"] = subdata[4] # *voters_list*
@@ -2202,7 +2202,10 @@ class MyTonCore():
 			item["weightRemaining"] = weightRemaining
 			item["approvedPercent"] = round(availableWeight / totalWeight * 100, 3)
 			item["isPassed"] = (weightRemaining < 0)
-			item["pseudohash"] = hashlib.sha256(param_val.encode()).hexdigest()
+			#item["pseudohash"] = hashlib.sha256(param_val.encode()).hexdigest()
+			config_val = self.GetConfig(param_id)
+			pseudohash_bytes = hash.encode() + json.dumps(config_val, sort_keys=True).encode()
+			item["pseudohash"] = hashlib.sha256(pseudohash_bytes).hexdigest()
 			offers.append(item)
 		#end for
 		return offers
