@@ -28,6 +28,9 @@ done
 COLOR='\033[92m'
 ENDC='\033[0m'
 
+# Установить дополниьтельные зависимости
+apt-get install -y libsecp256k1-dev libsodium-dev
+
 # Go to work dir
 cd ${srcdir}
 rm -rf ${srcdir}/${repo}
