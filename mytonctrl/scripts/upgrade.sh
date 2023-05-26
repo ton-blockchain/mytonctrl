@@ -28,6 +28,9 @@ done
 COLOR='\033[92m'
 ENDC='\033[0m'
 
+# Установить дополниьтельные зависимости
+apt-get install -y libsecp256k1-dev libsodium-dev
+
 # Go to work dir
 cd ${srcdir}
 rm -rf ${srcdir}/${repo}
@@ -44,7 +47,7 @@ export CCACHE_DISABLE=1
 cd ${bindir}/${repo}
 rm -f CMakeCache.txt
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
-let "cpuNumber = memory / 2100000"
+let "cpuNumber = memory / 2100000" || cpuNumber=1
 cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo}
 make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 systemctl restart validator
