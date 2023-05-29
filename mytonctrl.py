@@ -69,6 +69,12 @@ def Init(argv):
 	console.AddItem("deposit_to_pool", DepositToPool, local.Translate("deposit_to_pool_cmd"))
 	console.AddItem("withdraw_from_pool", WithdrawFromPool, local.Translate("withdraw_from_pool_cmd"))
 	console.AddItem("delete_pool", DeletePool, local.Translate("delete_pool_cmd"))
+	
+	console.AddItem("new_controller", NewController, local.Translate("_"))
+	console.AddItem("get_controller_data", GetControllerData, local.Translate("_"))
+	console.AddItem("create_loan_request", CreateLoanRequest, local.Translate("_"))
+	console.AddItem("return_unused_loan", ReturnUnusedLoan, local.Translate("_"))
+	console.AddItem("withdraw_from_controller", WithdrawFromController, local.Translate("_"))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -1151,9 +1157,42 @@ def UpdateValidatorSet(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} update_validator_set <pool-addr>")
 		return
-	wallet = self.GetValidatorWallet()
-	self.PoolUpdateValidatorSet(poolAddr, wallet)
-	ColorPrint("DeletePool - {green}OK{endc}")
+	wallet = ton.GetValidatorWallet()
+	ton.PoolUpdateValidatorSet(poolAddr, wallet)
+	ColorPrint("UpdateValidatorSet - {green}OK{endc}")
+#end define
+
+def NewController(args):
+	if len(args) == 1:
+		amount = int(args[0])
+	else:
+		amount = 1
+	ton.CreateController(amount)
+	ColorPrint("NewController - {green}OK{endc}")
+#end define
+
+def GetControllerData(args):
+	controllerAddr = ton.GetControllerAddress()
+	data = ton.GetControllerData(controllerAddr)
+	print(f"GetControllerAddress: {controllerAddr}")
+	print(f"GetControllerData: {data}")
+#end define
+
+def CreateLoanRequest(args):
+	controllerAddr = ton.GetControllerAddress()
+	ton.CreateLoanRequest(controllerAddr)
+#end define
+
+def ReturnUnusedLoan(args):
+	controllerAddr = ton.GetControllerAddress()
+	ton.ReturnUnusedLoan(controllerAddr)
+#end define
+
+def WithdrawFromController(args):
+	controllerAddr = ton.GetControllerAddress()
+	account = ton.GetAccount(controllerAddr)
+	amount = account.balance-10.1
+	ton.WithdrawFromController(controllerAddr, amount)
 #end define
 
 
