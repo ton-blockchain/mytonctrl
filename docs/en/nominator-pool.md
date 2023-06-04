@@ -89,12 +89,12 @@
 
     > To withdrawal a nominator deposit, send a transaction with the comment `w` to the pool address (1 TON must be attached to process the transaction). You can also do this with **mytonctrl**.
 
-13. Activate pool mode:
+12. Activate pool mode:
     ```
     set usePool true
     ```
 
-14. Invite nominators to make deposits to your pools. Participation in validation will start automatically.
+13. Invite nominators to make deposits to your pools. Participation in validation will start automatically.
     > (!) You need to have at least 200 TON/month on validator wallet for operation fees.
 
 ## Pools configuration
