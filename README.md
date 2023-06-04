@@ -2,7 +2,7 @@
 
 <!-- omit from toc --> 
 # MytTonCtrl
-[Данный текст доступен на русском языке.](https://github.com/ton-blockchain/mytonctrl/blob/master/README.Ru.md)
+[Данный текст доступен на русском языке.](README.Ru.md)
 
 <!-- omit from toc --> 
 ## Contents
@@ -84,39 +84,39 @@ MyTonCtrl is a console application that serves as a convenient wrapper for `fift
 - `mytoninstaller.py`: configures the validator and `mytonctrl`; generates validator connection keys.
 
 ## Installation modes
-There are two installation modes: `lite` and` full`. They both **compile** and install `TON` components. However the `lite` version does not configure or run the node/validator.
+There are two installation modes: `lite` and`full`. They both **compile** and install `TON` components. However the `lite` version does not configure or run the node/validator.
 
 ## Installation for Ubuntu
 1. Download and execute the `install.sh` script in the desired installation mode. During installation the script prompts you for the superuser password several times.
-```sh
-wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
-sudo bash install.sh -m <mode>
-```
+	```sh
+	wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
+	sudo bash install.sh -m <mode>
+	```
 
 2. Done. You can try to run the `mytonctrl` console now.
-```sh
-mytonctrl
-```
+	```sh
+	mytonctrl
+	```
 
 
 ## Installation for Debian
 1. Download and execute the `install.sh` script in the desired installation mode. During installation the script prompts you for the superuser password several times.
-```sh
-wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
-su root -c 'bash install.sh -m <mode>'
-```
+	```sh
+	wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
+	su root -c 'bash install.sh -m <mode>'
+	```
 
 2. Done. You can try to run the `mytonctrl` console now.
-```sh
-mytonctrl
-```
+	```sh
+	mytonctrl
+	```
 
 # MyTonCtrl Documentation
 
 This repository contains the following technical documents for MyTonCtrl, categorized by language. Simply click the links below to navigate to the document you're interested in.
 
 |   | FAQ | Import Wallets | Ubuntu Manual | Nominator Pool |
-|---|-----|----------------|---------------|----------------|
+|:-:|:---:|:-------------:|:-------------:|:--------------:|
 | **English (EN)** | [Link](./docs/en/FAQ.md) | [Link](./docs/en/import-wallets.md) | [Link](./docs/en/manual-ubuntu.md) | [Link](./docs/en/nominator-pool.md) |
 | **Russian (RU)** | [Link](./docs/ru/FAQ.md) | [Link](./docs/ru/import-wallets.md) | [Link](./docs/ru/manual-ubuntu.md) | [Link](./docs/ru/nominator-pool.md) |
 | **Traditional Chinese** | [Link](./docs/zh_TW/FAQ.md) | [Link](./docs/zh_TW/import-wallets.md) | [Link](./docs/zh_TW/manual-ubuntu.md) | [Link](./docs/zh_TW/nominator-pool.md) |

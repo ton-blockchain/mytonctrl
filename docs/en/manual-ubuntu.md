@@ -6,25 +6,25 @@ Here are the steps to become a validator using mytonctrl. This example is applic
 
 1. Download the installation script. We recommend installing the tool under your local user account, not as Root. In our example, a local user account is used:
 
-```sh
-wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
-```
+    ```sh
+    wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
+    ```
 
-![wget output](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_wget-ls_ru.png)
+    ![wget output](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_wget-ls_ru.png)
 
 2. Run the installation script as an administrator:
 
-```sh
-sudo bash install.sh -m full
-```
+    ```sh
+    sudo bash install.sh -m full
+    ```
 
 ## 2. Conduct an Operability Test:
 
 1. Run **mytonctrl** from the local user account used for installation in step 1:
 
-```sh
-mytonctrl
-```
+    ```sh
+    mytonctrl
+    ```
 
 2. Check the **mytonctrl** statuses, particularly the following:
 
@@ -32,7 +32,7 @@ mytonctrl
 * **Local validator status**: Should also be in green.
 * **Local validator out of sync**: Initially, a large number is displayed. As soon as the newly created validator connects with other validators, the number will be around 250k. As synchronization progresses, this number decreases. When it falls below 20, the validator is synchronized.
 
-![status](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/mytonctrl-status.png)
+    ![status](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/mytonctrl-status.png)
 
 
 ## 3. View the List of Available Wallets
@@ -48,7 +48,7 @@ To determine the minimum amount of coins required to participate in one election
 * Use the `vas` command to display the history of transfers
 * Activate the wallet using the `aw` command 
 
-![account history](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-vas-aw_ru.png)
+    ![account history](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-vas-aw_ru.png)
 
 ## 5. Your Validator is Now Ready
 
