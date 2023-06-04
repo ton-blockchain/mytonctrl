@@ -1,3 +1,5 @@
+![GitHub stars](https://img.shields.io/github/stars/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub forks](https://img.shields.io/github/forks/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub issues](https://img.shields.io/github/issues/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub pull requests](https://img.shields.io/github/issues-pr/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub last commit](https://img.shields.io/github/last-commit/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub license](https://img.shields.io/github/license/ton-blockchain/mytonctrl?style=flat-square&logo=github)
+
 <!-- omit from toc --> 
 # MytTonCtrl
 [Данный текст доступен на русском языке.](https://github.com/ton-blockchain/mytonctrl/blob/master/README.Ru.md)
@@ -7,7 +9,7 @@
 
 - [What is MytTonCtrl?](#what-is-myttonctrl)
 - [Functionality](#functionality)
-- [List of tested operating systems](#list-of-tested-operating-systems)
+	- [List of tested operating systems](#list-of-tested-operating-systems)
 - [Installation](#installation)
 	- [Installation scripts overview](#installation-scripts-overview)
 	- [Installation modes](#installation-modes)
