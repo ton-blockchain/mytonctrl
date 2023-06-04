@@ -45,15 +45,16 @@ This console is a wrapper over `fift`,`lite-client` and `validator-engine-consol
 	- [x] Send validator statistics to https://toncenter.com
 
 ## List of tested operating systems
-```
-Ubuntu 16.04 LTS (Xenial Xerus) - Error: TON compilation error
-Ubuntu 18.04 LTS (Bionic Beaver) - OK
-Ubuntu 20.04 LTS (Focal Fossa) - OK
-Ubuntu 22.04 LTS (Jammy Jellyfish) - OK
-Debian 8 - Error: Unable to locate package libgsl-dev
-Debian 9 - Error: TON compilation error
-Debian 10 - OK
-```
+| Operating System              | Status                     |
+|-------------------------------|----------------------------|
+| Ubuntu 16.04 LTS (Xenial Xerus) | Error: TON compilation error |
+| Ubuntu 18.04 LTS (Bionic Beaver) | OK                       |
+| Ubuntu 20.04 LTS (Focal Fossa) | OK                       |
+| Ubuntu 22.04 LTS (Jammy Jellyfish) | OK                   |
+| Debian 8 | Error: Unable to locate package libgsl-dev   |
+| Debian 9 | Error: TON compilation error                 |
+| Debian 10 | OK                                         |
+
 
 ## Installation scripts overview
 - `toninstaller.sh`: clones `TON` and` mytonctrl` sources to `/usr/src/ton` and`/usr/src/mytonctrl` folders, compiles programs from sources and writes them to `/usr/bin/`.
