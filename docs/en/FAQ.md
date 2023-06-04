@@ -1,53 +1,124 @@
-Used directories:
-mytonctrl is a wrapper and stores its files in two places:
-1. ~/.local/share/mytonctrl/ - persistent files such as logs
-2. /tmp/mytonctrl/ - temporary files
+Here is the optimized version in English:
 
-mytonctrl also contains another script mytoncore, which in turn stores files here:
-1. ~/.local/share/mytoncore/ - permanent files, the main config will be stored here
-2. /tmp/mytoncore/ - temporary files, there will be saved parameters used for elections
+# MyTonCtrl Directory Usage
 
-mytonctrl downloads the source code of itself and the validator into folders:
-1. /usr/src/mytonctrl/
-2. /usr/src/ton/
+MyTonCtrl is a wrapper that stores its files in two places:
 
-mytonctrl compiles the components of the validator into a folder:
-1. /usr/bin/ton/
+1. `~/.local/share/mytonctrl/` - Long-term files such as logs are stored here.
+2. `/tmp/mytonctrl/` - Temporary files are stored here.
 
-mytonctrl creates a folder for the validator to work here:
-1. /var/ton/
+MyTonCtrl also includes another script, mytoncore, which in turn stores files in the following locations:
 
-===========================================================================================================
+1. `~/.local/share/mytoncore/` - Permanent files, the main configuration will be stored here.
+2. `/tmp/mytoncore/` - Temporary files, parameters used for elections will be saved here.
 
-If mytonctrl was installed as root:
-Then the configurations will lie in a different way:
-1. /usr/local/bin/mytonctrl/
-2. /usr/local/bin/mytoncore/
+MyTonCtrl downloads the source code for itself and the validator into the following directories:
 
-===========================================================================================================
+1. `/usr/src/mytonctrl/`
+2. `/usr/src/ton/`
 
-How to remove mytonctrl:
-run the script as administrator and remove the compiled TON components:
-`sudo bash /usr/src/mytonctrl/scripts/uninstall.sh`
-`sudo rm -rf /usr/bin/ton`
+MyTonCtrl compiles the validator components into the following directory:
 
-===========================================================================================================
+1. `/usr/bin/ton/`
 
-If we run mytonctrl as a different user, we get the following error. The solution is to run as the user from whom you installed:
-`Error: expected str, bytes or os.PathLike object, not NoneType`
-(error screen + normal startup screen)
+MyTonCtrl creates a working directory for the validator here:
 
-===========================================================================================================
+1. `/var/ton/`
 
-If we want to change the working directory of the validator before installation, then there are two options:
-1.fork the project and make our changes (man git-fork)
-2.or create a symbolic link:
-`ln -s /opt/ton/var/ton` - Create a link /var/ton that leads to /opt/ton
+---
 
-===========================================================================================================
+## If MyTonCtrl was installed as root:
 
-If we want to change the working directory of the validator from /var/ton/, then after installation we will do the following:
-1.` systemctl stop validator`, `systemctl stop mytoncore` - Stop services
-2.`mv /var/ton/* /opt/ton/`- move the validator files
-3. Replace the paths in the configuration `~ /.local/share/mytoncore/mytoncore.db`
-4. Then we look at the circumstance - there was no experience of such a transfer
+The configurations will be stored differently:
+
+1. `/usr/local/bin/mytonctrl/`
+2. `/usr/local/bin/mytoncore/`
+
+---
+
+## How to remove MyTonCtrl:
+
+Run the script as an administrator and remove the compiled TON components:
+
+```bash
+sudo bash /usr/src/mytonctrl/scripts/uninstall.sh
+sudo rm -rf /usr/bin/ton
+```
+
+During this process, ensure you have sufficient permissions to delete or modify these files or directories.
+
+
+# Dealing with Errors and Directory Changes with MyTonCtrl
+
+If you encounter issues running MyTonCtrl as a different user or wish to change the working directory of the validator, this guide provides some solutions.
+
+## Running MyTonCtrl as Different User
+
+Running MyTonCtrl as a different user may trigger the following error:
+
+```
+Error: expected str, bytes or os.PathLike object, not NoneType
+```
+
+To resolve this, you should run MyTonCtrl as the user who installed it.
+
+## Changing Validator Working Directory Pre-installation
+
+If you wish to change the working directory of the validator prior to installation, there are two ways to do so:
+
+1. **Fork the project** - You can fork the project and make your changes there. Learn how to fork a project with `man git-fork`.
+2. **Create a symbolic link** - You can also create a symbolic link with the following command:
+
+    ```bash
+    ln -s /opt/ton/var/ton
+    ```
+This command will create a link `/var/ton` that points to `/opt/ton`.
+
+## Changing Validator Working Directory Post-installation
+
+If you want to change the working directory of the validator from `/var/ton/` after installation, perform the following steps:
+
+1. **Stop services** - You will need to stop the services with these commands:
+
+    ```bash
+    systemctl stop validator
+    systemctl stop mytoncore
+    ```
+
+2. **Move validator files** - You then need to move the validator files with this command:
+
+    ```bash
+    mv /var/ton/* /opt/ton/
+    ```
+
+3. **Update configuration paths** - Replace the paths in the configuration located at `~/.local/share/mytoncore/mytoncore.db`.
+
+4. **Note on experience** - There is no prior experience with such a transfer, so consider this when moving forward.
+
+Remember to make sure you have sufficient permissions to make these changes or run these commands.
+
+# Understanding Validator Status and Restarting Validator in MyTonCtrl
+
+This document will help you understand how to confirm if MyTonCtrl has become a full validator and how to restart your validator.
+
+## Checking Validator Status in MyTonCtrl
+
+You can confirm if your node has become a full validator by checking the following conditions:
+
+1. **Validator Desynchronization** - The desynchronization of the local validator should be less than 20.
+2. **Validator Index** - The validator index should be greater than -1.
+
+To view the performance factor of your validator, you can use the `vl` command in MyTonCtrl:
+
+1. Find your validator in the list by its ADNL address (`adnlAddr`).
+2. If the `mr` and `wr` coefficients are close to 1, it means that your validator is working correctly.
+
+## Restarting Your Validator
+
+If you need to restart your validator, you can do so by running the following command:
+
+```bash
+systemctl restart validator
+```
+
+Ensure you have sufficient permissions to execute these commands and make necessary adjustments. Always remember to back up important data before performing operations that could potentially affect your validator.
