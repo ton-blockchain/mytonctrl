@@ -1,11 +1,31 @@
+<!-- omit from toc --> 
+# MytTonCtrl
 [Данный текст доступен на русском языке.](https://github.com/ton-blockchain/mytonctrl/blob/master/README.Ru.md)
 
-## What is it?
-This console is a wrapper over `fift`,`lite-client` and `validator-engine-console`. It was created to facilitate wallet, domain and validator management on Linux OS.
+<!-- omit from toc --> 
+## Contents
 
-![](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/mytonctrl-status.png)
+- [What is MytTonCtrl?](#what-is-myttonctrl)
+- [Functionality](#functionality)
+- [List of tested operating systems](#list-of-tested-operating-systems)
+- [Installation](#installation)
+	- [Installation scripts overview](#installation-scripts-overview)
+	- [Installation modes](#installation-modes)
+	- [Installation for Ubuntu](#installation-for-ubuntu)
+	- [Installation for Debian](#installation-for-debian)
+- [MyTonCtrl Documentation](#mytonctrl-documentation)
+- [Telemetry](#telemetry)
+- [Web admin panel](#web-admin-panel)
+- [Local copy of toncenter](#local-copy-of-toncenter)
+- [Useful links](#useful-links)
 
-## Functionality
+
+# What is MytTonCtrl?
+MyTonCtrl is a console application that serves as a convenient wrapper for `fift`, `lite-client`, and `validator-engine-console`. It has been specifically developed to streamline wallet, domain, and validator management tasks on the Linux operating system.
+
+![MyTonCtrl Status](screens/mytonctrl-status.png)
+
+# Functionality
 - [x] Show TON network status
 - [x] Management of local wallets
 	- [x] Create local wallet
@@ -44,7 +64,7 @@ This console is a wrapper over `fift`,`lite-client` and `validator-engine-consol
 	- [x] Autostart validator on abnormal termination (systemd)
 	- [x] Send validator statistics to https://toncenter.com
 
-## List of tested operating systems
+# List of tested operating systems
 ```
 Ubuntu 16.04 LTS (Xenial Xerus) - Error: TON compilation error
 Ubuntu 18.04 LTS (Bionic Beaver) - OK
@@ -54,6 +74,7 @@ Debian 9 - Error: TON compilation error
 Debian 10 - OK
 ```
 
+# Installation
 ## Installation scripts overview
 - `toninstaller.sh`: clones `TON` and` mytonctrl` sources to `/usr/src/ton` and`/usr/src/mytonctrl` folders, compiles programs from sources and writes them to `/usr/bin/`.
 - `mytoninstaller.py`: configures the validator and `mytonctrl`; generates validator connection keys.
@@ -86,7 +107,17 @@ su root -c 'bash install.sh -m <mode>'
 mytonctrl
 ```
 
-## Telemetry
+# MyTonCtrl Documentation
+
+Below you will find a list of our documentation available in English, Russian, and Mandarin. 
+
+|   | FAQ | Import Wallets | Manual (Ubuntu) | Nominator Pool |
+|---|-----|----------------|-----------------|----------------|
+| **English** | [FAQ](docs/en/FAQ.md) | [Import Wallets](docs/en/import-wallets.md) | [Manual (Ubuntu)](docs/en/manual-ubuntu.md) | [Nominator Pool](docs/en/nominator-pool.md) |
+| **Russian** | [FAQ](docs/ru/FAQ.md) | [Import Wallets](docs/ru/import-wallets.md) | [Manual (Ubuntu)](docs/ru/manual-ubuntu.md) | [Nominator Pool](docs/ru/nominator-pool.md) |
+| **Mandarin** | [FAQ](docs/zh_TW/FAQ.md) | [Import Wallets](docs/zh_TW/import-wallets.md) | [Manual (Ubuntu)](docs/zh_TW/manual-ubuntu.md) | [Nominator Pool](docs/zh_TW/nominator-pool.md) |
+
+# Telemetry
 By default, `mytonctrl` sends validator statistics to the https://toncenter.com server.
 It is necessary to identify network abnormalities, as well as to quickly give feedback to developers.
 To disable telemetry during installation, use the `-t` flag:
@@ -99,7 +130,7 @@ To disable telemetry after installation, do the following:
 MyTonCtrl> set sendTelemetry false
 ```
 
-## Web admin panel
+# Web admin panel
 To control the node/validator through the browser, you need to install an additional module:
 `mytonctrl` -> `installer` -> `enable JR`
 
@@ -109,13 +140,13 @@ Next, you need to create a password for connection:
 Ready. Now you can go to https://tonadmin.org site and log in with your credentials.
 git: https://github.com/igroman787/mtc-jsonrpc
 
-## Local copy of toncenter
+# Local copy of toncenter
 To set up a local https://toncenter.com copy on your server, install an additional module:
 `mytonctrl` ->` installer` -> `enable PT`
 
 Ready. A local copy of toncenter is available at `http://<server-ip-address>:8000`
 git: https://github.com/igroman787/pytonv3
 
-## Useful links
+# Useful links
 1. https://github.com/ton-blockchain/mytonctrl/blob/master/docs/en/manual-ubuntu.md
 2. https://ton.org/docs/
