@@ -17,8 +17,9 @@
 	- [Installation for Debian](#installation-for-debian)
 - [MyTonCtrl Documentation](#mytonctrl-documentation)
 - [Telemetry](#telemetry)
-- [Web admin panel](#web-admin-panel)
-- [Local copy of toncenter](#local-copy-of-toncenter)
+- [MyTonCtrl installer mode](#mytonctrl-installer-mode)
+	- [Web admin panel](#web-admin-panel)
+	- [Local copy of toncenter](#local-copy-of-toncenter)
 - [Useful links](#useful-links)
 
 
@@ -112,13 +113,14 @@ mytonctrl
 
 # MyTonCtrl Documentation
 
-Below you will find a list of our documentation available in English, Russian, and Mandarin. 
+This repository contains the following technical documents for MyTonCtrl, categorized by language. Simply click the links below to navigate to the document you're interested in.
 
-|   | FAQ | Import Wallets | Manual (Ubuntu) | Nominator Pool |
-|---|-----|----------------|-----------------|----------------|
-| **English** | [FAQ](docs/en/FAQ.md) | [Import Wallets](docs/en/import-wallets.md) | [Manual (Ubuntu)](docs/en/manual-ubuntu.md) | [Nominator Pool](docs/en/nominator-pool.md) |
-| **Russian** | [FAQ](docs/ru/FAQ.md) | [Import Wallets](docs/ru/import-wallets.md) | [Manual (Ubuntu)](docs/ru/manual-ubuntu.md) | [Nominator Pool](docs/ru/nominator-pool.md) |
-| **Mandarin** | [FAQ](docs/zh_TW/FAQ.md) | [Import Wallets](docs/zh_TW/import-wallets.md) | [Manual (Ubuntu)](docs/zh_TW/manual-ubuntu.md) | [Nominator Pool](docs/zh_TW/nominator-pool.md) |
+|   | FAQ | Import Wallets | Ubuntu Manual | Nominator Pool |
+|---|-----|----------------|---------------|----------------|
+| **English (EN)** | [Link](./docs/en/FAQ.md) | [Link](./docs/en/import-wallets.md) | [Link](./docs/en/manual-ubuntu.md) | [Link](./docs/en/nominator-pool.md) |
+| **Russian (RU)** | [Link](./docs/ru/FAQ.md) | [Link](./docs/ru/import-wallets.md) | [Link](./docs/ru/manual-ubuntu.md) | [Link](./docs/ru/nominator-pool.md) |
+| **Traditional Chinese** | [Link](./docs/zh_TW/FAQ.md) | [Link](./docs/zh_TW/import-wallets.md) | [Link](./docs/zh_TW/manual-ubuntu.md) | [Link](./docs/zh_TW/nominator-pool.md) |
+
 
 # Telemetry
 By default, `mytonctrl` sends validator statistics to the https://toncenter.com server.
@@ -133,7 +135,9 @@ To disable telemetry after installation, do the following:
 MyTonCtrl> set sendTelemetry false
 ```
 
-# Web admin panel
+# MyTonCtrl installer mode
+
+## Web admin panel
 To control the node/validator through the browser, you need to install an additional module:
 `mytonctrl` -> `installer` -> `enable JR`
 
@@ -143,13 +147,12 @@ Next, you need to create a password for connection:
 Ready. Now you can go to https://tonadmin.org site and log in with your credentials.
 git: https://github.com/igroman787/mtc-jsonrpc
 
-# Local copy of toncenter
+## Local copy of toncenter
 To set up a local https://toncenter.com copy on your server, install an additional module:
-`mytonctrl` ->` installer` -> `enable PT`
+`mytonctrl` ->`installer` -> `enable PT`
 
 Ready. A local copy of toncenter is available at `http://<server-ip-address>:8000`
 git: https://github.com/igroman787/pytonv3
 
 # Useful links
-1. https://github.com/ton-blockchain/mytonctrl/blob/master/docs/en/manual-ubuntu.md
-2. https://ton.org/docs/
+* https://docs.ton.org/
