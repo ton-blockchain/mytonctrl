@@ -92,7 +92,7 @@
 13. Activate pool mode:
     ```
     set usePool true
-	set stake null
+    set stake null
     ```
 
 14. Invite nominators to make deposits to your pools. Participation in validation will start automatically.
