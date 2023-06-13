@@ -95,6 +95,7 @@
     
     ```bash
     set usePool true
+    set stake null
     ```
 
 13. 邀請提名人向您的池存款。驗證參與將自動開始。
