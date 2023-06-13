@@ -96,6 +96,7 @@
 
     ```bash
     set usePool true
+    set stake null
     ```
     
 13. Invite nominators to deposit into your pools. The participation in validation will commence automatically.
