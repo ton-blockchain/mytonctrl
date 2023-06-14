@@ -3637,7 +3637,7 @@ class MyTonCore():
 		liquidPoolAddr = local.db.get("liquidPoolAddr")
 		contractPath = self.contractsDir + "jetton_pool/"
 		if not os.path.isdir(contractPath):
-			self.DownloadContract("https://github.com/ton-blockchain/jetton_pool")
+			self.DownloadContract("https://github.com/igroman787/jetton_pool")
 		#end if
 		
 		fileName = contractPath + "fift-scripts/deploy_controller.boc"
