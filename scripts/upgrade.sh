@@ -45,11 +45,11 @@ export CCACHE_DISABLE=1
 
 # Update binary
 cd ${bindir}
-cp ${repo}/global.config.json .
+cp ${repo}/global.config.json /tmp
 rm -rf ${repo}
 mkdir ${repo}
 cd ${repo}
-cp ../global.config.json .
+mv /tmp/global.config.json .
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000" || cpuNumber=1
 cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja
