@@ -44,11 +44,10 @@ export CXX=/usr/bin/clang++
 export CCACHE_DISABLE=1
 
 # Update binary
-cd ${bindir}
-cp ${repo}/global.config.json /tmp
-rm -rf ${repo}
-mkdir ${repo}
-cd ${repo}
+cd ${bindir}/${repo}
+cp global.config.json /tmp
+rm -rf *
+rm -rf .ninja_*
 mv /tmp/global.config.json .
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000" || cpuNumber=1
