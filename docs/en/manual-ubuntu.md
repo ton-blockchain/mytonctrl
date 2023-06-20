@@ -1,58 +1,66 @@
-# How to become a validator with mytonctrl (v0.2, OS Ubuntu)
+# How to Become a Validator with mytonctrl (v0.2, OS Ubuntu)
 
-### 1. Install mytonctrl:
-1. Download the installation script. We recommend to install the tool under your local user account, not as Root. In our example a local user account is used:
+Here are the steps to become a validator using mytonctrl. This example is applicable for the Ubuntu Operating System.
 
-```sh
-wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
-```
+## 1. Install mytonctrl:
 
-![wget output](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_wget-ls_ru.png)
+1. Download the installation script. We recommend installing the tool under your local user account, not as Root. In our example, a local user account is used:
 
-2. Run the installation script as administrator:
+    ```sh
+    wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
+    ```
 
-```sh
-sudo bash install.sh -m full
-```
+    ![wget output](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_wget-ls_ru.png)
+
+2. Run the installation script as an administrator:
+
+    ```sh
+    sudo bash install.sh -m full
+    ```
+
+## 2. Conduct an Operability Test:
+
+1. Run **mytonctrl** from the local user account used for installation in step 1:
+
+    ```sh
+    mytonctrl
+    ```
+
+2. Check the **mytonctrl** statuses, particularly the following:
+
+* **mytoncore status**: Should be in green.
+* **Local validator status**: Should also be in green.
+* **Local validator out of sync**: Initially, a large number is displayed. As soon as the newly created validator connects with other validators, the number will be around 250k. As synchronization progresses, this number decreases. When it falls below 20, the validator is synchronized.
+
+    ![status](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/mytonctrl-status.png)
 
 
-### 2. Operability test:
-1. Run **mytonctrl** from local user account used for installation at step 1:
+## 3. View the List of Available Wallets
 
-```sh
-mytonctrl
-```
-
-2. Check **mytonctrl** statuses, in particular the following:
-
-* **mytoncore status**: should be green.
-* **Local validator status**: should be green.
-* **Local validator out of sync**. First a big number displays. Once the newly created validator contacts other validators, the number is around 250k. As synchronization goes on, the number decreases. When it falls below 20, the validator is synchronized.
-
-![status](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/mytonctrl-status.png)
-
-3. Look at the list of available wallets. In our example the **validator_wallet_001** wallet was created at **mytonctrl** installation:
+Check out the list of available wallets. For instance, during the installation of **mytonctrl**, the **validator_wallet_001** wallet is created:
 
 ![wallet list](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-wl_ru.png)
 
+## 4. Send the Required Number of Coins to the Wallet and Activate It
 
-### 3. Send the required number of coins to the wallet and activate it:
-Go to **tonmon.xyz** > **Participant stakes** to check the the minimum amount of coins required to participate in one election round.
+To determine the minimum amount of coins required to participate in one election round, head to **tonmon.xyz** > **Participant stakes**. 
 
-* The `vas` command displays the history of transfers
-* The `aw` command activates the wallet
+* Use the `vas` command to display the history of transfers
+* Activate the wallet using the `aw` command 
 
-![account history](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-vas-aw_ru.png)
+    ![account history](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-vas-aw_ru.png)
 
+## 5. Your Validator is Now Ready
 
-### 4. Now your validator is good to go
-**mytoncore** automatically joins the elections. It divides the wallet balance into two parts and uses them as a bet to participate in the elections. You can also manually set the stake size:
+**mytoncore** will automatically join the elections. It divides the wallet balance into two parts and uses them as a stake to participate in the elections. You can also manually set the stake size:
 
-`set stake 50000` — set the stake size to 50k coins. If the bet is accepted and our node becomes a validator, the bet can only be withdrawn at the second election (according to the rules of the electorate).
+`set stake 50000` — this sets the stake size to 50k coins. If the bet is accepted and our node becomes a validator, the bet can only be withdrawn in the second election (according to the rules of the electorate).
 
 ![setting stake](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-set_ru.png)
 
-Feel free to command help.
+You can also command for help anytime.
+
+![help command](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-help_ru.png)
 
 To check **mytoncrl** logs, open `~/.local/share/mytoncore/mytoncore.log` for a local user or `/usr/local/bin/mytoncore/mytoncore.log` for Root.
 

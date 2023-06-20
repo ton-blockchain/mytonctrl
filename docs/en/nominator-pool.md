@@ -1,46 +1,46 @@
-# Nominator pool
+# Nominator Pool
 
-## Running the validator in nominator pool mode
+## Running the Validator in Nominator Pool Mode
 
-1. Prepare the hardware for the validator - 8 vCPUs, 64GB memory, 1TB SSD, Fixed IP address, 1Gb/s.
+1. Set up the hardware for the validator - you will need 8 vCPUs, 64GB memory, 1TB SSD, a fixed IP address, and 1Gb/s internet speed.
 
-   To maintain network stability, it is recommended to distribute validator nodes in different locations around the world and not to concentrate them in one data center.
-   Use https://status.toncenter.com/ to determine the load of a location. According to the map, you can see that high utilization
-   data centers in Europe, Finland, Germany and Paris. Therefore, we do not recommend using such providers as Hetzner and OVH.
+   For maintaining network stability, it's recommended to distribute validator nodes in different geographical locations worldwide rather than concentrating them in a single data center. You can use [this site](https://status.toncenter.com/) to assess the load of various locations. The map indicates high data center utilization in Europe, especially in Finland, Germany, and Paris. Therefore, using providers such as Hetzner and OVH is not recommended.
 
-   > Your hardware must comply with the specified configuration or be higher. Do not run the validator on weak hardware - this negatively affects the network and you will be fined.
+   > Ensure your hardware matches or exceeds the specifications above. Running the validator on insufficient hardware negatively impacts the network and could result in penalties.
 
-   > Since May 2021, Hetzner has banned mining on its servers, currently both PoW and PoS algorithms fall under this rule. Installing a regular node will already be considered a violation of the terms of the agreement.
+   > Note that as of May 2021, Hetzner has prohibited mining on its servers, and this ban includes both PoW and PoS algorithms. Even installing a regular node may be considered a violation of their terms of service.
 
-   > **Recommended providers:** [amazon](https://aws.amazon.com/), [digitalocean](https://www.digitalocean.com/), [linode](https://www.linode.com/), [alibaba cloud](https://alibabacloud.com/), [latitude](https://www.latitude.sh/).
+   > **Recommended providers include:** [Amazon](https://aws.amazon.com/), [DigitalOcean](https://www.digitalocean.com/), [Linode](https://www.linode.com/), [Alibaba Cloud](https://alibabacloud.com/), [Latitude](https://www.latitude.sh/).
 
-2. Install and sync **mytonctrl** as described in https://github.com/ton-blockchain/mytonctrl/blob/master/docs/en/manual-ubuntu.md **only** paragraph 1, 2 and 3.
+2. Install and synchronize **mytonctrl** as described in the guide [here](https://github.com/ton-blockchain/mytonctrl/blob/master/docs/en/manual-ubuntu.md) — follow **only** steps 1, 2, and 3.
 
-   [Video instruction](https://ton.org/docs/#/nodes/run-node).
+   You can also refer to this [Video Instruction](https://ton.org/docs/#/nodes/run-node) for additional help.
 
-3. Send 1 TON to validator wallet address displayed in the list `wl`.
+3. Transfer 1 TON to the validator wallet address shown in the `wl` list.
 
-4. Type `aw` to activate validator wallet.
+4. Use the `aw` command to activate your validator wallet.
 
-5. Create two pools (for even and odd validation round):
-   ```
+5. Create two pools (for even and odd validation rounds):
+   
+   ```bash
    new_pool p1 0 1 1000 300000
    new_pool p2 0 1 1001 300000
    ```
-   where
-    * `p1` is pool name;
-    * `0` % is validator reward share (e.g. use 40 for 40%);
-    * `1` is max nominators count in the pool (should be <= 40);
-    * `1000` TON is minimum validator stake (should be >= 1K TON);
-    * `300000` TON is minimum nominator stake (should be >= 10K TON);
 
-   > (!) Pools configurations don't have to be identical, you can add 1 to the minimum stake of one pool to make them different.
+   where:
+    * `p1` is the pool name;
+    * `0` % is the validator's reward share (e.g., use 40 for 40%);
+    * `1` is the maximum number of nominators in the pool (should be <= 40);
+    * `1000` TON is the minimum validator stake (should be >= 1K TON);
+    * `300000` TON is the minimum nominator stake (should be >= 10K TON);
+
+   > (!) Pool configurations do not have to be identical, you can add 1 to the minimum stake of one pool to make them different.
 
    > (!) Use https://tonmon.xyz/ to determine the current minimum validator stake.
 
-6. Type `pools_list` to display pools addresses:
+6. Type `pools_list` to display pool addresses:
 
-   ```
+   ```bash
    pools_list
    Name  Status  Balance  Address
    p1    empty   0        0f98YhXA9wnr0d5XRXT-I2yH54nyQzn0tuAYC4FunT780qIT
@@ -48,7 +48,8 @@
    ```
 
 7. Send 1 TON to each pool and activate the pools:
-   ```
+
+   ```bash
    mg validator_wallet_001 0f98YhXA9wnr0d5XRXT-I2yH54nyQzn0tuAYC4FunT780qIT 1
    mg validator_wallet_001 0f9qtmnzs2-PumMisKDmv6KNjNfOMDQG70mQdp-BcAhnV5jL 1
    activate_pool p1
@@ -56,57 +57,62 @@
    ```
 
 8. Type `pools_list` to display pools:
-   ```
+
+   ```bash
    pools_list
    Name  Status  Balance      Address
    p1    active  0.731199733  kf98YhXA9wnr0d5XRXT-I2yH54nyQzn0tuAYC4FunT780v_W
    p2    active  0.731199806  kf9qtmnzs2-PumMisKDmv6KNjNfOMDQG70mQdp-BcAhnV8UO
    ```
 
-9. Open each pool by link "https://tonscan.org/nominator/<address_of_pool>" and verify pools configuration.
+9. Open each pool via the link "https://tonscan.org/nominator/<address_of_pool>" and verify pool configurations.
 
-10. Make validator deposit to each pool:
-    ```
+10. Proceed with the validator deposit to each pool:
+
+    ```bash
     deposit_to_pool validator_wallet_001 <address_of_pool_1> 1005
     deposit_to_pool validator_wallet_001 <address_of_pool_2> 1005
     ```
-    where `1005` TON is deposit amount. Please note that 1 TON will be debited by the pool for deposit processing.
 
+   In these commands, `1005` TON is the deposit amount. Be aware that 1 TON will be deducted by the pool for processing the deposit.
 
-11. Make nominator deposit to each pool:
+11. Proceed with the nominator deposit to each pool:
 
-    Go to the pool link (**9th step**) and click **ADD STAKE**.
-    You can also make a deposit using **mytonctrl**, use the commands below to do so.
+    Visit the pool link (from **Step 9**) and click **ADD STAKE**. 
+    You can also make a deposit using **mytonctrl**, using the following commands:
 
-    ```
+    ```bash
     mg nominator_wallet_001 <address_of_pool_1> 300001 -C d
     mg nominator_wallet_001 <address_of_pool_2> 300001 -C d
     ```
 
-    > (!) The nominator wallet must be initialized in basechain (workchain 0).
+   > (!) The nominator wallet must be initialized in basechain (workchain 0).
 
-    > (!) Keep in mind that the validator wallet and nominator wallet must be stored separately! Validator wallet is stored on the server with validator node, to ensure processing of all system transactions. The nominator wallet is stored on your cold cryptocurrency wallet.
+   > (!) Keep in mind that the validator wallet and nominator wallet must be stored separately! The validator wallet should be stored on the server with the validator node to ensure processing of all system transactions. Meanwhile, the nominator wallet should be stored in your cold cryptocurrency wallet.
 
-    > To withdrawal a nominator deposit, send a transaction with the comment `w` to the pool address (1 TON must be attached to process the transaction). You can also do this with **mytonctrl**.
+   > To withdraw a nominator deposit, send a transaction with the comment `w` to the pool address (attach 1 TON to process the transaction). You can also perform this action using **mytonctrl**.
 
-13. Activate pool mode:
-    ```
+12. Activate pool mode:
+
+    ```bash
     set usePool true
+    set stake null
     ```
+    
+13. Invite nominators to deposit into your pools. The participation in validation will commence automatically.
 
-14. Invite nominators to make deposits to your pools. Participation in validation will start automatically.
-    > (!) You need to have at least 200 TON/month on validator wallet for operation fees.
+    > (!) Ensure that you have at least 200 TON/month in your validator wallet for operation fees.
 
-## Pools configuration
+## Pool Configuration
 
-If you want to lend to yourself then use `new_pool p1 0 1 1000 300000` (1 nominator maximum, 0% validator share).
+If you're intending to lend to yourself, use `new_pool p1 0 1 1000 300000` (maximum of 1 nominator, 0% validator share).
 
-If you are creating a pool for many nominators then use something like this: `new_pool p1 40 40 10000 10000` (40 nominators maximum, 40% validator share, 10K TON minimum participant stakes).
+If you're creating a pool for numerous nominators, you might use something like this: `new_pool p1 40 40 10000 10000` (maximum of 40 nominators, 40% validator share, minimum participant stakes of 10K TON).
 
-## Switching a regular validator to nominator pool mode
+## Transitioning a Regular Validator to Nominator Pool Mode
 
-1. Type `set stake 0` to disable participation in elections.
+1. Input `set stake 0` to discontinue election participation.
 
-2. Wait for both of your stakes to return from the elector.
+2. Await the return of both your stakes from the elector.
 
-3. Complete the "Running the validator in nominator pool mode" steps starting from the **4th** step.
+3. Proceed with the steps under "Running the Validator in Nominator Pool Mode" from the **4th step** onwards.
