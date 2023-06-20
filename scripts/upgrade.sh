@@ -45,10 +45,8 @@ export CCACHE_DISABLE=1
 
 # Update binary
 cd ${bindir}/${repo}
-cp global.config.json /tmp
-rm -rf *
+ls --hide=global.config.json | xargs -d '\n' rm -rf
 rm -rf .ninja_*
-mv /tmp/global.config.json .
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000" || cpuNumber=1
 cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja
