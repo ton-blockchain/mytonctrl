@@ -46,6 +46,7 @@
 Ubuntu 16.04 LTS (Xenial Xerus) - Error: TON compilation error
 Ubuntu 18.04 LTS (Bionic Beaver) - OK
 Ubuntu 20.04 LTS (Focal Fossa) - OK
+Ubuntu 22.04 LTS (Jammy Jellyfish) - OK
 Debian 8 - Error: Unable to locate package libgsl-dev
 Debian 9 - Error: TON compilation error
 Debian 10 - OK
