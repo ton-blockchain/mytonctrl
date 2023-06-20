@@ -28,7 +28,7 @@ done
 COLOR='\033[92m'
 ENDC='\033[0m'
 
-# Установить дополниьтельные зависимости
+# Установить дополнительные зависимости
 apt-get install -y libsecp256k1-dev libsodium-dev
 
 # Go to work dir
@@ -45,11 +45,12 @@ export CCACHE_DISABLE=1
 
 # Update binary
 cd ${bindir}/${repo}
-rm -f CMakeCache.txt
+ls --hide=global.config.json | xargs -d '\n' rm -rf
+rm -rf .ninja_*
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000" || cpuNumber=1
-cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo}
-make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
+cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja
+ninja -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 systemctl restart validator
 
 # Конец
