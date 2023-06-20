@@ -70,10 +70,10 @@ def Init(argv):
 	console.AddItem("withdraw_from_pool", WithdrawFromPool, local.Translate("withdraw_from_pool_cmd"))
 	console.AddItem("delete_pool", DeletePool, local.Translate("delete_pool_cmd"))
 	
-	console.AddItem("new_controller", NewController, local.Translate("_"))
+	console.AddItem("new_controllers", NewControllers, local.Translate("_"))
+	console.AddItem("controllers_list", PrintControllersList, local.Translate("_"))
 	console.AddItem("get_controller_data", GetControllerData, local.Translate("_"))
-	console.AddItem("create_loan_request", CreateLoanRequest, local.Translate("_"))
-	console.AddItem("return_unused_loan", ReturnUnusedLoan, local.Translate("_"))
+	console.AddItem("deposit_to_controller", DepositToController, local.Translate("_"))
 	console.AddItem("withdraw_from_controller", WithdrawFromController, local.Translate("_"))
 
 	# Process input parameters
@@ -1162,34 +1162,51 @@ def UpdateValidatorSet(args):
 	ColorPrint("UpdateValidatorSet - {green}OK{endc}")
 #end define
 
-def NewController(args):
-	if len(args) == 1:
-		amount = int(args[0])
-	else:
-		amount = 1
-	ton.CreateController(amount)
-	ColorPrint("NewController - {green}OK{endc}")
+def NewControllers(args):
+	ton.CreateControllers()
+	ColorPrint("NewControllers - {green}OK{endc}")
+#end define
+
+def PrintControllersList(args):
+	table = list()
+	table += [["Address", "Status", "Balance"]]
+	controllers = ton.GetControllers()
+	if (controllers is None or len(controllers) == 0):
+		print("No data")
+		return
+	for controllerAddr in controllers:
+		account = ton.GetAccount(controllerAddr)
+		table += [[controllerAddr, account.status, account.balance]]
+	PrintTable(table)
 #end define
 
 def GetControllerData(args):
-	controllerAddr = ton.GetControllerAddress()
+	try:
+		controllerAddr = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} get_controller_data <controller-addr>")
+		return
 	data = ton.GetControllerData(controllerAddr)
-	print(f"GetControllerAddress: {controllerAddr}")
-	print(f"GetControllerData: {data}")
+	print(f"ControllerData: {data}")
 #end define
 
-def CreateLoanRequest(args):
-	controllerAddr = ton.GetControllerAddress()
-	ton.CreateLoanRequest(controllerAddr)
-#end define
-
-def ReturnUnusedLoan(args):
-	controllerAddr = ton.GetControllerAddress()
-	ton.ReturnUnusedLoan(controllerAddr)
+def DepositToController(args):
+	try:
+		controllerAddr = args[0]
+		amount = float(args[1])
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} deposit_to_controller <controller-addr> <amount>")
+		return
+	ton.DepositToController(controllerAddr, amount)
 #end define
 
 def WithdrawFromController(args):
-	controllerAddr = ton.GetControllerAddress()
+	try:
+		controllerAddr = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_controller <controller-addr>")
+		return
+	ton.CheckController(controllerAddr)
 	account = ton.GetAccount(controllerAddr)
 	amount = account.balance-10.1
 	ton.WithdrawFromController(controllerAddr, amount)

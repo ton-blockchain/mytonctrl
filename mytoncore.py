@@ -1399,7 +1399,9 @@ class MyTonCore():
 		#end if
 
 		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
+		#resultFilePath = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
+		boc_name = os.path.splitext(os.path.basename(bocPath))[0]
+		resultFilePath = self.tempDir + self.nodeName + boc_name + "_sign_with_" + wallet.name
 		if "v1" in wallet.version:
 			fiftScript = "wallet.fif"
 			args = [fiftScript, wallet.path, dest, seqno, coins, "-B", bocPath, resultFilePath]
@@ -1499,7 +1501,7 @@ class MyTonCore():
 		if stake is None and usePool:
 			stake = account.balance - 20
 		if stake is None and useController:
-			stake = account.balance - 20
+			stake = account.balance - 30
 		if stake is None:
 			sp = stakePercent / 100
 			if sp > 1 or sp < 0:
@@ -1542,6 +1544,8 @@ class MyTonCore():
 		#local.AddLog("start GetValidatorWallet function", "debug")
 		walletName = local.db.get("validatorWalletName")
 		wallet = self.GetLocalWallet(walletName)
+		if wallet is None:
+			raise Exception("GetValidatorWallet error: Validator wallet not found")
 		return wallet
 	#end define
 
@@ -1550,9 +1554,6 @@ class MyTonCore():
 		useController = local.db.get("useController")
 		wallet = self.GetValidatorWallet()
 		addrB64 = wallet.addrB64
-		if wallet is None:
-			raise Exception("Validator wallet not found")
-		#end if
 
 		local.AddLog("start ElectionEntry function", "debug")
 		# Check if validator is not synchronized
@@ -1593,10 +1594,10 @@ class MyTonCore():
 			pool = self.GetPool(mode="stake")
 			addrB64 = pool.addrB64
 		elif useController:
-			controllerAddr = self.GetControllerAddress()
+			controllerAddr = self.GetController(mode="stake")
 			self.CheckController(controllerAddr)
 			self.CreateLoanRequest(controllerAddr)
-			addrB64 = self.GetControllerAddress()
+			addrB64 = controllerAddr
 		#end if
 
 		# Calculate stake
@@ -1672,10 +1673,6 @@ class MyTonCore():
 
 	def RecoverStake(self):
 		wallet = self.GetValidatorWallet()
-		if wallet is None:
-			raise Exception("Validator wallet not found")
-		#end if
-
 		local.AddLog("start RecoverStake function", "debug")
 		fullElectorAddr = self.GetFullElectorAddr()
 		returnedStake = self.GetReturnedStake(fullElectorAddr, wallet.addrB64)
@@ -1692,10 +1689,6 @@ class MyTonCore():
 
 	def PoolRecoverStake(self, poolAddr):
 		wallet = self.GetValidatorWallet()
-		if wallet is None:
-			raise Exception("Validator wallet not found")
-		#end if
-
 		local.AddLog("start PoolRecoverStake function", "debug")
 		resultFilePath = self.PoolProcessRecoverStake()
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, poolAddr, 1.2)
@@ -3630,26 +3623,38 @@ class MyTonCore():
 		poolData["stakeHeldFor"] = data[15]
 		return poolData
 	#end define
+
+	def GetLiquidPoolAddr(self):
+		liquid_pool_addr = local.db.get("liquid_pool_addr")
+		if liquid_pool_addr is None:
+			raise Exception("GetLiquidPoolAddr error: liquid_pool_addr not set")
+		return liquid_pool_addr
+	#end define
 	
-	def CreateController(self, amount=1):
-		local.AddLog("start CreateController function", "debug")
+	def CreateControllers(self):
+		local.AddLog("start CreateControllers function", "debug")
 		wallet = self.GetValidatorWallet()
-		liquidPoolAddr = local.db.get("liquidPoolAddr")
+		liquid_pool_addr = self.GetLiquidPoolAddr()
 		contractPath = self.contractsDir + "jetton_pool/"
 		if not os.path.isdir(contractPath):
 			self.DownloadContract("https://github.com/igroman787/jetton_pool")
 		#end if
 		
-		fileName = contractPath + "fift-scripts/deploy_controller.boc"
-		resultFilePath = self.SignBocWithWallet(wallet, fileName, liquidPoolAddr, amount)
-		self.SendFile(resultFilePath, wallet)
+		fileName0 = contractPath + "fift-scripts/deploy_controller0.boc"
+		fileName1 = contractPath + "fift-scripts/deploy_controller1.boc"
+		resultFilePath0 = self.SignBocWithWallet(wallet, fileName0, liquid_pool_addr, 1)
+		self.SendFile(resultFilePath0, wallet)
+		time.sleep(10)
+		resultFilePath1 = self.SignBocWithWallet(wallet, fileName1, liquid_pool_addr, 1)
+		self.SendFile(resultFilePath1, wallet)
+		local.db["controllersAddr"] = self.GetControllers()
 	#end define
 	
-	def GetControllerAddress(self):
+	def GetControllerAddress(self, controller_id):
 		wallet = self.GetValidatorWallet()
 		addr_hash = HexAddr2Dec(wallet.addr)
-		liquidPoolAddr = local.db.get("liquidPoolAddr")
-		cmd = f"runmethodfull {liquidPoolAddr} get_controller_address_legacy {wallet.workchain} {addr_hash}"
+		liquid_pool_addr = self.GetLiquidPoolAddr()
+		cmd = f"runmethodfull {liquid_pool_addr} get_controller_address_legacy {controller_id} {wallet.workchain} {addr_hash}"
 		result = self.liteClient.Run(cmd)
 		buff = self.Result2List(result)
 		wc = buff[0]
@@ -3661,14 +3666,68 @@ class MyTonCore():
 	
 	def CheckController(self, controllerAddr):
 		local.AddLog("start CheckController function", "debug")
+		now = GetTimestamp()
 		controllerData = self.GetControllerData(controllerAddr)
-		saveControllerAddr = local.db.get("controllerAddr")
+		saveControllersAddr = local.db.get("controllersAddr", list())
 		if controllerData["approved"] != -1:
-			raise Exception(f"GetControllerAddress error: controller not approved: {controllerAddr}")
-		if saveControllerAddr != controllerAddr:
-			local.AddLog("GetControllerAddress warning: controller is not up to date. Recreating the controller", "warning")
-			self.CreateController()
-			local.db["controllerAddr"] = controllerAddr
+			raise Exception(f"CheckController error: controller not approved: {controllerAddr}")
+		if controllerData["borrowed_amount"] > 0 and controllerData["borrowing_time"] > now:
+			local.AddLog("CheckController warning: controller has loan. Return unused loan", "warning")
+			self.ReturnUnusedLoan(controllerAddr)
+		if controllerAddr not in saveControllersAddr:
+			raise Exception("CheckController error: controller is not up to date. Use new_controllers")
+	#end define
+
+	def GetControllers(self):
+		local.AddLog("start GetControllers function", "debug")
+		controller0 = self.GetControllerAddress(controller_id=0)
+		controller1 = self.GetControllerAddress(controller_id=1)
+		controllers = [controller0, controller1]
+		return controllers
+	#end define
+
+	def GetController(self, mode):
+		controllers = self.GetControllers()
+		for controllerAddr in controllers:
+			if mode == "stake" and self.IsControllerReadyToStake(controllerAddr):
+				return controllerAddr
+			if mode == "vote" and self.IsControllerReadyToVote(controllerAddr):
+				return controllerAddr
+		raise Exception("Validator controller not found or not ready")
+	#end define
+	
+	def GetControllerRequiredBalanceForLoan(self, controllerAddr, credit, interest):
+		cmd = f"runmethodfull {controllerAddr} required_balance_for_loan {credit} {interest}"
+		result = self.liteClient.Run(cmd)
+		data = self.Result2List(result)
+		if data is None:
+			return
+		result_vars = ["min_amount", "validator_amount"]
+		result = dict()
+		for name in result_vars:
+			result[name] = data.pop(0)
+		return result
+	#end define
+
+	def GetControllerLastSentStakeTime(self, addrB64):
+		controllerData = self.GetControllerData(addrB64)
+		return controllerData["stake_at"]
+	#end define
+
+	def IsControllerReadyToStake(self, addrB64):
+		now = GetTimestamp()
+		config15 = self.GetConfig15()
+		lastSentStakeTime = self.GetControllerLastSentStakeTime(addrB64)
+		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
+		result = lastSentStakeTime + stakeFreezeDelay < now
+		print(f"{addrB64}: {result}. {lastSentStakeTime}, {stakeFreezeDelay}, {now}")
+		return result
+	#end define
+
+	def IsControllerReadyToVote(self, addrB64):
+		vwl = self.GetValidatorsWalletsList()
+		result = addrB64 in vwl
+		return result
 	#end define
 	
 	def GetControllerData(self, controllerAddr):
@@ -3677,7 +3736,7 @@ class MyTonCore():
 		data = self.Result2List(result)
 		if data is None:
 			return
-		result_vars = ["state", "approved", "stake_amount_sent", "stake_at", "saved_validator_set_hash", "validator_set_changes_count", "validator_set_change_time", "stake_held_for", "borrowed_amount", "borrowing_time"]
+		result_vars = ["state", "halted", "approved", "stake_amount_sent", "stake_at", "saved_validator_set_hash", "validator_set_changes_count", "validator_set_change_time", "stake_held_for", "borrowed_amount", "borrowing_time"]
 		controllerData = dict()
 		for name in result_vars:
 			controllerData[name] = data.pop(0)
@@ -3688,7 +3747,8 @@ class MyTonCore():
 		local.AddLog("start CreateLoanRequest function", "debug")
 		min_loan = local.db.get("min_loan", 41000)
 		max_loan = local.db.get("max_loan", 43000)
-		max_interest_percent = local.db.get("max_interest_percent", 0.015)
+		max_interest_percent = local.db.get("max_interest_percent", 1.5)
+		max_interest = int(max_interest_percent/100*65536)
 		# TODO
 		# Проверить наличие старого кредита
 		controllerData = self.GetControllerData(controllerAddr)
@@ -3697,8 +3757,13 @@ class MyTonCore():
 			return
 		#end if
 		
+		# Проверить хватает ли ставки валидатора
+		min_amount, validator_amount = self.GetControllerRequiredBalanceForLoan(controllerAddr, max_loan, max_interest)
+		if validator_amount < min_amount:
+			raise Exception("CreateLoanRequest error: too_high_loan_request_amount")
+		#end if
+		
 		wallet = self.GetValidatorWallet()
-		max_interest = int(max_interest_percent*65536)
 		fiftScript = self.contractsDir + "jetton_pool/fift-scripts/generate-loan-request.fif"
 		resultFilePath = self.tempDir + self.nodeName + wallet.name + "_loan_request.boc"
 		args = [fiftScript, min_loan, max_loan, max_interest, resultFilePath]
@@ -3725,6 +3790,14 @@ class MyTonCore():
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.05)
 		self.SendFile(resultFilePath, wallet)
 	#end define
+
+	def DepositToController(self, controllerAddr, amount):
+		local.AddLog("start DepositToController function", "debug")
+		wallet = self.GetValidatorWallet()
+		fileName = self.contractsDir + "jetton_pool/fift-scripts/top-up.boc"
+		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, amount)
+		self.SendFile(resultFilePath, wallet)
+	#end define
 	
 	def WithdrawFromController(self, controllerAddr, amount):
 		local.AddLog("start WithdrawFromController function", "debug")
@@ -3749,11 +3822,17 @@ class MyTonCore():
 		fileName = Pars(result, "Saved to file ", '\n')
 		return pubkey, fileName
 	#end define
-	
+
 	def ControllerUpdateValidatorSet(self):
 		local.AddLog("start ControllerUpdateValidatorSet function", "debug")
+		controllers = self.GetControllers()
+		for controller in controllers:
+			self.ControllerUpdateValidatorSetProcess(controller)
+	#end define
+	
+	def ControllerUpdateValidatorSetProcess(self, controllerAddr):
+		local.AddLog("start ControllerUpdateValidatorSetProcess function", "debug")
 		wallet = self.GetValidatorWallet()
-		controllerAddr = self.GetControllerAddress()
 		controllerData = self.GetControllerData(controllerAddr)
 		if controllerData is None:
 			return
@@ -3787,10 +3866,6 @@ class MyTonCore():
 	
 	def ControllerRecoverStake(self, controllerAddr):
 		wallet = self.GetValidatorWallet()
-		if wallet is None:
-			raise Exception("Validator wallet not found")
-		#end if
-
 		local.AddLog("start ControllerRecoverStake function", "debug")
 		fileName = self.contractsDir + "jetton_pool/fift-scripts/recover_stake.boc"
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.04)
