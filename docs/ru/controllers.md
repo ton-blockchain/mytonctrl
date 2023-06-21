@@ -10,8 +10,6 @@
 
    > С мая 2021 года Hetzner запретил майнинг на своих серверах, в настоящее время под это правило попадают алгоритмы PoW и PoS. Установка даже обычного узла будет считаться нарушением условий договора.
 
-   > **Рекомендуемые провайдеры:** [Amazon](https://aws.amazon.com/), [DigitalOcean](https://www.digitalocean.com/), [Linode](https://www.linode.com/), [Alibaba Cloud](https://alibabacloud.com/), [Latitude](https://www.latitude.sh/).
-
 2. Установите и синхронизируйте **mytonctrl** в соответствии с описанием в [этой инструкции](https://github.com/ton-blockchain/mytonctrl/blob/master/docs/ru/manual-ubuntu.md) — следуйте **только** пунктам 1, 2 и 3.
 
    Вы также можете обратиться к этой [Видеоинструкции](https://ton.org/docs/#/nodes/run-node) для дополнительной помощи.
@@ -44,8 +42,6 @@
    new_controllers
    ```
 
-   > (!) Используйте https://tonmon.xyz/, чтобы определить текущую минимальную ставку валидатора.
-
 9. Введите `controllers_list` чтобы отобразить адреса контроллеров:
 
    ```
@@ -55,7 +51,7 @@
    kf_lT8QNykLh5PN5ictNX22maiyIf9iK787fXg6nJ_zB-jbN    active  0.720866
    ```
 
-10. Совершите депозит валидатора в каждый кнтроллер:
+10. Совершите депозит валидатора в каждый контроллер:
    
    ```
    deposit_to_controller kf89KYOeRPRRDyjt_3bPsz92cKSghRqw64efNr8mT1eeHDaS 10000
