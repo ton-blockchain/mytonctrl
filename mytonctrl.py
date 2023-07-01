@@ -75,6 +75,7 @@ def Init(argv):
 	console.AddItem("get_controller_data", GetControllerData, local.Translate("_"))
 	console.AddItem("deposit_to_controller", DepositToController, local.Translate("_"))
 	console.AddItem("withdraw_from_controller", WithdrawFromController, local.Translate("_"))
+	console.AddItem("calculate_annual_controller_percentage", CalculateAnnualControllerPercentage, local.Translate("_"))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -1210,6 +1211,23 @@ def WithdrawFromController(args):
 	account = ton.GetAccount(controllerAddr)
 	amount = account.balance-10.1
 	ton.WithdrawFromController(controllerAddr, amount)
+#end define
+
+def CalculateAnnualControllerPercentage(args):
+	try:
+		percentPerRound = float(args[0])
+	except:
+		percentPerRound = ton.GetSettings("max_interest_percent")
+	config15 = ton.GetConfig(15)
+	roundPeriod = config15["validators_elected_for"]
+	rounds = 365 * 24 * 3600 / roundPeriod
+	yearInterest = (1 + percentPerRound / 100) * rounds
+	yearInterestPercent = round(yearInterest / 100, 2)
+	print("roundPeriod", roundPeriod)
+	print("rounds", rounds)
+	print("percentPerRound", percentPerRound)
+	print("yearInterest", yearInterest)
+	print(f"yearInterestPercent: {yearInterestPercent}%")
 #end define
 
 

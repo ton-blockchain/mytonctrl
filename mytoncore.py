@@ -3666,12 +3666,12 @@ class MyTonCore():
 	
 	def CheckController(self, controllerAddr):
 		local.AddLog("start CheckController function", "debug")
-		now = GetTimestamp()
+		config34 = self.GetConfig34()
 		controllerData = self.GetControllerData(controllerAddr)
 		saveControllersAddr = local.db.get("controllersAddr", list())
 		if controllerData["approved"] != -1:
 			raise Exception(f"CheckController error: controller not approved: {controllerAddr}")
-		if controllerData["borrowed_amount"] > 0 and controllerData["borrowing_time"] > now:
+		if controllerData["borrowed_amount"] > 0 and config34["startWorkTime"] > controllerData["borrowing_time"]:
 			local.AddLog("CheckController warning: controller has loan. Return unused loan", "warning")
 			self.ReturnUnusedLoan(controllerAddr)
 		if controllerAddr not in saveControllersAddr:
@@ -3749,12 +3749,17 @@ class MyTonCore():
 		max_loan = local.db.get("max_loan", 43000)
 		max_interest_percent = local.db.get("max_interest_percent", 1.5)
 		max_interest = int(max_interest_percent/100*65536)
-		# TODO
+		
 		# Проверить наличие старого кредита
 		controllerData = self.GetControllerData(controllerAddr)
 		if controllerData["borrowed_amount"] != 0:
 			local.AddLog("CreateLoanRequest info: loan already taken")
 			return
+		#end if
+		
+		# Проверить наличие средств у ликвидного пула
+		if self.CalculateLoanAmount(min_loan, max_loan, max_interest) == -1:
+			raise Exception("CreateLoanRequest error: The liquid pool cannot issue the required amount of credit")
 		#end if
 		
 		# Проверить хватает ли ставки валидатора
@@ -3771,6 +3776,16 @@ class MyTonCore():
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, controllerAddr, 1.01)
 		self.SendFile(resultFilePath, wallet)
 		self.WaitLoan(controllerAddr)
+	#end define
+	
+	def CalculateLoanAmount(self, min_loan, max_loan, max_interest):
+		liquid_pool_addr = self.GetLiquidPoolAddr()
+		cmd = f"runmethodfull {liquid_pool_addr} calculate_loan_amount {min_loan} {max_loan} {max_interest}"
+		result = self.liteClient.Run(cmd)
+		data = self.Result2List(result)
+		if data is None:
+			return
+		return result.pop()
 	#end define
 	
 	def WaitLoan(self, controllerAddr):
