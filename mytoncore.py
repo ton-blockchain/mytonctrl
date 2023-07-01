@@ -3748,7 +3748,7 @@ class MyTonCore():
 		min_loan = local.db.get("min_loan", 41000)
 		max_loan = local.db.get("max_loan", 43000)
 		max_interest_percent = local.db.get("max_interest_percent", 1.5)
-		max_interest = int(max_interest_percent/100*65536)
+		max_interest = int(max_interest_percent/100*16777216)
 		
 		# Проверить наличие старого кредита
 		controllerData = self.GetControllerData(controllerAddr)
@@ -3758,7 +3758,7 @@ class MyTonCore():
 		#end if
 		
 		# Проверить наличие средств у ликвидного пула
-		if self.CalculateLoanAmount(min_loan, max_loan, max_interest) == -1:
+		if self.CalculateLoanAmount(min_loan, max_loan, max_interest) == '-0x1':
 			raise Exception("CreateLoanRequest error: The liquid pool cannot issue the required amount of credit")
 		#end if
 		
@@ -3779,13 +3779,19 @@ class MyTonCore():
 	#end define
 	
 	def CalculateLoanAmount(self, min_loan, max_loan, max_interest):
-		liquid_pool_addr = self.GetLiquidPoolAddr()
-		cmd = f"runmethodfull {liquid_pool_addr} calculate_loan_amount {min_loan} {max_loan} {max_interest}"
-		result = self.liteClient.Run(cmd)
-		data = self.Result2List(result)
-		if data is None:
-			return
-		return result.pop()
+		data = dict()
+		data["address"] = liquid_pool_addr
+		data["method"] = "calculate_loan_amount"
+		data["stack"] = [
+			["num", min_loan*10**9], 
+			["num", max_loan*10**9], 
+			["num", max_interest],
+		]
+
+		url = "https://testnet.toncenter.com/api/v2/runGetMethod"
+		res = requests.post(url, json=data)
+		result = res.json().get("result").get("stack").pop().pop()
+		return result
 	#end define
 	
 	def WaitLoan(self, controllerAddr):
