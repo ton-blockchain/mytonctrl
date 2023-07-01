@@ -127,7 +127,7 @@ def check_vport():
 		color_print(local.translate("vport_error"))
 #end define
 
-def check_git(input_args, default_repo):
+def check_git(input_args, default_repo, text):
 	src_dir = "/usr/src"
 	git_path = f"{src_dir}/{default_repo}"
 	default_author = "ton-blockchain"
@@ -147,9 +147,9 @@ def check_git(input_args, default_repo):
 	if ((need_author is None and local_author != default_author) or 
 		(need_repo is None and local_repo != default_repo)):
 		remote_url = f"https://github.com/{local_author}/{local_repo}/tree/{need_branch if need_branch else local_branch}"
-		raise Exception(f"update error: You are on {remote_url} remote url, to update to the tip use `update {remote_url}` command")
+		raise Exception(f"{text} error: You are on {remote_url} remote url, to {text} to the tip use `{text} {remote_url}` command")
 	elif need_branch is None and local_branch != default_branch:
-		raise Exception(f"update error: You are on {local_branch} branch, to update to the tip of {local_branch} branch use `update {local_branch}` command")
+		raise Exception(f"{text} error: You are on {local_branch} branch, to {text} to the tip of {local_branch} branch use `{text} {local_branch}` command")
 	#end if
 	
 	if need_author is None:
@@ -185,7 +185,7 @@ def GetAuthorRepoBranchFromArgs(args):
 
 def Update(args):
 	repo = "mytonctrl"
-	author, repo, branch = check_git(args, repo)
+	author, repo, branch = check_git(args, repo, "update")
 
 	# Run script
 	runArgs = ["bash", "/usr/src/mytonctrl/scripts/update.sh", "-a", author, "-r", repo, "-b", branch]
@@ -200,7 +200,7 @@ def Update(args):
 
 def Upgrade(args):
 	repo = "ton"
-	author, repo, branch = check_git(args, repo)
+	author, repo, branch = check_git(args, repo, "upgrade")
 
 	# Run script
 	runArgs = ["bash", "/usr/src/mytonctrl/scripts/upgrade.sh", "-a", author, "-r", repo, "-b", branch]

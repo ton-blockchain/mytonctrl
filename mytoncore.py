@@ -3758,11 +3758,11 @@ def Elections(ton):
 		ton.ElectionEntry()
 #end define
 
-def Statistics(scanner):
+def Statistics():
 	ReadNetworkData()
 	SaveNetworkStatistics()
-	ReadTransData(scanner)
-	SaveTransStatistics()
+	#ReadTransData(scanner)
+	#SaveTransStatistics()
 	ReadDiskData()
 	SaveDiskStatistics()
 #end define
@@ -3861,7 +3861,6 @@ def ReadNetworkData():
 	interfaceName = get_internet_interface_name()
 	buff = psutil.net_io_counters(pernic=True)
 	buff = buff[interfaceName]
-	data = dict()
 	data = dict()
 	data["timestamp"] = timestamp
 	data["bytesRecv"] = buff.bytes_recv
@@ -4087,7 +4086,7 @@ def Telemetry(ton):
 	data["stake"] = local.db.get("stake")
 	
 	# Get validator config
-	vconfig = self.GetValidatorConfig()
+	vconfig = ton.GetValidatorConfig()
 	data["fullnode_adnl"] = vconfig.fullnode
 
 	# Send data to toncenter server
@@ -4192,12 +4191,10 @@ def ScanLiteServers(ton):
 def General():
 	local.add_log("start General function", "debug")
 	ton = MyTonCore()
-	scanner = Dict()
-	#scanner.Run()
 
 	# Запустить потоки
 	local.start_cycle(Elections, sec=600, args=(ton, ))
-	local.start_cycle(Statistics, sec=10, args=(scanner,))
+	local.start_cycle(Statistics, sec=10)
 	local.start_cycle(Offers, sec=600, args=(ton, ))
 	local.start_cycle(Complaints, sec=600, args=(ton, ))
 	local.start_cycle(Slashing, sec=600, args=(ton, ))
