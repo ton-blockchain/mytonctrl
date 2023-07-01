@@ -3780,7 +3780,7 @@ class MyTonCore():
 	
 	def CalculateLoanAmount(self, min_loan, max_loan, max_interest):
 		data = dict()
-		data["address"] = liquid_pool_addr
+		data["address"] = self.GetLiquidPoolAddr()
 		data["method"] = "calculate_loan_amount"
 		data["stack"] = [
 			["num", min_loan*10**9], 
