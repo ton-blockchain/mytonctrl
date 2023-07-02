@@ -3666,14 +3666,10 @@ class MyTonCore():
 	
 	def CheckController(self, controllerAddr):
 		local.AddLog("start CheckController function", "debug")
-		config34 = self.GetConfig34()
 		controllerData = self.GetControllerData(controllerAddr)
 		saveControllersAddr = local.db.get("controllersAddr", list())
 		if controllerData["approved"] != -1:
 			raise Exception(f"CheckController error: controller not approved: {controllerAddr}")
-		if controllerData["borrowed_amount"] > 0 and config34["startWorkTime"] > controllerData["borrowing_time"]:
-			local.AddLog("CheckController warning: controller has loan. Return unused loan", "warning")
-			self.ReturnUnusedLoan(controllerAddr)
 		if controllerAddr not in saveControllersAddr:
 			raise Exception("CheckController error: controller is not up to date. Use new_controllers")
 	#end define
@@ -3750,13 +3746,6 @@ class MyTonCore():
 		max_interest_percent = local.db.get("max_interest_percent", 1.5)
 		max_interest = int(max_interest_percent/100*16777216)
 		
-		# Проверить наличие старого кредита
-		controllerData = self.GetControllerData(controllerAddr)
-		if controllerData["borrowed_amount"] != 0:
-			local.AddLog("CreateLoanRequest info: loan already taken")
-			return
-		#end if
-		
 		# Проверить наличие средств у ликвидного пула
 		if self.CalculateLoanAmount(min_loan, max_loan, max_interest) == '-0x1':
 			raise Exception("CreateLoanRequest error: The liquid pool cannot issue the required amount of credit")
@@ -3764,7 +3753,7 @@ class MyTonCore():
 		
 		# Проверить хватает ли ставки валидатора
 		min_amount, validator_amount = self.GetControllerRequiredBalanceForLoan(controllerAddr, max_loan, max_interest)
-		if validator_amount < min_amount:
+		if min_amount > validator_amount:
 			raise Exception("CreateLoanRequest error: too_high_loan_request_amount")
 		#end if
 		
@@ -3844,15 +3833,15 @@ class MyTonCore():
 		return pubkey, fileName
 	#end define
 
-	def ControllerUpdateValidatorSet(self):
-		local.AddLog("start ControllerUpdateValidatorSet function", "debug")
+	def ControllersUpdateValidatorSet(self):
+		local.AddLog("start ControllersUpdateValidatorSet function", "debug")
 		controllers = self.GetControllers()
 		for controller in controllers:
-			self.ControllerUpdateValidatorSetProcess(controller)
+			self.ControllerUpdateValidatorSet(controller)
 	#end define
 	
-	def ControllerUpdateValidatorSetProcess(self, controllerAddr):
-		local.AddLog("start ControllerUpdateValidatorSetProcess function", "debug")
+	def ControllerUpdateValidatorSet(self, controllerAddr):
+		local.AddLog("start ControllerUpdateValidatorSet function", "debug")
 		wallet = self.GetValidatorWallet()
 		controllerData = self.GetControllerData(controllerAddr)
 		if controllerData is None:
@@ -3868,21 +3857,26 @@ class MyTonCore():
 		if (controllerData["state"] == 3 and
 			controllerData["validator_set_changes_count"] < 2 and
 			controllerData["validator_set_change_time"] < config34["startWorkTime"]):
-			self.ControllerProcessUpdateValidatorSet(controllerAddr, wallet)
+			self.ControllerUpdateValidatorSetProcess(controllerAddr, wallet)
 			controllerData = self.GetControllerData(controllerAddr)
 		if (returnedStake > 0 and
 			controllerData["state"] == 3 and
 			controllerData["validator_set_changes_count"] >= 2 and
 			timeNow - controllerData["validator_set_change_time"] > controllerData["stake_held_for"] + 60):
 			self.ControllerRecoverStake(controllerAddr)
+			controllerData = self.GetControllerData(controllerAddr)
+		if (controllerData["borrowed_amount"] > 0 and 
+			controllerData["stake_amount_sent"] == 0 and 
+			config34["startWorkTime"] > controllerData["borrowing_time"]):
+			self.ReturnUnusedLoan(controllerAddr)
 	#end define
 	
-	def ControllerProcessUpdateValidatorSet(self, controllerAddr, wallet):
-		local.AddLog("start ControllerProcessUpdateValidatorSet function", "debug")
+	def ControllerUpdateValidatorSetProcess(self, controllerAddr, wallet):
+		local.AddLog("start ControllerUpdateValidatorSetProcess function", "debug")
 		fileName = self.contractsDir + "jetton_pool/fift-scripts/update_validator_hash.boc"
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.07)
 		self.SendFile(resultFilePath, wallet)
-		local.AddLog("ControllerProcessUpdateValidatorSet completed")
+		local.AddLog("ControllerUpdateValidatorSetProcess completed")
 	#end define
 	
 	def ControllerRecoverStake(self, controllerAddr):
@@ -4236,7 +4230,7 @@ def Elections(ton):
 		ton.RecoverStake()
 		ton.ElectionEntry()
 	elif useController == True:
-		ton.ControllerUpdateValidatorSet()
+		ton.ControllersUpdateValidatorSet()
 		ton.RecoverStake()
 		ton.ElectionEntry()
 	else:

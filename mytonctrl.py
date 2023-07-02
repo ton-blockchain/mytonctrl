@@ -76,6 +76,8 @@ def Init(argv):
 	console.AddItem("deposit_to_controller", DepositToController, local.Translate("_"))
 	console.AddItem("withdraw_from_controller", WithdrawFromController, local.Translate("_"))
 	console.AddItem("calculate_annual_controller_percentage", CalculateAnnualControllerPercentage, local.Translate("_"))
+	console.AddItem("controller_update_validator_set", ControllerUpdateValidatorSet, local.Translate("_"))
+	
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -1152,15 +1154,15 @@ def DeletePool(args):
 	ColorPrint("DeletePool - {green}OK{endc}")
 #end define
 
-def UpdateValidatorSet(args):
+def PoolUpdateValidatorSet(args):
 	try:
 		poolAddr = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} update_validator_set <pool-addr>")
+		ColorPrint("{red}Bad args. Usage:{endc} pool_update_validator_set <pool-addr>")
 		return
 	wallet = ton.GetValidatorWallet()
 	ton.PoolUpdateValidatorSet(poolAddr, wallet)
-	ColorPrint("UpdateValidatorSet - {green}OK{endc}")
+	ColorPrint("PoolUpdateValidatorSet - {green}OK{endc}")
 #end define
 
 def NewControllers(args):
@@ -1228,6 +1230,16 @@ def CalculateAnnualControllerPercentage(args):
 	print("percentPerRound", percentPerRound)
 	print("yearInterest", yearInterest)
 	print(f"yearInterestPercent: {yearInterestPercent}%")
+#end define
+
+def ControllerUpdateValidatorSet(args):
+	try:
+		controllerAddr = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} controller_update_validator_set <controller-addr>")
+		return
+	ton.ControllerUpdateValidatorSet(controllerAddr)
+	ColorPrint("ControllerUpdateValidatorSet - {green}OK{endc}")
 #end define
 
 
