@@ -3777,7 +3777,7 @@ class MyTonCore():
 			["num", max_interest],
 		]
 
-		url = "https://testnet.toncenter.com/api/v2/runGetMethod"
+		url = "http://127.0.0.1:8801/runGetMethod"
 		res = requests.post(url, json=data)
 		result = res.json().get("result").get("stack").pop().pop()
 		return result

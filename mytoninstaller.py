@@ -31,7 +31,7 @@ def Init():
 	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.AddItem("status", Status, "Print TON component status")
-	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'PT' - pyTONv3. Example: 'enable FN'")
+	console.AddItem("enable", Enable, "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'THA' - ton-http-api. Example: 'enable FN'")
 	console.AddItem("update", Enable, "Update some function: 'JR' - jsonrpc.  Example: 'update JR'") 
 	console.AddItem("plsc", PrintLiteServerConfig, "Print LiteServer config")
 	console.AddItem("clcf", CreateLocalConfigFile, "CreateLocalConfigFile")
@@ -97,7 +97,7 @@ def Status(args):
 def Enable(args):
 	name = args[0]
 	user = local.buffer["user"]
-	if name == "PT":
+	if name == "enableTHA":
 		CreateLocalConfigFile(args)
 	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "enable{name}".format(name=name)]
 	RunAsRoot(args)
@@ -195,8 +195,8 @@ def Event(name):
 		DangerousRecoveryValidatorConfigFile()
 	if name == "enableJR":
 		EnableJsonRpc()
-	if name == "enablePT":
-		EnablePytonv3()
+	if name == "enableTHA":
+		EnableTonHttpApi()
 	if name == "clc":
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]
@@ -1000,14 +1000,15 @@ def EnableJsonRpc():
 	ColorPrint(text)
 #end define
 
-def EnablePytonv3():
-	local.AddLog("start EnablePytonv3 function", "debug")
+def EnableTonHttpApi():
+	local.AddLog("start EnableTonHttpApi function", "debug")
 	user = local.buffer["user"]
-	exitCode = RunAsRoot(["bash", "/usr/src/mytonctrl/scripts/pytonv3installer.sh", "-u", user])
+	runArgs = ["bash", "/usr/src/mytonctrl/scripts/ton_http_api_installer.sh", "-u", user]
+	exitCode = RunAsRoot(runArgs)
 	if exitCode == 0:
-		text = "EnablePytonv3 - {green}OK{endc}"
+		text = "EnableTonHttpApi - {green}OK{endc}"
 	else:
-		text = "EnablePytonv3 - {red}Error{endc}"
+		text = "EnableTonHttpApi - {red}Error{endc}"
 	ColorPrint(text)
 #end define
 
