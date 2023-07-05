@@ -23,7 +23,7 @@
 	```
 	mytonctrl -> installer -> enable THA
 	```
-	Exit installer mode with `Ctrl+C`
+	Exit installer mode with `Ctrl+D`
 
 7. Set the liquid pool address, which will lend TON for validation:
    ```
