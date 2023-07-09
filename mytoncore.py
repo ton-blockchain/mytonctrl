@@ -3648,6 +3648,7 @@ class MyTonCore():
 		resultFilePath1 = self.SignBocWithWallet(wallet, fileName1, liquid_pool_addr, 1)
 		self.SendFile(resultFilePath1, wallet)
 		local.db["controllersAddr"] = self.GetControllers()
+		local.dbSave()
 	#end define
 	
 	def GetControllerAddress(self, controller_id):
@@ -3779,7 +3780,11 @@ class MyTonCore():
 
 		url = "http://127.0.0.1:8801/runGetMethod"
 		res = requests.post(url, json=data)
-		result = res.json().get("result").get("stack").pop().pop()
+		res_data = res.json()
+		if res_data.get("ok") is False:
+			error = res_data.get("error")
+			raise Exception(error)
+		result = res_data.get("result").get("stack").pop().pop()
 		return result
 	#end define
 	
