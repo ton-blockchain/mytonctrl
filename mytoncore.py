@@ -3835,7 +3835,7 @@ class MyTonCore():
 
 	def ControllersUpdateValidatorSet(self):
 		local.AddLog("start ControllersUpdateValidatorSet function", "debug")
-		controllers = self.GetControllers()
+		controllers = local.db.get("controllersAddr")
 		for controller in controllers:
 			self.ControllerUpdateValidatorSet(controller)
 	#end define

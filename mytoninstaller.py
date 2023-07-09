@@ -97,7 +97,7 @@ def Status(args):
 def Enable(args):
 	name = args[0]
 	user = local.buffer["user"]
-	if name == "enableTHA":
+	if name == "THA":
 		CreateLocalConfigFile(args)
 	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "enable{name}".format(name=name)]
 	RunAsRoot(args)
