@@ -1209,7 +1209,6 @@ def WithdrawFromController(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_controller <controller-addr>")
 		return
-	ton.CheckController(controllerAddr)
 	account = ton.GetAccount(controllerAddr)
 	amount = account.balance-10.1
 	ton.WithdrawFromController(controllerAddr, amount)
