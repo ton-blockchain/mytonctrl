@@ -98,7 +98,7 @@ def Enable(args):
 	name = args[0]
 	user = local.buffer["user"]
 	if name == "THA":
-		CreateLocalConfigFile(args)
+		CreateLocalConfigFile(args, localhost=True)
 	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "enable{name}".format(name=name)]
 	RunAsRoot(args)
 #end define
@@ -138,7 +138,7 @@ def GetInitBlock():
 	return initBlock
 #end define
 
-def CreateLocalConfig(initBlock, localConfigPath=defaultLocalConfigPath):
+def CreateLocalConfig(initBlock, localConfigPath=defaultLocalConfigPath, localhost=False):
 	# dirty hack, but GetInitBlock() function uses the same technique
 	from mytoncore import hex2base64
 
@@ -150,6 +150,9 @@ def CreateLocalConfig(initBlock, localConfigPath=defaultLocalConfigPath):
 
 	# edit config
 	liteServerConfig = GetLiteServerConfig()
+	if localhost is True:
+		liteServerConfig["ip"] = 2130706433 # 127.0.0.1
+		localConfigPath = localConfigPath.replace("local", "localhost")
 	data["liteservers"] = [liteServerConfig]
 	data["validator"]["init_block"]["seqno"] = initBlock["seqno"]
 	data["validator"]["init_block"]["root_hash"] = hex2base64(initBlock["rootHash"])
@@ -174,11 +177,15 @@ def PrintLiteServerConfig(args):
 	print(text)
 #end define
 
-def CreateLocalConfigFile(args):
+def CreateLocalConfigFile(args, localhost=False):
+	if localhost is True:
+		event_name = "clcl"
+	else:
+		event_name = "clc"
 	initBlock = GetInitBlock()
 	initBlock_b64 = dict2b64(initBlock)
 	user = local.buffer["user"]
-	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "clc", "-i", initBlock_b64]
+	args = ["python3", local.buffer["myPath"], "-u", user, "-e", event_name, "-i", initBlock_b64]
 	RunAsRoot(args)
 #end define
 
@@ -197,11 +204,14 @@ def Event(name):
 		EnableJsonRpc()
 	if name == "enableTHA":
 		EnableTonHttpApi()
-	if name == "clc":
+	if name in ["clc", "clcl"]:
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]
 		initBlock = b642dict(initBlock_b64)
-		CreateLocalConfig(initBlock)
+		if name == "clcl":
+			CreateLocalConfig(initBlock, localhost=True)
+		else:
+			CreateLocalConfig(initBlock)
 #end define
 
 def General():
