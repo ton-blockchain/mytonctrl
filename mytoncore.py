@@ -3830,9 +3830,9 @@ class MyTonCore():
 		fileName = self.tempDir + str(startWorkTime) + "_validator-query.boc"
 		fiftScript = self.contractsDir + "jetton_pool/fift-scripts/controller-elect-signed.fif"
 		args = [fiftScript, controllerAddr, startWorkTime, maxFactor, adnlAddr, validatorPubkey_b64, validatorSignature, fileName, stake]
-		print(f"args: {args}")
+		local.AddLog(f"SignElectionRequestWithController args: {args}", "debug")
 		result = self.fift.Run(args)
-		print(f"result: {result}")
+		local.AddLog(f"SignElectionRequestWithController result: {result}", "debug")
 		pubkey = Pars(result, "validator public key ", '\n')
 		fileName = Pars(result, "Saved to file ", '\n')
 		return pubkey, fileName
