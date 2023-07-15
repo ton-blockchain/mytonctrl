@@ -77,6 +77,9 @@ def Init(argv):
 	console.AddItem("withdraw_from_controller", WithdrawFromController, local.Translate("_"))
 	console.AddItem("calculate_annual_controller_percentage", CalculateAnnualControllerPercentage, local.Translate("_"))
 	console.AddItem("controller_update_validator_set", ControllerUpdateValidatorSet, local.Translate("_"))
+	console.AddItem("stop_controller", StopController, local.Translate("_"))
+	console.AddItem("stop_and_withdraw_controller", StopAndWithdrawController, local.Translate("_"))
+	console.AddItem("add_controller", AddController, local.Translate("_"))
 	
 
 	# Process input parameters
@@ -1171,15 +1174,31 @@ def NewControllers(args):
 #end define
 
 def PrintControllersList(args):
-	table = list()
-	table += [["Address", "Status", "Balance"]]
 	controllers = ton.GetControllers()
+	controllersAddr = ton.GetSettings("controllersAddr")
+	user_controllers_list = ton.GetSettings("user_controllers_list")
 	if (controllers is None or len(controllers) == 0):
 		print("No data")
 		return
+	PrintControllersListProcess(controllers)
+	if controllers != controllersAddr:
+		print()
+		print("old controllers:")
+		PrintControllersListProcess(controllersAddr)
+	if user_controllers_list is not None and len(user_controllers_list) > 0:
+		print()
+		print("user controllers:")
+		PrintControllersListProcess(user_controllers_list)
+#end define
+
+def PrintControllersListProcess(controllers):
+	table = list()
+	table += [["Address", "Status", "Balance", "Approved", "State"]]
 	for controllerAddr in controllers:
 		account = ton.GetAccount(controllerAddr)
-		table += [[controllerAddr, account.status, account.balance]]
+		controllerData = ton.GetControllerData(controllerAddr)
+		approved = True if controllerData["approved"] == -1 else False
+		table += [[controllerAddr, account.status, account.balance, approved, controllerData["state"]]]
 	PrintTable(table)
 #end define
 
@@ -1189,8 +1208,8 @@ def GetControllerData(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} get_controller_data <controller-addr>")
 		return
-	data = ton.GetControllerData(controllerAddr)
-	print(f"ControllerData: {data}")
+	controllerData = ton.GetControllerData(controllerAddr)
+	print(json.dumps(controllerData, indent=4))
 #end define
 
 def DepositToController(args):
@@ -1206,11 +1225,13 @@ def DepositToController(args):
 def WithdrawFromController(args):
 	try:
 		controllerAddr = args[0]
+		amount = GetItemFromList(args, 1)
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_controller <controller-addr>")
+		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_controller <controller-addr> [amount]")
 		return
-	account = ton.GetAccount(controllerAddr)
-	amount = account.balance-10.1
+	if amount is None:
+		account = ton.GetAccount(controllerAddr)
+		amount = account.balance-10.1
 	ton.WithdrawFromController(controllerAddr, amount)
 #end define
 
@@ -1239,6 +1260,41 @@ def ControllerUpdateValidatorSet(args):
 		return
 	ton.ControllerUpdateValidatorSet(controllerAddr)
 	ColorPrint("ControllerUpdateValidatorSet - {green}OK{endc}")
+#end define
+
+def StopController(args):
+	try:
+		controllerAddr = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} stop_controller <controller-addr>")
+		return
+	ton.StopController(controllerAddr)
+	ColorPrint("StopController - {green}OK{endc}")
+#end define
+
+def StopAndWithdrawController(args):
+	try:
+		controllerAddr = args[0]
+		amount = GetItemFromList(args, 1)
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} stop_and_withdraw_controller <controller-addr> [amount]")
+		return
+	if amount is None:
+		account = ton.GetAccount(controllerAddr)
+		amount = account.balance-10.1
+	ton.StopController(controllerAddr)
+	ton.WithdrawFromController(controllerAddr, amount)
+	ColorPrint("StopAndWithdrawController - {green}OK{endc}")
+#end define
+
+def AddController(args):
+	try:
+		controllerAddr = args[0]
+	except:
+		ColorPrint("{red}Bad args. Usage:{endc} add_controller <controller-addr>")
+		return
+	ton.AddController(controllerAddr)
+	ColorPrint("AddController - {green}OK{endc}")
 #end define
 
 

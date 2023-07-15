@@ -3706,15 +3706,14 @@ class MyTonCore():
 		return result
 	#end define
 
-	def GetControllerLastSentStakeTime(self, addrB64):
-		controllerData = self.GetControllerData(addrB64)
-		return controllerData["stake_at"]
-	#end define
-
 	def IsControllerReadyToStake(self, addrB64):
+		stop_controllers_list = local.db.get("stop_controllers_list")
+		if stop_controllers_list is not None and addrB64 in stop_controllers_list:
+			return False
 		now = GetTimestamp()
 		config15 = self.GetConfig15()
-		lastSentStakeTime = self.GetControllerLastSentStakeTime(addrB64)
+		controllerData = self.GetControllerData(addrB64)
+		lastSentStakeTime = controllerData["stake_at"]
 		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
 		result = lastSentStakeTime + stakeFreezeDelay < now
 		print(f"{addrB64}: {result}. {lastSentStakeTime}, {stakeFreezeDelay}, {now}")
@@ -3815,7 +3814,15 @@ class MyTonCore():
 	#end define
 	
 	def WithdrawFromController(self, controllerAddr, amount):
-		local.AddLog("start WithdrawFromController function", "debug")
+		controllerData = self.GetControllerData(controllerAddr)
+		if controllerData["state"] == 0:
+			self.WithdrawFromControllerProcess(controllerAddr, amount)
+		else:
+			self.PendWithdrawFromController(controllerAddr, amount)
+	#end define
+	
+	def WithdrawFromControllerProcess(self, controllerAddr, amount):
+		local.AddLog("start WithdrawFromControllerProcess function", "debug")
 		wallet = self.GetValidatorWallet()
 		fiftScript = self.contractsDir + "jetton_pool/fift-scripts/withdraw-controller.fif"
 		resultFilePath = self.tempDir + self.nodeName + wallet.name + "_withdraw_request.boc"
@@ -3823,6 +3830,28 @@ class MyTonCore():
 		result = self.fift.Run(args)
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, controllerAddr, 1.06)
 		self.SendFile(resultFilePath, wallet)
+	#end define
+	
+	def PendWithdrawFromController(self, controllerAddr, amount):
+		local.AddLog("start PendWithdrawFromController function", "debug")
+		controllerPendingWithdraws = self.GetControllerPendingWithdraws()
+		controllerPendingWithdraws[controllerAddr] = amount
+		local.dbSave()
+	#end define
+	
+	def HandleControllerPendingWithdraw(self, controllerPendingWithdraws, controllerAddr):
+		amount = controllerPendingWithdraws.get(controllerAddr)
+		self.WithdrawFromControllerProcess(controllerAddr, amount)
+		controllerPendingWithdraws.pop(controllerAddr)
+	#end define
+	
+	def GetControllerPendingWithdraws(self):
+		bname = "controllerPendingWithdraws"
+		controllerPendingWithdraws = local.db.get(bname)
+		if controllerPendingWithdraws is None:
+			controllerPendingWithdraws = dict()
+			local.db[bname] = controllerPendingWithdraws
+		return controllerPendingWithdraws
 	#end define
 	
 	def SignElectionRequestWithController(self, controllerAddr, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor, stake):
@@ -3841,7 +3870,8 @@ class MyTonCore():
 	def ControllersUpdateValidatorSet(self):
 		local.AddLog("start ControllersUpdateValidatorSet function", "debug")
 		controllers = local.db.get("controllersAddr")
-		for controller in controllers:
+		user_controllers_list = local.db.get("user_controllers_list", list())
+		for controller in controllers + user_controllers_list:
 			self.ControllerUpdateValidatorSet(controller)
 	#end define
 	
@@ -3857,8 +3887,7 @@ class MyTonCore():
 		config34 = self.GetConfig34()
 		fullElectorAddr = self.GetFullElectorAddr()
 		returnedStake = self.GetReturnedStake(fullElectorAddr, controllerAddr)
-		print(f"Controller returnedStake: {returnedStake}")
-		pendingWithdraws = self.GetPendingWithdraws()
+		controllerPendingWithdraws = self.GetControllerPendingWithdraws()
 		if (controllerData["state"] == 3 and
 			controllerData["validator_set_changes_count"] < 2 and
 			controllerData["validator_set_change_time"] < config34["startWorkTime"]):
@@ -3874,6 +3903,8 @@ class MyTonCore():
 			controllerData["stake_amount_sent"] == 0 and 
 			config34["startWorkTime"] > controllerData["borrowing_time"]):
 			self.ReturnUnusedLoan(controllerAddr)
+		if (controllerData["state"] == 0 and controllerAddr in controllerPendingWithdraws):
+			self.HandleControllerPendingWithdraw(controllerPendingWithdraws, controllerAddr)
 	#end define
 	
 	def ControllerUpdateValidatorSetProcess(self, controllerAddr, wallet):
@@ -3891,6 +3922,34 @@ class MyTonCore():
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.04)
 		self.SendFile(resultFilePath, wallet)
 		local.AddLog("ControllerRecoverStake completed")
+	#end define
+	
+	def StopController(self, controllerAddr):
+		stop_controllers_list = local.db.get("stop_controllers_list")
+		if stop_controllers_list is None:
+			stop_controllers_list = list()
+		if controllerAddr not in stop_controllers_list:
+			stop_controllers_list.append(controllerAddr)
+		local.db["stop_controllers_list"] = stop_controllers_list
+		
+		user_controllers_list = local.db.get("user_controllers_list")
+		if user_controllers_list is not None and controllerAddr in user_controllers_list:
+			user_controllers_list.remove(controllerAddr)
+		local.dbSave()
+	#end define
+
+	def AddController(self, controllerAddr):
+		user_controllers_list = local.db.get("user_controllers_list")
+		if user_controllers_list is None:
+			user_controllers_list = list()
+		if controllerAddr not in user_controllers_list:
+			user_controllers_list.append(controllerAddr)
+		local.db["user_controllers_list"] = user_controllers_list
+		
+		stop_controllers_list = local.db.get("stop_controllers_list")
+		if stop_controllers_list is not None and controllerAddr in stop_controllers_list:
+			stop_controllers_list.remove(controllerAddr)
+		local.dbSave()
 	#end define
 
 	def GetNetworkName(self):
