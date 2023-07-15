@@ -80,6 +80,7 @@ def Init(argv):
 	console.AddItem("stop_controller", StopController, local.Translate("_"))
 	console.AddItem("stop_and_withdraw_controller", StopAndWithdrawController, local.Translate("_"))
 	console.AddItem("add_controller", AddController, local.Translate("_"))
+	console.AddItem("check_liquid_pool", CheckLiquidPool, local.Translate("_"))
 	
 
 	# Process input parameters
@@ -679,6 +680,7 @@ def ViewAccountStatus(args):
 	statusTable += [[addrB64, account.status, version, account.balance]]
 	historyTable = GetHistoryTable(addrB64, 10)
 	PrintTable(statusTable)
+	ColorPrint("{yellow}codeHash: " + account.codeHash + "{endc}")
 	print()
 	PrintTable(historyTable)
 #end define
@@ -702,7 +704,7 @@ def GetHistoryTable(addr, limit):
 	typeText = ColorText("{red}{bold}{endc}")
 	table += [["Time", typeText, "Coins", "From/To"]]
 	for message in history:
-		if message.srcAddr is None:
+		if message.srcAddr is None or message.value is None:
 			continue
 		srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
 		destAddFull = f"{message.destWorkchain}:{message.destAddr}"
@@ -1295,6 +1297,11 @@ def AddController(args):
 		return
 	ton.AddController(controllerAddr)
 	ColorPrint("AddController - {green}OK{endc}")
+#end define
+
+def CheckLiquidPool(args):
+	ton.CheckLiquidPool()
+	ColorPrint("CheckLiquidPool - {green}OK{endc}")
 #end define
 
 

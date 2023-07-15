@@ -760,8 +760,16 @@ class MyTonCore():
 		arr["v3r2"] = "8a6d73bdd8704894f17d8c76ce6139034b8a51b1802907ca36283417798a219b"
 		arr["v4"] = "7ae380664c513769eaa5c94f9cd5767356e3f7676163baab66a4b73d5edab0e5"
 		arr["hv1"] = "fc8e48ed7f9654ba76757f52cc6031b2214c02fab9e429ffa0340f5575f9f29c"
-		for version, hash in arr.items():
-			if hash == inputHash:
+		arr["liquid_pool_r1"] = "82bc5760719c34395f80df76c42dc5d287f08f6562c643601ebed6944302dcc2"
+		arr["liquid_pool_r2"] = "95abec0a66ac63b0fbcf28466eb8240ddcd88f97300691511d9c9975d5521e4a"
+		arr["liquid_pool_r3"] = "22a023bc75b649ff2b5b183cd0d34cd413e6e27ee6d6ad0787f75ad39787ed4e"
+		arr["liquid_pool_r4"] = "77282b45fd7cfc72ca68fe97af33ad10078730ceaf55e20534c9526c48d602d2"
+		arr["controller_r1"] = "0949cf92963dd27bb1e6bf76487807f20409131b6110acbc18b7fbb90280ccf0"
+		arr["controller_r2"] = "01118b9553151fb9bc81704a4b3e0fc7b899871a527d44435a51574806863e2c"
+		arr["controller_r3"] = "e4d8ce8ff7b4b60c76b135eb8702ce3c86dc133fcee7d19c7aa18f71d9d91438"
+		arr["controller_r4"] = "dec125a4850c4ba24668d84252b04c6ad40abf5c9d413a429b56bfff09ea25d4"
+		for version, codeHash in arr.items():
+			if codeHash == inputHash:
 				return version
 		#end for
 	#end define
@@ -3089,6 +3097,8 @@ class MyTonCore():
 	#end define
 
 	def AddrFull2AddrB64(self, addrFull, bounceable=True):
+		if addrFull is None or "None" in addrFull:
+			return
 		testnet = self.IsTestnet()
 		buff = addrFull.split(':')
 		workchain = int(buff[0])
@@ -3950,6 +3960,34 @@ class MyTonCore():
 		if stop_controllers_list is not None and controllerAddr in stop_controllers_list:
 			stop_controllers_list.remove(controllerAddr)
 		local.dbSave()
+	#end define
+	
+	def CheckLiquidPool(self):
+		liquid_pool_addr = self.GetLiquidPoolAddr()
+		account = self.GetAccount(liquid_pool_addr)
+		history = self.GetAccountHistory(account, 5000)
+		addrs_list = list()
+		for message in history:
+			if message.srcAddr is None or message.value is None:
+				continue
+			srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
+			destAddFull = f"{message.destWorkchain}:{message.destAddr}"
+			if srcAddrFull == account.addrFull:
+				fromto = destAddFull
+			else:
+				fromto = srcAddrFull
+			fromto = self.AddrFull2AddrB64(fromto)
+			if fromto not in addrs_list:
+				addrs_list.append(fromto)
+		#end for
+		
+		for controllerAddr in addrs_list:
+			account = self.GetAccount(controllerAddr)
+			version = self.GetWalletVersionFromHash(account.codeHash)
+			if version is None or "controller" not in version:
+				continue
+			print(f"check controller: {controllerAddr}")
+			self.ControllerUpdateValidatorSet(controllerAddr)
 	#end define
 
 	def GetNetworkName(self):
