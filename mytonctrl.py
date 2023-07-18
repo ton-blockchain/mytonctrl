@@ -1231,9 +1231,6 @@ def WithdrawFromController(args):
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_controller <controller-addr> [amount]")
 		return
-	if amount is None:
-		account = ton.GetAccount(controllerAddr)
-		amount = account.balance-10.1
 	ton.WithdrawFromController(controllerAddr, amount)
 #end define
 

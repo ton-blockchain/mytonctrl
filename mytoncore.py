@@ -3657,6 +3657,15 @@ class MyTonCore():
 		time.sleep(10)
 		resultFilePath1 = self.SignBocWithWallet(wallet, fileName1, liquid_pool_addr, 1)
 		self.SendFile(resultFilePath1, wallet)
+		
+		# Доработать старые контроллеры
+		old_controllers = local.db.get("controllersAddr". list())
+		local.db["old_controllers"] = old_controllers.copy()
+		for controllerAddr in old_controllers
+			self.WithdrawFromController(controllerAddr)
+		#end for
+		
+		# Сохранить новые контроллеры
 		local.db["controllersAddr"] = self.GetControllers()
 		local.dbSave()
 	#end define
@@ -3823,7 +3832,7 @@ class MyTonCore():
 		self.SendFile(resultFilePath, wallet)
 	#end define
 	
-	def WithdrawFromController(self, controllerAddr, amount):
+	def WithdrawFromController(self, controllerAddr, amount=None):
 		controllerData = self.GetControllerData(controllerAddr)
 		if controllerData["state"] == 0:
 			self.WithdrawFromControllerProcess(controllerAddr, amount)
@@ -3833,6 +3842,11 @@ class MyTonCore():
 	
 	def WithdrawFromControllerProcess(self, controllerAddr, amount):
 		local.AddLog("start WithdrawFromControllerProcess function", "debug")
+		if amount is None:
+			account = self.GetAccount(controllerAddr)
+			amount = account.balance-10.1
+		#end if
+		
 		wallet = self.GetValidatorWallet()
 		fiftScript = self.contractsDir + "jetton_pool/fift-scripts/withdraw-controller.fif"
 		resultFilePath = self.tempDir + self.nodeName + wallet.name + "_withdraw_request.boc"
@@ -3881,7 +3895,8 @@ class MyTonCore():
 		local.AddLog("start ControllersUpdateValidatorSet function", "debug")
 		controllers = local.db.get("controllersAddr")
 		user_controllers_list = local.db.get("user_controllers_list", list())
-		for controller in controllers + user_controllers_list:
+		old_controllers = local.db.get("old_controllers", list())
+		for controller in controllers + user_controllers_list + old_controllers:
 			self.ControllerUpdateValidatorSet(controller)
 	#end define
 	
