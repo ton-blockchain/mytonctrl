@@ -3688,6 +3688,8 @@ class MyTonCore():
 		local.AddLog("start CheckController function", "debug")
 		controllerData = self.GetControllerData(controllerAddr)
 		saveControllersAddr = local.db.get("controllersAddr", list())
+		if controllerData is None:
+			raise Exception(f"CheckController error: controller not initialized. Use new_controllers")
 		if controllerData["approved"] != -1:
 			raise Exception(f"CheckController error: controller not approved: {controllerAddr}")
 		if controllerAddr not in saveControllersAddr:
@@ -3732,6 +3734,8 @@ class MyTonCore():
 		now = GetTimestamp()
 		config15 = self.GetConfig15()
 		controllerData = self.GetControllerData(addrB64)
+		if controllerData is None:
+			return
 		lastSentStakeTime = controllerData["stake_at"]
 		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
 		result = lastSentStakeTime + stakeFreezeDelay < now

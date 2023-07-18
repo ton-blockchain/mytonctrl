@@ -1199,8 +1199,9 @@ def PrintControllersListProcess(controllers):
 	for controllerAddr in controllers:
 		account = ton.GetAccount(controllerAddr)
 		controllerData = ton.GetControllerData(controllerAddr)
-		approved = True if controllerData["approved"] == -1 else False
-		table += [[controllerAddr, account.status, account.balance, approved, controllerData["state"]]]
+		approved = True if controllerData and controllerData["approved"] == -1 else False
+		state = controllerData["state"] if controllerData else None
+		table += [[controllerAddr, account.status, account.balance, approved, state]]
 	PrintTable(table)
 #end define
 
