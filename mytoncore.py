@@ -3661,7 +3661,7 @@ class MyTonCore():
 		# Доработать старые контроллеры
 		old_controllers = local.db.get("controllersAddr". list())
 		local.db["old_controllers"] = old_controllers.copy()
-		for controllerAddr in old_controllers
+		for controllerAddr in old_controllers:
 			self.WithdrawFromController(controllerAddr)
 		#end for
 		
