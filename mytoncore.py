@@ -3735,7 +3735,7 @@ class MyTonCore():
 		config15 = self.GetConfig15()
 		controllerData = self.GetControllerData(addrB64)
 		if controllerData is None:
-			return
+			raise Exception(f"IsControllerReadyToStake error: controller not initialized. Use new_controllers")
 		lastSentStakeTime = controllerData["stake_at"]
 		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
 		result = lastSentStakeTime + stakeFreezeDelay < now
