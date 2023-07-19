@@ -117,6 +117,10 @@ def Init(argv):
 def PreUp():
 	CheckMytonctrlUpdate()
 	# CheckTonUpdate()
+	buff = ton.GetSettings("using_controllers")
+	if buff is None or len(buff) == 0:
+		using_controllers = ton.GetSettings("controllersAddr")
+		ton.SetSettings("using_controllers", using_controllers)
 #end define
 
 def Installer(args):
@@ -1177,17 +1181,20 @@ def CreateControllers(args):
 #end define
 
 def PrintControllersList(args):
-	controllers = ton.GetControllers()
-	controllersAddr = ton.GetSettings("controllersAddr")
+	new_controllers = ton.GetControllers()
+	using_controllers = ton.GetSettings("using_controllers")
+	old_controllers = ton.GetSettings("old_controllers")
 	user_controllers_list = ton.GetSettings("user_controllers_list")
-	if (controllers is None or len(controllers) == 0):
-		print("No data")
-		return
-	PrintControllersListProcess(controllers)
-	if controllers != controllersAddr:
+	print("using controllers:")
+	PrintControllersListProcess(using_controllers)
+	if new_controllers != using_controllers:
+		print()
+		print("new controllers:")
+		PrintControllersListProcess(new_controllers)
+	if old_controllers is not None and len(old_controllers) > 0:
 		print()
 		print("old controllers:")
-		PrintControllersListProcess(controllersAddr)
+		PrintControllersListProcess(old_controllers)
 	if user_controllers_list is not None and len(user_controllers_list) > 0:
 		print()
 		print("user controllers:")

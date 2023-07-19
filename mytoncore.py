@@ -3643,7 +3643,7 @@ class MyTonCore():
 	
 	def CreateControllers(self):
 		new_controllers = self.GetControllers()
-		old_controllers = local.db.get("controllersAddr", list())
+		old_controllers = local.db.get("using_controllers", list())
 		if new_controllers == old_controllers:
 			return
 		#end if
@@ -3666,7 +3666,7 @@ class MyTonCore():
 		
 		# Сохранить новые контроллеры
 		local.db["old_controllers"] = old_controllers
-		local.db["controllersAddr"] = new_controllers
+		local.db["using_controllers"] = new_controllers
 		local.dbSave()
 	#end define
 	
@@ -3687,12 +3687,12 @@ class MyTonCore():
 	def CheckController(self, controllerAddr):
 		local.AddLog("start CheckController function", "debug")
 		controllerData = self.GetControllerData(controllerAddr)
-		saveControllersAddr = local.db.get("controllersAddr", list())
+		using_controllers = local.db.get("using_controllers", list())
 		if controllerData is None:
 			raise Exception(f"CheckController error: controller not initialized. Use new_controllers")
 		if controllerData["approved"] != -1:
 			raise Exception(f"CheckController error: controller not approved: {controllerAddr}")
-		if controllerAddr not in saveControllersAddr:
+		if controllerAddr not in using_controllers:
 			raise Exception("CheckController error: controller is not up to date. Use new_controllers")
 	#end define
 
@@ -3720,11 +3720,9 @@ class MyTonCore():
 		data = self.Result2List(result)
 		if data is None:
 			return
-		result_vars = ["min_amount", "validator_amount"]
-		result = dict()
-		for name in result_vars:
-			result[name] = data.pop(0)
-		return result
+		min_amount = data[0]
+		validator_amount = data[1]
+		return min_amount, validator_amount
 	#end define
 
 	def IsControllerReadyToStake(self, addrB64):
@@ -3777,7 +3775,7 @@ class MyTonCore():
 		# Проверить хватает ли ставки валидатора
 		min_amount, validator_amount = self.GetControllerRequiredBalanceForLoan(controllerAddr, max_loan, max_interest)
 		if min_amount > validator_amount:
-			raise Exception("CreateLoanRequest error: too_high_loan_request_amount")
+			raise Exception("CreateLoanRequest error: Validator stake is too low. Use deposit_to_controller")
 		#end if
 		
 		wallet = self.GetValidatorWallet()
@@ -3899,10 +3897,10 @@ class MyTonCore():
 
 	def ControllersUpdateValidatorSet(self):
 		local.AddLog("start ControllersUpdateValidatorSet function", "debug")
-		controllers = local.db.get("controllersAddr")
-		user_controllers_list = local.db.get("user_controllers_list", list())
+		using_controllers = local.db.get("using_controllers")
+		user_controllers = local.db.get("user_controllers", list())
 		old_controllers = local.db.get("old_controllers", list())
-		for controller in controllers + user_controllers_list + old_controllers:
+		for controller in using_controllers + user_controllers + old_controllers:
 			self.ControllerUpdateValidatorSet(controller)
 	#end define
 	
@@ -3966,19 +3964,19 @@ class MyTonCore():
 			stop_controllers_list.append(controllerAddr)
 		local.db["stop_controllers_list"] = stop_controllers_list
 		
-		user_controllers_list = local.db.get("user_controllers_list")
-		if user_controllers_list is not None and controllerAddr in user_controllers_list:
-			user_controllers_list.remove(controllerAddr)
+		user_controllers = local.db.get("user_controllers")
+		if user_controllers is not None and controllerAddr in user_controllers:
+			user_controllers.remove(controllerAddr)
 		local.dbSave()
 	#end define
 
 	def AddController(self, controllerAddr):
-		user_controllers_list = local.db.get("user_controllers_list")
-		if user_controllers_list is None:
-			user_controllers_list = list()
-		if controllerAddr not in user_controllers_list:
-			user_controllers_list.append(controllerAddr)
-		local.db["user_controllers_list"] = user_controllers_list
+		user_controllers = local.db.get("user_controllers")
+		if user_controllers is None:
+			user_controllers = list()
+		if controllerAddr not in user_controllers:
+			user_controllers.append(controllerAddr)
+		local.db["user_controllers"] = user_controllers
 		
 		stop_controllers_list = local.db.get("stop_controllers_list")
 		if stop_controllers_list is not None and controllerAddr in stop_controllers_list:
