@@ -1718,7 +1718,7 @@ class MyTonCore():
 		poolData = self.GetPoolData(poolAddr)
 		if poolData is None:
 			return
-		#en if
+		#end if
 
 		timeNow = int(time.time())
 		config34 = self.GetConfig34()
@@ -3642,6 +3642,12 @@ class MyTonCore():
 	#end define
 	
 	def CreateControllers(self):
+		new_controllers = self.GetControllers()
+		old_controllers = local.db.get("controllersAddr", list())
+		if new_controllers == old_controllers:
+			return
+		#end if
+		
 		local.AddLog("start CreateControllers function", "debug")
 		wallet = self.GetValidatorWallet()
 		liquid_pool_addr = self.GetLiquidPoolAddr()
@@ -3658,15 +3664,9 @@ class MyTonCore():
 		resultFilePath1 = self.SignBocWithWallet(wallet, fileName1, liquid_pool_addr, 1)
 		self.SendFile(resultFilePath1, wallet)
 		
-		# Доработать старые контроллеры
-		old_controllers = local.db.get("controllersAddr". list())
-		local.db["old_controllers"] = old_controllers.copy()
-		for controllerAddr in old_controllers:
-			self.WithdrawFromController(controllerAddr)
-		#end for
-		
 		# Сохранить новые контроллеры
-		local.db["controllersAddr"] = self.GetControllers()
+		local.db["old_controllers"] = old_controllers
+		local.db["controllersAddr"] = new_controllers
 		local.dbSave()
 	#end define
 	
@@ -3845,12 +3845,14 @@ class MyTonCore():
 	#end define
 	
 	def WithdrawFromControllerProcess(self, controllerAddr, amount):
-		local.AddLog("start WithdrawFromControllerProcess function", "debug")
 		if amount is None:
 			account = self.GetAccount(controllerAddr)
 			amount = account.balance-10.1
+		if amount < 3:
+			return
 		#end if
 		
+		local.AddLog("start WithdrawFromControllerProcess function", "debug")
 		wallet = self.GetValidatorWallet()
 		fiftScript = self.contractsDir + "jetton_pool/fift-scripts/withdraw-controller.fif"
 		resultFilePath = self.tempDir + self.nodeName + wallet.name + "_withdraw_request.boc"
@@ -3907,10 +3909,11 @@ class MyTonCore():
 	def ControllerUpdateValidatorSet(self, controllerAddr):
 		local.AddLog("start ControllerUpdateValidatorSet function", "debug")
 		wallet = self.GetValidatorWallet()
+		controllers = self.GetControllers()
 		controllerData = self.GetControllerData(controllerAddr)
 		if controllerData is None:
 			return
-		#en if
+		#end if
 		
 		timeNow = int(time.time())
 		config34 = self.GetConfig34()
@@ -3934,6 +3937,8 @@ class MyTonCore():
 			self.ReturnUnusedLoan(controllerAddr)
 		if (controllerData["state"] == 0 and controllerAddr in controllerPendingWithdraws):
 			self.HandleControllerPendingWithdraw(controllerPendingWithdraws, controllerAddr)
+		if controllerAddr not in controllers:
+			self.WithdrawFromController(controllerAddr)
 	#end define
 	
 	def ControllerUpdateValidatorSetProcess(self, controllerAddr, wallet):

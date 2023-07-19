@@ -70,7 +70,8 @@ def Init(argv):
 	console.AddItem("withdraw_from_pool", WithdrawFromPool, local.Translate("withdraw_from_pool_cmd"))
 	console.AddItem("delete_pool", DeletePool, local.Translate("delete_pool_cmd"))
 	
-	console.AddItem("new_controllers", NewControllers, local.Translate("_"))
+	console.AddItem("create_controllers", CreateControllers, local.Translate("_"))
+	console.AddItem("update_controllers", CreateControllers, local.Translate("_"))
 	console.AddItem("controllers_list", PrintControllersList, local.Translate("_"))
 	console.AddItem("get_controller_data", GetControllerData, local.Translate("_"))
 	console.AddItem("deposit_to_controller", DepositToController, local.Translate("_"))
@@ -1170,9 +1171,9 @@ def PoolUpdateValidatorSet(args):
 	ColorPrint("PoolUpdateValidatorSet - {green}OK{endc}")
 #end define
 
-def NewControllers(args):
+def CreateControllers(args):
 	ton.CreateControllers()
-	ColorPrint("NewControllers - {green}OK{endc}")
+	ColorPrint("CreateControllers - {green}OK{endc}")
 #end define
 
 def PrintControllersList(args):
