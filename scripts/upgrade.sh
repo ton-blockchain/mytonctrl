@@ -29,7 +29,7 @@ COLOR='\033[92m'
 ENDC='\033[0m'
 
 # Установить дополнительные зависимости
-apt-get install -y libsecp256k1-dev libsodium-dev ninja-build
+apt-get install -y ninja-build automake autogen autoconf libtool texinfo
 
 # Go to work dir
 cd ${srcdir}

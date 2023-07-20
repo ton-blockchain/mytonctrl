@@ -38,7 +38,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 		echo "CentOS Linux detected."
 		yum update -y
 		yum install -y epel-release
-		yum install -y git gflags gflags-devel zlib zlib-devel openssl-devel openssl-libs readline-devel libmicrohttpd python3 python3-pip python36-devel g++ gcc libstdc++-devel zlib1g-dev libssl-dev which make gcc-c++ libstdc++-devel 
+		yum install -y git gflags gflags-devel readline-devel python3 python3-pip python36-devel g++ gcc libstdc++-devel which make gcc-c++ libstdc++-devel automake autogen autoconf libtool texinfo
 		
 		# Upgrade make and gcc in CentOS system
 		yum install centos-release-scl -y
@@ -76,7 +76,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 	elif [ -f /etc/arch-release ]; then
 		echo "Arch Linux detected."
 		pacman -Syuy  --noconfirm
-		pacman -S --noconfirm git cmake clang gflags zlib openssl readline libmicrohttpd python python-pip
+		pacman -S --noconfirm git cmake clang gflags readline libmicrohttpd python python-pip automake autogen autoconf libtool texinfo
 
 		# Install ninja
 		pacman -S  --noconfirm ninja
@@ -84,7 +84,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
 		apt-get update
-		apt-get install -y build-essential git cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip libsecp256k1-dev libsodium-dev
+		apt-get install -y build-essential git cmake clang libgflags-dev libreadline-dev pkg-config libgsl-dev python3 python3-dev python3-pip automake autogen autoconf libtool texinfo
 
 		# Install ninja
 		apt-get install -y ninja-build
@@ -107,10 +107,7 @@ elif [[ "$OSTYPE" =~ darwin.* ]]; then
 	read LOCAL_USERNAME
 	
 	su $LOCAL_USERNAME -c "brew update"
-	su $LOCAL_USERNAME -c "brew install openssl cmake llvm"
-
-	# Install ninja
-	su $LOCAL_USERNAME -c "brew install ninja"
+	su $LOCAL_USERNAME -c "brew install cmake llvm ninja automake autogen autoconf libtool texinfo"
 
 elif [ "$OSTYPE" == "freebsd"* ]; then
 	echo "FreeBSD detected."
@@ -156,7 +153,9 @@ fi
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	if [[ $(uname -p) == 'arm' ]]; then
 		echo M1
-		CC="clang -mcpu=apple-a14" CXX="clang++ -mcpu=apple-a14" cmake $SOURCES_DIR/ton -DCMAKE_BUILD_TYPE=Release -DTON_ARCH= -Wno-dev -GNinja
+		CC="clang -mcpu=apple-a14"
+		CXX="clang++ -mcpu=apple-a14"
+		cmake $SOURCES_DIR/ton -DCMAKE_BUILD_TYPE=Release -DTON_ARCH= -Wno-dev -GNinja
 	else
 		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja
 	fi
