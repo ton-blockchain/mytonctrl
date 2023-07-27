@@ -3766,6 +3766,13 @@ class MyTonCore():
 		max_loan = local.db.get("max_loan", 43000)
 		max_interest_percent = local.db.get("max_interest_percent", 1.5)
 		max_interest = int(max_interest_percent/100*16777216)
+
+		# Проверить наличие действующего кредита
+		controllerData = self.GetControllerData(controllerAddr)
+		if controllerData["borrowed_amount"] > 0:
+			local.AddLog("CreateLoanRequest warning: past loan found", "warning")
+			return
+		#end define
 		
 		# Проверить наличие средств у ликвидного пула
 		if self.CalculateLoanAmount(min_loan, max_loan, max_interest) == '-0x1':
@@ -3930,7 +3937,6 @@ class MyTonCore():
 			self.ControllerRecoverStake(controllerAddr)
 			controllerData = self.GetControllerData(controllerAddr)
 		if (controllerData["borrowed_amount"] > 0 and 
-			controllerData["stake_amount_sent"] == 0 and 
 			config34["startWorkTime"] > controllerData["borrowing_time"]):
 			self.ReturnUnusedLoan(controllerAddr)
 		if (controllerData["state"] == 0 and controllerAddr in controllerPendingWithdraws):
