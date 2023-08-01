@@ -1141,14 +1141,12 @@ def DepositToPool(args):
 
 def WithdrawFromPool(args):
 	try:
-		walletName = args[0]
-		poolAddr = args[1]
-		amount = float(args[2])
+		poolAddr = args[0]
+		amount = float(args[1])
 	except:
-		color_print("{red}Bad args. Usage:{endc} withdraw_from_pool <wallet-name> <pool-addr> <amount>")
+		color_print("{red}Bad args. Usage:{endc} withdraw_from_pool <pool-addr> <amount>")
 		return
-	poolAddr = ton.GetDestinationAddr(poolAddr)
-	ton.WithdrawFromPool(walletName, poolAddr, amount)
+	ton.WithdrawFromPool(poolAddr, amount)
 	color_print("WithdrawFromPool - {green}OK{endc}")
 #end define
 

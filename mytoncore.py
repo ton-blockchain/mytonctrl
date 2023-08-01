@@ -749,7 +749,7 @@ class MyTonCore():
 	def SetWalletVersion(self, addrB64, version):
 		walletsVersionList = self.GetWalletsVersionList()
 		walletsVersionList[addrB64] = version
-		#local.save_db()
+		local.save()
 	#end define
 
 	def GetWalletVersionFromHash(self, inputHash):
@@ -2928,7 +2928,7 @@ class MyTonCore():
 			local.db["domains"] = list()
 		#end if
 		local.db["domains"].append(domain)
-		#local.save_db()
+		local.save()
 	#end define
 
 	def GetDomains(self):
@@ -2952,7 +2952,7 @@ class MyTonCore():
 		for domain in domains:
 			if (domainName == domain.get("name")):
 				domains.remove(domain)
-				#local.save_db()
+				local.save()
 				return
 		raise Exception("DeleteDomain error: Domain not found")
 	#end define
@@ -2968,7 +2968,7 @@ class MyTonCore():
 	def AddAutoTransferRule(self, rule):
 		autoTransferRules = self.GetAutoTransferRules()
 		autoTransferRules.append(rule)
-		#local.save_db()
+		local.save()
 	#end define
 
 	def AddBookmark(self, bookmark):
@@ -2976,7 +2976,7 @@ class MyTonCore():
 			local.db["bookmarks"] = list()
 		#end if
 		local.db["bookmarks"].append(bookmark)
-		#local.save_db()
+		local.save()
 	#end define
 
 	def GetBookmarks(self):
@@ -3005,7 +3005,7 @@ class MyTonCore():
 			bookmarkName = bookmark.get("name")
 			if (type == bookmarkType and name == bookmarkName):
 				bookmarks.remove(bookmark)
-				#local.save_db()
+				local.save()
 				return
 		raise Exception("DeleteBookmark error: Bookmark not found")
 	#end define
@@ -3046,7 +3046,7 @@ class MyTonCore():
 		saveOffers = self.GetSaveOffers()
 		if offerHash not in saveOffers:
 			saveOffers[offerHash] = offerPseudohash
-			#local.save_db()
+			local.save()
 	#end define
 
 	def GetVotedComplaints(self):
@@ -3063,7 +3063,7 @@ class MyTonCore():
 		votedComplaints = self.GetVotedComplaints()
 		if pseudohash not in votedComplaints:
 			votedComplaints[pseudohash] = complaint
-			#local.save_db()
+			local.save()
 	#end define
 
 	def GetDestinationAddr(self, destination):
@@ -3222,7 +3222,7 @@ class MyTonCore():
 			data = json.loads(data)
 		except: pass
 		local.db[name] = data
-		#local.save_db()
+		local.save()
 	#end define
 
 	def Tlb2Json(self, text):
@@ -3455,17 +3455,17 @@ class MyTonCore():
 		self.SendFile(resultFilePath, wallet)
 	#end define
 	
-	def WithdrawFromPool(self, walletName, poolAddr, amount):
+	def WithdrawFromPool(self, poolAddr, amount):
 		poolData = self.GetPoolData(poolAddr)
 		if poolData["state"] == 0:
-			self.WithdrawFromPoolProcess(walletName, poolAddr, amount)
+			self.WithdrawFromPoolProcess(poolAddr, amount)
 		else:
-			self.PendWithdrawFromPool(walletName, poolAddr, amount)
+			self.PendWithdrawFromPool(poolAddr, amount)
 	#end define
 
-	def WithdrawFromPoolProcess(self, walletName, poolAddr, amount):
+	def WithdrawFromPoolProcess(self, poolAddr, amount):
 		local.add_log("start WithdrawFromPoolProcess function", "debug")
-		wallet = self.GetLocalWallet(walletName)
+		wallet = self.GetValidatorWallet()
 		bocPath = local.buffer.my_temp_dir + wallet.name + "validator-withdraw-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-withdraw.fif"
 		args = [fiftScript, amount, bocPath]
@@ -3474,16 +3474,16 @@ class MyTonCore():
 		self.SendFile(resultFilePath, wallet)
 	#end define
 	
-	def PendWithdrawFromPool(self, walletName, poolAddr, amount):
+	def PendWithdrawFromPool(self, poolAddr, amount):
 		local.add_log("start PendWithdrawFromPool function", "debug")
 		pendingWithdraws = self.GetPendingWithdraws()
-		pendingWithdraws[poolAddr] = (walletName, amount)
-		#local.save_db()
+		pendingWithdraws[poolAddr] = amount
+		local.save()
 	#end define
 	
 	def HandlePendingWithdraw(self, pendingWithdraws, poolAddr):
-		walletName, amount = pendingWithdraws.get(poolAddr)
-		self.WithdrawFromPoolProcess(walletName, poolAddr, amount)
+		amount = pendingWithdraws.get(poolAddr)
+		self.WithdrawFromPoolProcess(poolAddr, amount)
 		pendingWithdraws.pop(poolAddr)
 	#end define
 	
@@ -3739,7 +3739,7 @@ def EnableVcEvent():
 	local.db["adnlAddr"] = adnlAddr
 
 	# Сохранить
-	#local.save_db()
+	local.save()
 #end define
 
 def ValidatorDownEvent():
@@ -3762,7 +3762,7 @@ def Statistics():
 	ReadNetworkData()
 	SaveNetworkStatistics()
 	#ReadTransData(scanner)
-	#SaveTransStatistics()
+	SaveTransStatistics()
 	ReadDiskData()
 	SaveDiskStatistics()
 #end define
