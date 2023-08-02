@@ -117,10 +117,10 @@ def Init(argv):
 def PreUp():
 	CheckMytonctrlUpdate()
 	# CheckTonUpdate()
-	buff = ton.GetSettings("using_controllers")
-	if buff is None or len(buff) == 0:
-		using_controllers = ton.GetSettings("controllersAddr")
-		ton.SetSettings("using_controllers", using_controllers)
+	usePool = ton.GetSettings("usePool")
+	useController = ton.GetSettings("useController")
+	if usePool == True and useController == True:
+		local.AddLog("usePool == True and useController == True", "error")
 #end define
 
 def Installer(args):

@@ -3936,7 +3936,8 @@ class MyTonCore():
 			timeNow - controllerData["validator_set_change_time"] > controllerData["stake_held_for"] + 60):
 			self.ControllerRecoverStake(controllerAddr)
 			controllerData = self.GetControllerData(controllerAddr)
-		if (controllerData["borrowed_amount"] > 0 and 
+		if (controllerData["state"] == 0 and 
+			controllerData["borrowed_amount"] > 0 and 
 			config34["startWorkTime"] > controllerData["borrowing_time"]):
 			self.ReturnUnusedLoan(controllerAddr)
 		if (controllerData["state"] == 0 and controllerAddr in controllerPendingWithdraws):
