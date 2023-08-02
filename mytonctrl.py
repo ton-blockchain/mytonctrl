@@ -46,6 +46,7 @@ def Init(argv):
 	console.AddItem("dl", PrintDomainsList, local.translate("dl_cmd"))
 	console.AddItem("vds", ViewDomainStatus, local.translate("vds_cmd"))
 	console.AddItem("dd", DeleteDomain, local.translate("dd_cmd"))
+	console.AddItem("gdfa", GetDomainFromAuction, local.translate("gdfa_cmd"))
 
 	console.AddItem("ol", PrintOffersList, local.translate("ol_cmd"))
 	console.AddItem("vo", VoteOffer, local.translate("vo_cmd"))
@@ -957,6 +958,17 @@ def DeleteDomain(args):
 		return
 	ton.DeleteDomain(domainName)
 	color_print("DeleteDomain - {green}OK{endc}")
+#end define
+
+def GetDomainFromAuction(args):
+	try:
+		walletName = args[0]
+		addr = args[1]
+	except:
+		color_print("{red}Bad args. Usage:{endc} gdfa <wallet-name> <addr>")
+		return
+	ton.GetDomainFromAuction(walletName, addr)
+	color_print("GetDomainFromAuction - {green}OK{endc}")
 #end define
 
 def PrintElectionEntriesList(args):
