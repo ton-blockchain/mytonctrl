@@ -374,10 +374,10 @@
 		"ru": "{green}Доступно обновление TON. {red}Пожалуйста, обновите его с помощью команды `upgrade`.{endc}",
 		"zh_TW": "{green}TON 有可用更新. {red}請使用 `upgrade` 命令進行更新.{endc}"
 	},
-	"test": {
-		"en": "001",
-		"ru": "002",
-		"zh_TW": "003"
+	"vport_error": {
+		"en": "{red}Error - UDP port of the validator is not accessible from the outside.{endc}",
+		"ru": "{red}Ошибка - UDP порт валидатора недоступен извне.{endc}",
+		"zh_TW": "{red}錯誤 - 驗證器的 UDP 端口無法從外部訪問.{endc}"
 	},
 	"000a": {
 		"en": "001",

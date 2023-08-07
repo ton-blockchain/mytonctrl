@@ -1,13 +1,13 @@
 ![GitHub stars](https://img.shields.io/github/stars/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub forks](https://img.shields.io/github/forks/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub issues](https://img.shields.io/github/issues/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub pull requests](https://img.shields.io/github/issues-pr/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub last commit](https://img.shields.io/github/last-commit/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub license](https://img.shields.io/github/license/ton-blockchain/mytonctrl?style=flat-square&logo=github)
 
 <!-- omit from toc --> 
-# MytTonCtrl
+# MyTonCtrl
 [Данный текст доступен на русском языке.](README.Ru.md)
 
 <!-- omit from toc --> 
 ## Contents
 
-- [What is MytTonCtrl?](#what-is-myttonctrl)
+- [What is MyTonCtrl?](#what-is-myttonctrl)
 - [Functionality](#functionality)
 	- [List of tested operating systems](#list-of-tested-operating-systems)
 - [Installation](#installation)
@@ -23,7 +23,7 @@
 - [Useful links](#useful-links)
 
 
-# What is MytTonCtrl?
+# What is MyTonCtrl?
 MyTonCtrl is a console application that serves as a convenient wrapper for `fift`, `lite-client`, and `validator-engine-console`. It has been specifically developed to streamline wallet, domain, and validator management tasks on the Linux operating system.
 
 ![MyTonCtrl Status](screens/mytonctrl-status.png)
