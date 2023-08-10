@@ -8,6 +8,7 @@ path.append(dir(path[0]))
 from mypylib.mypylib import *
 
 
+# validator.service
 file = open("/etc/systemd/system/validator.service", 'rt')
 text = file.read()
 file.close()
@@ -17,10 +18,8 @@ for i in range(len(lines)):
 	line = lines[i]
 	if "ExecStart" not in line:
 		continue
-	if " --threads " in line or " -t " in line:
-		continue
-	cpus = psutil.cpu_count() - 1
-	lines[i] += " --threads {cpus}".format(cpus=cpus)
+	if "ton-global.config.json" in line:
+		lines[i] += line.replace("validator-engine/ton-global.config.json", "global.config.json")
 #end for
 
 text = "\n".join(lines)

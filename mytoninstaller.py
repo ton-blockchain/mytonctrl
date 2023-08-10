@@ -1049,5 +1049,5 @@ if __name__ == "__main__":
 		General()
 	else:
 		console.Run()
-	local.Exit()
+	local.exit()
 #end if

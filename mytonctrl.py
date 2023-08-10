@@ -202,10 +202,29 @@ def Update(args):
 def Upgrade(args):
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
-
+	
+	# bugfix if the files are in the wrong place
+	liteClient = ton.GetSettings("liteClient")
+	configPath = liteClient.get("configPath")
+	pubkeyPath = liteClient.get("liteServer").get("pubkeyPath")
+	if "ton-lite-client-test1" in configPath:
+		liteClient["configPath"] = configPath.replace("lite-client/ton-lite-client-test1.config.json", "global.config.json")
+	if "/usr/bin/ton" in pubkeyPath:
+		liteClient["liteServer"]["pubkeyPath"] = "/var/ton-work/keys/liteserver.pub"
+	ton.SetSettings("liteClient", liteClient)
+	validatorConsole = ton.GetSettings("validatorConsole")
+	privKeyPath = validatorConsole.get("privKeyPath")
+	pubKeyPath = validatorConsole.get("pubKeyPath")
+	if "/usr/bin/ton" in privKeyPath:
+		validatorConsole["privKeyPath"] = "/var/ton-work/keys/client"
+	if "/usr/bin/ton" in pubKeyPath:
+		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
+	ton.SetSettings("validatorConsole", validatorConsole)
+	
 	# Run script
 	runArgs = ["bash", "/usr/src/mytonctrl/scripts/upgrade.sh", "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
+	exitCode += run_as_root(["python3", "/usr/src/mytonctrl/scripts/upgrade.py"])
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
