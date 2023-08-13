@@ -292,10 +292,9 @@ class MyTonCore():
 	#end define
 
 	def Refresh(self):
-		#if self.dbFile:
-		#	local.load_db(self.dbFile)
-		#else:
-		#	local.load_db()
+		if self.dbFile:
+			local.load_db(self.dbFile)
+		#end if
 
 		if not self.walletsDir:
 			self.walletsDir = local.buffer.my_work_dir + "wallets/"
@@ -336,7 +335,7 @@ class MyTonCore():
 		#end if
 
 		# Check config file
-		#self.CheckConfigFile(fift, liteClient)
+		self.CheckConfigFile(fift, liteClient)
 	#end define
 
 	def CheckConfigFile(self, fift, liteClient):
@@ -3733,7 +3732,7 @@ def Event(eventName):
 		EnableVcEvent()
 	elif eventName == "validator down":
 		ValidatorDownEvent()
-	local.Exit()
+	local.exit()
 #end define
 
 def EnableVcEvent():

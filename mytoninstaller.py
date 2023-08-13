@@ -13,19 +13,19 @@ defaultLocalConfigPath = "/usr/bin/ton/local.config.json"
 
 
 def Init():
-	local.db["config"]["isStartOnlyOneProcess"] = False
-	local.db["config"]["logLevel"] = "debug"
-	local.db["config"]["isIgnorLogWarning"] = True # disable warning
+	local.db.config.isStartOnlyOneProcess = False
+	local.db.config.logLevel = "debug"
+	local.db.config.isIgnorLogWarning = True # disable warning
 	local.run()
-	local.db["config"]["isIgnorLogWarning"] = False # enable warning
+	local.db.config.isIgnorLogWarning = False # enable warning
 
 
 	# create variables
 	user = os.environ.get("USER", "root")
-	local.buffer["user"] = user
-	local.buffer["vuser"] = "validator"
-	local.buffer["cport"] = random.randint(2000, 65000)
-	local.buffer["lport"] = random.randint(2000, 65000)
+	local.buffer.user = user
+	local.buffer.vuser = "validator"
+	local.buffer.cport = random.randint(2000, 65000)
+	local.buffer.lport = random.randint(2000, 65000)
 
 	# Create user console
 	console.name = "MyTonInstaller"
@@ -42,49 +42,43 @@ def Init():
 #end define
 
 def Refresh():
-	user = local.buffer["user"]
-	local.buffer["mconfigPath"] = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
+	user = local.buffer.user
+	local.buffer.mconfig_path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	if user == 'root':
-		local.buffer["mconfigPath"] = "/usr/local/bin/mytoncore/mytoncore.db"
+		local.buffer.mconfig_path = "/usr/local/bin/mytoncore/mytoncore.db"
 	#end if
 
 	# create variables
-	binDir = "/usr/bin/"
-	srcDir = "/usr/src/"
-	tonWorkDir = "/var/ton-work/"
-	tonBinDir = binDir + "ton/"
-	tonSrcDir = srcDir + "ton/"
-	local.buffer["binDir"] = binDir
-	local.buffer["srcDir"] = srcDir
-	local.buffer["tonWorkDir"] = tonWorkDir
-	local.buffer["tonBinDir"] = tonBinDir
-	local.buffer["tonSrcDir"] = tonSrcDir
-	tonDbDir = tonWorkDir + "db/"
-	keysDir = tonWorkDir + "keys/"
-	local.buffer["tonDbDir"] = tonDbDir
-	local.buffer["keysDir"] = keysDir
-	local.buffer["tonLogPath"] = tonWorkDir + "log"
-	local.buffer["validatorAppPath"] = tonBinDir + "validator-engine/validator-engine"
-	local.buffer["globalConfigPath"] = tonBinDir + "global.config.json"
-	local.buffer["vconfigPath"] = tonDbDir + "config.json"
+	bin_dir = "/usr/bin/"
+	src_dir = "/usr/src/"
+	ton_work_dir = "/var/ton-work/"
+	ton_bin_dir = bin_dir + "ton/"
+	ton_src_dir = src_dir + "ton/"
+	local.buffer.bin_dir = bin_dir
+	local.buffer.src_dir = src_dir
+	local.buffer.ton_work_dir = ton_work_dir
+	local.buffer.ton_bin_dir = ton_bin_dir
+	local.buffer.ton_src_dir = ton_src_dir
+	ton_db_dir = ton_work_dir + "db/"
+	keys_dir = ton_work_dir + "keys/"
+	local.buffer.ton_db_dir = ton_db_dir
+	local.buffer.keys_dir = keys_dir
+	local.buffer.ton_log_path = ton_work_dir + "log"
+	local.buffer.validator_app_path = ton_bin_dir + "validator-engine/validator-engine"
+	local.buffer.global_config_path = ton_bin_dir + "global.config.json"
+	local.buffer.vconfig_path = ton_db_dir + "config.json"
 #end define
 
 def Status(args):
-	vconfigPath = local.buffer["vconfigPath"]
-
-	user = local.buffer["user"]
-	mconfigPath = local.buffer["mconfigPath"]
-
-	tonBinDir = local.buffer["tonBinDir"]
-	keysDir = local.buffer["keysDir"]
-	server_key = keysDir + "server"
-	client_key = keysDir + "client"
-	liteserver_key = keysDir + "liteserver"
+	keys_dir = local.buffer.keys_dir
+	server_key = keys_dir + "server"
+	client_key = keys_dir + "client"
+	liteserver_key = keys_dir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
 
-	fnStatus = os.path.isfile(vconfigPath)
-	mtcStatus = os.path.isfile(mconfigPath)
+	fnStatus = os.path.isfile(local.buffer.vconfig_path)
+	mtcStatus = os.path.isfile(local.buffer.mconfig_path)
 	vcStatus = os.path.isfile(server_key) or os.path.isfile(client_key)
 	lsStatus = os.path.isfile(liteserver_pubkey)
 
@@ -96,38 +90,33 @@ def Status(args):
 
 def Enable(args):
 	name = args[0]
-	user = local.buffer["user"]
 	if name == "PT":
 		CreateLocalConfigFile(args)
-	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "enable{name}".format(name=name)]
+	args = ["python3", local.buffer.my_path, "-u", local.buffer.user, "-e", "enable{name}".format(name=name)]
 	run_as_root(args)
 #end define
 
 def DRVCF(args):
-	user = local.buffer["user"]
-	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "drvcf"]
+	args = ["python3", local.buffer.my_path, "-u", local.buffer.user, "-e", "drvcf"]
 	run_as_root(args)
 #end define
 
 def GetLiteServerConfig():
-	keysDir = local.buffer["keysDir"]
-	liteserver_key = keysDir + "liteserver"
+	keys_dir = local.buffer.keys_dir
+	liteserver_key = keys_dir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
-	result = dict()
+	result = Dict()
 	file = open(liteserver_pubkey, 'rb')
 	data = file.read()
 	file.close()
 	key = base64.b64encode(data[4:])
 	ip = requests.get("https://ifconfig.me").text
-	mconfigPath = local.buffer["mconfigPath"]
-	mconfig = GetConfig(path=mconfigPath)
-	liteClient = mconfig.get("liteClient")
-	liteServer = liteClient.get("liteServer")
-	result["ip"] = ip2int(ip)
-	result["port"] = liteServer.get("port")
-	result["id"] = dict()
-	result["id"]["@type"]= "pub.ed25519"
-	result["id"]["key"]= key.decode()
+	mconfig = GetConfig(path=local.buffer.mconfig_path)
+	result.ip = ip2int(ip)
+	result.port = mconfig.liteClient.liteServer.port
+	result.id = Dict()
+	result.id["@type"]= "pub.ed25519"
+	result.id.key= key.decode()
 	return result
 #end define
 
@@ -162,7 +151,7 @@ def CreateLocalConfig(initBlock, localConfigPath=defaultLocalConfigPath):
 	file.close()
 
 	# chown
-	user = local.buffer["user"]
+	user = local.buffer.user
 	args = ["chown", "-R", user + ':' + user, localConfigPath]
 
 	print("Local config file created:", localConfigPath)
@@ -177,8 +166,7 @@ def PrintLiteServerConfig(args):
 def CreateLocalConfigFile(args):
 	initBlock = GetInitBlock()
 	initBlock_b64 = dict2b64(initBlock)
-	user = local.buffer["user"]
-	args = ["python3", local.buffer["myPath"], "-u", user, "-e", "clc", "-i", initBlock_b64]
+	args = ["python3", local.buffer.my_path, "-u", local.buffer.user, "-e", "clc", "-i", initBlock_b64]
 	run_as_root(args)
 #end define
 
@@ -208,7 +196,7 @@ def General():
 	if "-u" in sys.argv:
 		ux = sys.argv.index("-u")
 		user = sys.argv[ux+1]
-		local.buffer["user"] = user
+		local.buffer.user = user
 		Refresh()
 	if "-e" in sys.argv:
 		ex = sys.argv.index("-e")
@@ -220,11 +208,11 @@ def General():
 	if "-t" in sys.argv:
 		mx = sys.argv.index("-t")
 		telemetry = sys.argv[mx+1]
-		local.buffer["telemetry"] = Str2Bool(telemetry)
+		local.buffer.telemetry = Str2Bool(telemetry)
 	if "--dump" in sys.argv:
 		mx = sys.argv.index("--dump")
 		dump = sys.argv[mx+1]
-		local.buffer["dump"] = Str2Bool(dump)
+		local.buffer.dump = Str2Bool(dump)
 	#end if
 
 		# Создать настройки для mytoncore.py
@@ -253,18 +241,18 @@ def FirstNodeSettings():
 	local.add_log("start FirstNodeSettings fuction", "debug")
 
 	# Создать переменные
-	user = local.buffer["user"]
-	vuser = local.buffer["vuser"]
-	tonWorkDir = local.buffer["tonWorkDir"]
-	tonDbDir = local.buffer["tonDbDir"]
-	keysDir = local.buffer["keysDir"]
-	tonLogPath = local.buffer["tonLogPath"]
-	validatorAppPath = local.buffer["validatorAppPath"]
-	globalConfigPath = local.buffer["globalConfigPath"]
-	vconfigPath = local.buffer["vconfigPath"]
+	user = local.buffer.user
+	vuser = local.buffer.vuser
+	ton_work_dir = local.buffer.ton_work_dir
+	ton_db_dir = local.buffer.ton_db_dir
+	keys_dir = local.buffer.keys_dir
+	tonLogPath = local.buffer.ton_log_path
+	validatorAppPath = local.buffer.validator_app_path
+	globalConfigPath = local.buffer.global_config_path
+	vconfig_path = local.buffer.vconfig_path
 
 	# Проверить конфигурацию
-	if os.path.isfile(vconfigPath):
+	if os.path.isfile(vconfig_path):
 		local.add_log("Validators config.json already exist. Break FirstNodeSettings fuction", "warning")
 		return
 	#end if
@@ -280,13 +268,13 @@ def FirstNodeSettings():
 	#end if
 
 	# Подготовить папки валидатора
-	os.makedirs(tonDbDir, exist_ok=True)
-	os.makedirs(keysDir, exist_ok=True)
+	os.makedirs(ton_db_dir, exist_ok=True)
+	os.makedirs(keys_dir, exist_ok=True)
 
 	# Прописать автозагрузку
 	cpus = psutil.cpu_count() - 1
-	cmd = "{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {tonDbDir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
-	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath, cpus=cpus)
+	cmd = "{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
+	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, ton_db_dir=ton_db_dir, tonLogPath=tonLogPath, cpus=cpus)
 	add2systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
@@ -297,7 +285,7 @@ def FirstNodeSettings():
 
 	# Первый запуск
 	local.add_log("First start validator - create config.json", "debug")
-	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", tonDbDir, "--ip", addr, "--logname", tonLogPath]
+	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", ton_db_dir, "--ip", addr, "--logname", tonLogPath]
 	subprocess.run(args)
 
 	# Скачать дамп
@@ -305,7 +293,7 @@ def FirstNodeSettings():
 
 	# chown 1
 	local.add_log("Chown ton-work dir", "debug")
-	args = ["chown", "-R", vuser + ':' + vuser, tonWorkDir]
+	args = ["chown", "-R", vuser + ':' + vuser, ton_work_dir]
 	subprocess.run(args)
 
 	# start validator
@@ -313,7 +301,7 @@ def FirstNodeSettings():
 #end define
 
 def DownloadDump():
-	dump = local.buffer["dump"]
+	dump = local.buffer.dump
 	if dump == False:
 		return
 	#end if
@@ -339,7 +327,7 @@ def DownloadDump():
 
 def FirstMytoncoreSettings():
 	local.add_log("start FirstMytoncoreSettings fuction", "debug")
-	user = local.buffer["user"]
+	user = local.buffer.user
 
 	# Прописать mytoncore.py в автозагрузку
 	add2systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")
@@ -362,47 +350,42 @@ def FirstMytoncoreSettings():
 	subprocess.run(args)
 
 	# Подготовить папку mytoncore
-	mconfigPath = local.buffer["mconfigPath"]
-	mconfigDir = get_dir_from_path(mconfigPath)
+	mconfig_path = local.buffer.mconfig_path
+	mconfigDir = get_dir_from_path(mconfig_path)
 	os.makedirs(mconfigDir, exist_ok=True)
 
 	# create variables
-	srcDir = local.buffer["srcDir"]
-	tonBinDir = local.buffer["tonBinDir"]
-	tonSrcDir = local.buffer["tonSrcDir"]
+	src_dir = local.buffer.src_dir
+	ton_bin_dir = local.buffer.ton_bin_dir
+	ton_src_dir = local.buffer.ton_src_dir
 
 	# general config
-	mconfig = dict()
-	mconfig["config"] = dict()
-	mconfig["config"]["logLevel"] = "debug"
-	mconfig["config"]["isLocaldbSaving"] = True
+	mconfig = Dict()
+	mconfig.config = Dict()
+	mconfig.config.logLevel = "debug"
+	mconfig.config.isLocaldbSaving = True
 
 	# fift
-	fift = dict()
-	fift["appPath"] = tonBinDir + "crypto/fift"
-	fift["libsPath"] = tonSrcDir + "crypto/fift/lib"
-	fift["smartcontsPath"] = tonSrcDir + "crypto/smartcont"
-	mconfig["fift"] = fift
+	fift = Dict()
+	fift.appPath = ton_bin_dir + "crypto/fift"
+	fift.libsPath = ton_src_dir + "crypto/fift/lib"
+	fift.smartcontsPath = ton_src_dir + "crypto/smartcont"
+	mconfig.fift = fift
 
 	# lite-client
-	liteClient = dict()
-	liteClient["appPath"] = tonBinDir + "lite-client/lite-client"
-	liteClient["configPath"] = tonBinDir + "global.config.json"
-	mconfig["liteClient"] = liteClient
-
-	# miner
-	miner = dict()
-	miner["appPath"] = tonBinDir + "crypto/pow-miner"
-	mconfig["miner"] = miner
+	liteClient = Dict()
+	liteClient.appPath = ton_bin_dir + "lite-client/lite-client"
+	liteClient.configPath = ton_bin_dir + "global.config.json"
+	mconfig.liteClient = liteClient
 
 	# Telemetry
-	mconfig["sendTelemetry"] = local.buffer["telemetry"]
+	mconfig.sendTelemetry = local.buffer.telemetry
 
 	# Записать настройки в файл
-	SetConfig(path=mconfigPath, data=mconfig)
+	SetConfig(path=mconfig_path, data=mconfig)
 
 	# chown 1
-	args = ["chown", user + ':' + user, mconfigDir, mconfigPath]
+	args = ["chown", user + ':' + user, mconfigDir, mconfig_path]
 	subprocess.run(args)
 
 	# start mytoncore
@@ -413,17 +396,17 @@ def EnableValidatorConsole():
 	local.add_log("start EnableValidatorConsole function", "debug")
 
 	# Create variables
-	user = local.buffer["user"]
-	vuser = local.buffer["vuser"]
-	cport = local.buffer["cport"]
-	srcDir = local.buffer["srcDir"]
-	tonDbDir = local.buffer["tonDbDir"]
-	tonBinDir = local.buffer["tonBinDir"]
-	vconfigPath = local.buffer["vconfigPath"]
-	generate_random_id = tonBinDir + "utils/generate-random-id"
-	keysDir = local.buffer["keysDir"]
-	client_key = keysDir + "client"
-	server_key = keysDir + "server"
+	user = local.buffer.user
+	vuser = local.buffer.vuser
+	cport = local.buffer.cport
+	src_dir = local.buffer.src_dir
+	ton_db_dir = local.buffer.ton_db_dir
+	ton_bin_dir = local.buffer.ton_bin_dir
+	vconfig_path = local.buffer.vconfig_path
+	generate_random_id = ton_bin_dir + "utils/generate-random-id"
+	keys_dir = local.buffer.keys_dir
+	client_key = keys_dir + "client"
+	server_key = keys_dir + "server"
 	client_pubkey = client_key + ".pub"
 	server_pubkey = server_key + ".pub"
 
@@ -442,7 +425,7 @@ def EnableValidatorConsole():
 	server_key_b64 = output_arr[1].replace('\n', '')
 
 	# move key
-	newKeyPath = tonDbDir + "/keyring/" + server_key_hex
+	newKeyPath = ton_db_dir + "/keyring/" + server_key_hex
 	args = ["mv", server_key, newKeyPath]
 	subprocess.run(args)
 
@@ -463,41 +446,41 @@ def EnableValidatorConsole():
 	subprocess.run(args)
 
 	# read vconfig
-	vconfig = GetConfig(path=vconfigPath)
+	vconfig = GetConfig(path=vconfig_path)
 
 	# prepare config
-	control = dict()
-	control["id"] = server_key_b64
-	control["port"] = cport
-	allowed = dict()
-	allowed["id"] = client_key_b64
-	allowed["permissions"] = 15
-	control["allowed"] = [allowed] # fix me
-	vconfig["control"].append(control)
+	control = Dict()
+	control.id = server_key_b64
+	control.port = cport
+	allowed = Dict()
+	allowed.id = client_key_b64
+	allowed.permissions = 15
+	control.allowed = [allowed] # fix me
+	vconfig.control.append(control)
 
 	# write vconfig
-	SetConfig(path=vconfigPath, data=vconfig)
+	SetConfig(path=vconfig_path, data=vconfig)
 
 	# restart validator
 	StartValidator()
 
 	# read mconfig
-	mconfigPath = local.buffer["mconfigPath"]
-	mconfig = GetConfig(path=mconfigPath)
+	mconfig_path = local.buffer.mconfig_path
+	mconfig = GetConfig(path=mconfig_path)
 
 	# edit mytoncore config file
-	validatorConsole = dict()
-	validatorConsole["appPath"] = tonBinDir + "validator-engine-console/validator-engine-console"
-	validatorConsole["privKeyPath"] = client_key
-	validatorConsole["pubKeyPath"] = server_pubkey
-	validatorConsole["addr"] = "127.0.0.1:{cport}".format(cport=cport)
-	mconfig["validatorConsole"] = validatorConsole
+	validatorConsole = Dict()
+	validatorConsole.appPath = ton_bin_dir + "validator-engine-console/validator-engine-console"
+	validatorConsole.privKeyPath = client_key
+	validatorConsole.pubKeyPath = server_pubkey
+	validatorConsole.addr = "127.0.0.1:{cport}".format(cport=cport)
+	mconfig.validatorConsole = validatorConsole
 
 	# write mconfig
-	SetConfig(path=mconfigPath, data=mconfig)
+	SetConfig(path=mconfig_path, data=mconfig)
 
 	# Подтянуть событие в mytoncore.py
-	cmd = "python3 {srcDir}mytonctrl/mytoncore.py -e \"enableVC\"".format(srcDir=srcDir)
+	cmd = "python3 {src_dir}mytonctrl/mytoncore.py -e \"enableVC\"".format(src_dir=src_dir)
 	args = ["su", "-l", user, "-c", cmd]
 	subprocess.run(args)
 
@@ -509,16 +492,16 @@ def EnableLiteServer():
 	local.add_log("start EnableLiteServer function", "debug")
 
 	# Create variables
-	user = local.buffer["user"]
-	vuser = local.buffer["vuser"]
-	lport = local.buffer["lport"]
-	srcDir = local.buffer["srcDir"]
-	tonDbDir = local.buffer["tonDbDir"]
-	keysDir = local.buffer["keysDir"]
-	tonBinDir = local.buffer["tonBinDir"]
-	vconfigPath = local.buffer["vconfigPath"]
-	generate_random_id = tonBinDir + "utils/generate-random-id"
-	liteserver_key = keysDir + "liteserver"
+	user = local.buffer.user
+	vuser = local.buffer.vuser
+	lport = local.buffer.lport
+	src_dir = local.buffer.src_dir
+	ton_db_dir = local.buffer.ton_db_dir
+	keys_dir = local.buffer.keys_dir
+	ton_bin_dir = local.buffer.ton_bin_dir
+	vconfig_path = local.buffer.vconfig_path
+	generate_random_id = ton_bin_dir + "utils/generate-random-id"
+	liteserver_key = keys_dir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
 	# Check if key exist
@@ -538,7 +521,7 @@ def EnableLiteServer():
 
 	# move key
 	local.add_log("move key", "debug")
-	newKeyPath = tonDbDir + "/keyring/" + liteserver_key_hex
+	newKeyPath = ton_db_dir + "/keyring/" + liteserver_key_hex
 	args = ["mv", liteserver_key, newKeyPath]
 	subprocess.run(args)
 
@@ -554,18 +537,18 @@ def EnableLiteServer():
 
 	# read vconfig
 	local.add_log("read vconfig", "debug")
-	vconfig = GetConfig(path=vconfigPath)
+	vconfig = GetConfig(path=vconfig_path)
 
 	# prepare vconfig
 	local.add_log("prepare vconfig", "debug")
-	liteserver = dict()
-	liteserver["id"] = liteserver_key_b64
-	liteserver["port"] = lport
-	vconfig["liteservers"].append(liteserver)
+	liteserver = Dict()
+	liteserver.id = liteserver_key_b64
+	liteserver.port = lport
+	vconfig.liteservers.append(liteserver)
 
 	# write vconfig
 	local.add_log("write vconfig", "debug")
-	SetConfig(path=vconfigPath, data=vconfig)
+	SetConfig(path=vconfig_path, data=vconfig)
 
 	# restart validator
 	StartValidator()
@@ -573,20 +556,20 @@ def EnableLiteServer():
 	# edit mytoncore config file
 	# read mconfig
 	local.add_log("read mconfig", "debug")
-	mconfigPath = local.buffer["mconfigPath"]
-	mconfig = GetConfig(path=mconfigPath)
+	mconfig_path = local.buffer.mconfig_path
+	mconfig = GetConfig(path=mconfig_path)
 
 	# edit mytoncore config file
 	local.add_log("edit mytoncore config file", "debug")
-	liteServer = dict()
-	liteServer["pubkeyPath"] = liteserver_pubkey
-	liteServer["ip"] = "127.0.0.1"
-	liteServer["port"] = lport
-	mconfig["liteClient"]["liteServer"] = liteServer
+	liteServer = Dict()
+	liteServer.pubkeyPath = liteserver_pubkey
+	liteServer.ip = "127.0.0.1"
+	liteServer.port = lport
+	mconfig.liteClient.liteServer = liteServer
 
 	# write mconfig
 	local.add_log("write mconfig", "debug")
-	SetConfig(path=mconfigPath, data=mconfig)
+	SetConfig(path=mconfig_path, data=mconfig)
 
 	# restart mytoncore
 	StartMytoncore()
@@ -615,7 +598,7 @@ def GetConfig(**kwargs):
 	file = open(path, 'rt')
 	text = file.read()
 	file.close()
-	config = json.loads(text)
+	config = Dict(json.loads(text))
 	return config
 #end define
 
@@ -632,40 +615,40 @@ def SetConfig(**kwargs):
 
 def BackupVconfig():
 	local.add_log("Backup validator config file 'config.json' to 'config.json.backup'", "debug")
-	vconfigPath = local.buffer["vconfigPath"]
-	backupPath = vconfigPath + ".backup"
-	args = ["cp", vconfigPath, backupPath]
+	vconfig_path = local.buffer.vconfig_path
+	backupPath = vconfig_path + ".backup"
+	args = ["cp", vconfig_path, backupPath]
 	subprocess.run(args)
 #end define
 
 def BackupMconfig():
 	local.add_log("Backup mytoncore config file 'mytoncore.db' to 'mytoncore.db.backup'", "debug")
-	mconfigPath = local.buffer["mconfigPath"]
-	backupPath = mconfigPath + ".backup"
-	args = ["cp", mconfigPath, backupPath]
+	mconfig_path = local.buffer.mconfig_path
+	backupPath = mconfig_path + ".backup"
+	args = ["cp", mconfig_path, backupPath]
 	subprocess.run(args)
 #end define
 
 def GetPortsFromVconfig():
-	vconfigPath = local.buffer["vconfigPath"]
+	vconfig_path = local.buffer.vconfig_path
 
 	# read vconfig
 	local.add_log("read vconfig", "debug")
-	vconfig = GetConfig(path=vconfigPath)
+	vconfig = GetConfig(path=vconfig_path)
 
 	# read mconfig
 	local.add_log("read mconfig", "debug")
-	mconfigPath = local.buffer["mconfigPath"]
-	mconfig = GetConfig(path=mconfigPath)
+	mconfig_path = local.buffer.mconfig_path
+	mconfig = GetConfig(path=mconfig_path)
 
 	# edit mytoncore config file
 	local.add_log("edit mytoncore config file", "debug")
-	mconfig["liteClient"]["liteServer"]["port"] = mconfig["liteservers"][0]["port"]
-	mconfig["validatorConsole"]["addr"] = "127.0.0.1:{}".format(mconfig["control"][0]["port"])
+	mconfig.liteClient.liteServer.port = mconfig.liteservers[0].port
+	mconfig.validatorConsole.addr = f"127.0.0.1:{mconfig.control[0].port}"
 
 	# write mconfig
 	local.add_log("write mconfig", "debug")
-	SetConfig(path=mconfigPath, data=mconfig)
+	SetConfig(path=mconfig_path, data=mconfig)
 
 	# restart mytoncore
 	StartMytoncore()
@@ -692,30 +675,30 @@ def DangerousRecoveryValidatorConfigFile():
 	#end for
 
 	# Create config object
-	vconfig = dict()
+	vconfig = Dict()
 	vconfig["@type"] = "engine.validator.config"
-	vconfig["out_port"] = 3278
+	vconfig.out_port = 3278
 
 	# Create addrs object
-	buffer = dict()
-	buffer["@type"] = "engine.addr"
-	buffer["ip"] = ip2int(requests.get("https://ifconfig.me").text)
-	buffer["port"] = None
-	buffer["categories"] = [0, 1, 2, 3]
-	buffer["priority_categories"] = []
-	vconfig["addrs"] = [buffer]
+	buff = Dict()
+	buff["@type"] = "engine.addr"
+	buff.ip = ip2int(requests.get("https://ifconfig.me").text)
+	buff.port = None
+	buff.categories = [0, 1, 2, 3]
+	buff.priority_categories = []
+	vconfig.addrs = [buff]
 
 	# Get liteserver fragment
-	mconfigPath = local.buffer["mconfigPath"]
-	mconfig = GetConfig(path=mconfigPath)
-	lkey = mconfig["liteClient"]["liteServer"]["pubkeyPath"]
-	lport = mconfig["liteClient"]["liteServer"]["port"]
+	mconfig_path = local.buffer.mconfig_path
+	mconfig = GetConfig(path=mconfig_path)
+	lkey = mconfig.liteClient.liteServer.pubkeyPath
+	lport = mconfig.liteClient.liteServer.port
 
 	# Read lite server pubkey
 	file = open(lkey, 'rb')
 	data = file.read()
 	file.close()
-	lsPubkey = data[4:]
+	ls_pubkey = data[4:]
 
 	# Search lite server priv key
 	for item in keyring:
@@ -727,21 +710,21 @@ def DangerousRecoveryValidatorConfigFile():
 		privkeyObject = Ed25519PrivateKey.from_private_bytes(peivkey)
 		pubkeyObject = privkeyObject.public_key()
 		pubkey = pubkeyObject.public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
-		if pubkey == lsPubkey:
-			lsId = hex2b64(item)
-			keys.remove(lsId)
+		if pubkey == ls_pubkey:
+			ls_id = hex2b64(item)
+			keys.remove(ls_id)
 	#end for
 
 	# Create LS object
-	buffer = dict()
-	buffer["@type"] = "engine.liteServer"
-	buffer["id"] = lsId
-	buffer["port"] = lport
-	vconfig["liteservers"] = [buffer]
+	buff = Dict()
+	buff["@type"] = "engine.liteServer"
+	buff.id = ls_id
+	buff.port = lport
+	vconfig.liteservers = [buff]
 
 	# Get validator-console fragment
-	ckey = mconfig["validatorConsole"]["pubKeyPath"]
-	addr = mconfig["validatorConsole"]["addr"]
+	ckey = mconfig.validatorConsole.pubKeyPath
+	addr = mconfig.validatorConsole.addr
 	buff = addr.split(':')
 	cport = int(buff[1])
 
@@ -767,16 +750,16 @@ def DangerousRecoveryValidatorConfigFile():
 	#end for
 
 	# Create VC object
-	buffer = dict()
-	buffer2 = dict()
-	buffer["@type"] = "engine.controlInterface"
-	buffer["id"] = vcId
-	buffer["port"] = cport
-	buffer2["@type"] = "engine.controlProcess"
-	buffer2["id"] = None
-	buffer2["permissions"] = 15
-	buffer["allowed"] = buffer2
-	vconfig["control"] = [buffer]
+	buff = Dict()
+	buff2 = Dict()
+	buff["@type"] = "engine.controlInterface"
+	buff.id = vcId
+	buff.port = cport
+	buff2["@type"] = "engine.controlProcess"
+	buff2.id = None
+	buff2.permissions = 15
+	buff.allowed = buff2
+	vconfig.control = [buff]
 
 	# Get dht fragment
 	files = os.listdir("/var/ton-work/db")
@@ -796,32 +779,32 @@ def DangerousRecoveryValidatorConfigFile():
 	#end for
 
 	# Create dht object
-	buffer = dict()
-	buffer["@type"] = "engine.dht"
-	buffer["id"] = dhtId
-	vconfig["dht"] = [buffer]
+	buff = Dict()
+	buff["@type"] = "engine.dht"
+	buff.id = dhtId
+	vconfig.dht = [buff]
 
 	# Create adnl object
-	adnl2 = dict()
+	adnl2 = Dict()
 	adnl2["@type"] = "engine.adnl"
-	adnl2["id"] = dhtId
-	adnl2["category"] = 0
+	adnl2.id = dhtId
+	adnl2.category = 0
 
 	# Create adnl object
 	adnlId = hex2b64(mconfig["adnlAddr"])
 	keys.remove(adnlId)
-	adnl3 = dict()
+	adnl3 = Dict()
 	adnl3["@type"] = "engine.adnl"
-	adnl3["id"] = adnlId
-	adnl3["category"] = 0
+	adnl3.id = adnlId
+	adnl3.category = 0
 
 	# Create adnl object
-	adnl1 = dict()
+	adnl1 = Dict()
 	adnl1["@type"] = "engine.adnl"
-	adnl1["id"] = keys.pop(0)
-	adnl1["category"] = 1
+	adnl1.id = keys.pop(0)
+	adnl1.category = 1
 
-	vconfig["adnl"] = [adnl1, adnl2, adnl3]
+	vconfig.adnl = [adnl1, adnl2, adnl3]
 
 	# Get dumps from tmp
 	dumps = list()
@@ -845,23 +828,23 @@ def DangerousRecoveryValidatorConfigFile():
 		file.close()
 		dump = json.loads(data)
 		vkey = hex2b64(dump["validatorKey"])
-		temp_key = dict()
+		temp_key = Dict()
 		temp_key["@type"] = "engine.validatorTempKey"
-		temp_key["key"] = vkey
-		temp_key["expire_at"] = dump["endWorkTime"]
-		adnl_addr = dict()
+		temp_key.key = vkey
+		temp_key.expire_at = dump["endWorkTime"]
+		adnl_addr = Dict()
 		adnl_addr["@type"] = "engine.validatorAdnlAddress"
-		adnl_addr["id"] = adnlId
-		adnl_addr["expire_at"] = dump["endWorkTime"]
+		adnl_addr.id = adnlId
+		adnl_addr.expire_at = dump["endWorkTime"]
 
 		# Create validator object
-		validator = dict()
+		validator = Dict()
 		validator["@type"] = "engine.validator"
-		validator["id"] = vkey
-		validator["temp_keys"] = [temp_key]
-		validator["adnl_addrs"] = [adnl_addr]
-		validator["election_date"] = dump["startWorkTime"]
-		validator["expire_at"] = dump["endWorkTime"]
+		validator.id = vkey
+		validator.temp_keys = [temp_key]
+		validator.adnl_addrs = [adnl_addr]
+		validator.election_date = dump["startWorkTime"]
+		validator.expire_at = dump["endWorkTime"]
 		if vkey in keys:
 			validators.append(validator)
 			keys.remove(vkey)
@@ -869,7 +852,7 @@ def DangerousRecoveryValidatorConfigFile():
 	#end while
 
 	# Add validators object to vconfig
-	vconfig["validators"] = validators
+	vconfig.validators = validators
 
 
 	print("vconfig:", json.dumps(vconfig, indent=4))
@@ -892,7 +875,7 @@ def b642hex(input):
 
 def CreateSymlinks():
 	local.add_log("start CreateSymlinks fuction", "debug")
-	cport = local.buffer["cport"]
+	cport = local.buffer.cport
 
 	mytonctrl_file = "/usr/bin/mytonctrl"
 	fift_file = "/usr/bin/fift"
@@ -928,11 +911,11 @@ def CreateSymlinks():
 
 def EnableDhtServer():
 	local.add_log("start EnableDhtServer function", "debug")
-	vuser = local.buffer["vuser"]
-	tonBinDir = local.buffer["tonBinDir"]
-	globalConfigPath = local.buffer["globalConfigPath"]
-	dht_server = tonBinDir + "dht-server/dht-server"
-	generate_random_id = tonBinDir + "utils/generate-random-id"
+	vuser = local.buffer.vuser
+	ton_bin_dir = local.buffer.ton_bin_dir
+	globalConfigPath = local.buffer.global_config_path
+	dht_server = ton_bin_dir + "dht-server/dht-server"
+	generate_random_id = ton_bin_dir + "utils/generate-random-id"
 	tonDhtServerDir = "/var/ton-dht-server/"
 	tonDhtKeyringDir = tonDhtServerDir + "keyring/"
 
@@ -991,7 +974,7 @@ def SetWebPassword(args):
 
 def EnableJsonRpc():
 	local.add_log("start EnableJsonRpc function", "debug")
-	user = local.buffer["user"]
+	user = local.buffer.user
 	exitCode = run_as_root(["bash", "/usr/src/mytonctrl/scripts/jsonrpcinstaller.sh", "-u", user])
 	if exitCode == 0:
 		text = "EnableJsonRpc - {green}OK{endc}"
@@ -1002,7 +985,7 @@ def EnableJsonRpc():
 
 def EnablePytonv3():
 	local.add_log("start EnablePytonv3 function", "debug")
-	user = local.buffer["user"]
+	user = local.buffer.user
 	exitCode = run_as_root(["bash", "/usr/src/mytonctrl/scripts/pytonv3installer.sh", "-u", user])
 	if exitCode == 0:
 		text = "EnablePytonv3 - {green}OK{endc}"
