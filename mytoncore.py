@@ -3853,7 +3853,7 @@ class MyTonCore():
 		if amount is None:
 			account = self.GetAccount(controllerAddr)
 			amount = account.balance-10.1
-		if amount < 3:
+		if int(amount) < 3:
 			return
 		#end if
 		
