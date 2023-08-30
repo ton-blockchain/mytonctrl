@@ -101,6 +101,12 @@ def DRVCF(args):
 	run_as_root(args)
 #end define
 
+def get_own_ip():
+	requests.packages.urllib3.util.connection.HAS_IPV6 = False
+	ip = requests.get("https://ifconfig.me/ip").text
+	return ip
+#end define
+
 def GetLiteServerConfig():
 	keys_dir = local.buffer.keys_dir
 	liteserver_key = keys_dir + "liteserver"
@@ -110,7 +116,7 @@ def GetLiteServerConfig():
 	data = file.read()
 	file.close()
 	key = base64.b64encode(data[4:])
-	ip = requests.get("https://ifconfig.me").text
+	ip = get_own_ip()
 	mconfig = GetConfig(path=local.buffer.mconfig_path)
 	result.ip = ip2int(ip)
 	result.port = mconfig.liteClient.liteServer.port
@@ -278,7 +284,7 @@ def FirstNodeSettings():
 	add2systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
-	ip = requests.get("https://ifconfig.me").text
+	ip = get_own_ip()
 	vport = random.randint(2000, 65000)
 	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
 	local.add_log("Use addr: " + addr, "debug")
@@ -682,7 +688,7 @@ def DangerousRecoveryValidatorConfigFile():
 	# Create addrs object
 	buff = Dict()
 	buff["@type"] = "engine.addr"
-	buff.ip = ip2int(requests.get("https://ifconfig.me").text)
+	buff.ip = ip2int(get_own_ip())
 	buff.port = None
 	buff.categories = [0, 1, 2, 3]
 	buff.priority_categories = []
@@ -934,7 +940,7 @@ def EnableDhtServer():
 	add2systemd(name="dht-server", user=vuser, start=cmd)
 
 	# Получить внешний ip адрес
-	ip = requests.get("https://ifconfig.me").text
+	ip = get_own_ip()
 	port = random.randint(2000, 65000)
 	addr = "{ip}:{port}".format(ip=ip, port=port)
 

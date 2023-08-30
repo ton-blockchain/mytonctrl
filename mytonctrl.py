@@ -686,6 +686,9 @@ def DeleteWallet(args):
 	except:
 		color_print("{red}Bad args. Usage:{endc} dw <wallet-name>")
 		return
+	if input("Are you sure you want to delete this wallet (yes/no): ") != "yes":
+		print("Cancel wallet deletion")
+		return
 	wallet = ton.GetLocalWallet(walletName)
 	wallet.Delete()
 	color_print("DeleteWallet - {green}OK{endc}")
