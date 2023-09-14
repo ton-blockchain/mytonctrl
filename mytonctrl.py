@@ -1231,7 +1231,7 @@ def PoolUpdateValidatorSet(args):
 
 def CreateControllers(args):
 	ton.CreateControllers()
-	ColorPrint("CreateControllers - {green}OK{endc}")
+	color_print("CreateControllers - {green}OK{endc}")
 #end define
 
 def PrintControllersList(args):
@@ -1271,7 +1271,7 @@ def GetControllerData(args):
 	try:
 		controllerAddr = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} get_controller_data <controller-addr>")
+		color_print("{red}Bad args. Usage:{endc} get_controller_data <controller-addr>")
 		return
 	controllerData = ton.GetControllerData(controllerAddr)
 	print(json.dumps(controllerData, indent=4))
@@ -1282,7 +1282,7 @@ def DepositToController(args):
 		controllerAddr = args[0]
 		amount = float(args[1])
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} deposit_to_controller <controller-addr> <amount>")
+		color_print("{red}Bad args. Usage:{endc} deposit_to_controller <controller-addr> <amount>")
 		return
 	ton.DepositToController(controllerAddr, amount)
 #end define
@@ -1292,7 +1292,7 @@ def WithdrawFromController(args):
 		controllerAddr = args[0]
 		amount = GetItemFromList(args, 1)
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_controller <controller-addr> [amount]")
+		color_print("{red}Bad args. Usage:{endc} withdraw_from_controller <controller-addr> [amount]")
 		return
 	ton.WithdrawFromController(controllerAddr, amount)
 #end define
@@ -1318,20 +1318,20 @@ def ControllerUpdateValidatorSet(args):
 	try:
 		controllerAddr = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} controller_update_validator_set <controller-addr>")
+		color_print("{red}Bad args. Usage:{endc} controller_update_validator_set <controller-addr>")
 		return
 	ton.ControllerUpdateValidatorSet(controllerAddr)
-	ColorPrint("ControllerUpdateValidatorSet - {green}OK{endc}")
+	color_print("ControllerUpdateValidatorSet - {green}OK{endc}")
 #end define
 
 def StopController(args):
 	try:
 		controllerAddr = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} stop_controller <controller-addr>")
+		color_print("{red}Bad args. Usage:{endc} stop_controller <controller-addr>")
 		return
 	ton.StopController(controllerAddr)
-	ColorPrint("StopController - {green}OK{endc}")
+	color_print("StopController - {green}OK{endc}")
 #end define
 
 def StopAndWithdrawController(args):
@@ -1339,29 +1339,29 @@ def StopAndWithdrawController(args):
 		controllerAddr = args[0]
 		amount = GetItemFromList(args, 1)
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} stop_and_withdraw_controller <controller-addr> [amount]")
+		color_print("{red}Bad args. Usage:{endc} stop_and_withdraw_controller <controller-addr> [amount]")
 		return
 	if amount is None:
 		account = ton.GetAccount(controllerAddr)
 		amount = account.balance-10.1
 	ton.StopController(controllerAddr)
 	ton.WithdrawFromController(controllerAddr, amount)
-	ColorPrint("StopAndWithdrawController - {green}OK{endc}")
+	color_print("StopAndWithdrawController - {green}OK{endc}")
 #end define
 
 def AddController(args):
 	try:
 		controllerAddr = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} add_controller <controller-addr>")
+		color_print("{red}Bad args. Usage:{endc} add_controller <controller-addr>")
 		return
 	ton.AddController(controllerAddr)
-	ColorPrint("AddController - {green}OK{endc}")
+	color_print("AddController - {green}OK{endc}")
 #end define
 
 def CheckLiquidPool(args):
 	ton.CheckLiquidPool()
-	ColorPrint("CheckLiquidPool - {green}OK{endc}")
+	color_print("CheckLiquidPool - {green}OK{endc}")
 #end define
 
 
