@@ -1264,7 +1264,7 @@ def PrintControllersListProcess(controllers):
 		approved = True if controllerData and controllerData["approved"] == -1 else False
 		state = controllerData["state"] if controllerData else None
 		table += [[controllerAddr, account.status, account.balance, approved, state]]
-	PrintTable(table)
+	print_table(table)
 #end define
 
 def GetControllerData(args):
