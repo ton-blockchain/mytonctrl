@@ -1,6 +1,6 @@
 ## Что это
 Данная консольная программа является оберткой над `fift`, `lite-client` и `validator-engine-console`. Она была создана для облегчения управления кошельками, доменами и валидатором на операционной системе `Linux`.
-![](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/mytonctrl-status_ru.png)
+![](screens/mytonctrl-status_ru.png)
 
 ## Функционал
 - [x] Показать статус сети TON
@@ -42,14 +42,16 @@
 	- [x] Отправлять статистику валидатора на https://toncenter.com
 
 ## Список проверенных операционных систем
-```
-Ubuntu 16.04 LTS (Xenial Xerus) - Error: TON compilation error
-Ubuntu 18.04 LTS (Bionic Beaver) - OK
-Ubuntu 20.04 LTS (Focal Fossa) - OK
-Debian 8 - Error: Unable to locate package libgsl-dev
-Debian 9 - Error: TON compilation error
-Debian 10 - OK
-```
+| Operating System              | Status                     |
+|-------------------------------|----------------------------|
+| Ubuntu 16.04 LTS (Xenial Xerus) | Error: TON compilation error |
+| Ubuntu 18.04 LTS (Bionic Beaver) | OK                       |
+| Ubuntu 20.04 LTS (Focal Fossa) | OK                       |
+| Ubuntu 22.04 LTS (Jammy Jellyfish) | OK                   |
+| Debian 8 | Error: Unable to locate package libgsl-dev   |
+| Debian 9 | Error: TON compilation error                 |
+| Debian 10 | OK                                         |
+
 
 ## Описание установочных скриптов
 - `toninstaller.sh` - Данный скрипт клонирует исходники `TON` и `mytonctrl` в папки `/usr/src/ton` и `/usr/src/mytonctrl`, компилирует программы из исходников и прописывает их в `/usr/bin/`.
