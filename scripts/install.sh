@@ -99,7 +99,7 @@ fi
 echo -e "${COLOR}[3/4]${ENDC} Launching the mytoninstaller.py"
 parent_name=$(ps -p $PPID -o comm=)
 user=$(whoami)
-if [ "$parent_name" = "sudo" ]; then
+if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ]; then
     user=$(logname)
 fi
 python3 ${SOURCES_DIR}/mytonctrl/mytoninstaller.py -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
