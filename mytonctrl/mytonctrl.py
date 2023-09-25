@@ -637,7 +637,7 @@ def PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkT
 #end define
 
 def GetColorTime(datetime, timestamp):
-	newTimestamp = GetTimestamp()
+	newTimestamp = get_timestamp()
 	if timestamp > newTimestamp:
 		result = bcolors.green_text(datetime)
 	else:
