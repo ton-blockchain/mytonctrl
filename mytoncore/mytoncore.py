@@ -1313,7 +1313,7 @@ class MyTonCore():
 	#end define
 
 	def IsNominationControllerReadyToStake(self, addrB64):
-		now = GetTimestamp()
+		now = get_timestamp()
 		config15 = self.GetConfig15()
 		lastSentStakeTime = self.GetNominationControllerLastSentStakeTime(addrB64)
 		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
