@@ -581,6 +581,6 @@ def mytoncore():
     from mypylib.mypylib import MyPyClass
 
     local = MyPyClass('mytoncore.py')
-    print('Local DB path:', local.buffer.localdbFileName)
+    print('Local DB path:', local.buffer.db_path)
     Init(local)
     General(local)
