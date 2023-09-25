@@ -15,6 +15,13 @@ do
 	esac
 done
 
+author=kdimentionaltree
+repo=mtc-jsonrpc
+branch=master
+
+echo "User: $user"
+echo "Workdir: `pwd`"
+
 # Цвета
 COLOR='\033[95m'
 ENDC='\033[0m'
@@ -25,14 +32,17 @@ pip3 install Werkzeug json-rpc cloudscraper pyotp
 
 # Клонирование репозиториев с github.com
 echo -e "${COLOR}[2/4]${ENDC} Cloning github repository"
+echo "https://github.com/${author}/${repo}.git -> ${branch}"
+
 cd /usr/src/
 rm -rf mtc-jsonrpc
-git clone --recursive https://github.com/igroman787/mtc-jsonrpc.git
+git clone --branch=${branch} --recursive https://github.com/${author}/${repo}.git
 
 # Прописать автозагрузку
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
-cmd="from sys import path; path.append('/usr/src/mytonctrl/'); from mypylib.mypylib import *; Add2Systemd(name='mtc-jsonrpc', user='${user}', start='/usr/bin/python3 /usr/src/mtc-jsonrpc/mtc-jsonrpc.py')"
-python3 -c "${cmd}"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+echo "Script dir: ${SCRIPT_DIR}"
+${SCRIPT_DIR}/add2systemd.sh -n mtc-jsonrpc -s "/usr/bin/python3 /usr/src/mtc-jsonrpc/mtc-jsonrpc.py" -u ${user} -g ${user}
 systemctl restart mtc-jsonrpc
 
 # Выход из программы

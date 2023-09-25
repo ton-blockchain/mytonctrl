@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-l
 
-from sys import path
-path.append("/usr/src/mytonctrl/")
-from mytoncore import *
+import time
 
-Local = MyPyClass(__file__)
-ton = MyTonCore()
+from mypylib.mypylib import MyPyClass
+from mytoncore import MyTonCore
+
+local = MyPyClass('./tests')
+ton = MyTonCore(local)
 
 
 def Init():
 	wallets = list()
-	Local.buffer["wallets"] = wallets
+	local.buffer["wallets"] = wallets
 	walletsNameList = ton.GetWalletsNameList()
 	
 	# Create tests wallet
@@ -50,7 +51,7 @@ def Init():
 			buff_wallet = wallet
 			buff_wallet.oldseqno = ton.GetSeqno(wallet)
 			ton.MoveCoinsFromHW(wallet, [[testsWallet.addr, need]], wait=False)
-			Local.AddLog(testsWallet.name + " <<< " + str(wallet.subwallet))
+			local.AddLog(testsWallet.name + " <<< " + str(wallet.subwallet))
 	if buff_wallet:
 		ton.WaitTransaction(buff_wallet)
 	#end for
@@ -63,18 +64,18 @@ def Init():
 		if wallet.account.status == "uninit":
 			wallet.oldseqno = ton.GetSeqno(wallet)
 			ton.SendFile(wallet.bocFilePath)
-		Local.AddLog(str(wallet.subwallet) + " - OK")
+		local.AddLog(str(wallet.subwallet) + " - OK")
 	ton.WaitTransaction(wallets[-1])
 #end define
 
 def Work():
-	wallets = Local.buffer["wallets"]
+	wallets = local.buffer["wallets"]
 	destList = list()
 	destList.append(["EQAY_2_A88HD43S96hbVGbCLB21e6_k1nbaqICwS3ZCrMBaZ", 2])
 	for wallet in wallets:
 		wallet.oldseqno = ton.GetSeqno(wallet)
 		ton.MoveCoinsFromHW(wallet, destList, wait=False)
-		Local.AddLog(str(wallet.subwallet) + " " + wallet.addr + " >>> ")
+		local.AddLog(str(wallet.subwallet) + " " + wallet.addr + " >>> ")
 	ton.WaitTransaction(wallets[-1])
 #end define
 
@@ -83,7 +84,7 @@ def General():
 	while True:
 		time.sleep(1)
 		Work()
-		Local.AddLog("Work - OK")
+		local.AddLog("Work - OK")
 	#end while
 #end define
 
@@ -92,10 +93,10 @@ def General():
 ###
 ### Start test
 ###
-Local.Run()
+local.Run()
 load = 200
 
-Local.StartCycle(General, sec=1)
+local.StartCycle(General, sec=1)
 while True:
 	time.sleep(60)
 	#load += 10

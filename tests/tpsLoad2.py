@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-l
 
-from sys import path
-path.append("/usr/src/mytonctrl/")
-from mytoncore import *
+import time
 
-Local = MyPyClass(__file__)
-ton = MyTonCore()
+from mypylib.mypylib import MyPyClass
+from mytoncore import MyTonCore
+
+local = MyPyClass('./tests')
+local.db["config"]["logLevel"] = "info"
+load = 10
+ton = MyTonCore(local)
 
 
 def Init():
 	wallets = list()
-	Local.buffer["wallets"] = wallets
+	local.buffer["wallets"] = wallets
 	walletsNameList = ton.GetWalletsNameList()
 	
 	# Create tests wallet
@@ -50,7 +53,7 @@ def Init():
 			buff_wallet = wallet
 			buff_wallet.oldseqno = ton.GetSeqno(wallet)
 			ton.MoveGramsFromHW(wallet, [[testsWallet.addr, need]], wait=False)
-			Local.AddLog(testsWallet.name + " <<< " + str(wallet.subwallet))
+			local.AddLog(testsWallet.name + " <<< " + str(wallet.subwallet))
 	if buff_wallet:
 		ton.WaitTransaction(buff_wallet)
 	#end for
@@ -63,7 +66,7 @@ def Init():
 		if wallet.account.status == "uninit":
 			wallet.oldseqno = ton.GetSeqno(wallet)
 			ton.SendFile(wallet.bocFilePath)
-		Local.AddLog(str(wallet.subwallet) + " - OK")
+		local.AddLog(str(wallet.subwallet) + " - OK")
 	ton.WaitTransaction(wallets[-1])
 #end define
 
@@ -75,7 +78,7 @@ def Work():
 	for wallet in wallets:
 		wallet.oldseqno = ton.GetSeqno(wallet)
 		ton.MoveGramsFromHW(wallet, destList, wait=False)
-		Local.AddLog(str(wallet.subwallet) + " " + wallet.addr + " >>> ")
+		local.AddLog(str(wallet.subwallet) + " " + wallet.addr + " >>> ")
 	ton.WaitTransaction(wallets[-1])
 #end define
 
@@ -84,7 +87,7 @@ def General():
 	while True:
 		time.sleep(1)
 		Work()
-		Local.AddLog("Work - OK")
+		local.AddLog("Work - OK")
 	#end while
 #end define
 
@@ -93,15 +96,8 @@ def General():
 ###
 ### Start test
 ###
-Local = MyPyClass(__file__)
-Local.db["config"]["logLevel"] = "info"
-Local.Run()
-
-ton = MyTonCore()
-local.db["config"]["logLevel"] = "info"
-load = 10
-
-Local.StartCycle(General, sec=1)
+local.Run()
+local.StartCycle(General, sec=1)
 while True:
 	time.sleep(60)
 	hour_str = time.strftime("%H")
