@@ -14,6 +14,7 @@ from mypylib.mypylib import (
     b2mb,
     get_timestamp,
     get_internet_interface_name,
+    get_git_hash,
     get_service_pid,
     get_load_avg,
     thr_sleep,
@@ -580,6 +581,6 @@ def mytoncore():
     from mypylib.mypylib import MyPyClass
 
     local = MyPyClass('mytoncore.py')
-    print('Local DB path:', local.buffer['localdbFileName'])
+    print('Local DB path:', local.buffer.localdbFileName)
     Init(local)
     General(local)
