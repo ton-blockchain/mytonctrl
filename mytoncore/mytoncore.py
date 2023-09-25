@@ -31,6 +31,7 @@ from mypylib.mypylib import (
 	get_timestamp,
 	timestamp2datetime,
 	dec2hex,
+	Dict
 )
 
 
