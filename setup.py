@@ -5,12 +5,12 @@ with open(join(dirname(__file__), "README.md"), "r") as f:
     long_description = f.read()
 
 
-version = 'dev'
+version = 'v0.0.0'
 
 setup(
-    author='igroman',
-    author_email='igroman',
-    name='myton',
+    author='igroman787',
+    author_email='igroman787',
+    name='mytonctrl',
     version=version,
     packages=find_packages('.', exclude=['tests']),
     install_requires=[
