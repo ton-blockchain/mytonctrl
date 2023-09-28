@@ -11,24 +11,6 @@ from shutil import copyfile
 from functools import partial
 
 from mypylib.mypylib import (
-	# GetGitAuthorAndRepo,
-	# GetGitBranch,
-	# GetGitHash,
-	# CheckGitUpdate,
-	# GetServiceStatus,
-	# GetServiceUptime,
-	# GetLoadAvg,
-	# RunAsRoot,
-	# time2human,
-	# timeago,
-	# Timestamp2Datetime,
-	# GetTimestamp,
-	# PrintTable,
-	# ColorPrint,
-	# ColorText,
-	# bcolors,
-	# MyPyClass,
-
 	int2ip,
 	get_git_author_and_repo,
 	get_git_branch,
@@ -678,7 +660,7 @@ def CreatNewWallet(ton, args):
 	table = list()
 	table += [["Name", "Workchain", "Address"]]
 	table += [[wallet.name, wallet.workchain, wallet.addrB64_init]]
-	PrintTable(table)
+	print_table(table)
 #end define
 
 def ActivateWallet(local, ton, args):
@@ -709,7 +691,7 @@ def PrintWalletsList(ton, args):
 		if account.status != "active":
 			wallet.addrB64 = wallet.addrB64_init
 		table += [[wallet.name, account.status, account.balance, wallet.version, wallet.workchain, wallet.addrB64]]
-	PrintTable(table)
+	print_table(table)
 #end define
 
 def ImportWalletFromFile(local, ton, args):
@@ -798,9 +780,9 @@ def ViewAccountStatus(ton, args):
 	statusTable += [["Address", "Status", "Version", "Balance"]]
 	statusTable += [[addrB64, account.status, version, account.balance]]
 	historyTable = GetHistoryTable(ton, addrB64, 10)
-	PrintTable(statusTable)
+	print_table(statusTable)
 	print()
-	PrintTable(historyTable)
+	print_table(historyTable)
 #end define
 
 def ViewAccountHistory(ton, args):
@@ -811,7 +793,7 @@ def ViewAccountHistory(ton, args):
 		color_print("{red}Bad args. Usage:{endc} vah <account-addr> <limit>")
 		return
 	table = GetHistoryTable(ton, addr, limit)
-	PrintTable(table)
+	print_table(table)
 #end define
 
 def GetHistoryTable(ton, addr, limit):
@@ -902,7 +884,7 @@ def PrintBookmarksList(ton, args):
 		addr = item.get("addr")
 		data = item.get("data")
 		table += [[name, type, addr, data]]
-	PrintTable(table)
+	print_table(table)
 #end define
 
 def DeleteBookmark(ton, args):
@@ -939,7 +921,7 @@ def DeleteBookmark(ton, args):
 # 	table += [["Name", "fix me"]]
 # 	for item in data:
 # 		table += [[item.get("name"), item.get("fix me")]]
-# 	PrintTable(table)
+# 	print_table(table)
 # #end define
 
 # def DeleteAutoTransferRule(args):
@@ -970,7 +952,7 @@ def PrintOffersList(ton, args):
 			if isPassed == False:
 				isPassed = bcolors.red_text("false")
 			table += [[hash, votedValidators, wl, approvedPercent_text, isPassed]]
-		PrintTable(table)
+		print_table(table)
 #end define
 
 def VoteOffer(ton, args):
@@ -1030,7 +1012,7 @@ def PrintComplaintsList(ton, args):
 			if isPassed == False:
 				isPassed = bcolors.red_text("false")
 			table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
-		PrintTable(table)
+		print_table(table)
 #end define
 
 def VoteComplaint(ton, args):
@@ -1074,7 +1056,7 @@ def PrintDomainsList(ton, args):
 		endTime = timestamp2datetime(endTime, "%d.%m.%Y")
 		adnlAddr = item.get("adnlAddr")
 		table += [[domainName, walletName, endTime, adnlAddr]]
-	PrintTable(table)
+	print_table(table)
 #end define
 
 def ViewDomainStatus(ton, args):
