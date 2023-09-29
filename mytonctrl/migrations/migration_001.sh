@@ -21,3 +21,4 @@ chmod +x /usr/bin/mytonctrl
 # update /etc/systemd/system/mytoncore.service
 echo "    Updating mytoncore service"
 sed -i 's\/usr/src/mytonctrl/mytoncore.py\-m mytoncore\g' /etc/systemd/system/mytoncore.service
+systemctl daemon-reload
