@@ -168,8 +168,6 @@ def Init(local, ton, console, argv):
 def PreUp(local, ton):
 	CheckMytonctrlUpdate(local)
 	check_vport(local, ton)
-
-	run_migrations(local, ton)
 	# CheckTonUpdate()
 #end define
 
@@ -1420,6 +1418,10 @@ def mytonctrl():
 	ton = MyTonCore(mytoncore_local)
 	console = MyPyConsole()
 
-	Init(local, ton, console, sys.argv[1:])
-	console.Run()
+	# migrations
+	restart = run_migrations(local, ton)
+
+	if not restart:
+		Init(local, ton, console, sys.argv[1:])
+		console.Run()
 #end define

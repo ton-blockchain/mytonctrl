@@ -22,10 +22,12 @@ def migrate_to_version_1(local: MyPyClass, ton: MyTonCore):
 
 
 def migrate(version: 0, local: MyPyClass, ton: MyTonCore):
+    restart = False
     if version < 1:
         local.add_log(f'Running migration {version} -> 1', 'info')
-        migrate_to_version_1(local, ton)
-    return 1
+        restart_required = migrate_to_version_1(local, ton)
+        restart = restart or restart_required
+    return 1, restart
 
 
 def run_migrations(local: Optional[MyPyClass]=None, ton: Optional[MyTonCore]=None):
@@ -34,20 +36,18 @@ def run_migrations(local: Optional[MyPyClass]=None, ton: Optional[MyTonCore]=Non
     if ton is None:
         ton = MyTonCore(MyPyClass('mytoncore.py'))
 
-    # migrations
-    local.add_log('Running MyTonCtrl migrations', 'info')
+    # migrations    
+    version = 0
     
     workdir = local.buffer.my_work_dir
-    local.add_log(f"Workdir: {workdir}", 'info')
-
-    version = 0
     version_file_path = os.path.join(workdir, 'VERSION')
     if os.path.exists(version_file_path):
         with open(version_file_path, 'r') as f:
             version = int(f.read())
-    local.add_log(f'Current version: {version}', 'info')
     
-    new_version = migrate(version, local, ton)
+    new_version, restart = migrate(version, local, ton)
+    
     with open(version_file_path, 'w') as f:
         f.write(f'{new_version}')
+    return restart
 #end define
