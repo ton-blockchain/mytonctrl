@@ -107,18 +107,18 @@ fi
 echo -e "${COLOR}[3/5]${ENDC} Installing MyTonCtrl"
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
 
+# remove previous installation
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/mytonctrl
+pip3 uninstall -y mytonctrl
 
-git clone https://github.com/${author}/${repo}.git ${repo}  # TODO: return --recursive back when fix libraries
-cd $SOURCES_DIR/${repo}
-git checkout ${branch}
-git submodule update --init --recursive
+git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git ${repo}  # TODO: return --recursive back when fix libraries
 git config --global --add safe.directory $SOURCES_DIR/${repo}
+cd $SOURCES_DIR/${repo}
 
 pip3 install -U .  # TODO: make installation from git directly
 
-echo -e "${COLOR}[3/5]${ENDC} Running myton.installer"
+echo -e "${COLOR}[3/5]${ENDC} Running mytoninstaller"
 # DEBUG
 
 parent_name=$(ps -p $PPID -o comm=)
