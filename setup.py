@@ -5,7 +5,7 @@ with open(join(dirname(__file__), "README.md"), "r") as f:
     long_description = f.read()
 
 
-version = 'v0.0.0'
+version = 'v0.1'
 
 setup(
     author='igroman787',
@@ -33,10 +33,12 @@ setup(
          "Programming Language :: Python :: 3.7",
          "Programming Language :: Python :: 3.8",
          "Programming Language :: Python :: 3.9",
+         "Programming Language :: Python :: 3.10",
+         "Programming Language :: Python :: 3.11",
          "License :: Other/Proprietary License",
          "Topic :: Software Development :: Libraries"
     ],
-    # url="https://github.com/toncenter/pytonlib",
+    url="https://github.com/ton-blockchain/mytonctrl",
     description="MyTonCtrl",
     long_description_content_type="text/markdown",
     long_description=long_description,

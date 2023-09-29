@@ -167,6 +167,8 @@ def Init(local, ton, console, argv):
 def PreUp(local, ton):
 	CheckMytonctrlUpdate(local)
 	check_vport(local, ton)
+
+	check_migrations(local, ton)
 	# CheckTonUpdate()
 #end define
 
@@ -296,6 +298,9 @@ def Upgrade(ton, args):
 		text = "Upgrade - {red}Error{endc}"
 	color_print(text)
 #end define
+
+def check_migrations(local: MyPyClass, ton: MyTonCore):
+	pass
 
 def CheckMytonctrlUpdate(local):
 	git_path = local.buffer.my_dir

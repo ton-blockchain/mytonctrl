@@ -30,21 +30,18 @@ ENDC='\033[0m'
 
 # Go to work dir
 cd ${srcdir}
+
+# uninstall previous version
 rm -rf ${srcdir}/${repo}
+pip3 uninstall -y 
 
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone https://github.com/${author}/${repo}.git
+git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git
 cd ${repo}
-git checkout ${branch} 
-git submodule update --init --recursive
-
-# FIXME: add __init__.py in these repos
-touch mypyconsole/__init__.py
-touch mypylib/__init__.py
-
 pip3 install -U .
 
+systemctl daemon-reload
 systemctl restart mytoncore
 
 # Конец
