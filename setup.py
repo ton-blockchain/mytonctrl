@@ -22,7 +22,11 @@ setup(
     ],
     package_data={
         'mytoninstaller.scripts': ['*.sh'],
-        'mytonctrl': ['resources/*', 'scripts/*.sh'],
+        'mytonctrl': [
+            'resources/*', 
+            'scripts/*.sh', 
+            'migrations/*.sh'
+        ],
         '': ['requirements.txt'],
     },
     zip_safe=True,
