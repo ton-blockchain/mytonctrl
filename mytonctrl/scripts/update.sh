@@ -33,7 +33,7 @@ cd ${srcdir}
 
 # uninstall previous version
 rm -rf ${srcdir}/${repo}
-pip3 uninstall -y 
+pip3 uninstall -y mytonctrl
 
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"

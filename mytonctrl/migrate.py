@@ -25,26 +25,29 @@ def migrate(version: 0, local: MyPyClass, ton: MyTonCore):
     if version < 1:
         local.add_log(f'Running migration {version} -> 1', 'info')
         migrate_to_version_1(local, ton)
+    return 1
 
 
 def run_migrations(local: Optional[MyPyClass]=None, ton: Optional[MyTonCore]=None):
-	if local is None:
-		local = MyPyClass('mytonctrl.py')
-	if ton is None:
-		ton = MyTonCore(MyPyClass('mytoncore.py'))
+    if local is None:
+        local = MyPyClass('mytonctrl.py')
+    if ton is None:
+        ton = MyTonCore(MyPyClass('mytoncore.py'))
 
-	# migrations
-	local.add_log('Running MyTonCtrl migrations', 'info')
-	
-	workdir = local.buffer.my_work_dir
-	local.add_log(f"Workdir: {workdir}", 'info')
+    # migrations
+    local.add_log('Running MyTonCtrl migrations', 'info')
+    
+    workdir = local.buffer.my_work_dir
+    local.add_log(f"Workdir: {workdir}", 'info')
 
-	version = 0
-	version_file_path = os.path.join(workdir, 'VERSION')
-	if os.path.exists(version_file_path):
-		with open(version_file_path, 'r') as f:
-			version = int(f.read())
-	local.add_log(f'Current version: {version}', 'info')
-	
-	migrate(version, local, ton)
+    version = 0
+    version_file_path = os.path.join(workdir, 'VERSION')
+    if os.path.exists(version_file_path):
+        with open(version_file_path, 'r') as f:
+            version = int(f.read())
+    local.add_log(f'Current version: {version}', 'info')
+    
+    new_version = migrate(version, local, ton)
+    with open(version_file_path, 'w') as f:
+        f.write(f'{new_version}')
 #end define
