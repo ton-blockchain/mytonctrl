@@ -129,5 +129,8 @@ fi
 echo "User: $user"
 python3 -m mytoninstaller -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
 
+# set migrate version
+echo "1" > /home/$user/.local/share/mytonctrl/VERSION
+
 echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
 exit 0
