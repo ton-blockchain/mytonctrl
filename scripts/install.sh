@@ -130,7 +130,12 @@ echo "User: $user"
 python3 -m mytoninstaller -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
 
 # set migrate version
-echo "1" > /home/$user/.local/share/mytonctrl/VERSION
+migrate_version=1
+version_dir="/home/${user}/.local/share/mytonctrl"
+version_path="${version_dir}/VERSION"
+mkdir -p ${version_dir}
+echo ${migrate_version} > ${version_path}
+chown ${user}:${user} ${version_dir} ${version_path}
 
 echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
 exit 0
