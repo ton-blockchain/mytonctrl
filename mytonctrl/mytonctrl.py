@@ -1364,13 +1364,12 @@ def GetPoolData(ton, args):
 
 def DepositToPool(ton, args):
 	try:
-		walletName = args[0]
-		pollAddr = args[1]
-		amount = float(args[2])
+		pollAddr = args[0]
+		amount = float(args[1])
 	except:
-		color_print("{red}Bad args. Usage:{endc} deposit_to_pool <wallet-name> <pool-addr> <amount>")
+		color_print("{red}Bad args. Usage:{endc} deposit_to_pool <pool-addr> <amount>")
 		return
-	ton.DepositToPool(walletName, pollAddr, amount)
+	ton.DepositToPool(pollAddr, amount)
 	color_print("DepositToPool - {green}OK{endc}")
 #end define
 
