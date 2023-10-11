@@ -3336,8 +3336,8 @@ class MyTonCore():
 			raise Exception("ActivatePool error: time out")
 	#end define
 
-	def DepositToPool(self, walletName, poolAddr, amount):
-		wallet = self.GetLocalWallet(walletName)
+	def DepositToPool(self, poolAddr, amount):
+		wallet = self.GetValidatorWallet()
 		bocPath = self.local.buffer.my_temp_dir + wallet.name + "validator-deposit-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-deposit.fif"
 		args = [fiftScript, bocPath]
@@ -3356,7 +3356,7 @@ class MyTonCore():
 
 	def WithdrawFromPoolProcess(self, poolAddr, amount):
 		self.local.add_log("start WithdrawFromPoolProcess function", "debug")
-		wallet = self.GetLocalWallet()
+		wallet = self.GetValidatorWallet()
 		bocPath = self.local.buffer.my_temp_dir + wallet.name + "validator-withdraw-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-withdraw.fif"
 		args = [fiftScript, amount, bocPath]
