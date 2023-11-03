@@ -6,10 +6,7 @@ import json
 import hashlib
 import struct
 import psutil
-import crc16  # TODO: check this library!
-import fastcrc
 import subprocess
-
 from fastcrc import crc16
 
 from mytoncore.utils import xhex2hex, ng2g
@@ -2963,8 +2960,7 @@ class MyTonCore():
 		crc_bytes = b[34:36]
 		crc_data = bytes(b[:34])
 		crc = int.from_bytes(crc_bytes, "big")
-		# check_crc = crc16.crc16xmodem(crc_data)
-		check_crc = fastcrc.crc16.xmodem(crc_data)  # TODO: check this library!
+		check_crc = crc16.xmodem(crc_data)
 		if crc != check_crc:
 			raise Exception("ParseAddrB64 error: crc do not match")
 		#end if
