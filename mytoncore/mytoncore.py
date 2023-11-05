@@ -2698,16 +2698,6 @@ class MyTonCore():
 		#end for
 		return None
 	#end define
-	
-	def GetDomainFromAuction(self, walletName, addr):
-		wallet = self.GetLocalWallet(walletName)
-		bocPath = local.buffer.my_temp_dir + "get_dns_data.boc"
-		bocData = bytes.fromhex("b5ee9c7241010101000e0000182fcb26a20000000000000000f36cae4d")
-		with open(bocPath, 'wb') as file:
-			file.write(bocData)
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, addr, 0.1)
-		self.SendFile(resultFilePath, wallet)
-	#end define
 
 	def GetDomainFromAuction(self, walletName, addr):
 		wallet = self.GetLocalWallet(walletName)

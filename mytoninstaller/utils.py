@@ -5,9 +5,11 @@ import subprocess
 
 
 def GetInitBlock():
+    from mypylib.mypylib import MyPyClass
     from mytoncore import MyTonCore
 
-    ton = MyTonCore(None)
+    mytoncore_local = MyPyClass('mytoncore.py')
+    ton = MyTonCore(mytoncore_local)
     initBlock = ton.GetInitBlock()
     return initBlock
 # end define
