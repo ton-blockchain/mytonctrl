@@ -56,6 +56,15 @@ export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
 export CCACHE_DISABLE=1
 
+cd ${bindir}
+rm -rf openssl_3
+git clone https://github.com/openssl/openssl openssl_3
+cd openssl_3
+opensslPath=`pwd`
+git checkout openssl-3.1.4
+./config
+make build_libs -j12
+
 # Update binary
 cd ${bindir}/${repo}
 ls --hide=global.config.json | xargs -d '\n' rm -rf
@@ -63,16 +72,7 @@ rm -rf .ninja_*
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000" || cpuNumber=1
 
-git clone https://github.com/openssl/openssl openssl_3
-cd openssl_3
-git checkout openssl-3.1.4
-./config
-make build_libs -j12
-
-cd ..
-rootPath=`pwd`
-
-cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$rootPath/openssl_3/include -DOPENSSL_CRYPTO_LIBRARY=$rootPath/openssl_3/libcrypto.a
+cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
 ninja -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 systemctl restart validator
 

@@ -137,6 +137,15 @@ git clone --recursive https://github.com/ton-blockchain/mytonctrl.git
 git config --global --add safe.directory $SOURCES_DIR/ton
 git config --global --add safe.directory $SOURCES_DIR/mytonctrl
 
+cd $BIN_DIR
+rm -rf openssl_3
+git clone https://github.com/openssl/openssl openssl_3
+cd openssl_3
+opensslPath=`pwd`
+git checkout openssl-3.1.4
+./config
+make build_libs -j12
+
 # Подготавливаем папки для компиляции
 echo -e "${COLOR}[3/6]${ENDC} Preparing for compilation"
 rm -rf $BIN_DIR/ton
@@ -163,7 +172,7 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
 		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja
 	fi
 else
-	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja 
+	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
 fi
 
 # Компилируем из исходников
