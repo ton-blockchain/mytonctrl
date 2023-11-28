@@ -19,6 +19,7 @@ setup(
         'psutil',
         'cryptography',
         'fastcrc',
+        'jsonpickle',
     ],
     package_data={
         'mytoninstaller.scripts': ['*.sh'],

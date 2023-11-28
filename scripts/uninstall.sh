@@ -59,7 +59,7 @@ fi
 rm -rf /usr/bin/mytonctrl
 
 # removing pip packages
-pip3 uninstall -y myton mypylib mypyconsole
+pip3 uninstall -y mytonctrl
 pip3 uninstall -y ton-http-api
 
 # Конец

@@ -62,7 +62,7 @@ def Init(local, console):
 	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.AddItem("status", inject_globals(Status), "Print TON component status")
-	console.AddItem("enable", inject_globals(Enable), "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'PT' - pyTONv3. Example: 'enable FN'")
+	console.AddItem("enable", inject_globals(Enable), "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'PT' - ton-http-api. Example: 'enable FN'")
 	console.AddItem("update", inject_globals(Enable), "Update some function: 'JR' - jsonrpc.  Example: 'update JR'") 
 	console.AddItem("plsc", inject_globals(PrintLiteServerConfig), "Print LiteServer config")
 	console.AddItem("clcf", inject_globals(CreateLocalConfigFile), "CreateLocalConfigFile")

@@ -92,7 +92,7 @@ def DownloadDump(local):
 
 	local.add_log("start DownloadDump fuction", "debug")
 	url = "https://dump.ton.org"
-	dumpSize = requests.get(url + "/dumps/latest.size.archive.txt").text
+	dumpSize = requests.get(url + "/dumps/latest.tar.size.archive.txt").text
 	print("dumpSize:", dumpSize)
 	needSpace = int(dumpSize) * 3
 	diskSpace = psutil.disk_usage("/var")
@@ -101,7 +101,7 @@ def DownloadDump(local):
 	#end if
 
 	# apt install
-	cmd = "apt install plzip pv -y"
+	cmd = "apt install plzip pv curl -y"
 	os.system(cmd)
 
 	# download dump

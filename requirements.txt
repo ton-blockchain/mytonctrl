@@ -3,3 +3,4 @@ requests
 psutil
 cryptography
 fastcrc
+jsonpickle
