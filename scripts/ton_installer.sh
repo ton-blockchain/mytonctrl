@@ -100,6 +100,16 @@ rm -rf $BIN_DIR/ton
 mkdir $BIN_DIR/ton
 cd $BIN_DIR/ton
 
+# build openssl 3.0
+cd $BIN_DIR
+rm -rf openssl_3
+git clone https://github.com/openssl/openssl openssl_3
+cd openssl_3
+opensslPath=`pwd`
+git checkout openssl-3.1.4
+./config
+make build_libs -j$(nproc)
+
 # Подготовиться к компиляции
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	export CMAKE_C_COMPILER=$(which clang)
@@ -120,7 +130,7 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
 		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
 	fi
 else
-	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
+	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
 fi
 
 # Компилируем из исходников

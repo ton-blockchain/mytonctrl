@@ -71,7 +71,7 @@ git clone https://github.com/openssl/openssl openssl_3
 cd openssl_3
 git checkout openssl-3.1.4
 ./config
-make build_libs -j12
+make build_libs -j$(nproc)
 
 cd ..
 rootPath=`pwd`
