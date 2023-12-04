@@ -47,11 +47,9 @@ You will need 2 addresses for the deployment:
 * Owner - control the funds and should be a highly secured wallet.
 * Validator - operates the validator machine and send transactions to the single nominator. You can use validator_wallet_001 as the validator wallet. 
 
-If the single nominator deployment is successful, you can retrieve the zipped folder titled mytonctrl-sn-files.zip. Download the folder and execute the provided commands on the same machine where you installed mytonctrl:
+If the single nominator deployment is successful, you can retrieve the zipped folder titled mytonctrl-sn-files.zip. Download the folder to the same machine where you installed mytonctrl, extract the files and execute:
 
 ```sh
-unzip mytonctrl-sn-files.zip
-cd mytonctrl-sn-files
 chmod +x mytonctrl-add-sn-files.sh
 ./mytonctrl-add-sn-files.sh
 ```
