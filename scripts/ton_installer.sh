@@ -87,28 +87,27 @@ fi
 # Установка компонентов python3
 pip3 install psutil crc16 requests
 
+# build openssl 3.0
+echo -e "${COLOR}[2/6]${ENDC} Building OpenSSL 3.0"
+rm -rf $BIN_DIR/openssl_3
+git clone --branch openssl-3.1.4 https://github.com/openssl/openssl $BIN_DIR/openssl_3
+cd $BIN_DIR/openssl_3
+opensslPath=`pwd`
+git checkout 
+./config
+make build_libs -j$(nproc)
+
 # Клонирование репозиториев с github.com
-echo -e "${COLOR}[2/6]${ENDC} Cloning github repository"
+echo -e "${COLOR}[3/6]${ENDC} Preparing for compilation"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
 git clone --recursive https://github.com/ton-blockchain/ton.git
 git config --global --add safe.directory $SOURCES_DIR/ton
 
 # Подготавливаем папки для компиляции
-echo -e "${COLOR}[3/6]${ENDC} Preparing for compilation"
 rm -rf $BIN_DIR/ton
 mkdir $BIN_DIR/ton
 cd $BIN_DIR/ton
-
-# build openssl 3.0
-cd $BIN_DIR
-rm -rf openssl_3
-git clone https://github.com/openssl/openssl openssl_3
-cd openssl_3
-opensslPath=`pwd`
-git checkout openssl-3.1.4
-./config
-make build_libs -j$(nproc)
 
 # Подготовиться к компиляции
 if [[ "$OSTYPE" =~ darwin.* ]]; then
@@ -147,7 +146,7 @@ else
 fi
 
 echo "use ${cpuNumber} cpus"
-make -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
+ninja -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"

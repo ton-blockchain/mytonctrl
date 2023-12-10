@@ -52,10 +52,17 @@ fi
 cd ${srcdir}
 rm -rf ${srcdir}/${repo}
 
+# compile openssl_3
+git clone --branch openssl-3.1.4 https://github.com/openssl/openssl ${bindir}/openssl_3
+cd ${bindir}/openssl_3
+./config
+make build_libs -j$(nproc)
+opensslPath=`pwd`
+
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone --recursive https://github.com/${author}/${repo}.git
-cd ${repo} && git checkout ${branch} && git submodule update --init --recursive
+git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git
+cd ${repo}
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
 export CCACHE_DISABLE=1
@@ -67,16 +74,7 @@ rm -rf .ninja_*
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000" || cpuNumber=1
 
-git clone https://github.com/openssl/openssl openssl_3
-cd openssl_3
-git checkout openssl-3.1.4
-./config
-make build_libs -j$(nproc)
-
-cd ..
-rootPath=`pwd`
-
-cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$rootPath/openssl_3/include -DOPENSSL_CRYPTO_LIBRARY=$rootPath/openssl_3/libcrypto.a
+cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
 ninja -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 systemctl restart validator
 
