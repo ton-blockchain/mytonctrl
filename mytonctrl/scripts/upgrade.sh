@@ -48,16 +48,17 @@ else
 	systemctl daemon-reload
 fi
 
-# Go to work dir
-cd ${srcdir}
-rm -rf ${srcdir}/${repo}
-
 # compile openssl_3
+rm -rf ${bindir}/openssl_3
 git clone --branch openssl-3.1.4 https://github.com/openssl/openssl ${bindir}/openssl_3
 cd ${bindir}/openssl_3
 ./config
 make build_libs -j$(nproc)
 opensslPath=`pwd`
+
+# Go to work dir
+cd ${srcdir}
+rm -rf ${srcdir}/${repo}
 
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
