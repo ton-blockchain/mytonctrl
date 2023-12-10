@@ -138,7 +138,7 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
 	cpuNumber=$(sysctl -n hw.logicalcpu)
 else
 	memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
-	cpuNumber=$(($memory/2100000))
+	cpuNumber=$(cat /proc/cpuinfo | grep "processor" | wc -l)
 	if [ ${cpuNumber} == 0 ]; then
 		echo "Warning! insufficient RAM"
 		cpuNumber=1
