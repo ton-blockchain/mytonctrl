@@ -2846,8 +2846,8 @@ class MyTonCore():
 	def GetSaveOffers(self):
 		bname = "saveOffers"
 		saveOffers = self.local.db.get(bname)
-		if saveOffers is None:
-			saveOffers = list()
+		if type(saveOffers) != dict:
+			saveOffers = dict()
 			self.local.db[bname] = saveOffers
 		return saveOffers
 	#end define
@@ -2857,7 +2857,7 @@ class MyTonCore():
 		offerPseudohash = offer.get("pseudohash")
 		saveOffers = self.GetSaveOffers()
 		if offerHash not in saveOffers:
-			saveOffers.append(offerHash)
+			saveOffers[offerHash] = offerPseudohash
 			self.local.save()
 	#end define
 
