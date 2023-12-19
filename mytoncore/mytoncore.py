@@ -65,7 +65,7 @@ class MyTonCore():
 			self.walletsDir = self.local.buffer.my_work_dir + "wallets/"
 		self.contractsDir = self.local.buffer.my_work_dir + "contracts/"
 		self.poolsDir = self.local.buffer.my_work_dir + "pools/"
-		self.tempDir = self.local.buffer.my_work_dir
+		self.tempDir = self.local.buffer.my_temp_dir
 
 		self.nodeName = self.local.db.get("nodeName")
 		if self.nodeName is None:
