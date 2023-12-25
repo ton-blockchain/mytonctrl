@@ -62,7 +62,8 @@ def Init(local, ton, console, argv):
 
 	# Create user console
 	console.name = "MyTonCtrl"
-	console.startFunction = inject_globals(PreUp) 
+	console.startFunction = inject_globals(PreUp)
+	console.debug = ton.GetSettings("debug")
 
 	console.AddItem("update", inject_globals(Update), local.translate("update_cmd"))
 	console.AddItem("upgrade", inject_globals(Upgrade), local.translate("upgrade_cmd"))
@@ -160,7 +161,7 @@ def Init(local, ton, console, argv):
 			ton.walletsDir = wallets
 	#end for
 
-	local.db.config.logLevel = "debug"
+	local.db.config.logLevel = "debug" if console.debug else "info"
 	local.db.config.isLocaldbSaving = False
 	local.run()
 #end define
