@@ -205,7 +205,11 @@ def GetAuthorRepoBranchFromArgs(args):
 #end define
 
 def check_vport(local, ton):
-	vconfig = ton.GetValidatorConfig()
+	try:
+		vconfig = ton.GetValidatorConfig()
+	except:
+		local.add_log("GetValidatorConfig error", "error")
+		return
 	addr = vconfig.addrs.pop()
 	ip = int2ip(addr.ip)
 	with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
