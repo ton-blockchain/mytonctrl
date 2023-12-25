@@ -3523,17 +3523,15 @@ class MyTonCore():
 	#end define
 
 	def GetNetworkName(self):
-		mainnetValidatorsElectedFor = 65536
-		mainnetZerostateRootHash = "x55B13F6D0E1D0C34C9C2160F6F918E92D82BF9DDCF8DE2E4C94A3FDF39D15446"
-		config12 = self.GetConfig(12)
-		config15 = self.GetConfig15()
-		validatorsElectedFor = config15["validatorsElectedFor"]
-		zerostateRootHash = config12["workchains"]["root"]["node"]["value"]["zerostate_root_hash"]
-		if (zerostateRootHash == mainnetZerostateRootHash and
-			validatorsElectedFor == mainnetValidatorsElectedFor):
+		data = self.local.read_db(self.liteClient.configPath)
+		mainnet_init_block_root_hash = "YRkrcmZMvLBvjanwKCyL3w4oceGPtFfgx8ym1QKCK/4="
+		testnet_init_block_root_hash = "gj+B8wb/AmlPk1z1AhVI484rhrUpgSr2oSFIh56VoSg="
+		if data.validator.init_block.root_hash == mainnet_init_block_root_hash:
 			return "mainnet"
-		else:
+		elif data.validator.init_block.root_hash == testnet_init_block_root_hash:
 			return "testnet"
+		else:
+			return "unknown"
 	#end define
 	
 	def GetFunctionBuffer(self, name, timeout=10):
