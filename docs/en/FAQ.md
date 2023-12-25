@@ -70,32 +70,73 @@ If you wish to change the working directory of the validator prior to installati
 2. **Create a symbolic link** - You can also create a symbolic link with the following command:
 
     ```bash
-    ln -s /opt/ton/var/ton
+    ln -s /home/ubuntu/ton-work /var/ton-work
     ```
-This command will create a link `/var/ton` that points to `/opt/ton`.
+This command will create a link `/var/ton-work` that points to `/home/ubuntu/ton-work`.
 
 ## Changing Validator Working Directory Post-installation
 
-If you want to change the working directory of the validator from `/var/ton/` after installation, perform the following steps:
+If you want to change the working directory of the validator from `/var/ton-work` after installation, perform the following steps:
 
-1. **Stop services** - You will need to stop the services with these commands:
+1. **Stop services**
 
     ```bash
     systemctl stop validator
     systemctl stop mytoncore
     ```
 
-2. **Move validator files** - You then need to move the validator files with this command:
+2. **Move validator files**
 
     ```bash
-    mv /var/ton/* /opt/ton/
+    mv /var/ton-work /home/ubuntu
+    ```
+   This command will move the `ton-work` directory to the new `/home/ubuntu` directory.
+
+   (!) If you need to copy a directory, use `cp -Rp` to copy recursively with privileges intact.
+
+3. **Update the paths in the mytoncore configuration**
+
+   Replace the paths in the configuration located at `~/.local/share/mytoncore/mytoncore.db`.
+
+4. **Update the paths in the service configuration**
+
+   Replace the paths in the configuration located in `/etc/systemd/system/validator.service`.
+
+   Run the `systemctl daemon-reload` command to update the service configuration.
+
+5. **Create a symbolic link to the old directory and set permissions**
+
+   Some components may still reference the old directory, create a symbolic link for backward compatibility.
+
+    ```bash
+    ln -s /home/ubuntu/ton-work /var/ton-work
+    ```
+   This command will create a symbolic link `/var/ton-work` that points to `/home/ubuntu/ton-work`.
+
+    ```bash
+    chown -h validator:validator /var/ton-work
+    ```
+   This command will change the owner and group of the `/var/ton-work` symbolic link.
+
+    ```bash
+    usermod -a -G ubuntu validator
+    ```
+   This command will add the user `validator` to the `ubuntu` group.
+
+   (!) Be sure to make sure you have enough permissions to make these changes or run these commands.
+
+6. **Start the services**
+
+    ```bash
+    systemctl start validator
+    systemctl start mytoncore
     ```
 
-3. **Update configuration paths** - Replace the paths in the configuration located at `~/.local/share/mytoncore/mytoncore.db`.
+   Check the status of ``validator``:
+    ```bash
+    systemctl status validator
+    ```
 
-4. **Note on experience** - There is no prior experience with such a transfer, so consider this when moving forward.
-
-Remember to make sure you have sufficient permissions to make these changes or run these commands.
 
 # Understanding Validator Status and Restarting Validator in MyTonCtrl
 
