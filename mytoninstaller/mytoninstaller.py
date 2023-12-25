@@ -194,9 +194,6 @@ def General(local):
 		ex = sys.argv.index("-e")
 		name = sys.argv[ex+1]
 		Event(local, name)
-	if "-m" in sys.argv:
-		mx = sys.argv.index("-m")
-		mode = sys.argv[mx+1]
 	if "-t" in sys.argv:
 		mx = sys.argv.index("-t")
 		telemetry = sys.argv[mx+1]
@@ -207,20 +204,13 @@ def General(local):
 		local.buffer.dump = str2bool(dump)
 	#end if
 
-		# Создать настройки для mytoncore.py
-		FirstMytoncoreSettings(local)
-
-		if mode == "full":
-			FirstNodeSettings(local)
-			EnableValidatorConsole(local)
-			EnableLiteServer(local)
-			BackupVconfig(local)
-			BackupMconfig(local)
-		#end if
-
-		# Создать символические ссылки
-		CreateSymlinks(local)
-	#end if
+	FirstMytoncoreSettings(local)
+	FirstNodeSettings(local)
+	EnableValidatorConsole(local)
+	EnableLiteServer(local)
+	BackupVconfig(local)
+	BackupMconfig(local)
+	CreateSymlinks(local)
 #end define
 
 

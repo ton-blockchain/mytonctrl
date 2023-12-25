@@ -18,7 +18,6 @@ branch="master"
 
 show_help_and_exit() {
     echo 'Supported argumets:'
-    echo ' -m [lite|full]   Choose installation mode'
     echo ' -c  PATH         Provide custom config for toninstaller.sh'
     echo ' -t               Disable telemetry'
     echo ' -i               Ignore minimum reqiurements'
@@ -41,10 +40,9 @@ ignore=false
 dump=false
 
 
-while getopts m:c:tida:r:b: flag
+while getopts c:tida:r:b: flag
 do
 	case "${flag}" in
-		m) mode=${OPTARG};;
 		c) config=${OPTARG};;
 		t) telemetry=false;;
 		i) ignore=true;;
@@ -59,12 +57,6 @@ do
 	esac
 done
 
-# check installation mode
-if [ "${mode}" != "lite" ] && [ "${mode}" != "full" ]; then
-	echo "Run script with flag '-m lite' or '-m full'"
-	exit 1
-fi
-
 # check machine configuration
 echo -e "${COLOR}[1/5]${ENDC} Checking system requirements"
 
@@ -72,12 +64,8 @@ cpus=$(lscpu | grep "CPU(s)" | head -n 1 | awk '{print $2}')
 memory=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
 
 echo "This machine has ${cpus} CPUs and ${memory}KB of Memory"
-if [ "${mode}" = "lite" ] && [ "$ignore" = false ] && ([ "${cpus}" -lt 2 ] || [ "${memory}" -lt 2000000 ]); then
-	echo "Insufficient resources. Requires a minimum of 2 processors and 2Gb RAM."
-	exit 1
-fi
-if [ "${mode}" = "full" ] && [ "$ignore" = false ] && ([ "${cpus}" -lt 8 ] || [ "${memory}" -lt 8000000 ]); then
-	echo "Insufficient resources. Requires a minimum of 8 processors and 8Gb RAM."
+if [ "$ignore" = false ] && ([ "${cpus}" -lt 16 ] || [ "${memory}" -lt 64000000 ]); then
+	echo "Insufficient resources. Requires a minimum of 16 processors and 64Gb RAM."
 	exit 1
 fi
 
@@ -127,7 +115,7 @@ if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ]; then
     user=$(logname)
 fi
 echo "User: $user"
-python3 -m mytoninstaller -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
+python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump}
 
 # set migrate version
 migrate_version=1
