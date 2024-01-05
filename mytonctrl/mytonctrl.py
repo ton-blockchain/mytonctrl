@@ -28,6 +28,7 @@ from mypylib.mypylib import (
 	color_print,
 	color_text,
 	bcolors,
+	Dict,
 	MyPyClass
 )
 
@@ -111,8 +112,8 @@ def Init(local, ton, console, argv):
 
 	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
-	console.AddItem("xrestart", inject_globals(Xrestart), local.translate("xrestart_cmd"))
-	console.AddItem("xlist", inject_globals(Xlist), local.translate("xlist_cmd"))
+	#console.AddItem("xrestart", inject_globals(Xrestart), local.translate("xrestart_cmd"))
+	#console.AddItem("xlist", inject_globals(Xlist), local.translate("xlist_cmd"))
 	#console.AddItem("gpk", inject_globals(GetPubKey), local.translate("gpk_cmd"))
 	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.translate("ssoc_cmd"))
 	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
@@ -131,10 +132,12 @@ def Init(local, ton, console, argv):
 	console.AddItem("deposit_to_pool", inject_globals(DepositToPool), local.translate("deposit_to_pool_cmd"))
 	console.AddItem("withdraw_from_pool", inject_globals(WithdrawFromPool), local.translate("withdraw_from_pool_cmd"))
 	console.AddItem("delete_pool", inject_globals(DeletePool), local.translate("delete_pool_cmd"))
-	#console.AddItem("update_validator_set", inject_globals(UpdateValidatorSet), local.translate("update_validator_set_cmd"))
+	console.AddItem("update_validator_set", inject_globals(UpdateValidatorSet), local.translate("update_validator_set_cmd"))
 
 	# console.AddItem("pt", inject_globals(PrintTest), "PrintTest")
 	# console.AddItem("sl", inject_globals(sl), "sl")
+	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
+	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -302,7 +305,37 @@ def Upgrade(ton, args):
 		text = "Upgrade - {red}Error{endc}"
 	color_print(text)
 #end define
-	
+
+def cleanup_validator_db(ton, args):
+	cleanup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/cleanup.sh')
+	run_args = ["bash", cleanup_script_path]
+	exit_code = run_as_root(run_args)
+#end define
+
+def run_benchmark(ton, args):
+	timeout = 200
+	benchmark_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/benchmark.sh')
+	etabar_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/etabar.py')
+	benchmark_result_path = "/tmp/benchmark_result.json"
+	run_args = ["python3", etabar_script_path, str(timeout), benchmark_script_path, benchmark_result_path]
+	exit_code = run_as_root(run_args)
+	if exit_code != 0:
+		color_print("Benchmark - {red}Error{endc}")
+		return
+	#end if
+
+	with open(benchmark_result_path, 'rt') as file:
+		text = file.read()
+		data = Dict(json.loads(text))
+	#end with
+
+	table = list()
+	table += [["Test type", "Read speed", "Write speed", "Read iops", "Write iops", "Random ops"]]
+	table += [["Fio lite", data.lite.read_speed, data.lite.write_speed, data.lite.read_iops, data.lite.write_iops, None]] # RND-4K-QD64
+	table += [["Fio hard", data.hard.read_speed, data.hard.write_speed, data.hard.read_iops, data.hard.write_iops, None]] # RND-4K-QD1
+	table += [["RocksDB", None, None, None, None, data.full.random_ops]]
+	print_table(table)
+#end define
 
 def CheckMytonctrlUpdate(local):
 	git_path = local.buffer.my_dir
@@ -1408,7 +1441,7 @@ def UpdateValidatorSet(ton, args):
 		return
 	wallet = ton.GetValidatorWallet()
 	ton.PoolUpdateValidatorSet(poolAddr, wallet)
-	color_print("DeletePool - {green}OK{endc}")
+	color_print("UpdateValidatorSet - {green}OK{endc}")
 #end define
 
 

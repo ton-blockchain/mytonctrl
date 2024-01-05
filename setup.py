@@ -25,7 +25,7 @@ setup(
         'mytoninstaller.scripts': ['*.sh'],
         'mytonctrl': [
             'resources/*', 
-            'scripts/*.sh', 
+            'scripts/*', 
             'migrations/*.sh'
         ],
         '': ['requirements.txt'],
