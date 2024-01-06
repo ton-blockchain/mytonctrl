@@ -327,7 +327,7 @@ def DownloadDump():
 	os.system(cmd)
 
 	# download dump
-	cmd = "curl -s {url}/dumps/latest.tar.lz | pv | plzip -d -n8 | tar -xC /var/ton-work/db".format(url=url)
+	cmd = "curl -Ls {url}/dumps/latest.tar.lz | pv | plzip -d -n8 | tar -xC /var/ton-work/db".format(url=url)
 	os.system(cmd)
 #end define
 
