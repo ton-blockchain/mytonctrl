@@ -3,7 +3,8 @@
 "Asm.fif" include
 "GetOpt.fif" include
 
-{ ."usage: " @' $0 type ." <new_validator_addr>" cr
+{ ."usage: " @' $0 type ." <new-validator-addr>" cr
+  ."Takes user friendly address as parameter - not file." cr
   ."Creates change validator action msg body BoC." cr
   ."Saves it into `change-validator.boc`." cr 1 halt
 } : usage
@@ -15,7 +16,7 @@ false =: force-bounce
 
 $1 bounce parse-load-address force-bounce or allow-bounce and =: bounce 2=: to_addr
 
-<b 4097 32 u, 1 64 u, to_addr Addr, b> =: body_boc
+<b 0x1001 32 u, 1 64 u, to_addr Addr, b> =: body_boc
 body_boc <s csr.
 body_boc 2 boc+>B
 "change-validator.boc" tuck B>file

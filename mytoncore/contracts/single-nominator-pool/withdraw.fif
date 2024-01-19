@@ -9,7 +9,7 @@ $# 1 = { } { usage } cond
 
 $1 $>GR =: amount
 
-<b 4096 32 u, 1 64 u, amount Gram, b> =: body_boc
+<b 0x1000 32 u, 1 64 u, amount Gram, b> =: body_boc
 body_boc <s csr.
 body_boc 2 boc+>B
 "withdraw.boc" tuck B>file

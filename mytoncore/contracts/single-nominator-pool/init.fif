@@ -6,7 +6,7 @@
 
   ."<code-boc> is a filename of the compiled contract code BoC bytes or HEX." cr
   ."Saves the contract address in `snominator.addr`." cr
-  ."Saves the init boc into `snominator-state-init.boc`." cr 1 halt
+  ."Saves the init boc into `snominator-init.boc`." cr 1 halt
 } : usage
 $# 3 = { cr } { usage } cond
 

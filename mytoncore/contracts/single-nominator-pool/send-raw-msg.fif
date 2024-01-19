@@ -9,9 +9,9 @@
 $# 2 = {  } { usage } cond
 
 $1 file>B B>boc =: msg
-$2 (number) =: mode
+$2 (number) 1 <> abort"not an integer: check your send-mode" =: mode
 
-<b x{7702} s, 0 64 u, msg ref, b> 2 boc+>B
+<b 0x7702 32 u, 1 64 u, mode 8 u, msg ref, b> 2 boc+>B
 ."Message body is " dup B>base64 type cr cr
 ."HEX: " dup Bx. cr cr
 
