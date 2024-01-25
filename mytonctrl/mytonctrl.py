@@ -712,9 +712,6 @@ def ActivateWallet(local, ton, args):
 		ton.WalletsCheck()
 	else:
 		wallet = ton.GetLocalWallet(walletName)
-		if not os.path.isfile(wallet.bocFilePath):
-			local.add_log("Wallet {walletName} already activated".format(walletName=walletName), "warning")
-			return
 		ton.ActivateWallet(wallet)
 	color_print("ActivateWallet - {green}OK{endc}")
 #end define
@@ -732,31 +729,6 @@ def PrintWalletsList(ton, args):
 			wallet.addrB64 = wallet.addrB64_init
 		table += [[wallet.name, account.status, account.balance, wallet.version, wallet.workchain, wallet.addrB64]]
 	print_table(table)
-#end define
-
-def ImportWalletFromFile(local, ton, args):
-	try:
-		filePath = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} iw <wallet-path>")
-		return
-	if (".addr" in filePath):
-		filePath = filePath.replace(".addr", '')
-	if (".pk" in filePath):
-		filePath = filePath.replace(".pk", '')
-	if os.path.isfile(filePath + ".addr") == False:
-		local.add_log("ImportWalletFromFile error: Address file not found: " + filePath, "error")
-		return
-	if os.path.isfile(filePath + ".pk") == False:
-		local.add_log("ImportWalletFromFile error: Private key not found: " + filePath, "error")
-		return
-	if '/' in filePath:
-		walletName = filePath[filePath.rfind('/')+1:]
-	else:
-		walletName = filePath
-	copyfile(filePath + ".addr", ton.walletsDir + walletName + ".addr")
-	copyfile(filePath + ".pk", ton.walletsDir + walletName + ".pk")
-	color_print("ImportWalletFromFile - {green}OK{endc}")
 #end define
 
 def ImportWallet(ton, args):
