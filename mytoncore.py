@@ -3833,6 +3833,7 @@ class MyTonCore():
 			["num", max_loan*10**9], 
 			["num", max_interest],
 		]
+		print(f"CalculateLoanAmount data: {data}")
 
 		url = "http://127.0.0.1:8801/runGetMethod"
 		res = requests.post(url, json=data)
@@ -3842,6 +3843,14 @@ class MyTonCore():
 			raise Exception(error)
 		result = res_data.get("result").get("stack").pop().pop()
 		return result
+	#end define
+
+	def CalculateLoanAmount_test():
+		min_loan = local.db.get("min_loan", 41000)
+		max_loan = local.db.get("max_loan", 43000)
+		max_interest_percent = local.db.get("max_interest_percent", 1.5)
+		max_interest = int(max_interest_percent/100*16777216)
+		return self.CalculateLoanAmount(min_loan, max_loan, max_interest)
 	#end define
 	
 	def WaitLoan(self, controllerAddr):

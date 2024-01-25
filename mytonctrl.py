@@ -83,6 +83,8 @@ def Init(argv):
 	console.AddItem("stop_and_withdraw_controller", StopAndWithdrawController, local.translate("_"))
 	console.AddItem("add_controller", AddController, local.translate("_"))
 	console.AddItem("check_liquid_pool", CheckLiquidPool, local.translate("_"))
+	console.AddItem("test_calculate_loan_amount", CalculateLoanAmount_test, local.translate("_"))
+	
 	
 
 	# Process input parameters
@@ -1362,6 +1364,11 @@ def AddController(args):
 def CheckLiquidPool(args):
 	ton.CheckLiquidPool()
 	color_print("CheckLiquidPool - {green}OK{endc}")
+#end define
+
+def CalculateLoanAmount_test(args):
+	t = ton.CalculateLoanAmount_test()
+	print(t)
 #end define
 
 
