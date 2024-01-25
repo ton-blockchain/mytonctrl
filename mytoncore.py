@@ -3845,7 +3845,7 @@ class MyTonCore():
 		return result
 	#end define
 
-	def CalculateLoanAmount_test():
+	def CalculateLoanAmount_test(self):
 		min_loan = local.db.get("min_loan", 41000)
 		max_loan = local.db.get("max_loan", 43000)
 		max_interest_percent = local.db.get("max_interest_percent", 1.5)
