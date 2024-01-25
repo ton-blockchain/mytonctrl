@@ -198,7 +198,7 @@ def Event(name):
 		EnableJsonRpc()
 	if name == "enableTHA":
 		EnableTonHttpApi()
-	if name == "clc":
+	if name in ["clc", "clcl"]:
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]
 		initBlock = b642dict(initBlock_b64)
