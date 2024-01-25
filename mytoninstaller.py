@@ -196,8 +196,8 @@ def Event(name):
 		DangerousRecoveryValidatorConfigFile()
 	if name == "enableJR":
 		EnableJsonRpc()
-	if name == "enablePT":
-		EnablePytonv3()
+	if name == "enableTHA":
+		EnableTonHttpApi()
 	if name == "clc":
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]
