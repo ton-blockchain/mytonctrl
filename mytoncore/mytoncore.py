@@ -1495,12 +1495,11 @@ class MyTonCore():
 		wallet = self.GetValidatorWallet()
 		pools = self.GetPools()
 		for pool in pools:
-			self.PoolUpdateValidatorSet(pool, wallet)
+			self.PoolUpdateValidatorSet(pool.addrB64, wallet)
 	#end define
 
-	def PoolUpdateValidatorSet(self, pool, wallet):
+	def PoolUpdateValidatorSet(self, poolAddr, wallet):
 		self.local.add_log("start PoolUpdateValidatorSet function", "debug")
-		poolAddr = pool.addrB64
 		poolData = self.GetPoolData(poolAddr)
 		if poolData is None:
 			return
@@ -1522,8 +1521,8 @@ class MyTonCore():
 			timeNow - poolData["validatorSetChangeTime"] > poolData["stakeHeldFor"] + 60):
 			self.PoolRecoverStake(poolAddr)
 			poolData = self.GetPoolData(poolAddr)
-		if (poolData["state"] == 0 and self.HasPoolWithdrawRequests(pool)):
-			self.PoolWithdrawRequests(pool, wallet)
+		if (poolData["state"] == 0 and self.HasPoolWithdrawRequests(poolAddr)):
+			self.PoolWithdrawRequests(poolAddr, wallet)
 			poolData = self.GetPoolData(poolAddr)
 		if (poolData["state"] == 0 and poolAddr in pendingWithdraws):
 			self.HandlePendingWithdraw(pendingWithdraws, poolAddr)
@@ -1541,10 +1540,10 @@ class MyTonCore():
 		self.local.add_log("PoolProcessUpdateValidatorSet completed")
 	#end define
 
-	def PoolWithdrawRequests(self, pool, wallet):
+	def PoolWithdrawRequests(self, poolAddr, wallet):
 		self.local.add_log("start PoolWithdrawRequests function", "debug")
 		resultFilePath = self.PoolProcessWihtdrawRequests()
-		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, pool.addrB64, 10)
+		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, poolAddr, 10)
 		self.SendFile(resultFilePath, wallet)
 		self.local.add_log("PoolWithdrawRequests completed")
 	#end define
@@ -1559,8 +1558,8 @@ class MyTonCore():
 		return resultFilePath
 	#end define
 
-	def HasPoolWithdrawRequests(self, pool):
-		cmd = f"runmethodfull {pool.addrB64} has_withdraw_requests"
+	def HasPoolWithdrawRequests(self, poolAddr):
+		cmd = f"runmethodfull {poolAddr} has_withdraw_requests"
 		result = self.liteClient.Run(cmd)
 		buff = self.Result2List(result)
 		data = int(buff[0])
