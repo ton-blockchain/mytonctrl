@@ -28,7 +28,7 @@ B>boc =: new-code-boc
 2 boc+>B
 dup ."StateInit: " B>base64 type cr cr
 dup ."HEX: " Bx. cr
-file-base +"-init.boc" tuck B>file
+file-base +"-query.boc" tuck B>file
 ."(Saved single nominator pool init into " type .")" cr cr
 
 init-boc hashu wc swap 2dup 2=: dest-addr

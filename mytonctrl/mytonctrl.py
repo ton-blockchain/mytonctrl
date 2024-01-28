@@ -134,6 +134,9 @@ def Init(local, ton, console, argv):
 	console.AddItem("delete_pool", inject_globals(DeletePool), local.translate("delete_pool_cmd"))
 	console.AddItem("update_validator_set", inject_globals(UpdateValidatorSet), local.translate("update_validator_set_cmd"))
 
+	console.AddItem("new_single_pool", inject_globals(new_single_pool), local.translate("new_single_pool_cmd"))
+	console.AddItem("activate_single_pool", inject_globals(activate_single_pool), local.translate("activate_single_pool_cmd"))
+
 	# console.AddItem("pt", inject_globals(PrintTest), "PrintTest")
 	# console.AddItem("sl", inject_globals(sl), "sl")
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
@@ -787,12 +790,17 @@ def ViewAccountStatus(ton, args):
 		return
 	addrB64 = ton.GetDestinationAddr(addrB64)
 	account = ton.GetAccount(addrB64)
-	version = ton.GetWalletVersionFromHash(account.codeHash)
+	version = ton.GetVersionFromCodeHash(account.codeHash)
 	statusTable = list()
-	statusTable += [["Address", "Status", "Version", "Balance"]]
-	statusTable += [[addrB64, account.status, version, account.balance]]
+	statusTable += [["Address", "Status", "Balance", "Version"]]
+	statusTable += [[addrB64, account.status, account.balance, version]]
+	codeHashTable = list()
+	codeHashTable += [["Code hash"]]
+	codeHashTable += [[account.codeHash]]
 	historyTable = GetHistoryTable(ton, addrB64, 10)
 	print_table(statusTable)
+	print()
+	print_table(codeHashTable)
 	print()
 	print_table(historyTable)
 #end define
@@ -1316,7 +1324,7 @@ def NewRestrictedWallet(ton, args):
 
 def NewPool(ton, args):
 	try:
-		poolName = args[0]
+		pool_name = args[0]
 		validatorRewardSharePercent = float(args[1])
 		maxNominatorsCount = int(args[2])
 		minValidatorStake = int(args[3])
@@ -1324,19 +1332,19 @@ def NewPool(ton, args):
 	except:
 		color_print("{red}Bad args. Usage:{endc} new_pool <pool-name> <validator-reward-share-percent> <max-nominators-count> <min-validator-stake> <min-nominator-stake>")
 		return
-	ton.CreatePool(poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake)
+	ton.CreatePool(pool_name, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake)
 	color_print("NewPool - {green}OK{endc}")
 #end define
 
 def ActivatePool(local, ton, args):
 	try:
-		poolName = args[0]
+		pool_name = args[0]
 	except:
 		color_print("{red}Bad args. Usage:{endc} activate_pool <pool-name>")
 		return
-	pool = ton.GetLocalPool(poolName)
+	pool = ton.GetLocalPool(pool_name)
 	if not os.path.isfile(pool.bocFilePath):
-		local.add_log(f"Pool {poolName} already activated", "warning")
+		local.add_log(f"Pool {pool_name} already activated", "warning")
 		return
 	ton.ActivatePool(pool)
 	color_print("ActivatePool - {green}OK{endc}")
@@ -1344,7 +1352,7 @@ def ActivatePool(local, ton, args):
 
 def PrintPoolsList(ton, args):
 	table = list()
-	table += [["Name", "Status", "Balance", "Address"]]
+	table += [["Name", "Status", "Balance", "Version", "Address"]]
 	data = ton.GetPools()
 	if (data is None or len(data) == 0):
 		print("No data")
@@ -1353,67 +1361,93 @@ def PrintPoolsList(ton, args):
 		account = ton.GetAccount(pool.addrB64)
 		if account.status != "active":
 			pool.addrB64 = pool.addrB64_init
-		table += [[pool.name, account.status, account.balance, pool.addrB64]]
+		version = ton.GetVersionFromCodeHash(account.codeHash)
+		table += [[pool.name, account.status, account.balance, version, pool.addrB64]]
 	print_table(table)
 #end define
 
 def GetPoolData(ton, args):
 	try:
-		poolName = args[0]
+		pool_name = args[0]
 	except:
 		color_print("{red}Bad args. Usage:{endc} get_pool_data <pool-name | pool-addr>")
 		return
-	if ton.IsAddr(poolName):
-		poolAddr = poolName
+	if ton.IsAddr(pool_name):
+		pool_addr = pool_name
 	else:
-		pool = ton.GetLocalPool(poolName)
-		poolAddr = pool.addrB64
-	poolData = ton.GetPoolData(poolAddr)
-	print(json.dumps(poolData, indent=4))
+		pool = ton.GetLocalPool(pool_name)
+		pool_addr = pool.addrB64
+	pool_data = ton.GetPoolData(pool_addr)
+	print(json.dumps(pool_data, indent=4))
 #end define
 
 def DepositToPool(ton, args):
 	try:
-		pollAddr = args[0]
+		poll_addr = args[0]
 		amount = float(args[1])
 	except:
 		color_print("{red}Bad args. Usage:{endc} deposit_to_pool <pool-addr> <amount>")
 		return
-	ton.DepositToPool(pollAddr, amount)
+	ton.DepositToPool(poll_addr, amount)
 	color_print("DepositToPool - {green}OK{endc}")
 #end define
 
 def WithdrawFromPool(ton, args):
 	try:
-		poolAddr = args[0]
+		pool_addr = args[0]
 		amount = float(args[1])
 	except:
 		color_print("{red}Bad args. Usage:{endc} withdraw_from_pool <pool-addr> <amount>")
 		return
-	ton.WithdrawFromPool(poolAddr, amount)
+	ton.WithdrawFromPool(pool_addr, amount)
 	color_print("WithdrawFromPool - {green}OK{endc}")
 #end define
 
 def DeletePool(ton, args):
 	try:
-		poolName = args[0]
+		pool_name = args[0]
 	except:
 		color_print("{red}Bad args. Usage:{endc} delete_pool <pool-name>")
 		return
-	pool = ton.GetLocalPool(poolName)
+	pool = ton.GetLocalPool(pool_name)
 	pool.Delete()
 	color_print("DeletePool - {green}OK{endc}")
 #end define
 
 def UpdateValidatorSet(ton, args):
 	try:
-		poolAddr = args[0]
+		pool_addr = args[0]
 	except:
 		color_print("{red}Bad args. Usage:{endc} update_validator_set <pool-addr>")
 		return
 	wallet = ton.GetValidatorWallet()
-	ton.PoolUpdateValidatorSet(poolAddr, wallet)
+	ton.PoolUpdateValidatorSet(pool_addr, wallet)
 	color_print("UpdateValidatorSet - {green}OK{endc}")
+#end define
+
+def new_single_pool(ton, args):
+	try:
+		pool_name = args[0]
+		owner_address = args[1]
+	except:
+		color_print("{red}Bad args. Usage:{endc} new_single_pool <pool-name> <owner_address>")
+		return
+	ton.create_single_pool(pool_name, owner_address)
+	color_print("new_single_pool - {green}OK{endc}")
+#end define
+
+def activate_single_pool(local, ton, args):
+	try:
+		pool_name = args[0]
+	except:
+		color_print("{red}Bad args. Usage:{endc} activate_single_pool <pool-name>")
+		return
+	pool = ton.get_local_single_pool(pool_name)
+	if not os.path.isfile(pool.bocFilePath):
+		local.add_log(f"Pool {pool_name} already activated", "warning")
+		return
+	ton.activate_single_pool(pool)
+	color_print("activate_single_pool - {green}OK{endc}")
 #end define
 
 

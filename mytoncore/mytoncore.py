@@ -7,6 +7,7 @@ import hashlib
 import struct
 import psutil
 import subprocess
+import pkg_resources
 from fastcrc import crc16
 
 from mytoncore.utils import xhex2hex, ng2g
@@ -500,7 +501,7 @@ class MyTonCore():
 		account = self.GetAccount(wallet.addrB64)
 		version = walletsVersionList.get(wallet.addrB64)
 		if version is None:
-			version = self.GetWalletVersionFromHash(account.codeHash)
+			version = self.GetVersionFromCodeHash(account.codeHash)
 		if version is None:
 			self.local.add_log("Wallet version not found: " + wallet.addrB64, "warning")
 			return
@@ -516,8 +517,8 @@ class MyTonCore():
 		self.local.save()
 	#end define
 
-	def GetWalletVersionFromHash(self, inputHash):
-		self.local.add_log("start GetWalletVersionFromHash function", "debug")
+	def GetVersionFromCodeHash(self, inputHash):
+		self.local.add_log("start GetVersionFromCodeHash function", "debug")
 		arr = dict()
 		arr["v1r1"] = "d670136510daff4fee1889b8872c4c1e89872ffa1fe58a23a5f5d99cef8edf32"
 		arr["v1r2"] = "2705a31a7ac162295c8aed0761cc6e031ab65521dd7b4a14631099e02de99e18"
@@ -528,6 +529,8 @@ class MyTonCore():
 		arr["v3r2"] = "8a6d73bdd8704894f17d8c76ce6139034b8a51b1802907ca36283417798a219b"
 		arr["v4"] = "7ae380664c513769eaa5c94f9cd5767356e3f7676163baab66a4b73d5edab0e5"
 		arr["hv1"] = "fc8e48ed7f9654ba76757f52cc6031b2214c02fab9e429ffa0340f5575f9f29c"
+		arr["pool"] = "399838da9489139680e90fd237382e96ba771fdf6ea27eb7d513965b355038b4"
+		arr["spool"] = "fc2ae44bcaedfa357d0091769aabbac824e1c28f14cc180c0b52a57d83d29054"
 		for version, hash in arr.items():
 			if hash == inputHash:
 				return version
@@ -1143,11 +1146,12 @@ class MyTonCore():
 		return pubkey, fileName
 	#end define
 
-	def SignBocWithWallet(self, wallet, bocPath, dest, coins, **kwargs):
+	def SignBocWithWallet(self, wallet, boc_path, dest, coins, **kwargs):
 		self.local.add_log("start SignBocWithWallet function", "debug")
 		flags = kwargs.get("flags", list())
 		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
 		subwallet = kwargs.get("subwallet", subwalletDefault)
+		boc_mode = kwargs.get("boc_mode", "--body")
 
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
@@ -1159,7 +1163,7 @@ class MyTonCore():
 		destAccount = self.GetAccount(dest)
 		bounceable = self.IsBounceableAddrB64(dest)
 		if bounceable == False and destAccount.status == "active":
-			flags += ["-b"]
+			flags += ["--force-bounce"]
 			text = "Find non-bounceable flag, but destination account already active. Using bounceable flag"
 			self.local.AddLog(text, "warning")
 		elif "-n" not in flags and bounceable == True and destAccount.status != "active":
@@ -1167,21 +1171,21 @@ class MyTonCore():
 		#end if
 
 		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
+		result_file_path = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
 		if "v1" in wallet.version:
-			fiftScript = "wallet.fif"
-			args = [fiftScript, wallet.path, dest, seqno, coins, "-B", bocPath, resultFilePath]
+			fift_script = "wallet.fif"
+			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
 		elif "v2" in wallet.version:
-			fiftScript = "wallet-v2.fif"
-			args = [fiftScript, wallet.path, dest, seqno, coins, "-B", bocPath, resultFilePath]
+			fift_script = "wallet-v2.fif"
+			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
 		elif "v3" in wallet.version:
-			fiftScript = "wallet-v3.fif"
-			args = [fiftScript, wallet.path, dest, subwallet, seqno, coins, "-B", bocPath, resultFilePath]
+			fift_script = "wallet-v3.fif"
+			args = [fift_script, wallet.path, dest, subwallet, seqno, coins, boc_mode, boc_path, result_file_path]
 		if flags:
 			args += flags
 		result = self.fift.Run(args)
-		resultFilePath = parse(result, "Saved to file ", ")")
-		return resultFilePath
+		result_file_path = parse(result, "Saved to file ", ")")
+		return result_file_path
 	#end define
 
 	def SendFile(self, filePath, wallet=None, **kwargs):
@@ -3519,6 +3523,41 @@ class MyTonCore():
 		poolData["validatorSetChangeTime"] = data[14]
 		poolData["stakeHeldFor"] = data[15]
 		return poolData
+	#end define
+
+	def create_single_pool(self, pool_name, owner_address):
+		self.local.add_log("start create_single_pool function", "debug")
+
+		file_path = self.poolsDir + pool_name
+		if os.path.isfile(file_path + ".addr"):
+			self.local.add_log("create_single_pool warning: Pool already exists: " + file_path, "warning")
+			return
+		#end if
+
+		fift_script = pkg_resources.resource_filename('mytoncore', 'contracts/single-nominator-pool/init.fif')
+		code_boc = pkg_resources.resource_filename('mytoncore', 'contracts/single-nominator-pool/single-nominator-code.hex')
+		validator_wallet = self.GetValidatorWallet()
+		args = [fift_script, code_boc, owner_address, validator_wallet.addrB64, file_path]
+		result = self.fift.Run(args)
+		if "Saved single nominator pool" not in result:
+			raise Exception("create_single_pool error: " + result)
+		#end if
+		
+		pools = self.GetPools()
+		new_pool = self.GetLocalPool(pool_name)
+		for pool in pools:
+			if pool.name != new_pool.name and pool.addrB64 == new_pool.addrB64:
+				new_pool.Delete()
+				raise Exception("create_single_pool error: Pool with the same parameters already exists.")
+		#end for
+	#end define
+
+	def activate_single_pool(self, pool, ex=True):
+		self.local.add_log("start activate_single_pool function", "debug")
+		boc_mode = "--with-init"
+		validator_wallet = self.GetValidatorWallet()
+		resultFilePath = self.SignBocWithWallet(validator_wallet, pool.bocFilePath, pool.addrB64_init, 1, boc_mode=boc_mode)
+		self.SendFile(resultFilePath, validator_wallet)
 	#end define
 
 	def GetNetworkName(self):
