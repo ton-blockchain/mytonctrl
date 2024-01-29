@@ -491,6 +491,7 @@ class MyTonCore():
 		object.addrFull = f"{object.workchain}:{object.addr}"
 		object.addrB64 = self.AddrFull2AddrB64(object.addrFull)
 		object.addrB64_init = self.AddrFull2AddrB64(object.addrFull, bounceable=False)
+		file.close()
 	#end define
 
 	def WalletVersion2Wallet(self, wallet):
