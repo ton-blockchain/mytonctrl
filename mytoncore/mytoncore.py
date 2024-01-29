@@ -3553,7 +3553,7 @@ class MyTonCore():
 		#end for
 	#end define
 
-	def activate_single_pool(self, pool, ex=True):
+	def activate_single_pool(self, pool):
 		self.local.add_log("start activate_single_pool function", "debug")
 		boc_mode = "--with-init"
 		validator_wallet = self.GetValidatorWallet()
