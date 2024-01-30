@@ -491,6 +491,7 @@ class MyTonCore():
 		object.addrFull = f"{object.workchain}:{object.addr}"
 		object.addrB64 = self.AddrFull2AddrB64(object.addrFull)
 		object.addrB64_init = self.AddrFull2AddrB64(object.addrFull, bounceable=False)
+		file.close()
 	#end define
 
 	def WalletVersion2Wallet(self, wallet):
@@ -3552,7 +3553,7 @@ class MyTonCore():
 		#end for
 	#end define
 
-	def activate_single_pool(self, pool, ex=True):
+	def activate_single_pool(self, pool):
 		self.local.add_log("start activate_single_pool function", "debug")
 		boc_mode = "--with-init"
 		validator_wallet = self.GetValidatorWallet()

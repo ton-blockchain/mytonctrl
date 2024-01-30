@@ -1442,7 +1442,7 @@ def activate_single_pool(local, ton, args):
 	except:
 		color_print("{red}Bad args. Usage:{endc} activate_single_pool <pool-name>")
 		return
-	pool = ton.get_local_single_pool(pool_name)
+	pool = ton.GetLocalPool(pool_name)
 	if not os.path.isfile(pool.bocFilePath):
 		local.add_log(f"Pool {pool_name} already activated", "warning")
 		return
