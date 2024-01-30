@@ -1646,34 +1646,39 @@ class MyTonCore():
 			self.SendFile(wallet.bocFilePath, wallet, remove=False)
 	#end define
 
-	def ImportWallet(self, addrB64, key):
-		workchain, addr, bounceable = self.ParseAddrB64(addrB64)
+	def ImportWallet(self, addr_b64, key):
+		addr_bytes = self.addr_b64_to_bytes(addr_b64)
+		pk_bytes = base64.b64decode(key)
+		wallet_name = self.GenerateWalletName()
+		wallet_path = self.walletsDir + wallet_name
+		with open(wallet_path + ".addr", 'wb') as file:
+			file.write(addr_bytes)
+		with open(wallet_path + ".pk", 'wb') as file:
+			file.write(pk_bytes)
+		return wallet_name
+	#end define
+
+	def addr_b64_to_bytes(self, addr_b64):
+		workchain, addr, bounceable = self.ParseAddrB64(addr_b64)
 		workchain_bytes = int.to_bytes(workchain, 4, "big", signed=True)
 		addr_bytes = bytes.fromhex(addr)
-		key_bytes = base64.b64decode(key)
-
-		walletName = self.GenerateWalletName()
-		walletPath = self.walletsDir + walletName
-		file = open(walletPath + ".addr", 'wb')
-		file.write(addr_bytes + workchain_bytes)
-		file.close()
-
-		file = open(walletPath + ".pk", 'wb')
-		file.write(key_bytes)
-		file.close()
-
-		return walletName
+		result = addr_bytes + workchain_bytes
+		return result
 	#end define
 
 	def ExportWallet(self, walletName):
 		wallet = self.GetLocalWallet(walletName)
-
-		file = open(wallet.privFilePath, 'rb')
-		data = file.read()
-		file.close()
+		with open(wallet.privFilePath, 'rb') as file:
+			data = file.read()
 		key = base64.b64encode(data).decode("utf-8")
-
 		return wallet.addrB64, key
+	#end define
+
+	def import_pool(self, pool_name, addr_b64):
+		addr_bytes = self.addr_b64_to_bytes(addr_b64)
+		pool_path = self.poolsDir + pool_name
+		with open(pool_path + ".addr", 'wb') as file:
+			file.write(addr_bytes)
 	#end define
 
 	def GetWalletsNameList(self):

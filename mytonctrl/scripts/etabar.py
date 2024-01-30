@@ -13,10 +13,15 @@ bar = EtaBar(timeout=timeout)
 args = ["bash", script]
 process = bar.run(run, args, stdin=PIPE, stdout=PIPE, stderr=PIPE, timeout=timeout)
 exit_code = -1
+output = "process is None"
 if process != None:
 	exit_code = process.returncode
 	stdout = process.stdout.decode("utf-8")
 	stderr = process.stderr.decode("utf-8")
-	with open(result, 'wt') as file:
-		file.write(stdout)
+	if exit_code == 0:
+		output = stdout
+	else:
+		output = stderr
+with open(result, 'wt') as file:
+	file.write(output)
 exit(exit_code)

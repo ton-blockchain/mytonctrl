@@ -136,6 +136,7 @@ def Init(local, ton, console, argv):
 
 	console.AddItem("new_single_pool", inject_globals(new_single_pool), local.translate("new_single_pool_cmd"))
 	console.AddItem("activate_single_pool", inject_globals(activate_single_pool), local.translate("activate_single_pool_cmd"))
+	console.AddItem("import_pool", inject_globals(import_pool), local.translate("import_pool_cmd"))
 
 	# console.AddItem("pt", inject_globals(PrintTest), "PrintTest")
 	# console.AddItem("sl", inject_globals(sl), "sl")
@@ -322,16 +323,14 @@ def run_benchmark(ton, args):
 	benchmark_result_path = "/tmp/benchmark_result.json"
 	run_args = ["python3", etabar_script_path, str(timeout), benchmark_script_path, benchmark_result_path]
 	exit_code = run_as_root(run_args)
+	with open(benchmark_result_path, 'rt') as file:
+		text = file.read()
 	if exit_code != 0:
-		color_print("Benchmark - {red}Error{endc}")
+		color_print("Benchmark - {red}Error:{endc} " + text)
 		return
 	#end if
 
-	with open(benchmark_result_path, 'rt') as file:
-		text = file.read()
-		data = Dict(json.loads(text))
-	#end with
-
+	data = Dict(json.loads(text))
 	table = list()
 	table += [["Test type", "Read speed", "Write speed", "Read iops", "Write iops", "Random ops"]]
 	table += [["Fio lite", data.lite.read_speed, data.lite.write_speed, data.lite.read_iops, data.lite.write_iops, None]] # RND-4K-QD64
@@ -1448,6 +1447,17 @@ def activate_single_pool(local, ton, args):
 		return
 	ton.activate_single_pool(pool)
 	color_print("activate_single_pool - {green}OK{endc}")
+#end define
+
+def import_pool(ton, args):
+	try:
+		pool_name = args[0]
+		pool_addr = args[1]
+	except:
+		color_print("{red}Bad args. Usage:{endc} import_pool <pool-name> <pool-addr>")
+		return
+	ton.import_pool(pool_name, pool_addr)
+	color_print("import_pool - {green}OK{endc}")
 #end define
 
 

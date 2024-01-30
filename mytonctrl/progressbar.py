@@ -17,6 +17,7 @@ class EtaBar:
 		self.indent_symbol = ' '
 
 		self.tty_height, self.tty_width = self.get_tty_size()
+		stdout.reconfigure(encoding="utf-8")
 	#end define
 
 	def run(self, func=None, *args, **kwargs):
