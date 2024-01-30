@@ -79,7 +79,17 @@ int check_new_stake_msg(slice cs) impure inline_ref;
 	slice sender = cs~load_msg_addr();
 
 	int op = in_msg_body~load_uint(32);
-	int query_id = in_msg_body~load_uint(64);
+	int query_id = 0; ;; filled below
+
+	;; if just a message with comment "w" - means withdraw
+	if ( (op == 0) & (equal_slice_bits(in_msg_body, "w")) & (in_msg_body.slice_refs() == 0) ) {
+		op = OP::WITHDRAW;
+		;; in few lines, amount to withdraw is loaded from in_msg_body,
+		;; so we set it to the maximum avaliable balance
+		in_msg_body = begin_cell().store_coins(my_balance - msg_value - MIN_TON_FOR_STORAGE).end_cell().begin_parse();
+	} else {
+		query_id = in_msg_body~load_uint(64);
+	}
 
 	;; owner role - cold wallet (private key that is not connected to the internet) that owns the funds used for staking and acts as the single nominator
 	if (equal_slice_bits(sender, owner_address)) {
