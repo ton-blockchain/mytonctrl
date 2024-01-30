@@ -41,7 +41,8 @@ Saves the result into `upgrade.boc`.
 
 ### Change Validator Address
 
-usage: `./change-validator.fif <new_validator_addr>` \
+usage: `./change-validator.fif <new-validator-addr>` \
+Takes user friendly address as parameter - not file. \
 Creates change validator action msg body BoC. \
 Saves it into `change-validator.boc`.
 
