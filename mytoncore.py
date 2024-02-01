@@ -1430,13 +1430,31 @@ class MyTonCore():
 			wallet.oldseqno = self.GetSeqno(wallet)
 		self.liteClient.Run("sendfile " + filePath)
 		if duplicateSendfile:
-			self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
-			self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+			self.send_boc_toncenter(filePath)
+			# self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+			# self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
 		if timeout and wallet:
 			self.WaitTransaction(wallet, timeout)
 		if remove == True:
 			os.remove(filePath)
 	#end define
+
+	def send_boc_toncenter(self, file_path: str):
+		local.add_log('Start send_boc_toncenter function: ' + file_path, 'debug')
+		with open(file_path, "rb") as f:
+			boc = f.read()
+			boc_b64 = base64.b64encode(boc).decode("utf-8")
+		data = {"boc": boc_b64}
+		if self.GetNetworkName() == 'testnet':
+			url = 'https://testnet.toncenter.com/api/v2/sendBoc'
+		else:
+			url = 'https://toncenter.com/api/v2/sendBoc'
+		result = requests.post(url=url, json=data)
+		if result.status_code != 200:
+			local.add_log(f'Failed to send boc to toncenter: {result.content}', 'info')
+			return False
+		local.add_log('Sent boc to toncenter', 'info')
+		return True
 
 	def WaitTransaction(self, wallet, timeout=30):
 		local.add_log("start WaitTransaction function", "debug")
