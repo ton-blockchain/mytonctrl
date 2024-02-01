@@ -1445,7 +1445,11 @@ class MyTonCore():
 			boc = f.read()
 			boc_b64 = base64.b64encode(boc).decode("utf-8")
 		data = {"boc": boc_b64}
-		result = requests.post(url='https://toncenter.com/api/v2/sendBoc', json=data)
+		if self.GetNetworkName() == 'testnet':
+			url = 'https://testnet.toncenter.com/api/v2/sendBoc'
+		else:
+			url = 'https://toncenter.com/api/v2/sendBoc'
+		result = requests.post(url=url, json=data)
 		if result.status_code != 200:
 			local.add_log(f'Failed to send boc to toncenter: {result.content}', 'info')
 			return False
