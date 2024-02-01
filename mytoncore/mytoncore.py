@@ -3585,11 +3585,11 @@ class MyTonCore():
 
 	def GetNetworkName(self):
 		data = self.local.read_db(self.liteClient.configPath)
-		mainnet_init_block_root_hash = "YRkrcmZMvLBvjanwKCyL3w4oceGPtFfgx8ym1QKCK/4="
-		testnet_init_block_root_hash = "gj+B8wb/AmlPk1z1AhVI484rhrUpgSr2oSFIh56VoSg="
-		if data.validator.init_block.root_hash == mainnet_init_block_root_hash:
+		mainnet_zero_state_root_hash = "F6OpKZKqvqeFp6CQmFomXNMfMj2EnaUSOXN+Mh+wVWk="
+		testnet_zero_state_root_hash = "gj+B8wb/AmlPk1z1AhVI484rhrUpgSr2oSFIh56VoSg="
+		if data.validator.zero_state.root_hash == mainnet_zero_state_root_hash:
 			return "mainnet"
-		elif data.validator.init_block.root_hash == testnet_init_block_root_hash:
+		elif data.validator.zero_state.root_hash == testnet_zero_state_root_hash:
 			return "testnet"
 		else:
 			return "unknown"
