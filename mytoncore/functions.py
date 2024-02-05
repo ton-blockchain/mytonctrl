@@ -504,13 +504,11 @@ def Complaints(local, ton):
     # Voting for complaints
     config32 = ton.GetConfig32()
     electionId = config32.get("startWorkTime")
-    complaintsHashes = ton.SaveComplaints(electionId)
-    complaints = ton.GetComplaints(electionId)
-    for key, item in complaints.items():
-        complaintHash = item.get("hash")
-        complaintHash_hex = Dec2HexAddr(complaintHash)
-        if complaintHash_hex in complaintsHashes:
-            ton.VoteComplaint(electionId, complaintHash)
+    complaints = ton.GetComplaints(electionId)  # get complaints from Elector
+    for c in complaints.values():
+        complaint_hash = c.get("hash")
+        if ton.complaint_is_valid(c):
+            ton.VoteComplaint(electionId, complaint_hash)
 # end define
 
 
