@@ -910,9 +910,9 @@ class MyTonCore():
 			if "public_key:" in line:
 				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
 				pubkey = parse(line, "pubkey:x", ')')
-				if config32["totalValidators"] > 1:
+				try:
 					validatorWeight = int(parse(line, "weight:", ' '))
-				else:
+				except ValueError:
 					validatorWeight = int(parse(line, "weight:", ')'))
 				buff = dict()
 				buff["adnlAddr"] = validatorAdnlAddr
@@ -947,9 +947,9 @@ class MyTonCore():
 			if "public_key:" in line:
 				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
 				pubkey = parse(line, "pubkey:x", ')')
-				if config34["totalValidators"] > 1:
+				try:
 					validatorWeight = int(parse(line, "weight:", ' '))
-				else:
+				except ValueError:
 					validatorWeight = int(parse(line, "weight:", ')'))
 				buff = dict()
 				buff["adnlAddr"] = validatorAdnlAddr
