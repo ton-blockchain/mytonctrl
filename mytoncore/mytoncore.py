@@ -1205,15 +1205,19 @@ class MyTonCore():
 		timeout = kwargs.get("timeout", 30)
 		remove = kwargs.get("remove", True)
 		duplicateSendfile = self.local.db.get("duplicateSendfile", True)
+		duplicateApi = self.local.db.get("duplicateApi", False)
 		if not os.path.isfile(filePath):
 			raise Exception("SendFile error: no such file '{filePath}'".format(filePath=filePath))
 		if timeout and wallet:
 			wallet.oldseqno = self.GetSeqno(wallet)
 		self.liteClient.Run("sendfile " + filePath)
 		if duplicateSendfile:
+			try:
+				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+			except: pass
+		if duplicateApi:
 			self.send_boc_toncenter(filePath)
-			# self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
-			# self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
 		if timeout and wallet:
 			self.WaitTransaction(wallet, timeout)
 		if remove == True:
@@ -1228,10 +1232,13 @@ class MyTonCore():
 		data = {"boc": boc_b64}
 		network_name = self.GetNetworkName()
 		if network_name == 'testnet':
-			url = 'https://testnet.toncenter.com/api/v2/sendBoc'
+			default_url = 'https://testnet.toncenter.com/api/v2/sendBoc'
 		elif network_name == 'mainnet':
-			url = 'https://toncenter.com/api/v2/sendBoc'
+			default_url = 'https://toncenter.com/api/v2/sendBoc'
 		else:
+			default_url = None
+		url = self.local.db.get("duplicateApiUrl", default_url)
+		if url == None:
 			return False
 		result = requests.post(url=url, json=data)
 		if result.status_code != 200:
