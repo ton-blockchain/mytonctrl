@@ -181,6 +181,7 @@ def Event(local, name):
 		initBlock_b64 = sys.argv[ix+1]
 		initBlock = b642dict(initBlock_b64)
 		CreateLocalConfig(local, initBlock)
+	local.exit()
 #end define
 
 
