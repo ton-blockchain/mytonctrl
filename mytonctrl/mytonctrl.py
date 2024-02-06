@@ -901,8 +901,8 @@ def PrintBookmarksList(ton, args):
 		name = item.get("name")
 		type = item.get("type")
 		addr = item.get("addr")
-		data = item.get("data")
-		table += [[name, type, addr, data]]
+		bookmark_data = item.get("data")
+		table += [[name, type, addr, bookmark_data]]
 	print_table(table)
 #end define
 
@@ -948,14 +948,17 @@ def DeleteBookmark(ton, args):
 # #end define
 
 def PrintOffersList(ton, args):
-	offers = ton.GetOffers()
+	data = ton.GetOffers()
+	if (data is None or len(data) == 0):
+ 		print("No data")
+ 		return
 	if "--json" in args:
-		text = json.dumps(offers, indent=2)
+		text = json.dumps(data, indent=2)
 		print(text)
 	else:
 		table = list()
 		table += [["Hash", "Votes", "W/L", "Approved", "Is passed"]]
-		for item in offers:
+		for item in data:
 			hash = item.get("hash")
 			votedValidators = len(item.get("votedValidators"))
 			wins = item.get("wins")
@@ -1007,14 +1010,17 @@ def GetConfig(ton, args):
 
 def PrintComplaintsList(ton, args):
 	past = "past" in args
-	complaints = ton.GetComplaints(past=past)
+	data = ton.GetComplaints(past=past)
+	if (data is None or len(complaints)data 0):
+		print("No data")
+		return
 	if "--json" in args:
-		text = json.dumps(complaints, indent=2)
+		text = json.dumps(data, indent=2)
 		print(text)
 	else:
 		table = list()
 		table += [["Election id", "ADNL", "Fine (part)", "Votes", "Approved", "Is passed"]]
-		for key, item in complaints.items():
+		for key, item in data.items():
 			electionId = item.get("electionId")
 			adnl = item.get("adnl")
 			suggestedFine = item.get("suggestedFine")
@@ -1117,14 +1123,17 @@ def GetDomainFromAuction(ton, args):
 
 def PrintElectionEntriesList(ton, args):
 	past = "past" in args
-	entries = ton.GetElectionEntries(past=past)
+	data = ton.GetElectionEntries(past=past)
+	if (data is None or len(data) == 0):
+		print("No data")
+		return
 	if "--json" in args:
-		text = json.dumps(entries, indent=2)
+		text = json.dumps(data, indent=2)
 		print(text)
 	else:
 		table = list()
 		table += [["ADNL", "Pubkey", "Wallet", "Stake", "Max-factor"]]
-		for key, item in entries.items():
+		for key, item in data.items():
 			adnl = item.get("adnlAddr")
 			pubkey = item.get("pubkey")
 			walletAddr = item.get("walletAddr")
@@ -1147,14 +1156,17 @@ def VoteElectionEntry(ton, args):
 
 def PrintValidatorList(ton, args):
 	past = "past" in args
-	validators = ton.GetValidatorsList(past=past)
+	data = ton.GetValidatorsList(past=past)
+	if (data is None or len(data) == 0):
+		print("No data")
+		return
 	if "--json" in args:
-		text = json.dumps(validators, indent=2)
+		text = json.dumps(data, indent=2)
 		print(text)
 	else:
 		table = list()
 		table += [["ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
-		for item in validators:
+		for item in data:
 			adnl = item.get("adnlAddr")
 			pubkey = item.get("pubkey")
 			walletAddr = item.get("walletAddr")
