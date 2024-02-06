@@ -1,16 +1,16 @@
 #!/usr/bin/fift -s
 "TonUtil.fif" include
 
-{ ."usage: " @' $0 type ." <complaint-boc> <file-base>" cr
+{ ."usage: " @' $0 type ." <complaint-boc> <savefile>" cr
   ."Removes proof cells from complaint." cr cr
 
   ."<complaint-boc> is a filename of the serialized TL-B ValidatorComplaint boc." cr
-  ."Saves the result boc into `<file-base>.boc`." cr 1 halt
+  ."Saves the result boc into `<savefile>`." cr 1 halt
 } : usage
 $# 2 = { cr } { usage } cond
 
 $1 =: filename
-$2 =: file-base
+$2 =: savefile
 
 filename file>B dup
 8 B| drop B>$ "b5ee9c72" $= { B>$ x>B? drop } if
@@ -86,5 +86,5 @@ b> =: result_cell
 result_cell <s csr.
 
 result_cell 2 boc+>B
-file-base +".boc" B>file
-
+savefile tuck B>file
+."(Saved to file " type .")" cr
