@@ -23,7 +23,10 @@ setup(
     ],
     package_data={
         'mytoninstaller.scripts': ['*.sh'],
-        'mytoncore.contracts' :['single-nominator-pool/*'],
+        'mytoncore': [
+            'contracts/*', 
+            'complaints/*'
+        ],
         'mytonctrl': [
             'resources/*', 
             'scripts/*', 
