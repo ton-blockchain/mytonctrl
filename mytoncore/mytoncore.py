@@ -2347,8 +2347,6 @@ class MyTonCore():
 		self.local.add_log("start CheckComplaint function", "debug")
 		cmd = "loadproofcheck {filePath}".format(filePath=file_path)
 		result = self.liteClient.Run(cmd, timeout=30)
-		if 'error' in result.lower():
-			return self.check_invalid_complaint(file_path)
 		lines = result.split('\n')
 		ok = False
 		for line in lines:
