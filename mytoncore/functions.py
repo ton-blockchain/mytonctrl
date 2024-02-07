@@ -558,15 +558,20 @@ def ScanLiteServers(local, ton):
 def General(local):
     local.add_log("start General function", "debug")
     ton = MyTonCore(local)
-    scanner = Dict()
+    # scanner = Dict()
     # scanner.Run()
 
-    # Запустить потоки
+    # Start threads
     local.start_cycle(Elections, sec=600, args=(local, ton, ))
     local.start_cycle(Statistics, sec=10, args=(local, ))
     local.start_cycle(Offers, sec=600, args=(local, ton, ))
-    local.start_cycle(Complaints, sec=600, args=(local, ton, ))
-    local.start_cycle(Slashing, sec=600, args=(local, ton, ))
+
+    t = 600
+    if ton.GetNetworkName() != 'mainnet':
+        t = 60
+    local.start_cycle(Complaints, sec=t, args=(local, ton, ))
+    local.start_cycle(Slashing, sec=t, args=(local, ton, ))
+
     local.start_cycle(Domains, sec=600, args=(local, ton, ))
     local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
     local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
