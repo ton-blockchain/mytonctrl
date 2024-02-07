@@ -1011,7 +1011,7 @@ def GetConfig(ton, args):
 def PrintComplaintsList(ton, args):
 	past = "past" in args
 	data = ton.GetComplaints(past=past)
-	if (data is None or len(complaints)data 0):
+	if (data is None or len(data) == 0):
 		print("No data")
 		return
 	if "--json" in args:
