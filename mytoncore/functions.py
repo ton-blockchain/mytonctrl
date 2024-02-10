@@ -523,6 +523,10 @@ def Slashing(local, ton):
     config32 = ton.GetConfig32()
     start = config32.get("startWorkTime")
     end = config32.get("endWorkTime")
+    config15 = ton.GetConfig15()
+    ts = get_timestamp()
+    if not(end < ts < end + config15['stakeHeldFor']):  # check that currently is freeze time
+        return
     local.add_log("slash_time {}, start {}, end {}".format(slash_time, start, end), "debug")
     if slash_time != start:
         end -= 60
