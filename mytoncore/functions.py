@@ -504,13 +504,11 @@ def Complaints(local, ton):
     # Voting for complaints
     config32 = ton.GetConfig32()
     electionId = config32.get("startWorkTime")
-    complaintsHashes = ton.SaveComplaints(electionId)
-    complaints = ton.GetComplaints(electionId)
-    for key, item in complaints.items():
-        complaintHash = item.get("hash")
-        complaintHash_hex = Dec2HexAddr(complaintHash)
-        if complaintHash_hex in complaintsHashes:
-            ton.VoteComplaint(electionId, complaintHash)
+    complaints = ton.GetComplaints(electionId)  # get complaints from Elector
+    for c in complaints.values():
+        complaint_hash = c.get("hash")
+        if ton.complaint_is_valid(c):
+            ton.VoteComplaint(electionId, complaint_hash)
 # end define
 
 
@@ -525,6 +523,10 @@ def Slashing(local, ton):
     config32 = ton.GetConfig32()
     start = config32.get("startWorkTime")
     end = config32.get("endWorkTime")
+    config15 = ton.GetConfig15()
+    ts = get_timestamp()
+    if not(end < ts < end + config15['stakeHeldFor']):  # check that currently is freeze time
+        return
     local.add_log("slash_time {}, start {}, end {}".format(slash_time, start, end), "debug")
     if slash_time != start:
         end -= 60
@@ -560,15 +562,20 @@ def ScanLiteServers(local, ton):
 def General(local):
     local.add_log("start General function", "debug")
     ton = MyTonCore(local)
-    scanner = Dict()
+    # scanner = Dict()
     # scanner.Run()
 
-    # Запустить потоки
+    # Start threads
     local.start_cycle(Elections, sec=600, args=(local, ton, ))
     local.start_cycle(Statistics, sec=10, args=(local, ))
     local.start_cycle(Offers, sec=600, args=(local, ton, ))
-    local.start_cycle(Complaints, sec=600, args=(local, ton, ))
-    local.start_cycle(Slashing, sec=600, args=(local, ton, ))
+
+    t = 600
+    if ton.GetNetworkName() != 'mainnet':
+        t = 60
+    local.start_cycle(Complaints, sec=t, args=(local, ton, ))
+    local.start_cycle(Slashing, sec=t, args=(local, ton, ))
+
     local.start_cycle(Domains, sec=600, args=(local, ton, ))
     local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
     local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))

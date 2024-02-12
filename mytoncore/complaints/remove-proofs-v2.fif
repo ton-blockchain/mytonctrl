@@ -1,0 +1,90 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <complaint-boc> <savefile>" cr
+  ."Removes proof cells from complaint." cr cr
+
+  ."<complaint-boc> is a filename of the serialized TL-B ValidatorComplaint boc." cr
+  ."Saves the result boc into `<savefile>`." cr 1 halt
+} : usage
+$# 2 = { cr } { usage } cond
+
+$1 =: filename
+$2 =: savefile
+
+filename file>B dup
+8 B| drop B>$ "b5ee9c72" $= { B>$ x>B? drop } if
+B>boc =: complaint
+
+."got: " cr
+complaint <s csr. cr
+
+
+// replaces 2 refs with empty cells
+// c - c
+{
+  <b // s, c, b
+    swap // s, b, c
+    <s // s, b, s
+      ref@+ drop
+      ref@+ drop
+    s, // s, b
+    <b b> ref,
+    <b b> ref,
+  b> // s, c
+} : clear_producer_info
+
+{ // c
+    <s // s
+    ref@+ // s, c
+
+    clear_producer_info // s, c
+    
+    <b // s, c, b
+        swap ref, // s, b
+        swap s, // b
+    b> // c
+} : clean_descr
+
+{ // c
+    <s // s
+
+    ref@+ clear_producer_info // s, c1
+    swap // c1, s
+    ref@+ clear_producer_info // c1, s, c2
+
+    <b // c1, s, c2, b
+        3 roll ref, // s, c2, b
+        swap ref, // s, b 
+        swap s, // b
+    b> // c
+} : clean_descr_with_diff
+
+
+// prod_info#34 utime:uint32 mc_blk_ref:ExtBlkRef state_proof:^(MERKLE_PROOF Block)
+//   prod_proof:^(MERKLE_PROOF ShardState) = ProducerInfo;
+//
+// no_blk_gen#450e8bd9 from_utime:uint32 prod_info:^ProducerInfo = ComplaintDescr;
+// no_blk_gen_diff#c737b0ca prod_info_old:^ProducerInfo prod_info_new:^ProducerInfo = ComplaintDescr;
+//
+// validator_complaint#bc validator_pubkey:bits256 description:^ComplaintDescr created_at:uint32 severity:uint8 reward_addr:uint256 paid:Grams suggested_fine:Grams suggested_fine_part:uint32 = ValidatorComplaint;
+
+complaint <s
+ref@+ =: descr
+=: comlaint_no_ref
+
+<b comlaint_no_ref s,
+   descr dup <s
+      32 u@ 0x450e8bd9 =
+          { clean_descr }
+          { clean_descr_with_diff }
+      cond
+   ref,
+b> =: result_cell
+
+"result: " type cr
+result_cell <s csr.
+
+result_cell 2 boc+>B
+savefile tuck B>file
+."(Saved to file " type .")" cr

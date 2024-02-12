@@ -533,6 +533,7 @@ class MyTonCore():
 		arr["hv1"] = "fc8e48ed7f9654ba76757f52cc6031b2214c02fab9e429ffa0340f5575f9f29c"
 		arr["pool"] = "399838da9489139680e90fd237382e96ba771fdf6ea27eb7d513965b355038b4"
 		arr["spool"] = "fc2ae44bcaedfa357d0091769aabbac824e1c28f14cc180c0b52a57d83d29054"
+		arr["spool_r2"] = "42bea8fea43bf803c652411976eb2981b9bdb10da84eb788a63ea7a01f2a044d"
 		for version, hash in arr.items():
 			if hash == inputHash:
 				return version
@@ -560,7 +561,7 @@ class MyTonCore():
 		result = self.liteClient.Run("getconfig 0")
 		configAddr_hex = self.GetVarFromWorkerOutput(result, "config_addr:x")
 		fullConfigAddr = "-1:{configAddr_hex}".format(configAddr_hex=configAddr_hex)
-		
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, fullConfigAddr)
 		return fullConfigAddr
@@ -615,7 +616,7 @@ class MyTonCore():
 		result = self.liteClient.Run("getconfig 4")
 		dnsRootAddr_hex = self.GetVarFromWorkerOutput(result, "dns_root_addr:x")
 		fullDnsRootAddr = "-1:{dnsRootAddr_hex}".format(dnsRootAddr_hex=dnsRootAddr_hex)
-		
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, fullDnsRootAddr)
 		return fullDnsRootAddr
@@ -636,7 +637,7 @@ class MyTonCore():
 		activeElectionId = activeElectionId.replace(' ', '')
 		activeElectionId = parse(activeElectionId, '[', ']')
 		activeElectionId = int(activeElectionId)
-		
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, activeElectionId)
 		return activeElectionId
@@ -865,7 +866,7 @@ class MyTonCore():
 		start = result.find("ConfigParam")
 		text = result[start:]
 		data = self.Tlb2Json(text)
-		
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, data)
 		return data
@@ -910,9 +911,9 @@ class MyTonCore():
 			if "public_key:" in line:
 				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
 				pubkey = parse(line, "pubkey:x", ')')
-				if config32["totalValidators"] > 1:
+				try:
 					validatorWeight = int(parse(line, "weight:", ' '))
-				else:
+				except ValueError:
 					validatorWeight = int(parse(line, "weight:", ')'))
 				buff = dict()
 				buff["adnlAddr"] = validatorAdnlAddr
@@ -920,7 +921,7 @@ class MyTonCore():
 				buff["weight"] = validatorWeight
 				validators.append(buff)
 		config32["validators"] = validators
-		
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, config32)
 		return config32
@@ -947,9 +948,9 @@ class MyTonCore():
 			if "public_key:" in line:
 				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
 				pubkey = parse(line, "pubkey:x", ')')
-				if config34["totalValidators"] > 1:
+				try:
 					validatorWeight = int(parse(line, "weight:", ' '))
-				else:
+				except ValueError:
 					validatorWeight = int(parse(line, "weight:", ')'))
 				buff = dict()
 				buff["adnlAddr"] = validatorAdnlAddr
@@ -957,7 +958,7 @@ class MyTonCore():
 				buff["weight"] = validatorWeight
 				validators.append(buff)
 		config34["validators"] = validators
-		
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, config34)
 		return config34
@@ -994,7 +995,7 @@ class MyTonCore():
 		except:
 			config36["validators"] = list()
 		#end try
-		
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, config36)
 		return config36
@@ -1085,7 +1086,7 @@ class MyTonCore():
 		return var1
 	#end define
 
-	def CreateComplaintRequest(self, electionId , complaintHash, validatorIndex):
+	def CreateComplaintRequest(self, electionId, complaintHash, validatorIndex):
 		self.local.add_log("start CreateComplaintRequest function", "debug")
 		fileName = self.tempDir + "complaint_validator-to-sign.req"
 		args = ["complaint-vote-req.fif", validatorIndex, electionId, complaintHash, fileName]
@@ -1102,6 +1103,15 @@ class MyTonCore():
 		var2 = resultList[start_index + 2] # var2 not using
 		return var1
 	#end define
+
+	def remove_proofs_from_complaint(self, input_file_name: str):
+		self.local.add_log("start remove_proofs_from_complaint function", "debug")
+		output_file_name = self.tempDir + "complaint-new.boc"
+		fift_script = pkg_resources.resource_filename('mytoncore', 'complaints/remove-proofs-v2.fif')
+		args = [fift_script, input_file_name, output_file_name]
+		result = self.fift.Run(args)
+		return output_file_name
+
 
 	def PrepareComplaint(self, electionId, inputFileName):
 		self.local.add_log("start PrepareComplaint function", "debug")
@@ -1160,7 +1170,7 @@ class MyTonCore():
 		if account.balance < coins + 0.1:
 			raise Exception("Wallet balance is less than requested coins")
 		#end if
-		
+
 		# Bounceable checking
 		destAccount = self.GetAccount(dest)
 		bounceable = self.IsBounceableAddrB64(dest)
@@ -1195,15 +1205,19 @@ class MyTonCore():
 		timeout = kwargs.get("timeout", 30)
 		remove = kwargs.get("remove", True)
 		duplicateSendfile = self.local.db.get("duplicateSendfile", True)
+		duplicateApi = self.local.db.get("duplicateApi", False)
 		if not os.path.isfile(filePath):
 			raise Exception("SendFile error: no such file '{filePath}'".format(filePath=filePath))
 		if timeout and wallet:
 			wallet.oldseqno = self.GetSeqno(wallet)
 		self.liteClient.Run("sendfile " + filePath)
 		if duplicateSendfile:
+			try:
+				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+			except: pass
+		if duplicateApi:
 			self.send_boc_toncenter(filePath)
-			# self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
-			# self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
 		if timeout and wallet:
 			self.WaitTransaction(wallet, timeout)
 		if remove == True:
@@ -1218,10 +1232,13 @@ class MyTonCore():
 		data = {"boc": boc_b64}
 		network_name = self.GetNetworkName()
 		if network_name == 'testnet':
-			url = 'https://testnet.toncenter.com/api/v2/sendBoc'
+			default_url = 'https://testnet.toncenter.com/api/v2/sendBoc'
 		elif network_name == 'mainnet':
-			url = 'https://toncenter.com/api/v2/sendBoc'
+			default_url = 'https://toncenter.com/api/v2/sendBoc'
 		else:
+			default_url = None
+		url = self.local.db.get("duplicateApiUrl", default_url)
+		if url == None:
 			return False
 		result = requests.post(url=url, json=data)
 		if result.status_code != 200:
@@ -1765,7 +1782,7 @@ class MyTonCore():
 		vconfig = json.loads(text)
 		return Dict(vconfig)
 	#end define
-	
+
 	def GetOverlaysStats(self):
 		self.local.add_log("start GetOverlaysStats function", "debug")
 		resultFilePath = self.local.buffer.my_temp_dir + "getoverlaysstats.json"
@@ -1816,7 +1833,7 @@ class MyTonCore():
 		if account.status != "active":
 			raise Exception("Wallet account is uninitialized")
 		#end if
-		
+
 		# Bounceable checking
 		destAccount = self.GetAccount(dest)
 		bounceable = self.IsBounceableAddrB64(dest)
@@ -2339,9 +2356,9 @@ class MyTonCore():
 		return complaintsHashes
 	#end define
 
-	def CheckComplaint(self, filePath):
+	def CheckComplaint(self, file_path: str):
 		self.local.add_log("start CheckComplaint function", "debug")
-		cmd = "loadproofcheck {filePath}".format(filePath=filePath)
+		cmd = "loadproofcheck {filePath}".format(filePath=file_path)
 		result = self.liteClient.Run(cmd, timeout=30)
 		lines = result.split('\n')
 		ok = False
@@ -2354,6 +2371,52 @@ class MyTonCore():
 					ok = True
 		return ok
 	#end define
+
+	def complaint_is_valid(self, complaint: dict):
+		self.local.add_log("start complaint_is_valid function", "debug")
+
+		voted_complaints = self.GetVotedComplaints()
+		if complaint['pseudohash'] in voted_complaints:
+			self.local.add_log(f"skip checking complaint {complaint['hash']}: "
+							   f"complaint with this pseudohash ({complaint['pseudohash']})"
+							   f" has already been voted", "debug")
+			return False
+
+		# check that complaint is valid
+		election_id = complaint['electionId']
+		config32 = self.GetConfig32()
+		start = config32.get("startWorkTime")
+		if election_id != start:
+			self.local.add_log(f"skip checking complaint {complaint['hash']}: "
+							   f"election_id ({election_id}) doesn't match with "
+							   f"start work time ({config32.get('startWorkTime')})", "info")
+			return False
+		end = config32.get("endWorkTime")
+		data = self.GetValidatorsLoad(start, end - 60, saveCompFiles=False)
+
+		exists = False
+		for item in data.values():
+			pubkey = item.get("pubkey")
+			if pubkey is None:
+				continue
+			pseudohash = pubkey + str(election_id)
+			if pseudohash == complaint['pseudohash']:
+				exists = True
+				break
+
+		if not exists:
+			self.local.add_log(f"complaint {complaint['hash']} declined: complaint info was not found", "info")
+			return False
+
+		# check complaint fine value
+		if complaint['suggestedFine'] != 101:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3708
+			self.local.add_log(f"complaint {complaint['hash']} declined: complaint fine value is {complaint['suggestedFine']} ton", "info")
+			return False
+		if complaint['suggestedFinePart'] != 0:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3709
+			self.local.add_log(f"complaint {complaint['hash']} declined: complaint fine part value is {complaint['suggestedFinePart']} ton", "info")
+			return False
+
+		return True
 
 	def GetOnlineValidators(self):
 		onlineValidators = list()
@@ -2457,7 +2520,7 @@ class MyTonCore():
 		if buff:
 			return buff
 		#end if
-		
+
 		timestamp = get_timestamp()
 		end = timestamp - 60
 		start = end - 2000
@@ -2482,7 +2545,7 @@ class MyTonCore():
 			if saveElectionEntries and adnlAddr in saveElectionEntries:
 				validator["walletAddr"] = saveElectionEntries[adnlAddr]["walletAddr"]
 		#end for
-		
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, validators)
 		return validators
@@ -2513,6 +2576,7 @@ class MyTonCore():
 			if pseudohash in complaints:
 				continue
 			# Create complaint
+			fileName = self.remove_proofs_from_complaint(fileName)
 			fileName = self.PrepareComplaint(electionId, fileName)
 			fileName = self.SignBocWithWallet(wallet, fileName, fullElectorAddr, 300)
 			self.SendFile(fileName, wallet)
@@ -2954,7 +3018,7 @@ class MyTonCore():
 		if buff:
 			return buff
 		#end if
-	
+
 		buff = addrB64.replace('-', '+')
 		buff = buff.replace('_', '/')
 		buff = buff.encode()
@@ -2988,7 +3052,7 @@ class MyTonCore():
 
 		workchain = int.from_bytes(workchain_bytes, "big", signed=True)
 		addr = addr_bytes.hex()
-		
+
 		# Set buffer
 		data = (workchain, addr, bounceable)
 		self.SetFunctionBuffer(fname, data)
@@ -3015,7 +3079,7 @@ class MyTonCore():
 		else:
 			raise Exception(f"ParseInputAddr error: input address is not a adress: {inputAddr}")
 	#end define
-	
+
 	def IsBounceableAddrB64(self, inputAddr):
 		bounceable = None
 		try:
@@ -3331,7 +3395,7 @@ class MyTonCore():
 		if "Saved pool" not in result:
 			raise Exception("CreatePool error: " + result)
 		#end if
-		
+
 		pools = self.GetPools()
 		newPool = self.GetLocalPool(poolName)
 		for pool in pools:
@@ -3362,7 +3426,7 @@ class MyTonCore():
 		resultFilePath = self.SignBocWithWallet(wallet, bocPath, poolAddr, amount)
 		self.SendFile(resultFilePath, wallet)
 	#end define
-	
+
 	def WithdrawFromPool(self, poolAddr, amount):
 		poolData = self.GetPoolData(poolAddr)
 		if poolData["state"] == 0:
@@ -3381,20 +3445,20 @@ class MyTonCore():
 		resultFilePath = self.SignBocWithWallet(wallet, bocPath, poolAddr, 1.35)
 		self.SendFile(resultFilePath, wallet)
 	#end define
-	
+
 	def PendWithdrawFromPool(self, poolAddr, amount):
 		self.local.add_log("start PendWithdrawFromPool function", "debug")
 		pendingWithdraws = self.GetPendingWithdraws()
 		pendingWithdraws[poolAddr] = amount
 		self.local.save()
 	#end define
-	
+
 	def HandlePendingWithdraw(self, pendingWithdraws, poolAddr):
 		amount = pendingWithdraws.get(poolAddr)
 		self.WithdrawFromPoolProcess(poolAddr, amount)
 		pendingWithdraws.pop(poolAddr)
 	#end define
-	
+
 	def GetPendingWithdraws(self):
 		bname = "pendingWithdraws"
 		pendingWithdraws = self.local.db.get(bname)
@@ -3570,7 +3634,7 @@ class MyTonCore():
 		if "Saved single nominator pool" not in result:
 			raise Exception("create_single_pool error: " + result)
 		#end if
-		
+
 		pools = self.GetPools()
 		new_pool = self.GetLocalPool(pool_name)
 		for pool in pools:
@@ -3599,7 +3663,7 @@ class MyTonCore():
 		else:
 			return "unknown"
 	#end define
-	
+
 	def GetFunctionBuffer(self, name, timeout=10):
 		timestamp = get_timestamp()
 		buff = self.local.buffer.get(name)
@@ -3612,7 +3676,7 @@ class MyTonCore():
 		data = buff.get("data")
 		return data
 	#end define
-	
+
 	def SetFunctionBuffer(self, name, data):
 		buff = dict()
 		buff["time"] = get_timestamp()
