@@ -2396,7 +2396,7 @@ class MyTonCore():
 	def GetSaveComplaints(self):
 		timestamp = get_timestamp()
 		saveComplaints = local.db.get("saveComplaints")
-		if type(saveComplaints) is not dict:
+		if saveComplaints is None:
 			saveComplaints = dict()
 			local.db["saveComplaints"] = saveComplaints
 		buff = saveComplaints.copy()
@@ -3061,7 +3061,7 @@ class MyTonCore():
 	def GetSaveOffers(self):
 		bname = "saveOffers"
 		saveOffers = local.db.get(bname)
-		if type(saveOffers) != dict:
+		if saveOffers is None:
 			saveOffers = dict()
 			local.db[bname] = saveOffers
 		return saveOffers
