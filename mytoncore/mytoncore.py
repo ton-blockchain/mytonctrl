@@ -2229,7 +2229,7 @@ class MyTonCore():
 	def GetSaveComplaints(self):
 		timestamp = get_timestamp()
 		saveComplaints = self.local.db.get("saveComplaints")
-		if type(saveComplaints) is not dict:
+		if saveComplaints is None:
 			saveComplaints = dict()
 			self.local.db["saveComplaints"] = saveComplaints
 		buff = saveComplaints.copy()
