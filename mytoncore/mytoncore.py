@@ -1205,7 +1205,8 @@ class MyTonCore():
 		timeout = kwargs.get("timeout", 30)
 		remove = kwargs.get("remove", True)
 		duplicateSendfile = self.local.db.get("duplicateSendfile", True)
-		duplicateApi = self.local.db.get("duplicateApi", False)
+		telemetry = self.local.db.get("sendTelemetry", False)
+		duplicateApi = self.local.db.get("duplicateApi", telemetry)
 		if not os.path.isfile(filePath):
 			raise Exception("SendFile error: no such file '{filePath}'".format(filePath=filePath))
 		if timeout and wallet:
@@ -1911,12 +1912,13 @@ class MyTonCore():
 
 	def GetValidatorKey(self):
 		vconfig = self.GetValidatorConfig()
-		for validator in vconfig["validators"]:
+		validators = sorted(vconfig["validators"], key=lambda i: i['election_date'], reverse=True)
+		for validator in validators:
 			validatorId = validator["id"]
 			key_bytes = base64.b64decode(validatorId)
 			validatorKey = key_bytes.hex().upper()
 			timestamp = get_timestamp()
-			if timestamp > validator["election_date"]:
+			if validator["election_date"] < timestamp < validator["expire_at"]:
 				return validatorKey
 		raise Exception("GetValidatorKey error: validator key not found. Are you sure you are a validator?")
 	#end define
