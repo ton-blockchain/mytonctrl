@@ -1205,7 +1205,8 @@ class MyTonCore():
 		timeout = kwargs.get("timeout", 30)
 		remove = kwargs.get("remove", True)
 		duplicateSendfile = self.local.db.get("duplicateSendfile", True)
-		duplicateApi = self.local.db.get("duplicateApi", False)
+		telemetry = self.local.db.get("sendTelemetry", False)
+		duplicateApi = self.local.db.get("duplicateApi", telemetry)
 		if not os.path.isfile(filePath):
 			raise Exception("SendFile error: no such file '{filePath}'".format(filePath=filePath))
 		if timeout and wallet:
