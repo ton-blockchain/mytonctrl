@@ -2379,6 +2379,11 @@ class MyTonCore():
 							   f" has already been voted", "debug")
 			return False
 
+		if complaint['isPassed']:
+			self.local.add_log(f"skip checking complaint {complaint['hash_hex']}: "
+							   f"complaint has already been passed", "debug")
+			return False
+
 		# check that complaint is valid
 		config32 = self.GetConfig32()
 		start = config32.get("startWorkTime")
