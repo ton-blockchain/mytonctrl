@@ -2956,12 +2956,10 @@ class MyTonCore():
 		complaints = self.GetComplaints(election_id)
 		result = {}
 		validator_index = self.GetValidatorIndex()
-		for complaint in complaints.values():
+		for pseudohash, complaint in complaints.items():
 			votedValidators = complaint.get("votedValidators")
 			if validator_index in votedValidators:
-				pubkey = complaint.get("pubkey")
-				election_id = complaint.get("electionId")
-				result[pubkey + str(election_id)] = complaint
+				result[pseudohash] = complaint
 		return result
 	#end define
 
