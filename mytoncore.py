@@ -1430,13 +1430,34 @@ class MyTonCore():
 			wallet.oldseqno = self.GetSeqno(wallet)
 		self.liteClient.Run("sendfile " + filePath)
 		if duplicateSendfile:
-			self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
-			self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+			try:
+				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+			except Exception as e:
+				local.add_log('failed to send file via liteclient: ' + str(e), 'info')
+			self.send_boc_toncenter(filePath)
 		if timeout and wallet:
 			self.WaitTransaction(wallet, timeout)
 		if remove == True:
 			os.remove(filePath)
 	#end define
+
+	def send_boc_toncenter(self, file_path: str):
+		local.add_log('Start send_boc_toncenter function: ' + file_path, 'debug')
+		with open(file_path, "rb") as f:
+			boc = f.read()
+			boc_b64 = base64.b64encode(boc).decode("utf-8")
+		data = {"boc": boc_b64}
+		if self.GetNetworkName() == 'testnet':
+			url = 'https://testnet.toncenter.com/api/v2/sendBoc'
+		else:
+			url = 'https://toncenter.com/api/v2/sendBoc'
+		result = requests.post(url=url, json=data)
+		if result.status_code != 200:
+			local.add_log(f'Failed to send boc to toncenter: {result.content}', 'info')
+			return False
+		local.add_log('Sent boc to toncenter', 'info')
+		return True
 
 	def WaitTransaction(self, wallet, timeout=30):
 		local.add_log("start WaitTransaction function", "debug")
@@ -2060,12 +2081,13 @@ class MyTonCore():
 
 	def GetValidatorKey(self):
 		vconfig = self.GetValidatorConfig()
-		for validator in vconfig.validators:
+		validators = sorted(vconfig["validators"], key=lambda i: i['election_date'], reverse=True)
+		for validator in validators:
 			validatorId = validator["id"]
 			key_bytes = base64.b64decode(validatorId)
 			validatorKey = key_bytes.hex().upper()
 			timestamp = get_timestamp()
-			if timestamp > validator["election_date"]:
+			if validator["election_date"] < timestamp < validator["expire_at"]:
 				return validatorKey
 		raise Exception("GetValidatorKey error: validator key not found. Are you sure you are a validator?")
 	#end define
@@ -2378,7 +2400,7 @@ class MyTonCore():
 	def GetSaveComplaints(self):
 		timestamp = get_timestamp()
 		saveComplaints = local.db.get("saveComplaints")
-		if type(saveComplaints) is not dict:
+		if saveComplaints is None:
 			saveComplaints = dict()
 			local.db["saveComplaints"] = saveComplaints
 		buff = saveComplaints.copy()
@@ -3043,7 +3065,7 @@ class MyTonCore():
 	def GetSaveOffers(self):
 		bname = "saveOffers"
 		saveOffers = local.db.get(bname)
-		if type(saveOffers) != dict:
+		if saveOffers is None:
 			saveOffers = dict()
 			local.db[bname] = saveOffers
 		return saveOffers
