@@ -475,6 +475,17 @@ def GetBinGitHash(path, short=False):
     return result
 # end define
 
+def GetTonPkgVersion():
+    args = ["apt", "show ton | grep Version"]
+    process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+    output = process.stdout.decode("utf-8")
+    if "Version" not in output:
+        return
+    buff = output.split(' ')
+    start = buff.index("Version:") + 1
+    result = buff[start].replace('Version:', '')
+    return result
+# end define
 
 def OverlayTelemetry(local, ton):
     sendTelemetry = local.db.get("sendTelemetry")

@@ -40,6 +40,7 @@ from mytoncore.functions import (
 	GetMemoryInfo,
 	GetSwapInfo,
 	GetBinGitHash,
+	GetTonPkgVersion,
 )
 from mytonctrl.migrate import run_migrations
 
@@ -550,7 +551,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 		validatorGitBranch_text = bcolors.yellow_text(validatorGitBranch)
 		validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
 	else:
-		validatorVersion_text = local.translate("local_status_version_validator").format("precompiled", "v2014.01")
+		validatorVersion_text = local.translate("local_status_version_validator").format("precompiled", GetTonPkgVersion())
 
 	color_print(local.translate("local_status_head"))
 	print(validatorIndex_text)
