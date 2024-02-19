@@ -1430,9 +1430,12 @@ class MyTonCore():
 			wallet.oldseqno = self.GetSeqno(wallet)
 		self.liteClient.Run("sendfile " + filePath)
 		if duplicateSendfile:
+			try:
+				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+			except Exception as e:
+				local.add_log('failed to send file via liteclient: ' + str(e), 'info')
 			self.send_boc_toncenter(filePath)
-			# self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
-			# self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
 		if timeout and wallet:
 			self.WaitTransaction(wallet, timeout)
 		if remove == True:
