@@ -717,25 +717,39 @@ def CreateSymlinks(local):
 	cport = local.buffer.cport
 
 	mytonctrl_file = "/usr/bin/mytonctrl"
-	fift_file = "/usr/bin/fift"
-	liteclient_file = "/usr/bin/lite-client"
-	validator_console_file = "/usr/bin/validator-console"
 	file = open(mytonctrl_file, 'wt')
 	# file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")  # TODO: fix path
 	file.write("/usr/bin/python3 -m mytonctrl $@")  # TODO: fix path
 	file.close()
-	file = open(fift_file, 'wt')
-	file.write("/usr/bin/ton/crypto/fift $@")
-	file.close()
-	file = open(liteclient_file, 'wt')
-	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/global.config.json $@")
-	file.close()
-	if cport:
-		file = open(validator_console_file, 'wt')
-		file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /var/ton-work/keys/client -p /var/ton-work/keys/server.pub -a 127.0.0.1:" + str(cport) + " $@")
+
+	if local.buffer.mode == 'full':
+		fift_file = "/usr/bin/fift"
+		liteclient_file = "/usr/bin/lite-client"
+		validator_console_file = "/usr/bin/validator-console"
+
+		file = open(fift_file, 'wt')
+		file.write("/usr/bin/ton/crypto/fift $@")
 		file.close()
-		args = ["chmod", "+x", validator_console_file]
+		file = open(liteclient_file, 'wt')
+		file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/global.config.json $@")
+		file.close()
+		if cport:
+			file = open(validator_console_file, 'wt')
+			file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /var/ton-work/keys/client -p /var/ton-work/keys/server.pub -a 127.0.0.1:" + str(cport) + " $@")
+			file.close()
+			args = ["chmod", "+x", validator_console_file]
+			subprocess.run(args)
+		args = ["chmod", "+x", mytonctrl_file, fift_file, liteclient_file]
 		subprocess.run(args)
-	args = ["chmod", "+x", mytonctrl_file, fift_file, liteclient_file]
-	subprocess.run(args)
+
+	# env
+	if local.buffer.mode == 'full':
+		fiftpath = "export FIFTPATH=/usr/src/ton/crypto/fift/lib/:/usr/src/ton/crypto/smartcont/"
+	else:
+		fiftpath = "export FIFTPATH=/usr/lib/fift/:/usr/share/ton/smartcont/"
+	file = open("/etc/environment", 'rt+')
+	text = file.read()
+	if fiftpath not in text:
+		file.write(fiftpath + '\n')
+	file.close()
 #end define

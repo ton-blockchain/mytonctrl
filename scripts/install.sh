@@ -41,14 +41,14 @@ ignore=false
 dump=false
 
 
-while getopts c:tidma:r:b: flag
+while getopts c:tidm:a:r:b: flag
 do
 	case "${flag}" in
 		c) config=${OPTARG};;
 		t) telemetry=false;;
 		i) ignore=true;;
 		d) dump=true;;
-    m) mode=${OPTARG};;
+		m) mode=${OPTARG};;
 		a) author=${OPTARG};;
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
@@ -95,6 +95,7 @@ if [ "$mode" = "full" ]; then
   fi
 elif [ "$mode" = "binaries" ]; then
   apt update -y
+  apt remove -y ton
   apt install -y ton
   wget ${config} -O /usr/bin/global.config.json
 else

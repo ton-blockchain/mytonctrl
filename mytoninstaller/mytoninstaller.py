@@ -227,20 +227,8 @@ def General(local):
 	EnableLiteServer(local)
 	BackupVconfig(local)
 	BackupMconfig(local)
+	CreateSymlinks(local)
 
-	if local.buffer.mode == 'full':
-		CreateSymlinks(local)
-
-	# env
-	if local.buffer.mode == 'full':
-		fiftpath = "export FIFTPATH=/usr/src/ton/crypto/fift/lib/:/usr/src/ton/crypto/smartcont/"
-	else:
-		fiftpath = "export FIFTPATH=/usr/lib/fift/:/usr/share/ton/smartcont/"
-	file = open("/etc/environment", 'rt+')
-	text = file.read()
-	if fiftpath not in text:
-		file.write(fiftpath + '\n')
-	file.close()
 #end define
 
 
