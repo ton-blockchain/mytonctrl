@@ -535,18 +535,22 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	
 	# Mytonctrl and validator git hash
 	mtcGitPath = "/usr/src/mytonctrl"
-	validatorGitPath = "/usr/src/ton"
-	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
 	mtcGitHash = get_git_hash(mtcGitPath, short=True)
-	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
 	mtcGitBranch = get_git_branch(mtcGitPath)
-	validatorGitBranch = get_git_branch(validatorGitPath)
 	mtcGitHash_text = bcolors.yellow_text(mtcGitHash)
-	validatorGitHash_text = bcolors.yellow_text(validatorGitHash)
 	mtcGitBranch_text = bcolors.yellow_text(mtcGitBranch)
-	validatorGitBranch_text = bcolors.yellow_text(validatorGitBranch)
 	mtcVersion_text = local.translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
-	validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
+
+	if local.buffer.mode == 'full':
+		validatorGitPath = "/usr/src/ton"
+		validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
+		validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+		validatorGitHash_text = bcolors.yellow_text(validatorGitHash)
+		validatorGitBranch = get_git_branch(validatorGitPath)
+		validatorGitBranch_text = bcolors.yellow_text(validatorGitBranch)
+		validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
+	else:
+		validatorVersion_text = local.translate("local_status_version_validator").format("precompiled", "v2014.01")
 
 	color_print(local.translate("local_status_head"))
 	print(validatorIndex_text)
