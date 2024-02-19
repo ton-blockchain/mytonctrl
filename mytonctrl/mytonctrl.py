@@ -551,7 +551,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 		validatorGitBranch_text = bcolors.yellow_text(validatorGitBranch)
 		validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
 	else:
-		validatorVersion_text = local.translate("local_status_version_validator").format("precompiled", GetTonPkgVersion())
+		validatorVersion_text = GetTonPkgVersion()
 
 	color_print(local.translate("local_status_head"))
 	print(validatorIndex_text)
