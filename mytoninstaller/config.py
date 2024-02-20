@@ -80,7 +80,7 @@ def CreateLocalConfig(local, initBlock):
 	# dirty hack, but GetInitBlock() function uses the same technique
 	from mytoncore import hex2base64
 
-	mode = local.db.get("mode")
+	mode = local.buffer.mode
 	# read global config file
 	if mode == 'full':
 		file = open("/usr/bin/ton/global.config.json", 'rt')

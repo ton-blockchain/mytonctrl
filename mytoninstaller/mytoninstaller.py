@@ -85,7 +85,7 @@ def Refresh(local):
 	src_dir = "/usr/src/"
 	ton_work_dir = "/var/ton-work/"
 
-	mode = local.db.get("mode")
+	mode = local.buffer.mode
 
 	if mode == 'full':
 		ton_bin_dir = bin_dir + "ton/"

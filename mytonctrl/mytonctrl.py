@@ -549,7 +549,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	mtcGitBranch_text = bcolors.yellow_text(mtcGitBranch)
 	mtcVersion_text = local.translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
 
-	mode = local.db.get("mode")
+	mode = local.buffer.mode
 	print(mode)
 	if mode == 'full':
 		validatorGitPath = "/usr/src/ton"

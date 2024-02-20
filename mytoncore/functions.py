@@ -442,7 +442,7 @@ def Telemetry(local, ton):
     gitHashes = dict()
     gitHashes["mytonctrl"] = get_git_hash("/usr/src/mytonctrl")
 
-    mode = local.db.get("mode")
+    mode = local.buffer.mode
 
     if mode == 'full':
         gitHashes["validator"] = GetBinGitHash("/usr/bin/ton/validator-engine/validator-engine")

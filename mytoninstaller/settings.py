@@ -156,7 +156,7 @@ def FirstMytoncoreSettings(local):
 	mconfig.config.logLevel = "debug"
 	mconfig.config.isLocaldbSaving = True
 
-	mode = local.db.get("mode")
+	mode = local.buffer.mode
 	# fift
 	fift = Dict()
 	if mode == 'full':
@@ -206,7 +206,7 @@ def EnableValidatorConsole(local):
 	ton_bin_dir = local.buffer.ton_bin_dir
 	vconfig_path = local.buffer.vconfig_path
 
-	mode = local.db.get("mode")
+	mode = local.buffer.mode
 
 	if mode == 'full':
 		generate_random_id = ton_bin_dir + "utils/generate-random-id"
@@ -321,7 +321,7 @@ def EnableLiteServer(local):
 	ton_bin_dir = local.buffer.ton_bin_dir
 	vconfig_path = local.buffer.vconfig_path
 
-	mode = local.db.get("mode")
+	mode = local.buffer.mode
 
 	if mode == 'full':
 		generate_random_id = ton_bin_dir + "utils/generate-random-id"
@@ -409,7 +409,7 @@ def EnableDhtServer(local):
 	ton_bin_dir = local.buffer.ton_bin_dir
 	globalConfigPath = local.buffer.global_config_path
 
-	mode = local.db.get("mode")
+	mode = local.buffer.mode
 
 	if mode == 'full':
 		dht_server = ton_bin_dir + "dht-server/dht-server"
@@ -733,7 +733,7 @@ def CreateSymlinks(local):
 	args = ["chmod", "+x", "/usr/bin/mytonctrl"]
 	subprocess.run(args)
 
-	mode = local.db.get("mode")
+	mode = local.buffer.mode
 
 	if mode == 'full':
 		fift_file = "/usr/bin/fift"
