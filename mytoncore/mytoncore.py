@@ -1400,8 +1400,11 @@ class MyTonCore():
 			raise Exception("Validator wallet not found")
 		#end if
 
-		print("core, mode: " + self.local.buffer.mode)
-		if self.local.buffer.mode == 'binaries':
+		mode = self.local.db.get("mode", "full")
+
+		self.local.add_log("core, mode: " + mode, "error")
+
+		if mode == 'binaries':
 			self.local.add_log("Not allowed to validate with precompiled binaries", "error")
 			return
 
@@ -3303,7 +3306,8 @@ class MyTonCore():
 		#end if
 
 		os.makedirs(gitPath + "build", exist_ok=True)
-		args = ["bash", "build.sh", "-m", self.local.buffer.mode]
+		mode = self.local.db.get("mode", "full")
+		args = ["bash", "build.sh", "-m", mode]
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=30)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")

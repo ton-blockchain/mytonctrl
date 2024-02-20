@@ -298,8 +298,10 @@ def Upgrade(ton, local, args):
 		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
 	ton.SetSettings("validatorConsole", validatorConsole)
 
-	print("ctrl, mode: " + local.buffer.mode)
-	if local.buffer.mode == 'full':
+	mode = local.db.get("mode", "full")
+	print("ctrl, mode: " + mode)
+
+	if mode == 'full':
 		repo = "ton"
 		author, repo, branch = check_git(args, repo, "upgrade")
 		# Run script
