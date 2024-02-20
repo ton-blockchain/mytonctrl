@@ -156,9 +156,10 @@ def FirstMytoncoreSettings(local):
 	mconfig.config.logLevel = "debug"
 	mconfig.config.isLocaldbSaving = True
 
+	mode = local.db.get("mode")
 	# fift
 	fift = Dict()
-	if local.buffer.mode == 'full':
+	if mode == 'full':
 		fift.appPath = ton_bin_dir + "crypto/fift"
 		fift.libsPath = ton_src_dir + "crypto/fift/lib"
 		fift.smartcontsPath = ton_src_dir + "crypto/smartcont"
@@ -171,7 +172,7 @@ def FirstMytoncoreSettings(local):
 
 	# lite-client
 	liteClient = Dict()
-	if local.buffer.mode == 'full':
+	if mode == 'full':
 		liteClient.appPath = ton_bin_dir + "lite-client/lite-client"
 	else:
 		liteClient.appPath = ton_bin_dir + "lite-client"
@@ -205,7 +206,9 @@ def EnableValidatorConsole(local):
 	ton_bin_dir = local.buffer.ton_bin_dir
 	vconfig_path = local.buffer.vconfig_path
 
-	if local.buffer.mode == 'full':
+	mode = local.db.get("mode")
+
+	if mode == 'full':
 		generate_random_id = ton_bin_dir + "utils/generate-random-id"
 	else:
 		generate_random_id = ton_bin_dir + "generate-random-id"
@@ -282,7 +285,7 @@ def EnableValidatorConsole(local):
 	# edit mytoncore config file
 	validatorConsole = Dict()
 
-	if local.buffer.mode == 'full':
+	if mode == 'full':
 		validatorConsole.appPath = ton_bin_dir + "validator-engine-console/validator-engine-console"
 	else:
 		validatorConsole.appPath = ton_bin_dir + "validator-engine-console"
@@ -318,7 +321,9 @@ def EnableLiteServer(local):
 	ton_bin_dir = local.buffer.ton_bin_dir
 	vconfig_path = local.buffer.vconfig_path
 
-	if local.buffer.mode == 'full':
+	mode = local.db.get("mode")
+
+	if mode == 'full':
 		generate_random_id = ton_bin_dir + "utils/generate-random-id"
 	else:
 		generate_random_id = ton_bin_dir + "generate-random-id"
@@ -404,7 +409,9 @@ def EnableDhtServer(local):
 	ton_bin_dir = local.buffer.ton_bin_dir
 	globalConfigPath = local.buffer.global_config_path
 
-	if local.buffer.mode == 'full':
+	mode = local.db.get("mode")
+
+	if mode == 'full':
 		dht_server = ton_bin_dir + "dht-server/dht-server"
 		generate_random_id = ton_bin_dir + "utils/generate-random-id"
 	else:
@@ -726,7 +733,9 @@ def CreateSymlinks(local):
 	args = ["chmod", "+x", "/usr/bin/mytonctrl"]
 	subprocess.run(args)
 
-	if local.buffer.mode == 'full':
+	mode = local.db.get("mode")
+
+	if mode == 'full':
 		fift_file = "/usr/bin/fift"
 		liteclient_file = "/usr/bin/lite-client"
 		validator_console_file = "/usr/bin/validator-console"
@@ -747,10 +756,11 @@ def CreateSymlinks(local):
 		subprocess.run(args)
 
 	# env
-	if local.buffer.mode == 'full':
+	if mode == 'full':
 		fiftpath = "export FIFTPATH=/usr/src/ton/crypto/fift/lib/:/usr/src/ton/crypto/smartcont/"
 	else:
 		fiftpath = "export FIFTPATH=/usr/lib/fift/:/usr/share/ton/smartcont/"
+
 	file = open("/etc/environment", 'rt+')
 	text = file.read()
 	if fiftpath not in text:

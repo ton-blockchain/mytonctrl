@@ -1404,9 +1404,9 @@ class MyTonCore():
 
 		self.local.add_log("mode: " + mode)
 
-		if mode == 'binaries':
-			self.local.add_log("Not allowed to validate with precompiled binaries", "error")
-			return
+#		if mode == 'binaries':
+#			self.local.add_log("Not allowed to validate with precompiled binaries", "error")
+#			return
 
 		if usePool:
 			pool = self.GetPool(mode="stake")

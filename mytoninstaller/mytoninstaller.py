@@ -85,7 +85,9 @@ def Refresh(local):
 	src_dir = "/usr/src/"
 	ton_work_dir = "/var/ton-work/"
 
-	if local.buffer.mode == 'full':
+	mode = local.db.get("mode")
+
+	if mode == 'full':
 		ton_bin_dir = bin_dir + "ton/"
 		ton_src_dir = src_dir + "ton/"
 	else:
@@ -103,7 +105,7 @@ def Refresh(local):
 	local.buffer.keys_dir = keys_dir
 	local.buffer.ton_log_path = ton_work_dir + "log"
 
-	if local.buffer.mode == 'full':
+	if mode == 'full':
 		local.buffer.validator_app_path = ton_bin_dir + "validator-engine/validator-engine"
 	else:
 		local.buffer.validator_app_path = ton_bin_dir + "validator-engine"
