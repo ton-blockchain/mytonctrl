@@ -1402,7 +1402,7 @@ class MyTonCore():
 
 		mode = self.local.db.get("mode", "full")
 
-		self.local.add_log("core, mode: " + mode, "error")
+		self.local.add_log("mode: " + mode)
 
 		if mode == 'binaries':
 			self.local.add_log("Not allowed to validate with precompiled binaries", "error")

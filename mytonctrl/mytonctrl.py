@@ -299,7 +299,7 @@ def Upgrade(ton, args):
 	ton.SetSettings("validatorConsole", validatorConsole)
 
 	mode = ton.GetSettings("mode")
-	print("ctrl, mode: " + mode)
+	print("mode: " + mode)
 
 	if mode == 'full':
 		repo = "ton"
