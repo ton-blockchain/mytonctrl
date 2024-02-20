@@ -1400,6 +1400,7 @@ class MyTonCore():
 			raise Exception("Validator wallet not found")
 		#end if
 
+		print("core, mode: " + self.local.buffer.mode)
 		if self.local.buffer.mode == 'binaries':
 			self.local.add_log("Not allowed to validate with precompiled binaries", "error")
 			return

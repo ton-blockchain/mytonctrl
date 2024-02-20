@@ -278,9 +278,7 @@ def Update(local, args):
 	local.exit()
 #end define
 
-def Upgrade(ton, args):
-	repo = "ton"
-	author, repo, branch = check_git(args, repo, "upgrade")
+def Upgrade(ton, local, args):
 
 	# bugfix if the files are in the wrong place
 	liteClient = ton.GetSettings("liteClient")
@@ -300,9 +298,16 @@ def Upgrade(ton, args):
 		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
 	ton.SetSettings("validatorConsole", validatorConsole)
 
-	# Run script
-	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
-	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
+	print("ctrl, mode: " + local.buffer.mode)
+	if local.buffer.mode == 'full':
+		repo = "ton"
+		author, repo, branch = check_git(args, repo, "upgrade")
+		# Run script
+		upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
+		runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
+	else:
+		runArgs = ["apt", "install", "-y", "--only-upgrade", "ton"]
+
 	exitCode = run_as_root(runArgs)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
