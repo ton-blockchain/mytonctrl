@@ -278,7 +278,7 @@ def Update(local, args):
 	local.exit()
 #end define
 
-def Upgrade(ton, local, args):
+def Upgrade(ton, args):
 
 	# bugfix if the files are in the wrong place
 	liteClient = ton.GetSettings("liteClient")
@@ -298,7 +298,7 @@ def Upgrade(ton, local, args):
 		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
 	ton.SetSettings("validatorConsole", validatorConsole)
 
-	mode = local.db.get("mode", "full")
+	mode = ton.GetSettings("mode")
 	print("ctrl, mode: " + mode)
 
 	if mode == 'full':
