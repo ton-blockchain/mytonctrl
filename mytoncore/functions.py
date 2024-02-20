@@ -476,7 +476,7 @@ def GetBinGitHash(path, short=False):
 # end define
 
 def GetTonPkgVersion():
-    args = ["apt", "show ton | grep Version"]
+    args = ["apt", "show", "ton"]
     process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
     output = process.stdout.decode("utf-8")
     if "Version" not in output:
