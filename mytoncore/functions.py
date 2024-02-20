@@ -481,10 +481,7 @@ def GetTonPkgVersion():
     output = process.stdout.decode("utf-8")
     if "Version" not in output:
         return
-    buff = output.split(' ')
-    start = buff.index("Version:") + 1
-    result = buff[start].replace('Version:', '')
-    return result
+    return output[output.find("Version:")+len("Version:"):output.rfind("Priority")].strip()
 # end define
 
 def OverlayTelemetry(local, ton):
