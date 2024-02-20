@@ -347,12 +347,15 @@ def GetBlockTimeAvg(local, timediff):
 
 
 def Offers(local, ton):
-    saveOffers = ton.GetSaveOffers()
+    save_offers = ton.GetSaveOffers()
     offers = ton.GetOffers()
     for offer in offers:
-        offerHash = offer.get("hash")
-        if offerHash in saveOffers:
-            ton.VoteOffer(offerHash)
+        offer_hash = offer.get("hash")
+        if offer_hash in save_offers:
+            offer_pseudohash = offer.get("pseudohash")
+            save_offer_pseudohash = save_offers.get(offer_hash)
+            if offer_pseudohash == save_offer_pseudohash and offer_pseudohash is not None:
+                ton.VoteOffer(offer_hash)
 # end define
 
 
