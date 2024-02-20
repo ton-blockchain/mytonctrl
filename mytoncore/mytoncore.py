@@ -1400,6 +1400,10 @@ class MyTonCore():
 			raise Exception("Validator wallet not found")
 		#end if
 
+		if self.local.buffer.mode == 'binaries':
+			self.local.add_log("Not allowed to validate with precompiled binaries", "error")
+			return
+
 		if usePool:
 			pool = self.GetPool(mode="stake")
 			addrB64 = pool.addrB64
@@ -1427,7 +1431,7 @@ class MyTonCore():
 		# Get ADNL address
 		adnlAddr = self.GetAdnlAddr()
 
-		# Check wether it is too early to participate
+		# Check whether it is too early to participate
 		if "participateBeforeEnd" in self.local.db:
 			now = time.time()
 			if (startWorkTime - now) > self.local.db["participateBeforeEnd"] and \
