@@ -484,7 +484,7 @@ def EnablePytonv3(local):
 
 	pythonv3installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'pytonv3installer.sh')
 	local.add_log(f"Running script: {pythonv3installer_path}", "debug")
-	exitCode = run_as_root(["bash", pythonv3installer_path, "-u", user])
+	exitCode = run_as_root(["bash", pythonv3installer_path, "-u", user, "-m", local.buffer.mode])
 	if exitCode == 0:
 		text = "EnablePytonv3 - {green}OK{endc}"
 	else:
@@ -498,7 +498,7 @@ def EnableTonHttpApi(local):
 	user = local.buffer.user
 
 	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'tonhttpapiinstaller.sh')
-	exitCode = run_as_root(["bash", ton_http_api_installer_path, "-u", user])
+	exitCode = run_as_root(["bash", ton_http_api_installer_path, "-u", user, "-m", local.buffer.mode])
 	if exitCode == 0:
 		text = "EnableTonHttpApi - {green}OK{endc}"
 	else:
@@ -721,6 +721,9 @@ def CreateSymlinks(local):
 	# file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")  # TODO: fix path
 	file.write("/usr/bin/python3 -m mytonctrl $@")  # TODO: fix path
 	file.close()
+
+	args = ["chmod", "+x", "/usr/bin/mytonctrl"]
+	subprocess.run(args)
 
 	if local.buffer.mode == 'full':
 		fift_file = "/usr/bin/fift"

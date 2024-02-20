@@ -3298,7 +3298,7 @@ class MyTonCore():
 		#end if
 
 		os.makedirs(gitPath + "build", exist_ok=True)
-		args = ["bash", "build.sh"]
+		args = ["bash", "build.sh", "-m", self.local.buffer.mode]
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=30)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")

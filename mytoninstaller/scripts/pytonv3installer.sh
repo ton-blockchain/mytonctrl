@@ -8,10 +8,11 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Get arguments
-while getopts u: flag
+while getopts u:m: flag
 do
 	case "${flag}" in
 		u) user=${OPTARG};;
+		m) mode=${OPTARG};;
 	esac
 done
 
@@ -41,7 +42,13 @@ cd /usr/bin/ton && make tonlibjson
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 echo "Script dir: ${SCRIPT_DIR}"
-${SCRIPT_DIR}/add2systemd -n pytonv3 -s "/usr/bin/python3 -m pyTON --liteserverconfig /usr/bin/ton/local.config.json --libtonlibjson /usr/bin/ton/tonlib/libtonlibjson.so" -u ${user} -g ${user}
+
+if [ "$mode" = "binaries" ]; then
+  ${SCRIPT_DIR}/add2systemd -n pytonv3 -s "/usr/bin/python3 -m pyTON --liteserverconfig /usr/bin/local.config.json --libtonlibjson /usr/lib/libtonlibjson.so" -u ${user} -g ${user}
+else
+  ${SCRIPT_DIR}/add2systemd -n pytonv3 -s "/usr/bin/python3 -m pyTON --liteserverconfig /usr/bin/ton/local.config.json --libtonlibjson /usr/bin/ton/tonlib/libtonlibjson.so" -u ${user} -g ${user}
+fi
+
 systemctl restart pytonv3
 
 # Конец
