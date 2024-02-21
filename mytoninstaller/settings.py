@@ -181,6 +181,8 @@ def FirstMytoncoreSettings(local):
 
 	# Telemetry
 	mconfig.sendTelemetry = local.buffer.telemetry
+
+	# mode
 	mconfig.mode = local.buffer.mode
 
 	# Записать настройки в файл

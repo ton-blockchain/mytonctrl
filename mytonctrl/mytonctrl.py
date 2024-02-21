@@ -404,6 +404,7 @@ def PrintStatus(local, ton, args):
 	offersNumber = ton.GetOffersNumber()
 	complaintsNumber = ton.GetComplaintsNumber()
 	statistics = ton.GetSettings("statistics")
+	mode = ton.GetSettings("mode")
 	tpsAvg = ton.GetStatistics("tpsAvg", statistics)
 	netLoadAvg = ton.GetStatistics("netLoadAvg", statistics)
 	disksLoadAvg = ton.GetStatistics("disksLoadAvg", statistics)
@@ -413,7 +414,7 @@ def PrintStatus(local, ton, args):
 	else:
 		validatorAccount = None
 	PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
-	PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg)
+	PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, mode)
 	PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
 	PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
@@ -458,7 +459,7 @@ def PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shar
 	print()
 #end define
 
-def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg):
+def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, mode):
 	if validatorWallet is None:
 		return
 	walletAddr = validatorWallet.addrB64
@@ -549,7 +550,6 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	mtcGitBranch_text = bcolors.yellow_text(mtcGitBranch)
 	mtcVersion_text = local.translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
 
-	mode = local.buffer.mode
 	print(mode)
 	if mode == 'full':
 		validatorGitPath = "/usr/src/ton"
