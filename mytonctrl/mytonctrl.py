@@ -308,7 +308,7 @@ def Upgrade(ton, args):
 		upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 		runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	else:
-		runArgs = ["apt", "install", "-y", "--only-upgrade", "ton"]
+		runArgs = ["apt", "install", "-y", "ton"]
 
 	exitCode = run_as_root(runArgs)
 	if exitCode == 0:
@@ -550,7 +550,6 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	mtcGitBranch_text = bcolors.yellow_text(mtcGitBranch)
 	mtcVersion_text = local.translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
 
-	print(mode)
 	if mode == 'full':
 		validatorGitPath = "/usr/src/ton"
 		validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
