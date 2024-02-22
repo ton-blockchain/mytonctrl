@@ -24,7 +24,7 @@ setup(
     package_data={
         'mytoninstaller.scripts': ['*.sh'],
         'mytoncore': [
-            'contracts/*', 
+            'contracts/**/*',
             'complaints/*'
         ],
         'mytonctrl': [
