@@ -9,8 +9,6 @@ from mytoninstaller.utils import StartMytoncore, GetInitBlock
 from mypylib.mypylib import ip2int, Dict
 
 
-defaultLocalConfigPath = "/usr/bin/ton/local.config.json"
-
 
 def GetConfig(**kwargs):
 	path = kwargs.get("path")
@@ -78,12 +76,17 @@ def GetPortsFromVconfig(local):
 #end define
 
 
-def CreateLocalConfig(local, initBlock, localConfigPath=defaultLocalConfigPath):
+def CreateLocalConfig(local, initBlock):
 	# dirty hack, but GetInitBlock() function uses the same technique
 	from mytoncore import hex2base64
 
+	mode = local.buffer.mode
 	# read global config file
-	file = open("/usr/bin/ton/global.config.json", 'rt')
+	if mode == 'full':
+		file = open("/usr/bin/ton/global.config.json", 'rt')
+	else:
+		file = open("/usr/bin/global.config.json", 'rt')
+
 	text = file.read()
 	data = json.loads(text)
 	file.close()
@@ -97,6 +100,11 @@ def CreateLocalConfig(local, initBlock, localConfigPath=defaultLocalConfigPath):
 	text = json.dumps(data, indent=4)
 
 	# write local config file
+	if mode == 'full':
+		localConfigPath = "/usr/bin/ton/local.config.json"
+	else:
+		localConfigPath = "/usr/bin/local.config.json"
+
 	file = open(localConfigPath, 'wt')
 	file.write(text)
 	file.close()

@@ -84,8 +84,16 @@ def Refresh(local):
 	bin_dir = "/usr/bin/"
 	src_dir = "/usr/src/"
 	ton_work_dir = "/var/ton-work/"
-	ton_bin_dir = bin_dir + "ton/"
-	ton_src_dir = src_dir + "ton/"
+
+	mode = local.buffer.mode
+
+	if mode == 'full':
+		ton_bin_dir = bin_dir + "ton/"
+		ton_src_dir = src_dir + "ton/"
+	else:
+		ton_bin_dir = bin_dir
+		ton_src_dir = src_dir
+
 	local.buffer.bin_dir = bin_dir
 	local.buffer.src_dir = src_dir
 	local.buffer.ton_work_dir = ton_work_dir
@@ -96,7 +104,12 @@ def Refresh(local):
 	local.buffer.ton_db_dir = ton_db_dir
 	local.buffer.keys_dir = keys_dir
 	local.buffer.ton_log_path = ton_work_dir + "log"
-	local.buffer.validator_app_path = ton_bin_dir + "validator-engine/validator-engine"
+
+	if mode == 'full':
+		local.buffer.validator_app_path = ton_bin_dir + "validator-engine/validator-engine"
+	else:
+		local.buffer.validator_app_path = ton_bin_dir + "validator-engine"
+
 	local.buffer.global_config_path = ton_bin_dir + "global.config.json"
 	local.buffer.vconfig_path = ton_db_dir + "config.json"
 #end define
@@ -199,6 +212,11 @@ def General(local):
 		mx = sys.argv.index("-t")
 		telemetry = sys.argv[mx+1]
 		local.buffer.telemetry = str2bool(telemetry)
+	if "-m" in sys.argv:
+		mo = sys.argv.index("-m")
+		mode = sys.argv[mo+1]
+		local.buffer.mode = mode
+		Refresh(local)
 	if "--dump" in sys.argv:
 		mx = sys.argv.index("--dump")
 		dump = sys.argv[mx+1]
@@ -212,6 +230,7 @@ def General(local):
 	BackupVconfig(local)
 	BackupMconfig(local)
 	CreateSymlinks(local)
+
 #end define
 
 
@@ -219,12 +238,12 @@ def General(local):
 ### Start of the program
 ###
 def mytoninstaller():
-    local = MyPyClass(__file__)
-    console = MyPyConsole()
+	local = MyPyClass(__file__)
+	console = MyPyConsole()
 
-    Init(local, console)
-    if len(sys.argv) > 1:
-        General(local)
-    else:
-        console.Run()
-    local.exit()
+	Init(local, console)
+	if len(sys.argv) > 1:
+		General(local)
+	else:
+		console.Run()
+	local.exit()

@@ -21,7 +21,7 @@ from mytoncore.utils import hex2b64
 
 
 def FirstNodeSettings(local):
-	local.add_log("start FirstNodeSettings fuction", "debug")
+	local.add_log("start FirstNodeSettings function", "debug")
 
 	# Создать переменные
 	user = local.buffer.user
@@ -36,7 +36,7 @@ def FirstNodeSettings(local):
 
 	# Проверить конфигурацию
 	if os.path.isfile(vconfig_path):
-		local.add_log(f"Validators config '{vconfig_path}' already exist. Break FirstNodeSettings fuction", "warning")
+		local.add_log(f"Validators config '{vconfig_path}' already exist. Break FirstNodeSettings function", "warning")
 		return
 	#end if
 
@@ -90,7 +90,7 @@ def DownloadDump(local):
 		return
 	#end if
 
-	local.add_log("start DownloadDump fuction", "debug")
+	local.add_log("start DownloadDump function", "debug")
 	url = "https://dump.ton.org"
 	dumpSize = requests.get(url + "/dumps/latest.tar.size.archive.txt").text
 	print("dumpSize:", dumpSize)
@@ -111,7 +111,7 @@ def DownloadDump(local):
 
 
 def FirstMytoncoreSettings(local):
-	local.add_log("start FirstMytoncoreSettings fuction", "debug")
+	local.add_log("start FirstMytoncoreSettings function", "debug")
 	user = local.buffer.user
 
 	# Прописать mytoncore.py в автозагрузку
@@ -121,13 +121,13 @@ def FirstMytoncoreSettings(local):
 	# Проверить конфигурацию
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	if os.path.isfile(path):
-		local.add_log(f"{path} already exist. Break FirstMytoncoreSettings fuction", "warning")
+		local.add_log(f"{path} already exist. Break FirstMytoncoreSettings function", "warning")
 		return
 	#end if
 
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
 	if os.path.isfile(path2):
-		local.add_log(f"{path2}.db already exist. Break FirstMytoncoreSettings fuction", "warning")
+		local.add_log(f"{path2}.db already exist. Break FirstMytoncoreSettings function", "warning")
 		return
 	#end if
 
@@ -156,21 +156,34 @@ def FirstMytoncoreSettings(local):
 	mconfig.config.logLevel = "debug"
 	mconfig.config.isLocaldbSaving = True
 
+	mode = local.buffer.mode
 	# fift
 	fift = Dict()
-	fift.appPath = ton_bin_dir + "crypto/fift"
-	fift.libsPath = ton_src_dir + "crypto/fift/lib"
-	fift.smartcontsPath = ton_src_dir + "crypto/smartcont"
+	if mode == 'full':
+		fift.appPath = ton_bin_dir + "crypto/fift"
+		fift.libsPath = ton_src_dir + "crypto/fift/lib"
+		fift.smartcontsPath = ton_src_dir + "crypto/smartcont"
+	else:
+		fift.appPath = ton_bin_dir + "fift"
+		fift.libsPath = "/usr/lib/fift"
+		fift.smartcontsPath = "/usr/share/ton/smartcont"
+
 	mconfig.fift = fift
 
 	# lite-client
 	liteClient = Dict()
-	liteClient.appPath = ton_bin_dir + "lite-client/lite-client"
+	if mode == 'full':
+		liteClient.appPath = ton_bin_dir + "lite-client/lite-client"
+	else:
+		liteClient.appPath = ton_bin_dir + "lite-client"
 	liteClient.configPath = ton_bin_dir + "global.config.json"
 	mconfig.liteClient = liteClient
 
 	# Telemetry
 	mconfig.sendTelemetry = local.buffer.telemetry
+
+	# mode
+	mconfig.mode = local.buffer.mode
 
 	# Записать настройки в файл
 	SetConfig(path=mconfig_path, data=mconfig)
@@ -194,7 +207,14 @@ def EnableValidatorConsole(local):
 	ton_db_dir = local.buffer.ton_db_dir
 	ton_bin_dir = local.buffer.ton_bin_dir
 	vconfig_path = local.buffer.vconfig_path
-	generate_random_id = ton_bin_dir + "utils/generate-random-id"
+
+	mode = local.buffer.mode
+
+	if mode == 'full':
+		generate_random_id = ton_bin_dir + "utils/generate-random-id"
+	else:
+		generate_random_id = ton_bin_dir + "generate-random-id"
+
 	keys_dir = local.buffer.keys_dir
 	client_key = keys_dir + "client"
 	server_key = keys_dir + "server"
@@ -203,12 +223,12 @@ def EnableValidatorConsole(local):
 
 	# Check if key exist
 	if os.path.isfile(server_key):
-		local.add_log(f"Server key '{server_key}' already exist. Break EnableValidatorConsole fuction", "warning")
+		local.add_log(f"Server key '{server_key}' already exist. Break EnableValidatorConsole function", "warning")
 		return
 	#end if
 
 	if os.path.isfile(client_key):
-		local.add_log(f"Client key '{client_key}' already exist. Break EnableValidatorConsole fuction", "warning")
+		local.add_log(f"Client key '{client_key}' already exist. Break EnableValidatorConsole function", "warning")
 		return
 	#end if
 
@@ -266,7 +286,12 @@ def EnableValidatorConsole(local):
 
 	# edit mytoncore config file
 	validatorConsole = Dict()
-	validatorConsole.appPath = ton_bin_dir + "validator-engine-console/validator-engine-console"
+
+	if mode == 'full':
+		validatorConsole.appPath = ton_bin_dir + "validator-engine-console/validator-engine-console"
+	else:
+		validatorConsole.appPath = ton_bin_dir + "validator-engine-console"
+
 	validatorConsole.privKeyPath = client_key
 	validatorConsole.pubKeyPath = server_pubkey
 	validatorConsole.addr = "127.0.0.1:{cport}".format(cport=cport)
@@ -297,13 +322,20 @@ def EnableLiteServer(local):
 	keys_dir = local.buffer.keys_dir
 	ton_bin_dir = local.buffer.ton_bin_dir
 	vconfig_path = local.buffer.vconfig_path
-	generate_random_id = ton_bin_dir + "utils/generate-random-id"
+
+	mode = local.buffer.mode
+
+	if mode == 'full':
+		generate_random_id = ton_bin_dir + "utils/generate-random-id"
+	else:
+		generate_random_id = ton_bin_dir + "generate-random-id"
+
 	liteserver_key = keys_dir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
 	# Check if key exist
 	if os.path.isfile(liteserver_pubkey):
-		local.add_log(f"Liteserver key '{liteserver_pubkey}' already exist. Break EnableLiteServer fuction", "warning")
+		local.add_log(f"Liteserver key '{liteserver_pubkey}' already exist. Break EnableLiteServer function", "warning")
 		return
 	#end if
 
@@ -378,15 +410,23 @@ def EnableDhtServer(local):
 	vuser = local.buffer.vuser
 	ton_bin_dir = local.buffer.ton_bin_dir
 	globalConfigPath = local.buffer.global_config_path
-	dht_server = ton_bin_dir + "dht-server/dht-server"
-	generate_random_id = ton_bin_dir + "utils/generate-random-id"
+
+	mode = local.buffer.mode
+
+	if mode == 'full':
+		dht_server = ton_bin_dir + "dht-server/dht-server"
+		generate_random_id = ton_bin_dir + "utils/generate-random-id"
+	else:
+		dht_server = ton_bin_dir + "dht-server"
+		generate_random_id = ton_bin_dir + "generate-random-id"
+
 	tonDhtServerDir = "/var/ton-dht-server/"
 	tonDhtKeyringDir = tonDhtServerDir + "keyring/"
 
 	# Проверить конфигурацию
 	dht_config_path = "/var/ton-dht-server/config.json"
 	if os.path.isfile(dht_config_path):
-		local.add_log(f"DHT-Server '{dht_config_path}' already exist. Break EnableDhtServer fuction", "warning")
+		local.add_log(f"DHT-Server '{dht_config_path}' already exist. Break EnableDhtServer function", "warning")
 		return
 	#end if
 
@@ -454,7 +494,7 @@ def EnablePytonv3(local):
 
 	pythonv3installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'pytonv3installer.sh')
 	local.add_log(f"Running script: {pythonv3installer_path}", "debug")
-	exitCode = run_as_root(["bash", pythonv3installer_path, "-u", user])
+	exitCode = run_as_root(["bash", pythonv3installer_path, "-u", user, "-m", local.buffer.mode])
 	if exitCode == 0:
 		text = "EnablePytonv3 - {green}OK{endc}"
 	else:
@@ -468,7 +508,7 @@ def EnableTonHttpApi(local):
 	user = local.buffer.user
 
 	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'tonhttpapiinstaller.sh')
-	exitCode = run_as_root(["bash", ton_http_api_installer_path, "-u", user])
+	exitCode = run_as_root(["bash", ton_http_api_installer_path, "-u", user, "-m", local.buffer.mode])
 	if exitCode == 0:
 		text = "EnableTonHttpApi - {green}OK{endc}"
 	else:
@@ -683,36 +723,47 @@ def DangerousRecoveryValidatorConfigFile(local):
 
 
 def CreateSymlinks(local):
-	local.add_log("start CreateSymlinks fuction", "debug")
+	local.add_log("start CreateSymlinks function", "debug")
 	cport = local.buffer.cport
 
 	mytonctrl_file = "/usr/bin/mytonctrl"
-	fift_file = "/usr/bin/fift"
-	liteclient_file = "/usr/bin/lite-client"
-	validator_console_file = "/usr/bin/validator-console"
-	env_file = "/etc/environment"
 	file = open(mytonctrl_file, 'wt')
 	# file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")  # TODO: fix path
 	file.write("/usr/bin/python3 -m mytonctrl $@")  # TODO: fix path
 	file.close()
-	file = open(fift_file, 'wt')
-	file.write("/usr/bin/ton/crypto/fift $@")
-	file.close()
-	file = open(liteclient_file, 'wt')
-	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/global.config.json $@")
-	file.close()
-	if cport:
-		file = open(validator_console_file, 'wt')
-		file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /var/ton-work/keys/client -p /var/ton-work/keys/server.pub -a 127.0.0.1:" + str(cport) + " $@")
-		file.close()
-		args = ["chmod", "+x", validator_console_file]
-		subprocess.run(args)
-	args = ["chmod", "+x", mytonctrl_file, fift_file, liteclient_file]
+
+	args = ["chmod", "+x", "/usr/bin/mytonctrl"]
 	subprocess.run(args)
 
+	mode = local.buffer.mode
+
+	if mode == 'full':
+		fift_file = "/usr/bin/fift"
+		liteclient_file = "/usr/bin/lite-client"
+		validator_console_file = "/usr/bin/validator-console"
+
+		file = open(fift_file, 'wt')
+		file.write("/usr/bin/ton/crypto/fift $@")
+		file.close()
+		file = open(liteclient_file, 'wt')
+		file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/global.config.json $@")
+		file.close()
+		if cport:
+			file = open(validator_console_file, 'wt')
+			file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /var/ton-work/keys/client -p /var/ton-work/keys/server.pub -a 127.0.0.1:" + str(cport) + " $@")
+			file.close()
+			args = ["chmod", "+x", validator_console_file]
+			subprocess.run(args)
+		args = ["chmod", "+x", mytonctrl_file, fift_file, liteclient_file]
+		subprocess.run(args)
+
 	# env
-	fiftpath = "export FIFTPATH=/usr/src/ton/crypto/fift/lib/:/usr/src/ton/crypto/smartcont/"
-	file = open(env_file, 'rt+')
+	if mode == 'full':
+		fiftpath = "export FIFTPATH=/usr/src/ton/crypto/fift/lib/:/usr/src/ton/crypto/smartcont/"
+	else:
+		fiftpath = "export FIFTPATH=/usr/lib/fift/:/usr/share/ton/smartcont/"
+
+	file = open("/etc/environment", 'rt+')
 	text = file.read()
 	if fiftpath not in text:
 		file.write(fiftpath + '\n')

@@ -17,15 +17,16 @@ repo="mytonctrl"
 branch="master"
 
 show_help_and_exit() {
-    echo 'Supported argumets:'
+    echo 'Supported arguments:'
     echo ' -c  PATH         Provide custom config for toninstaller.sh'
     echo ' -t               Disable telemetry'
-    echo ' -i               Ignore minimum reqiurements'
+    echo ' -i               Ignore minimum requirements'
+    echo ' -m               Mode: full or binaries'
     echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
     echo ' -a               Set MyTonCtrl git repo author'
-	echo ' -r               Set MyTonCtrl git repo'
-	echo ' -b               Set MyTonCtrl git repo branch'
-	echo ' -h               Show this help'
+   	echo ' -r               Set MyTonCtrl git repo'
+	  echo ' -b               Set MyTonCtrl git repo branch'
+	  echo ' -h               Show this help'
     exit
 }
 
@@ -40,13 +41,14 @@ ignore=false
 dump=false
 
 
-while getopts c:tida:r:b: flag
+while getopts c:tidm:a:r:b: flag
 do
 	case "${flag}" in
 		c) config=${OPTARG};;
 		t) telemetry=false;;
 		i) ignore=true;;
 		d) dump=true;;
+		m) mode=${OPTARG};;
 		a) author=${OPTARG};;
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
@@ -73,22 +75,32 @@ echo -e "${COLOR}[2/5]${ENDC} Checking for required TON components"
 SOURCES_DIR=/usr/src
 BIN_DIR=/usr/bin
 
-# create dirs for OSX
-if [[ "$OSTYPE" =~ darwin.* ]]; then
-	SOURCES_DIR=/usr/local/src
-	BIN_DIR=/usr/local/bin
-	mkdir -p ${SOURCES_DIR}
-fi
+if [ "$mode" = "full" ]; then
+  # create dirs for OSX
+  if [[ "$OSTYPE" =~ darwin.* ]]; then
+    SOURCES_DIR=/usr/local/src
+    BIN_DIR=/usr/local/bin
+    mkdir -p ${SOURCES_DIR}
+  fi
 
-# check TON components
-file1=${BIN_DIR}/ton/crypto/fift
-file2=${BIN_DIR}/ton/lite-client/lite-client
-file3=${BIN_DIR}/ton/validator-engine-console/validator-engine-console
+  # check TON components
+  file1=${BIN_DIR}/ton/crypto/fift
+  file2=${BIN_DIR}/ton/lite-client/lite-client
+  file3=${BIN_DIR}/ton/validator-engine-console/validator-engine-console
 
-if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
-	echo "TON does not exists, building"
-	wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
-	bash /tmp/ton_installer.sh -c ${config}
+  if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
+    echo "TON does not exists, building"
+    wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
+    bash /tmp/ton_installer.sh -c ${config}
+  fi
+elif [ "$mode" = "binaries" ]; then
+  apt update -y
+  apt remove -y ton
+  apt install -y ton
+  wget ${config} -O /usr/bin/global.config.json
+else
+  echo "Wrong installation mode. Use either full or binaries mode"
+  exit 1;
 fi
 
 # Cloning mytonctrl
@@ -115,7 +127,7 @@ if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ]; then
     user=$(logname)
 fi
 echo "User: $user"
-python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump}
+python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode}
 
 # set migrate version
 migrate_version=1

@@ -49,6 +49,8 @@ rm -rf /usr/local/bin/mytoncore/mytoncore.db
 rm -rf /home/${user}/.local/share/mytonctrl
 rm -rf /home/${user}/.local/share/mytoncore/mytoncore.db
 
+apt remove -y ton
+
 # Удаление ссылок
 if $full; then
 	echo "removing ton node"

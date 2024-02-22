@@ -1400,6 +1400,14 @@ class MyTonCore():
 			raise Exception("Validator wallet not found")
 		#end if
 
+		mode = self.local.db.get("mode", "full")
+
+		self.local.add_log("mode: " + mode)
+
+#		if mode == 'binaries':
+#			self.local.add_log("Not allowed to validate with precompiled binaries", "error")
+#			return
+
 		if usePool:
 			pool = self.GetPool(mode="stake")
 			addrB64 = pool.addrB64
@@ -1427,7 +1435,7 @@ class MyTonCore():
 		# Get ADNL address
 		adnlAddr = self.GetAdnlAddr()
 
-		# Check wether it is too early to participate
+		# Check whether it is too early to participate
 		if "participateBeforeEnd" in self.local.db:
 			now = time.time()
 			if (startWorkTime - now) > self.local.db["participateBeforeEnd"] and \
@@ -3298,7 +3306,8 @@ class MyTonCore():
 		#end if
 
 		os.makedirs(gitPath + "build", exist_ok=True)
-		args = ["bash", "build.sh"]
+		mode = self.local.db.get("mode", "full")
+		args = ["bash", "build.sh", "-m", mode]
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=30)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")

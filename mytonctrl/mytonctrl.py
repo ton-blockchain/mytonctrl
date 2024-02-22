@@ -40,6 +40,7 @@ from mytoncore.functions import (
 	GetMemoryInfo,
 	GetSwapInfo,
 	GetBinGitHash,
+	GetTonPkgVersion,
 )
 from mytonctrl.migrate import run_migrations
 
@@ -278,8 +279,6 @@ def Update(local, args):
 #end define
 
 def Upgrade(ton, args):
-	repo = "ton"
-	author, repo, branch = check_git(args, repo, "upgrade")
 
 	# bugfix if the files are in the wrong place
 	liteClient = ton.GetSettings("liteClient")
@@ -299,9 +298,18 @@ def Upgrade(ton, args):
 		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
 	ton.SetSettings("validatorConsole", validatorConsole)
 
-	# Run script
-	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
-	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
+	mode = ton.GetSettings("mode")
+	print("mode: " + mode)
+
+	if mode == 'full':
+		repo = "ton"
+		author, repo, branch = check_git(args, repo, "upgrade")
+		# Run script
+		upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
+		runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
+	else:
+		runArgs = ["apt", "install", "-y", "ton"]
+
 	exitCode = run_as_root(runArgs)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
@@ -396,6 +404,7 @@ def PrintStatus(local, ton, args):
 	offersNumber = ton.GetOffersNumber()
 	complaintsNumber = ton.GetComplaintsNumber()
 	statistics = ton.GetSettings("statistics")
+	mode = ton.GetSettings("mode")
 	tpsAvg = ton.GetStatistics("tpsAvg", statistics)
 	netLoadAvg = ton.GetStatistics("netLoadAvg", statistics)
 	disksLoadAvg = ton.GetStatistics("disksLoadAvg", statistics)
@@ -405,7 +414,7 @@ def PrintStatus(local, ton, args):
 	else:
 		validatorAccount = None
 	PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
-	PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg)
+	PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, mode)
 	PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
 	PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
@@ -450,7 +459,7 @@ def PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shar
 	print()
 #end define
 
-def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg):
+def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, mode):
 	if validatorWallet is None:
 		return
 	walletAddr = validatorWallet.addrB64
@@ -535,18 +544,22 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	
 	# Mytonctrl and validator git hash
 	mtcGitPath = "/usr/src/mytonctrl"
-	validatorGitPath = "/usr/src/ton"
-	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
 	mtcGitHash = get_git_hash(mtcGitPath, short=True)
-	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
 	mtcGitBranch = get_git_branch(mtcGitPath)
-	validatorGitBranch = get_git_branch(validatorGitPath)
 	mtcGitHash_text = bcolors.yellow_text(mtcGitHash)
-	validatorGitHash_text = bcolors.yellow_text(validatorGitHash)
 	mtcGitBranch_text = bcolors.yellow_text(mtcGitBranch)
-	validatorGitBranch_text = bcolors.yellow_text(validatorGitBranch)
 	mtcVersion_text = local.translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
-	validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
+
+	if mode == 'full':
+		validatorGitPath = "/usr/src/ton"
+		validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
+		validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+		validatorGitHash_text = bcolors.yellow_text(validatorGitHash)
+		validatorGitBranch = get_git_branch(validatorGitPath)
+		validatorGitBranch_text = bcolors.yellow_text(validatorGitBranch)
+		validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
+	else:
+		validatorVersion_text = local.translate("local_status_version_validator").format(GetTonPkgVersion(), "precompiled")
 
 	color_print(local.translate("local_status_head"))
 	print(validatorIndex_text)

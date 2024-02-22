@@ -8,10 +8,11 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Get arguments
-while getopts u: flag
+while getopts u:m: flag
 do
 	case "${flag}" in
 		u) user=${OPTARG};;
+    m) mode=${OPTARG};;
 	esac
 done
 
@@ -29,7 +30,13 @@ mkdir -p /var/ton-http-api/ton_keystore/
 chown -R $user /var/ton-http-api/
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-cmd="ton-http-api --port=8000 --logs-level=INFO --cdll-path=/usr/bin/ton/tonlib/libtonlibjson.so --liteserver-config /usr/bin/ton/local.config.json --tonlib-keystore=/var/ton-http-api/ton_keystore/ --parallel-requests-per-liteserver=1024"
+
+if [ "$mode" = "binaries" ]; then
+  cmd="ton-http-api --port=8000 --logs-level=INFO --cdll-path=/usr/lib/libtonlibjson.so --liteserver-config /usr/bin/local.config.json --tonlib-keystore=/var/ton-http-api/ton_keystore/ --parallel-requests-per-liteserver=1024"
+else
+  cmd="ton-http-api --port=8000 --logs-level=INFO --cdll-path=/usr/bin/ton/tonlib/libtonlibjson.so --liteserver-config /usr/bin/ton/local.config.json --tonlib-keystore=/var/ton-http-api/ton_keystore/ --parallel-requests-per-liteserver=1024"
+fi
+
 ${SCRIPT_DIR}/add2systemd.sh -n ton-http-api -s "${cmd}" -u ${user} -g ${user}
 systemctl restart ton-http-api
 

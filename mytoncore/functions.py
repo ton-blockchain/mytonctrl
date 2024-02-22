@@ -441,8 +441,14 @@ def Telemetry(local, ton):
     # Get git hashes
     gitHashes = dict()
     gitHashes["mytonctrl"] = get_git_hash("/usr/src/mytonctrl")
-    gitHashes["validator"] = GetBinGitHash(
-        "/usr/bin/ton/validator-engine/validator-engine")
+
+    mode = local.buffer.mode
+
+    if mode == 'full':
+        gitHashes["validator"] = GetBinGitHash("/usr/bin/ton/validator-engine/validator-engine")
+    else:
+        gitHashes["validator"] = GetBinGitHash("/usr/bin/validator-engine")
+
     data["gitHashes"] = gitHashes
     data["stake"] = local.db.get("stake")
 
@@ -475,6 +481,14 @@ def GetBinGitHash(path, short=False):
     return result
 # end define
 
+def GetTonPkgVersion():
+    args = ["apt", "show", "ton"]
+    process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+    output = process.stdout.decode("utf-8")
+    if "Version" not in output:
+        return
+    return output[output.find("Version:")+len("Version:"):output.rfind("Priority")].strip()
+# end define
 
 def OverlayTelemetry(local, ton):
     sendTelemetry = local.db.get("sendTelemetry")
