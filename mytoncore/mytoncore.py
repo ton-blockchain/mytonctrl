@@ -1307,7 +1307,10 @@ class MyTonCore():
 				stake = account.balance - 10
 		#end if
 
-		if stake is None and usePool:
+		pool_version = self.GetVersionFromCodeHash(account.codeHash)
+		is_single_nominator = 'spool' in pool_version
+
+		if stake is None and usePool and not is_single_nominator:
 			stake = account.balance - 20
 		if stake is None:
 			sp = stakePercent / 100
