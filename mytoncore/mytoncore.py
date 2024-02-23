@@ -1428,7 +1428,8 @@ class MyTonCore():
 		#end if
 
 		# Get ADNL address
-		adnlAddr = self.GetAdnlAddr()
+		adnl_addr = self.GetAdnlAddr()
+		adnl_addr_bytes = bytes.fromhex(adnl_addr)
 
 		# Check wether it is too early to participate
 		if "participateBeforeEnd" in self.local.db:
@@ -1436,9 +1437,21 @@ class MyTonCore():
 			if (startWorkTime - now) > self.local.db["participateBeforeEnd"] and \
 			   (now + self.local.db["periods"]["elections"]) < startWorkTime:
 				return
+
+		vconfig = self.GetValidatorConfig()
+
+		have_adnl = False
+		# Check if ADNL address is in the list
+		for a in vconfig.adnl:
+			if base64.b64decode(a.id) == adnl_addr_bytes:
+				have_adnl = True
+				break
+		if not have_adnl:
+			raise Exception('ADNL address is not found')
+
 		# Check if election entry already completed
 		entries = self.GetElectionEntries()
-		if adnlAddr in entries:
+		if adnl_addr in entries:
 			self.local.add_log("Elections entry already completed", "info")
 			return
 		#end if
@@ -1456,24 +1469,24 @@ class MyTonCore():
 		validatorPubkey_b64  = self.GetPubKeyBase64(validatorKey)
 
 		# Attach ADNL addr to validator
-		self.AttachAdnlAddrToValidator(adnlAddr, validatorKey, endWorkTime)
+		self.AttachAdnlAddrToValidator(adnl_addr, validatorKey, endWorkTime)
 
 		# Get max factor
 		maxFactor = self.GetMaxFactor()
 
 		# Create fift's. Continue with pool or walet
 		if usePool:
-			var1 = self.CreateElectionRequest(pool, startWorkTime, adnlAddr, maxFactor)
+			var1 = self.CreateElectionRequest(pool, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-			validatorPubkey, resultFilePath = self.SignElectionRequestWithPoolWithValidator(pool, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
+			validatorPubkey, resultFilePath = self.SignElectionRequestWithPoolWithValidator(pool, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
 
 			# Send boc file to TON
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, pool.addrB64, 1.3)
 			self.SendFile(resultFilePath, wallet)
 		else:
-			var1 = self.CreateElectionRequest(wallet, startWorkTime, adnlAddr, maxFactor)
+			var1 = self.CreateElectionRequest(wallet, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-			validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor)
+			validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor)
 
 			# Send boc file to TON
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, fullElectorAddr, stake)
@@ -1481,7 +1494,7 @@ class MyTonCore():
 		#end if
 
 		# Save vars to json file
-		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
+		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnl_addr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
 
 		self.local.add_log("ElectionEntry completed. Start work time: " + str(startWorkTime))
 	#end define

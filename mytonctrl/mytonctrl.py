@@ -225,9 +225,26 @@ def check_vport(local, ton):
 		color_print(local.translate("vport_error"))
 #end define
 
+
+def fix_git_config(git_path: str):
+	args = ["git", "status"]
+	try:
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path, timeout=3)
+		err = process.stderr.decode("utf-8")
+	except Exception as e:
+		err = str(e)
+	if err:
+		if 'git config --global --add safe.directory' in err:
+			args = ["git", "config", "--global", "--add", "safe.directory", git_path]
+			subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+		else:
+			raise Exception(f'Failed to check git status: {err}')
+
+
 def check_git(input_args, default_repo, text):
 	src_dir = "/usr/src"
 	git_path = f"{src_dir}/{default_repo}"
+	fix_git_config(git_path)
 	default_author = "ton-blockchain"
 	default_branch = "master"
 
