@@ -1436,6 +1436,18 @@ class MyTonCore():
 			if (startWorkTime - now) > self.local.db["participateBeforeEnd"] and \
 			   (now + self.local.db["periods"]["elections"]) < startWorkTime:
 				return
+
+		vconfig = self.GetValidatorConfig()
+
+		have_adnl = False
+		# Check if ADNL address is in the list
+		for a in vconfig.adnl:
+			if base64.b64decode(a.id).hex() == adnlAddr:
+				have_adnl = True
+				break
+		if not have_adnl:
+			raise Exception('ADNL address is not found')
+
 		# Check if election entry already completed
 		entries = self.GetElectionEntries()
 		if adnlAddr in entries:
