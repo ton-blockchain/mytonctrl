@@ -52,10 +52,10 @@ fi
 rm -rf ${bindir}/openssl_3
 git clone https://github.com/openssl/openssl ${bindir}/openssl_3
 cd ${bindir}/openssl_3
+git checkout openssl-3.1.4
 ./config
 make build_libs -j$(nproc)
 opensslPath=`pwd`
-git checkout openssl-3.1.4
 
 # Go to work dir
 cd ${srcdir}
