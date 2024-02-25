@@ -92,10 +92,10 @@ pip3 install psutil crc16 requests
 # build openssl 3.0
 echo -e "${COLOR}[2/6]${ENDC} Building OpenSSL 3.0"
 rm -rf $BIN_DIR/openssl_3
-git clone --branch openssl-3.1.4 https://github.com/openssl/openssl $BIN_DIR/openssl_3
+git clone https://github.com/openssl/openssl $BIN_DIR/openssl_3
 cd $BIN_DIR/openssl_3
 opensslPath=`pwd`
-git checkout 
+git checkout openssl-3.1.4
 ./config
 make build_libs -j$(nproc)
 

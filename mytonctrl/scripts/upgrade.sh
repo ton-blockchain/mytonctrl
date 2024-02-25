@@ -50,11 +50,12 @@ fi
 
 # compile openssl_3
 rm -rf ${bindir}/openssl_3
-git clone --branch openssl-3.1.4 https://github.com/openssl/openssl ${bindir}/openssl_3
+git clone https://github.com/openssl/openssl ${bindir}/openssl_3
 cd ${bindir}/openssl_3
 ./config
 make build_libs -j$(nproc)
 opensslPath=`pwd`
+git checkout openssl-3.1.4
 
 # Go to work dir
 cd ${srcdir}
