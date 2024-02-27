@@ -1495,9 +1495,24 @@ class MyTonCore():
 
 		# Save vars to json file
 		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnl_addr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
-
 		self.local.add_log("ElectionEntry completed. Start work time: " + str(startWorkTime))
+
+		self.clear_tmp()
+
 	#end define
+
+	def clear_tmp(self):
+		start = time.time()
+		count = 0
+		week_ago = 60 * 60 * 24 * 7
+		dir = self.tempDir
+		for f in os.listdir(dir):
+			ts = os.path.getmtime(os.path.join(dir, f))
+			if ts < time.time() - week_ago:
+				count += 1
+				os.remove(os.path.join(dir, f))
+
+		self.local.add_log(f"Removed {count} old files from tmp dir for {int(time.time() - start)} seconds", "info")
 
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
 		self.local.add_log("start GetValidatorKeyByTime function", "debug")
@@ -2950,13 +2965,22 @@ class MyTonCore():
 		bookmark["data"] = data
 	#end define
 
+	def offers_gc(self, save_offers):
+		current_offers = self.GetOffers()
+		current_offers_hashes = [offer.get("hash") for offer in current_offers]
+		for offer in save_offers:
+			if offer not in current_offers_hashes:
+				save_offers.pop(offer)
+		return save_offers
+
 	def GetSaveOffers(self):
 		bname = "saveOffers"
-		saveOffers = self.local.db.get(bname)
-		if saveOffers is None:
-			saveOffers = dict()
-			self.local.db[bname] = saveOffers
-		return saveOffers
+		save_offers = self.local.db.get(bname)
+		if save_offers is None:
+			save_offers = dict()
+			self.local.db[bname] = save_offers
+		self.offers_gc(save_offers)
+		return save_offers
 	#end define
 
 	def AddSaveOffer(self, offer):
