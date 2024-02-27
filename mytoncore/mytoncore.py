@@ -1495,9 +1495,25 @@ class MyTonCore():
 
 		# Save vars to json file
 		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnl_addr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
-
 		self.local.add_log("ElectionEntry completed. Start work time: " + str(startWorkTime))
+
+		self.clear_tmp()
+
 	#end define
+
+	def clear_tmp(self):
+		start = time.time()
+		count = 0
+		dir = self.tempDir
+		for f in os.listdir(dir):
+			ts = f.split('_')[0]
+			if ts.isdigit():
+				ts = int(ts)
+				week = 60 * 60 * 24 * 7
+				if ts < time.time() - week:
+					count += 1
+					os.remove(os.path.join(dir, f))
+		self.local.add_log(f"Removed {count} old files from tmp dir for {int(time.time() - start)} seconds", "info")
 
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
 		self.local.add_log("start GetValidatorKeyByTime function", "debug")
