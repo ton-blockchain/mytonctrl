@@ -1507,17 +1507,10 @@ class MyTonCore():
 		week_ago = 60 * 60 * 24 * 7
 		dir = self.tempDir
 		for f in os.listdir(dir):
-			prefix = f.split('_')[0]
-			if prefix.isdigit():
-				ts = int(prefix)
-				if ts < time.time() - week_ago:
-					count += 1
-					os.remove(os.path.join(dir, f))
-			elif prefix == 'checkload':
-				ts = int(f.split('_')[1])
-				if ts < time.time() - week_ago:
-					count += 1
-					os.remove(os.path.join(dir, f))
+			ts = os.path.getmtime(os.path.join(dir, f))
+			if ts < time.time() - week_ago:
+				count += 1
+				os.remove(os.path.join(dir, f))
 
 		self.local.add_log(f"Removed {count} old files from tmp dir for {int(time.time() - start)} seconds", "info")
 
