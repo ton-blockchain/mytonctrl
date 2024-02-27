@@ -2950,13 +2950,22 @@ class MyTonCore():
 		bookmark["data"] = data
 	#end define
 
+	def offers_gc(self, save_offers):
+		current_offers = self.GetOffers()
+		current_offers_hashes = [offer.get("hash") for offer in current_offers]
+		for offer in save_offers:
+			if offer not in current_offers_hashes:
+				save_offers.pop(offer)
+		return save_offers
+
 	def GetSaveOffers(self):
 		bname = "saveOffers"
-		saveOffers = self.local.db.get(bname)
-		if saveOffers is None:
-			saveOffers = dict()
-			self.local.db[bname] = saveOffers
-		return saveOffers
+		save_offers = self.local.db.get(bname)
+		if save_offers is None:
+			save_offers = dict()
+			self.local.db[bname] = save_offers
+		self.offers_gc(save_offers)
+		return save_offers
 	#end define
 
 	def AddSaveOffer(self, offer):
