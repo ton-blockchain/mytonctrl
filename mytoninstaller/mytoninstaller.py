@@ -7,29 +7,29 @@ import random
 import json
 import subprocess
 
-from mypylib.mypylib import MyPyClass, run_as_root
+from mypylib.mypylib import MyPyClass, run_as_root, color_print
 from mypyconsole.mypyconsole import MyPyConsole
 
-from mytoninstaller.config import GetLiteServerConfig
+from mytoninstaller.config import GetLiteServerConfig, get_ls_proxy_config
 from mytoninstaller.utils import GetInitBlock
 from mytoncore.utils import dict2b64, str2bool, b642dict
 
 from mytoninstaller.settings import (
-    FirstNodeSettings,
-    FirstMytoncoreSettings,
-    EnableValidatorConsole,
-    EnableLiteServer,
-    EnableDhtServer,
-    EnableJsonRpc,
-    EnablePytonv3,
+	FirstNodeSettings,
+	FirstMytoncoreSettings,
+	EnableValidatorConsole,
+	EnableLiteServer,
+	EnableDhtServer,
+	EnableJsonRpc,
 	EnableTonHttpApi,
-    DangerousRecoveryValidatorConfigFile,
-    CreateSymlinks,
+	DangerousRecoveryValidatorConfigFile,
+	CreateSymlinks,
+	enable_ls_proxy
 )
 from mytoninstaller.config import (
-    CreateLocalConfig,
-    BackupVconfig,
-    BackupMconfig,
+	CreateLocalConfig,
+	BackupVconfig,
+	BackupMconfig,
 )
 
 from functools import partial
@@ -62,10 +62,12 @@ def Init(local, console):
 	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.AddItem("status", inject_globals(Status), "Print TON component status")
-	console.AddItem("enable", inject_globals(Enable), "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'PT' - ton-http-api. Example: 'enable FN'")
+	console.AddItem("enable", inject_globals(Enable), "Enable some function")
 	console.AddItem("update", inject_globals(Enable), "Update some function: 'JR' - jsonrpc.  Example: 'update JR'") 
-	console.AddItem("plsc", inject_globals(PrintLiteServerConfig), "Print LiteServer config")
-	console.AddItem("clcf", inject_globals(CreateLocalConfigFile), "CreateLocalConfigFile")
+	console.AddItem("plsc", inject_globals(PrintLiteServerConfig), "Print lite-server config")
+	console.AddItem("clcf", inject_globals(CreateLocalConfigFile), "Create lite-server config file")
+	console.AddItem("print_ls_proxy_config", inject_globals(print_ls_proxy_config), "Print ls-proxy config")
+	console.AddItem("create_ls_proxy_config_file", inject_globals(create_ls_proxy_config_file), "Create ls-proxy config file")
 	console.AddItem("drvcf", inject_globals(DRVCF), "Dangerous recovery validator config file")
 	console.AddItem("setwebpass", inject_globals(SetWebPassword), "Set a password for the web admin interface")
 
@@ -123,10 +125,22 @@ def Status(local, args):
 
 
 def Enable(local, args):
-	name = args[0]
-	if name == "PT":
+	try:
+		name = args[0]
+	except:
+		color_print("{red}Bad args. Usage:{endc} enable <mode-name>")
+		print("'FN' - Full node")
+		print("'VC' - Validator console")
+		print("'LS' - Lite-Server")
+		print("'DS' - DHT-Server")
+		print("'JR' - jsonrpc")
+		print("'THA' - ton-http-api")
+		print("'LSP' - ls-proxy")
+		print("Example: 'enable FN'")
+		return
+	if name == "THA":
 		CreateLocalConfigFile(local, args)
-	args = ["python3", "-m", "mytoninstaller", "-u", local.buffer.user, "-e", "enable{name}".format(name=name)]
+	args = ["python3", "-m", "mytoninstaller", "-u", local.buffer.user, "-e", f"enable{name}"]
 	run_as_root(args)
 #end define
 
@@ -159,6 +173,15 @@ def CreateLocalConfigFile(local, args):
 	run_as_root(args)
 #end define
 
+def print_ls_proxy_config(local, args):
+	ls_proxy_config = get_ls_proxy_config(local)
+	text = json.dumps(ls_proxy_config, indent=4)
+	print(text)
+#end define
+
+def create_ls_proxy_config_file(local, args):
+	print("TODO")
+#end define
 
 def Event(local, name):
 	if name == "enableFN":
@@ -173,9 +196,10 @@ def Event(local, name):
 		DangerousRecoveryValidatorConfigFile(local)
 	if name == "enableJR":
 		EnableJsonRpc(local)
-	if name == "enablePT":
-		# EnablePytonv3(local)
+	if name == "enableTHA":
 		EnableTonHttpApi(local)
+	if name == "enableLSP":
+		enable_ls_proxy(local)
 	if name == "clc":
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]
@@ -219,12 +243,12 @@ def General(local):
 ### Start of the program
 ###
 def mytoninstaller():
-    local = MyPyClass(__file__)
-    console = MyPyConsole()
+	local = MyPyClass(__file__)
+	console = MyPyConsole()
 
-    Init(local, console)
-    if len(sys.argv) > 1:
-        General(local)
-    else:
-        console.Run()
-    local.exit()
+	Init(local, console)
+	if len(sys.argv) > 1:
+		General(local)
+	else:
+		console.Run()
+	local.exit()
