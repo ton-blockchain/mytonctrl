@@ -2968,7 +2968,7 @@ class MyTonCore():
 	def offers_gc(self, save_offers):
 		current_offers = self.GetOffers()
 		current_offers_hashes = [offer.get("hash") for offer in current_offers]
-		for offer in save_offers:
+		for offer in list(save_offers.keys()):
 			if offer not in current_offers_hashes:
 				save_offers.pop(offer)
 		return save_offers
