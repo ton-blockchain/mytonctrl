@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Проверить sudo
+# Check sudo
 if [ "$(id -u)" != "0" ]; then
 	echo "Please run script as root"
 	exit 1
@@ -12,7 +12,6 @@ author="ton-blockchain"
 repo="mytonctrl"
 branch="master"
 srcdir="/usr/src/"
-bindir="/usr/bin/"
 
 # Get arguments
 while getopts a:r:b: flag
@@ -24,11 +23,11 @@ do
 	esac
 done
 
-# Цвета
+# Colors
 COLOR='\033[92m'
 ENDC='\033[0m'
 
-# Установка компонентов python3
+# Installation of python3 components
 pip3 install fastcrc
 
 # Go to work dir
@@ -41,6 +40,6 @@ git clone --recursive https://github.com/${author}/${repo}.git
 cd ${repo} && git checkout ${branch} && git submodule update --init --recursive
 systemctl restart mytoncore
 
-# Конец
+# End
 echo -e "${COLOR}[1/1]${ENDC} MyTonCtrl components update completed"
 exit 0
