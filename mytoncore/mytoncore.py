@@ -1292,6 +1292,7 @@ class MyTonCore():
 	def GetStake(self, account, args=None):
 		stake = self.local.db.get("stake")
 		usePool = self.local.db.get("usePool")
+		useController = self.local.db.get("useController")
 		stakePercent = self.local.db.get("stakePercent", 99)
 		vconfig = self.GetValidatorConfig()
 		validators = vconfig.get("validators")
@@ -1408,6 +1409,7 @@ class MyTonCore():
 
 	def ElectionEntry(self, args=None):
 		usePool = self.local.db.get("usePool")
+		useController = self.local.db.get("useController")
 		wallet = self.GetValidatorWallet()
 		addrB64 = wallet.addrB64
 		if wallet is None:
@@ -1500,9 +1502,9 @@ class MyTonCore():
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, pool.addrB64, 1.3)
 			self.SendFile(resultFilePath, wallet)
 		elif useController:
-			var1 = self.CreateElectionRequest(controllerAddr, startWorkTime, adnlAddr, maxFactor)
+			var1 = self.CreateElectionRequest(controllerAddr, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-			validatorPubkey, resultFilePath = self.SignElectionRequestWithController(controllerAddr, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
+			validatorPubkey, resultFilePath = self.SignElectionRequestWithController(controllerAddr, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
 
 			# Send boc file to TON
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, controllerAddr, 1.03)
@@ -3691,7 +3693,7 @@ class MyTonCore():
 	#end define
 
 	def GetLiquidPoolAddr(self):
-		liquid_pool_addr = local.db.get("liquid_pool_addr")
+		liquid_pool_addr = self.local.db.get("liquid_pool_addr")
 		if liquid_pool_addr is None:
 			raise Exception("GetLiquidPoolAddr error: liquid_pool_addr not set")
 		return liquid_pool_addr
@@ -3699,12 +3701,12 @@ class MyTonCore():
 
 	def CreateControllers(self):
 		new_controllers = self.GetControllers()
-		old_controllers = local.db.get("using_controllers", list())
+		old_controllers = self.local.db.get("using_controllers", list())
 		if new_controllers == old_controllers:
 			return
 		#end if
 
-		local.add_log("start CreateControllers function", "debug")
+		self.local.add_log("start CreateControllers function", "debug")
 		wallet = self.GetValidatorWallet()
 		liquid_pool_addr = self.GetLiquidPoolAddr()
 		contractPath = self.contractsDir + "jetton_pool/"
@@ -3721,9 +3723,9 @@ class MyTonCore():
 		self.SendFile(resultFilePath1, wallet)
 
 		# Сохранить новые контроллеры
-		local.db["old_controllers"] = old_controllers
-		local.db["using_controllers"] = new_controllers
-		local.save()
+		self.local.db["old_controllers"] = old_controllers
+		self.local.db["using_controllers"] = new_controllers
+		self.local.save()
 	#end define
 
 	def GetControllerAddress(self, controller_id):
@@ -3741,9 +3743,9 @@ class MyTonCore():
 	#end define
 
 	def CheckController(self, controllerAddr):
-		local.add_log("start CheckController function", "debug")
+		self.local.add_log("start CheckController function", "debug")
 		controllerData = self.GetControllerData(controllerAddr)
-		using_controllers = local.db.get("using_controllers", list())
+		using_controllers = self.local.db.get("using_controllers", list())
 		if controllerData is None:
 			raise Exception(f"CheckController error: controller not initialized. Use new_controllers")
 		if controllerData["approved"] != -1:
@@ -3753,7 +3755,7 @@ class MyTonCore():
 	#end define
 
 	def GetControllers(self):
-		local.add_log("start GetControllers function", "debug")
+		self.local.add_log("start GetControllers function", "debug")
 		controller0 = self.GetControllerAddress(controller_id=0)
 		controller1 = self.GetControllerAddress(controller_id=1)
 		controllers = [controller0, controller1]
@@ -3782,10 +3784,10 @@ class MyTonCore():
 	#end define
 
 	def IsControllerReadyToStake(self, addrB64):
-		stop_controllers_list = local.db.get("stop_controllers_list")
+		stop_controllers_list = self.local.db.get("stop_controllers_list")
 		if stop_controllers_list is not None and addrB64 in stop_controllers_list:
 			return False
-		now = GetTimestamp()
+		now = get_timestamp()
 		config15 = self.GetConfig15()
 		controllerData = self.GetControllerData(addrB64)
 		if controllerData is None:
@@ -3817,16 +3819,16 @@ class MyTonCore():
 	#end define
 
 	def CreateLoanRequest(self, controllerAddr):
-		local.add_log("start CreateLoanRequest function", "debug")
-		min_loan = local.db.get("min_loan", 41000)
-		max_loan = local.db.get("max_loan", 43000)
-		max_interest_percent = local.db.get("max_interest_percent", 1.5)
+		self.local.add_log("start CreateLoanRequest function", "debug")
+		min_loan = self.local.db.get("min_loan", 41000)
+		max_loan = self.local.db.get("max_loan", 43000)
+		max_interest_percent = self.local.db.get("max_interest_percent", 1.5)
 		max_interest = int(max_interest_percent/100*16777216)
 
 		# Проверить наличие действующего кредита
 		controllerData = self.GetControllerData(controllerAddr)
 		if controllerData["borrowed_amount"] > 0:
-			local.add_log("CreateLoanRequest warning: past loan found", "warning")
+			self.local.add_log("CreateLoanRequest warning: past loan found", "warning")
 			return
 		#end define
 
@@ -3873,15 +3875,15 @@ class MyTonCore():
 	#end define
 
 	def CalculateLoanAmount_test(self):
-		min_loan = local.db.get("min_loan", 41000)
-		max_loan = local.db.get("max_loan", 43000)
-		max_interest_percent = local.db.get("max_interest_percent", 1.5)
+		min_loan = self.local.db.get("min_loan", 41000)
+		max_loan = self.local.db.get("max_loan", 43000)
+		max_interest_percent = self.local.db.get("max_interest_percent", 1.5)
 		max_interest = int(max_interest_percent/100*16777216)
 		return self.CalculateLoanAmount(min_loan, max_loan, max_interest)
 	#end define
 
 	def WaitLoan(self, controllerAddr):
-		local.add_log("start WaitLoan function", "debug")
+		self.local.add_log("start WaitLoan function", "debug")
 		for i in range(10):
 			time.sleep(3)
 			controllerData = self.GetControllerData(controllerAddr)
@@ -3891,7 +3893,7 @@ class MyTonCore():
 	#end define
 
 	def ReturnUnusedLoan(self, controllerAddr):
-		local.add_log("start ReturnUnusedLoan function", "debug")
+		self.local.add_log("start ReturnUnusedLoan function", "debug")
 		wallet = self.GetValidatorWallet()
 		fileName = self.contractsDir + "jetton_pool/fift-scripts/return_unused_loan.boc"
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.05)
@@ -3899,7 +3901,7 @@ class MyTonCore():
 	#end define
 
 	def DepositToController(self, controllerAddr, amount):
-		local.add_log("start DepositToController function", "debug")
+		self.local.add_log("start DepositToController function", "debug")
 		wallet = self.GetValidatorWallet()
 		fileName = self.contractsDir + "jetton_pool/fift-scripts/top-up.boc"
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, amount)
@@ -3922,7 +3924,7 @@ class MyTonCore():
 			return
 		#end if
 
-		local.add_log("start WithdrawFromControllerProcess function", "debug")
+		self.local.add_log("start WithdrawFromControllerProcess function", "debug")
 		wallet = self.GetValidatorWallet()
 		fiftScript = self.contractsDir + "jetton_pool/fift-scripts/withdraw-controller.fif"
 		resultFilePath = self.tempDir + self.nodeName + wallet.name + "_withdraw_request.boc"
@@ -3933,10 +3935,10 @@ class MyTonCore():
 	#end define
 
 	def PendWithdrawFromController(self, controllerAddr, amount):
-		local.add_log("start PendWithdrawFromController function", "debug")
+		self.local.add_log("start PendWithdrawFromController function", "debug")
 		controllerPendingWithdraws = self.GetControllerPendingWithdraws()
 		controllerPendingWithdraws[controllerAddr] = amount
-		local.save()
+		self.local.save()
 	#end define
 
 	def HandleControllerPendingWithdraw(self, controllerPendingWithdraws, controllerAddr):
@@ -3947,37 +3949,37 @@ class MyTonCore():
 
 	def GetControllerPendingWithdraws(self):
 		bname = "controllerPendingWithdraws"
-		controllerPendingWithdraws = local.db.get(bname)
+		controllerPendingWithdraws = self.local.db.get(bname)
 		if controllerPendingWithdraws is None:
 			controllerPendingWithdraws = dict()
-			local.db[bname] = controllerPendingWithdraws
+			self.local.db[bname] = controllerPendingWithdraws
 		return controllerPendingWithdraws
 	#end define
 
 	def SignElectionRequestWithController(self, controllerAddr, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor, stake):
-		local.add_log("start SignElectionRequestWithController function", "debug")
+		self.local.add_log("start SignElectionRequestWithController function", "debug")
 		fileName = self.tempDir + str(startWorkTime) + "_validator-query.boc"
 		fiftScript = self.contractsDir + "jetton_pool/fift-scripts/controller-elect-signed.fif"
 		args = [fiftScript, controllerAddr, startWorkTime, maxFactor, adnlAddr, validatorPubkey_b64, validatorSignature, fileName, stake]
-		local.add_log(f"SignElectionRequestWithController args: {args}", "debug")
+		self.local.add_log(f"SignElectionRequestWithController args: {args}", "debug")
 		result = self.fift.Run(args)
-		local.add_log(f"SignElectionRequestWithController result: {result}", "debug")
-		pubkey = Pars(result, "validator public key ", '\n')
-		fileName = Pars(result, "Saved to file ", '\n')
+		self.local.add_log(f"SignElectionRequestWithController result: {result}", "debug")
+		pubkey = parse(result, "validator public key ", '\n')
+		fileName = parse(result, "Saved to file ", '\n')
 		return pubkey, fileName
 	#end define
 
 	def ControllersUpdateValidatorSet(self):
-		local.add_log("start ControllersUpdateValidatorSet function", "debug")
-		using_controllers = local.db.get("using_controllers")
-		user_controllers = local.db.get("user_controllers", list())
-		old_controllers = local.db.get("old_controllers", list())
+		self.local.add_log("start ControllersUpdateValidatorSet function", "debug")
+		using_controllers = self.local.db.get("using_controllers")
+		user_controllers = self.local.db.get("user_controllers", list())
+		old_controllers = self.local.db.get("old_controllers", list())
 		for controller in using_controllers + user_controllers + old_controllers:
 			self.ControllerUpdateValidatorSet(controller)
 	#end define
 
 	def ControllerUpdateValidatorSet(self, controllerAddr):
-		local.add_log("start ControllerUpdateValidatorSet function", "debug")
+		self.local.add_log("start ControllerUpdateValidatorSet function", "debug")
 		wallet = self.GetValidatorWallet()
 		controllers = self.GetControllers()
 		controllerData = self.GetControllerData(controllerAddr)
@@ -4012,48 +4014,48 @@ class MyTonCore():
 	#end define
 
 	def ControllerUpdateValidatorSetProcess(self, controllerAddr, wallet):
-		local.add_log("start ControllerUpdateValidatorSetProcess function", "debug")
+		self.local.add_log("start ControllerUpdateValidatorSetProcess function", "debug")
 		fileName = self.contractsDir + "jetton_pool/fift-scripts/update_validator_hash.boc"
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.07)
 		self.SendFile(resultFilePath, wallet)
-		local.add_log("ControllerUpdateValidatorSetProcess completed")
+		self.local.add_log("ControllerUpdateValidatorSetProcess completed")
 	#end define
 
 	def ControllerRecoverStake(self, controllerAddr):
 		wallet = self.GetValidatorWallet()
-		local.add_log("start ControllerRecoverStake function", "debug")
+		self.local.add_log("start ControllerRecoverStake function", "debug")
 		fileName = self.contractsDir + "jetton_pool/fift-scripts/recover_stake.boc"
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.04)
 		self.SendFile(resultFilePath, wallet)
-		local.add_log("ControllerRecoverStake completed")
+		self.local.add_log("ControllerRecoverStake completed")
 	#end define
 
 	def StopController(self, controllerAddr):
-		stop_controllers_list = local.db.get("stop_controllers_list")
+		stop_controllers_list = self.local.db.get("stop_controllers_list")
 		if stop_controllers_list is None:
 			stop_controllers_list = list()
 		if controllerAddr not in stop_controllers_list:
 			stop_controllers_list.append(controllerAddr)
-		local.db["stop_controllers_list"] = stop_controllers_list
+		self.local.db["stop_controllers_list"] = stop_controllers_list
 
-		user_controllers = local.db.get("user_controllers")
+		user_controllers = self.local.db.get("user_controllers")
 		if user_controllers is not None and controllerAddr in user_controllers:
 			user_controllers.remove(controllerAddr)
-		local.save()
+		self.local.save()
 	#end define
 
 	def AddController(self, controllerAddr):
-		user_controllers = local.db.get("user_controllers")
+		user_controllers = self.local.db.get("user_controllers")
 		if user_controllers is None:
 			user_controllers = list()
 		if controllerAddr not in user_controllers:
 			user_controllers.append(controllerAddr)
-		local.db["user_controllers"] = user_controllers
+		self.local.db["user_controllers"] = user_controllers
 
-		stop_controllers_list = local.db.get("stop_controllers_list")
+		stop_controllers_list = self.local.db.get("stop_controllers_list")
 		if stop_controllers_list is not None and controllerAddr in stop_controllers_list:
 			stop_controllers_list.remove(controllerAddr)
-		local.save()
+		self.local.save()
 	#end define
 
 	def CheckLiquidPool(self):
