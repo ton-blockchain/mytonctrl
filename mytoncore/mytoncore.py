@@ -2977,9 +2977,9 @@ class MyTonCore():
 					param_id = offer[1]
 					if param_id is not None and offer[0] != self.calculate_offer_pseudohash(offer_hash, param_id):
 						# param has been changed so no need to keep anymore
-						save_offers.pop(offer)
+						save_offers.pop(offer_hash)
 				else:  # old version of offer in db
-					save_offers.pop(offer)
+					save_offers.pop(offer_hash)
 		return save_offers
 
 	def GetSaveOffers(self):
