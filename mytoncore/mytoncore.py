@@ -2043,6 +2043,11 @@ class MyTonCore():
 		return result
 	#end define
 
+	def calculate_offer_pseudohash(self, offer_hash: str, param_id: int):
+		config_val = self.GetConfig(param_id)
+		pseudohash_bytes = offer_hash.encode() + json.dumps(config_val, sort_keys=True).encode()
+		return hashlib.sha256(pseudohash_bytes).hexdigest()
+
 	def GetOffers(self):
 		self.local.add_log("start GetOffers function", "debug")
 		fullConfigAddr = self.GetFullConfigAddr()
@@ -2087,9 +2092,7 @@ class MyTonCore():
 			item["approvedPercent"] = round(availableWeight / totalWeight * 100, 3)
 			item["isPassed"] = (weightRemaining < 0)
 			#item["pseudohash"] = hashlib.sha256(param_val.encode()).hexdigest()
-			config_val = self.GetConfig(param_id)
-			pseudohash_bytes = hash.encode() + json.dumps(config_val, sort_keys=True).encode()
-			item["pseudohash"] = hashlib.sha256(pseudohash_bytes).hexdigest()
+			item['pseudohash'] = self.calculate_offer_pseudohash(hash, param_id)
 			offers.append(item)
 		#end for
 		return offers
@@ -2345,7 +2348,7 @@ class MyTonCore():
 		resultFilePath = self.SignProposalVoteRequestWithValidator(offerHash, validatorIndex, validatorPubkey_b64, validatorSignature)
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, fullConfigAddr, 1.5)
 		self.SendFile(resultFilePath, wallet)
-		self.AddSaveOffer(offer)
+		self.add_save_offer(offer)
 	#end define
 
 	def VoteComplaint(self, electionId, complaintHash):
@@ -2968,9 +2971,15 @@ class MyTonCore():
 	def offers_gc(self, save_offers):
 		current_offers = self.GetOffers()
 		current_offers_hashes = [offer.get("hash") for offer in current_offers]
-		for offer in list(save_offers.keys()):
-			if offer not in current_offers_hashes:
-				save_offers.pop(offer)
+		for offer_hash, offer in list(save_offers.items()):
+			if offer_hash not in current_offers_hashes:
+				if isinstance(offer, list):
+					param_id = offer[1]
+					if param_id is not None and offer[0] != self.calculate_offer_pseudohash(offer_hash, param_id):
+						# param has been changed so no need to keep anymore
+						save_offers.pop(offer)
+				else:  # old version of offer in db
+					save_offers.pop(offer)
 		return save_offers
 
 	def GetSaveOffers(self):
@@ -2983,12 +2992,12 @@ class MyTonCore():
 		return save_offers
 	#end define
 
-	def AddSaveOffer(self, offer):
-		offerHash = offer.get("hash")
-		offerPseudohash = offer.get("pseudohash")
-		saveOffers = self.GetSaveOffers()
-		if offerHash not in saveOffers:
-			saveOffers[offerHash] = offerPseudohash
+	def add_save_offer(self, offer):
+		offer_hash = offer.get("hash")
+		offer_pseudohash = offer.get("pseudohash")
+		save_offers = self.GetSaveOffers()
+		if offer_hash not in save_offers:
+			save_offers[offer_hash] = [offer_pseudohash, offer.get('config', {}).get("id")]
 			self.local.save()
 	#end define
 
