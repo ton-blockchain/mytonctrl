@@ -239,6 +239,11 @@
 		"ru": "Эффективность валидатора: {0}",
 		"zh_TW": "驗證者效率: {0}"
 	},
+	"local_status_validator_efficiency_ver2": {
+		"en": "Validator efficiency, ver.2: {0}",
+		"ru": "Эффективность валидатора, вер.2: {0}",
+		"zh_TW": "驗證器效率，版本2： {0}"
+	},
 	"local_status_adnl_addr": {
 		"en": "ADNL address of local validator: {0}",
 		"ru": "ADNL адрес локального валидатора: {0}",
