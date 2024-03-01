@@ -1,6 +1,7 @@
 import os
 import os.path
 import psutil
+import base64
 import subprocess
 import requests
 import random
@@ -15,7 +16,7 @@ from mypylib.mypylib import (
 	ip2int,
 	Dict
 )
-from mytoninstaller.utils import StartValidator, StartMytoncore
+from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, get_ed25519_pubkey
 from mytoninstaller.config import SetConfig, GetConfig, get_own_ip
 from mytoncore.utils import hex2b64
 
@@ -428,8 +429,7 @@ def EnableDhtServer(local):
 	subprocess.run(args)
 
 	# start DHT-Server
-	args = ["systemctl", "restart", "dht-server"]
-	subprocess.run(args)
+	start_service(local, "dht-server")
 #end define
 
 
@@ -447,22 +447,6 @@ def EnableJsonRpc(local):
 	color_print(text)
 #end define
 
-
-def EnablePytonv3(local):
-	local.add_log("start EnablePytonv3 function", "debug")
-	user = local.buffer.user
-
-	pythonv3installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'pytonv3installer.sh')
-	local.add_log(f"Running script: {pythonv3installer_path}", "debug")
-	exitCode = run_as_root(["bash", pythonv3installer_path, "-u", user])
-	if exitCode == 0:
-		text = "EnablePytonv3 - {green}OK{endc}"
-	else:
-		text = "EnablePytonv3 - {red}Error{endc}"
-	color_print(text)
-#end define
-
-
 def EnableTonHttpApi(local):
 	local.add_log("start EnablePytonv3 function", "debug")
 	user = local.buffer.user
@@ -474,16 +458,69 @@ def EnableTonHttpApi(local):
 	else:
 		text = "EnableTonHttpApi - {red}Error{endc}"
 	color_print(text)
+#end define
 
+def enable_ls_proxy(local):
+	local.add_log("start enable_ls_proxy function", "debug")
+	user = local.buffer.user
+	ls_proxy_port = random.randint(2000, 65000)
+	metrics_port = random.randint(2000, 65000)
+	bin_name = "ls_proxy"
+	ls_proxy_db_path = f"/var/{bin_name}"
+	ls_proxy_path = f"{ls_proxy_db_path}/{bin_name}"
+	ls_proxy_config_path = f"{ls_proxy_db_path}/ls-proxy-config.json"
+
+	installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'ls_proxy_installer.sh')
+	local.add_log(f"Running script: {installer_path}", "debug")
+	exitCode = run_as_root(["bash", installer_path, "-u", user])
+	if exitCode != 0:
+		color_print("enable_ls_proxy - {red}Error{endc}")
+	#end if
+
+	# Прописать автозагрузку
+	add2systemd(name=bin_name, user=user, start=ls_proxy_path, workdir=ls_proxy_db_path)
+
+	# Первый запуск - создание конфига
+	start_service(local, bin_name)
+	stop_service(local, bin_name)
+
+	# read ls_proxy config
+	local.add_log("read ls_proxy config", "debug")
+	ls_proxy_config = GetConfig(path=ls_proxy_config_path)
+
+	# read mytoncore config
+	local.add_log("read mytoncore config", "debug")
+	mconfig = GetConfig(path=local.buffer.mconfig_path)
+	ls_pubkey_path = mconfig.liteClient.liteServer.pubkeyPath
+	ls_port = mconfig.liteClient.liteServer.port
+
+	# read ls_pubkey
+	with open(ls_pubkey_path, 'rb') as file:
+		data = file.read()
+		pubkey = data[4:]
+		ls_pubkey = base64.b64encode(pubkey).decode("utf-8")
+	#end with
+
+	# prepare config
+	ls_proxy_config.ListenAddr = f"0.0.0.0:{ls_proxy_port}"
+	ls_proxy_config.MetricsAddr = f"127.0.0.1:{metrics_port}"
+	ls_proxy_config.Backends = [{
+		"Name": "local_ls",
+		"Addr": f"127.0.0.1:{ls_port}",
+		"Key": ls_pubkey
+	}]
+
+	# write ls_proxy config
+	local.add_log("write ls_proxy config", "debug")
+	SetConfig(path=ls_proxy_config_path, data=ls_proxy_config)
+
+	# start ls_proxy
+	start_service(local, bin_name)
+	color_print("enable_ls_proxy - {green}OK{endc}")
+#end define
 
 def DangerousRecoveryValidatorConfigFile(local):
 	local.add_log("start DangerousRecoveryValidatorConfigFile function", "info")
-
-	# install and import cryptography library
-	args = ["pip3", "install", "cryptography"]
-	subprocess.run(args)
-	from cryptography.hazmat.primitives import serialization
-	from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 	# Get keys from keyring
 	keys = list()
@@ -528,10 +565,8 @@ def DangerousRecoveryValidatorConfigFile(local):
 		file = open(path, 'rb')
 		data = file.read()
 		file.close()
-		peivkey = data[4:]
-		privkeyObject = Ed25519PrivateKey.from_private_bytes(peivkey)
-		pubkeyObject = privkeyObject.public_key()
-		pubkey = pubkeyObject.public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+		privkey = data[4:]
+		pubkey = get_ed25519_pubkey(privkey)
 		if pubkey == ls_pubkey:
 			ls_id = hex2b64(item)
 			keys.remove(ls_id)
@@ -562,10 +597,8 @@ def DangerousRecoveryValidatorConfigFile(local):
 		file = open(path, 'rb')
 		data = file.read()
 		file.close()
-		peivkey = data[4:]
-		privkeyObject = Ed25519PrivateKey.from_private_bytes(peivkey)
-		pubkeyObject = privkeyObject.public_key()
-		pubkey = pubkeyObject.public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+		privkey = data[4:]
+		pubkey = get_ed25519_pubkey(privkey)
 		if pubkey == vPubkey:
 			vcId = hex2b64(item)
 			keys.remove(vcId)

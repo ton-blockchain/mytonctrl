@@ -5,7 +5,7 @@ import requests
 import base64
 
 from mytoncore.utils import hex2b64, dict2b64
-from mytoninstaller.utils import StartMytoncore, GetInitBlock
+from mytoninstaller.utils import StartMytoncore, GetInitBlock, get_ed25519_pubkey_text
 from mypylib.mypylib import ip2int, Dict
 
 
@@ -132,5 +132,21 @@ def GetLiteServerConfig(local):
 	result.id = Dict()
 	result.id["@type"]= "pub.ed25519"
 	result.id.key= key.decode()
+	return result
+#end define
+
+def get_ls_proxy_config(local):
+	ls_proxy_config_path = "/var/ls_proxy/ls-proxy-config.json"
+	ls_proxy_config = GetConfig(path=ls_proxy_config_path)
+	ip = get_own_ip()
+	port = ls_proxy_config.ListenAddr.split(':')[1]
+	privkey_text = ls_proxy_config.Clients[0].PrivateKey
+
+	result = Dict()
+	result.ip = ip2int(ip)
+	result.port = port
+	result.id = Dict()
+	result.id["@type"]= "pub.ed25519"
+	result.id.key= get_ed25519_pubkey_text(privkey_text)
 	return result
 #end define
