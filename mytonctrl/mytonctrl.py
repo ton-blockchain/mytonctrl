@@ -42,7 +42,7 @@ from mytoncore.functions import (
 	GetBinGitHash,
 )
 from mytonctrl.migrate import run_migrations
-from .utils import GetItemFromList
+from mytonctrl.utils import GetItemFromList
 
 import sys, getopt, os
 

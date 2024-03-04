@@ -3225,9 +3225,9 @@ class MyTonCore():
 		self.local.save()
 
 	def disable_mode(self, name):
-		if name not in MODES:
-			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
 		current_modes = self.get_modes()
+		if name not in current_modes:
+			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
 		current_modes[name] = False
 		self.local.save()
 
