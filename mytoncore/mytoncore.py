@@ -11,6 +11,7 @@ import pkg_resources
 import requests
 from fastcrc import crc16
 
+from mytoncore.modes import MODES
 from mytoncore.utils import xhex2hex, ng2g
 from mytoncore.liteclient import LiteClient
 from mytoncore.validator_console import ValidatorConsole
@@ -3206,6 +3207,35 @@ class MyTonCore():
 		self.local.db[name] = data
 		self.local.save()
 	#end define
+
+	def get_modes(self):
+		current_modes = self.local.db.get('modes', {})
+		if 'modes' not in self.local.db:
+			self.local.db['modes'] = current_modes
+		for mode in MODES:
+			if mode not in current_modes:
+				current_modes[mode] = MODES[mode]  # assign default mode value
+		return current_modes
+
+	def enable_mode(self, name):
+		if name not in MODES:
+			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
+		current_modes = self.get_modes()
+		current_modes[name] = True
+		self.local.save()
+
+	def disable_mode(self, name):
+		if name not in MODES:
+			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
+		current_modes = self.get_modes()
+		current_modes[name] = False
+		self.local.save()
+
+	def get_mode_value(self, name):
+		current_modes = self.get_modes()
+		if name not in current_modes:
+			raise Exception(f'No mode named {name} found in current modes: {current_modes}')
+		return current_modes[name]
 
 	def Tlb2Json(self, text):
 		# Заменить скобки

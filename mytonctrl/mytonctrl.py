@@ -42,6 +42,7 @@ from mytoncore.functions import (
 	GetBinGitHash,
 )
 from mytonctrl.migrate import run_migrations
+from .utils import GetItemFromList
 
 import sys, getopt, os
 
@@ -138,19 +139,10 @@ def Init(local, ton, console, argv):
 	console.AddItem("activate_single_pool", inject_globals(activate_single_pool), local.translate("activate_single_pool_cmd"))
 	console.AddItem("import_pool", inject_globals(import_pool), local.translate("import_pool_cmd"))
 
-	console.AddItem("create_controllers", inject_globals(CreateControllers), local.translate("_"))
-	console.AddItem("update_controllers", inject_globals(CreateControllers), local.translate("_"))
-	console.AddItem("controllers_list", inject_globals(PrintControllersList), local.translate("_"))
-	console.AddItem("get_controller_data", inject_globals(GetControllerData), local.translate("_"))
-	console.AddItem("deposit_to_controller", inject_globals(DepositToController), local.translate("_"))
-	console.AddItem("withdraw_from_controller", inject_globals(WithdrawFromController), local.translate("_"))
-	console.AddItem("calculate_annual_controller_percentage", inject_globals(CalculateAnnualControllerPercentage), local.translate("_"))
-	console.AddItem("controller_update_validator_set", inject_globals(ControllerUpdateValidatorSet), local.translate("_"))
-	console.AddItem("stop_controller", inject_globals(StopController), local.translate("_"))
-	console.AddItem("stop_and_withdraw_controller", inject_globals(StopAndWithdrawController), local.translate("_"))
-	console.AddItem("add_controller", inject_globals(AddController), local.translate("_"))
-	console.AddItem("check_liquid_pool", inject_globals(CheckLiquidPool), local.translate("_"))
-	console.AddItem("test_calculate_loan_amount", inject_globals(CalculateLoanAmount_test), local.translate("_"))
+	if ton.get_mode_value('Controller'):
+		from mytonctrl.modules.controller import ControllerModule
+		module = ControllerModule(ton, local)
+		module.add_console_commands(console)
 
 	# console.AddItem("pt", inject_globals(PrintTest), "PrintTest")
 	# console.AddItem("sl", inject_globals(sl), "sl")
@@ -197,12 +189,6 @@ def Installer(args):
 	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
 	args = ["python3", "-m", "mytoninstaller"]
 	subprocess.run(args)
-#end define
-
-def GetItemFromList(data, index):
-	try:
-		return data[index]
-	except: pass
 #end define
 
 def GetAuthorRepoBranchFromArgs(args):
@@ -1250,6 +1236,27 @@ def SetSettings(ton, args):
 	color_print("SetSettings - {green}OK{endc}")
 #end define
 
+
+def enable_mode(ton, args):
+	try:
+		name = args[0]
+	except:
+		color_print("{red}Bad args. Usage:{endc} enable_mode <mode_name>")
+		return
+	ton.enable_mode(name)
+	color_print("enable_mode - {green}OK{endc}")
+
+
+def disable_mode(ton, args):
+	try:
+		name = args[0]
+	except:
+		color_print("{red}Bad args. Usage:{endc} disable_mode <mode_name>")
+		return
+	ton.disable_mode(name)
+	color_print("disable_mode - {green}OK{endc}")
+
+
 def Xrestart(inputArgs):
 	if len(inputArgs) < 2:
 		color_print("{red}Bad args. Usage:{endc} xrestart <timestamp> <args>")
@@ -1502,146 +1509,6 @@ def import_pool(ton, args):
 	ton.import_pool(pool_name, pool_addr)
 	color_print("import_pool - {green}OK{endc}")
 #end define
-
-def CreateControllers(ton, args):
-	ton.CreateControllers()
-	color_print("CreateControllers - {green}OK{endc}")
-#end define
-
-def PrintControllersList(ton, args):
-	new_controllers = ton.GetControllers()
-	using_controllers = ton.GetSettings("using_controllers")
-	old_controllers = ton.GetSettings("old_controllers")
-	user_controllers_list = ton.GetSettings("user_controllers_list")
-	print("using controllers:")
-	PrintControllersListProcess(ton, using_controllers)
-	if new_controllers != using_controllers:
-		print()
-		print("new controllers:")
-		PrintControllersListProcess(ton, new_controllers)
-	if old_controllers is not None and len(old_controllers) > 0:
-		print()
-		print("old controllers:")
-		PrintControllersListProcess(ton, old_controllers)
-	if user_controllers_list is not None and len(user_controllers_list) > 0:
-		print()
-		print("user controllers:")
-		PrintControllersListProcess(ton, user_controllers_list)
-#end define
-
-def PrintControllersListProcess(ton, controllers):
-	table = list()
-	table += [["Address", "Status", "Balance", "Approved", "State"]]
-	for controllerAddr in controllers:
-		account = ton.GetAccount(controllerAddr)
-		controllerData = ton.GetControllerData(controllerAddr)
-		approved = True if controllerData and controllerData["approved"] == -1 else False
-		state = controllerData["state"] if controllerData else None
-		table += [[controllerAddr, account.status, account.balance, approved, state]]
-	print_table(table)
-#end define
-
-def GetControllerData(ton, args):
-	try:
-		controllerAddr = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} get_controller_data <controller-addr>")
-		return
-	controllerData = ton.GetControllerData(controllerAddr)
-	print(json.dumps(controllerData, indent=4))
-#end define
-
-def DepositToController(ton, args):
-	try:
-		controllerAddr = args[0]
-		amount = float(args[1])
-	except:
-		color_print("{red}Bad args. Usage:{endc} deposit_to_controller <controller-addr> <amount>")
-		return
-	ton.DepositToController(controllerAddr, amount)
-#end define
-
-def WithdrawFromController(ton, args):
-	try:
-		controllerAddr = args[0]
-		amount = GetItemFromList(args, 1)
-	except:
-		color_print("{red}Bad args. Usage:{endc} withdraw_from_controller <controller-addr> [amount]")
-		return
-	ton.WithdrawFromController(controllerAddr, amount)
-#end define
-
-def CalculateAnnualControllerPercentage(ton, args):
-	try:
-		percentPerRound = float(args[0])
-	except:
-		percentPerRound = ton.GetSettings("max_interest_percent")
-	config15 = ton.GetConfig(15)
-	roundPeriod = config15["validators_elected_for"]
-	rounds = 365 * 24 * 3600 / roundPeriod
-	yearInterest = (1 + percentPerRound / 100) * rounds
-	yearInterestPercent = round(yearInterest / 100, 2)
-	print("roundPeriod", roundPeriod)
-	print("rounds", rounds)
-	print("percentPerRound", percentPerRound)
-	print("yearInterest", yearInterest)
-	print(f"yearInterestPercent: {yearInterestPercent}%")
-#end define
-
-def ControllerUpdateValidatorSet(ton, args):
-	try:
-		controllerAddr = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} controller_update_validator_set <controller-addr>")
-		return
-	ton.ControllerUpdateValidatorSet(controllerAddr)
-	color_print("ControllerUpdateValidatorSet - {green}OK{endc}")
-#end define
-
-def StopController(ton, args):
-	try:
-		controllerAddr = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} stop_controller <controller-addr>")
-		return
-	ton.StopController(controllerAddr)
-	color_print("StopController - {green}OK{endc}")
-#end define
-
-def StopAndWithdrawController(ton, args):
-	try:
-		controllerAddr = args[0]
-		amount = GetItemFromList(args, 1)
-	except:
-		color_print("{red}Bad args. Usage:{endc} stop_and_withdraw_controller <controller-addr> [amount]")
-		return
-	if amount is None:
-		account = ton.GetAccount(controllerAddr)
-		amount = account.balance-10.1
-	ton.StopController(controllerAddr)
-	ton.WithdrawFromController(controllerAddr, amount)
-	color_print("StopAndWithdrawController - {green}OK{endc}")
-#end define
-
-def AddController(ton, args):
-	try:
-		controllerAddr = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} add_controller <controller-addr>")
-		return
-	ton.AddController(controllerAddr)
-	color_print("AddController - {green}OK{endc}")
-#end define
-
-def CheckLiquidPool(ton, args):
-	ton.CheckLiquidPool()
-	color_print("CheckLiquidPool - {green}OK{endc}")
-#end define
-
-def CalculateLoanAmount_test(ton, args):
-	t = ton.CalculateLoanAmount_test()
-	print(t)
-
 
 ###
 ### Start of the program
