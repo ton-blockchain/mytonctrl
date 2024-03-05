@@ -71,6 +71,8 @@ def Init(local, ton, console, argv):
 	console.AddItem("upgrade", inject_globals(Upgrade), local.translate("upgrade_cmd"))
 	console.AddItem("installer", inject_globals(Installer), local.translate("installer_cmd"))
 	console.AddItem("status", inject_globals(PrintStatus), local.translate("status_cmd"))
+	console.AddItem("enable_mode", inject_globals(enable_mode), local.translate("enable_mode_cmd"))
+	console.AddItem("disable_mode", inject_globals(disable_mode), local.translate("disable_mode_cmd"))
 	console.AddItem("seqno", inject_globals(Seqno), local.translate("seqno_cmd"))
 	console.AddItem("getconfig", inject_globals(GetConfig), local.translate("getconfig_cmd"))
 
@@ -1237,7 +1239,7 @@ def SetSettings(ton, args):
 #end define
 
 
-def enable_mode(ton, args):
+def enable_mode(local, ton, args):
 	try:
 		name = args[0]
 	except:
@@ -1245,9 +1247,10 @@ def enable_mode(ton, args):
 		return
 	ton.enable_mode(name)
 	color_print("enable_mode - {green}OK{endc}")
+	local.exit()
 
 
-def disable_mode(ton, args):
+def disable_mode(local, ton, args):
 	try:
 		name = args[0]
 	except:
@@ -1255,6 +1258,7 @@ def disable_mode(ton, args):
 		return
 	ton.disable_mode(name)
 	color_print("disable_mode - {green}OK{endc}")
+	local.exit()
 
 
 def Xrestart(inputArgs):
