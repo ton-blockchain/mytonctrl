@@ -14,6 +14,16 @@
 		"ru": "Показать статус TON",
 		"zh_TW": "顯示 TON 狀態"
 	},
+	"enable_mode_cmd": {
+		"en": "Enable mode",
+		"ru": "Включить режим",
+		"zh_TW": "啟用模式"
+	},
+	"disable_mode_cmd": {
+		"en": "Disable mode",
+		"ru": "Выключить режим",
+		"zh_TW": "禁用模式"
+	},
 	"seqno_cmd": {
 		"en": "Get seqno wallet",
 		"ru": "Получить seqno кошелька",
