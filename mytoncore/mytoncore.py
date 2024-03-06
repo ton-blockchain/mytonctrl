@@ -1292,7 +1292,7 @@ class MyTonCore():
 
 	def GetStake(self, account, args=None):
 		stake = self.local.db.get("stake")
-		usePool = self.local.db.get("usePool")
+		usePool = self.using_pool()
 		useController = self.local.db.get("useController")
 		stakePercent = self.local.db.get("stakePercent", 99)
 		vconfig = self.GetValidatorConfig()
@@ -1409,7 +1409,7 @@ class MyTonCore():
 	#end define
 
 	def ElectionEntry(self, args=None):
-		usePool = self.local.db.get("usePool")
+		usePool = self.using_pool()
 		useController = self.local.db.get("useController")
 		wallet = self.GetValidatorWallet()
 		addrB64 = wallet.addrB64
@@ -3236,6 +3236,13 @@ class MyTonCore():
 		if name not in current_modes:
 			raise Exception(f'No mode named {name} found in current modes: {current_modes}')
 		return current_modes[name]
+
+	def using_nominator_pool(self):
+		return (self.local.db.get("usePool") or  # for backward compatibility
+				self.get_mode_value('nominator-pool'))
+
+	def using_pool(self) -> bool:
+		return self.using_nominator_pool() or self.get_mode_value('single-nominator')
 
 	def Tlb2Json(self, text):
 		# Заменить скобки

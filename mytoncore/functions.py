@@ -79,8 +79,8 @@ def ValidatorDownEvent(local):
 
 
 def Elections(local, ton):
-    usePool = local.db.get("usePool")
-    if usePool == True:
+    use_pool = ton.using_pool()
+    if use_pool:
         ton.PoolsUpdateValidatorSet()
         ton.RecoverStake()
         ton.ElectionEntry()

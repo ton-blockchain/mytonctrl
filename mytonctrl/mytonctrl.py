@@ -71,6 +71,7 @@ def Init(local, ton, console, argv):
 	console.AddItem("upgrade", inject_globals(Upgrade), local.translate("upgrade_cmd"))
 	console.AddItem("installer", inject_globals(Installer), local.translate("installer_cmd"))
 	console.AddItem("status", inject_globals(PrintStatus), local.translate("status_cmd"))
+	console.AddItem("status_modes", inject_globals(mode_status), local.translate("status_modes_cmd"))
 	console.AddItem("enable_mode", inject_globals(enable_mode), local.translate("enable_mode_cmd"))
 	console.AddItem("disable_mode", inject_globals(disable_mode), local.translate("disable_mode_cmd"))
 	console.AddItem("seqno", inject_globals(Seqno), local.translate("seqno_cmd"))
@@ -97,11 +98,11 @@ def Init(local, ton, console, argv):
 	# console.AddItem("rl", inject_globals(PrintAutoTransferRulesList), local.translate("rl_cmd")) # "Показать правила автопереводов / Show auto transfer rule list"
 	# console.AddItem("dr", inject_globals(DeleteAutoTransferRule), local.translate("dr_cmd")) # "Удалить правило автопереводов из расписания / Delete auto transfer rule"
 
-	console.AddItem("nd", inject_globals(NewDomain), local.translate("nd_cmd"))
-	console.AddItem("dl", inject_globals(PrintDomainsList), local.translate("dl_cmd"))
-	console.AddItem("vds", inject_globals(ViewDomainStatus), local.translate("vds_cmd"))
-	console.AddItem("dd", inject_globals(DeleteDomain), local.translate("dd_cmd"))
-	console.AddItem("gdfa", inject_globals(GetDomainFromAuction), local.translate("gdfa_cmd"))
+	# console.AddItem("nd", inject_globals(NewDomain), local.translate("nd_cmd"))
+	# console.AddItem("dl", inject_globals(PrintDomainsList), local.translate("dl_cmd"))
+	# console.AddItem("vds", inject_globals(ViewDomainStatus), local.translate("vds_cmd"))
+	# console.AddItem("dd", inject_globals(DeleteDomain), local.translate("dd_cmd"))
+	# console.AddItem("gdfa", inject_globals(GetDomainFromAuction), local.translate("gdfa_cmd"))
 
 	console.AddItem("ol", inject_globals(PrintOffersList), local.translate("ol_cmd"))
 	console.AddItem("vo", inject_globals(VoteOffer), local.translate("vo_cmd"))
@@ -121,33 +122,28 @@ def Init(local, ton, console, argv):
 	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.translate("ssoc_cmd"))
 	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
 
-	#console.AddItem("new_nomination_controller", inject_globals(NewNominationController), local.translate("new_controller_cmd"))
-	#console.AddItem("get_nomination_controller_data", inject_globals(GetNominationControllerData), local.translate("get_nomination_controller_data_cmd"))
-	#console.AddItem("deposit_to_nomination_controller", inject_globals(DepositToNominationController), local.translate("deposit_to_controller_cmd"))
-	#console.AddItem("withdraw_from_nomination_controller", inject_globals(WithdrawFromNominationController), local.translate("withdraw_from_nomination_controller_cmd"))
-	#console.AddItem("request_to_nomination_controller", inject_globals(SendRequestToNominationController), local.translate("request_to_nomination_controller_cmd"))
-	#console.AddItem("new_restricted_wallet", inject_globals(NewRestrictedWallet), local.translate("new_restricted_wallet_cmd"))
-
-	console.AddItem("new_pool", inject_globals(NewPool), local.translate("new_pool_cmd"))
-	console.AddItem("pools_list", inject_globals(PrintPoolsList), local.translate("pools_list_cmd"))
 	console.AddItem("get_pool_data", inject_globals(GetPoolData), local.translate("get_pool_data_cmd"))
-	console.AddItem("activate_pool", inject_globals(ActivatePool), local.translate("activate_pool_cmd"))
-	console.AddItem("deposit_to_pool", inject_globals(DepositToPool), local.translate("deposit_to_pool_cmd"))
-	console.AddItem("withdraw_from_pool", inject_globals(WithdrawFromPool), local.translate("withdraw_from_pool_cmd"))
-	console.AddItem("delete_pool", inject_globals(DeletePool), local.translate("delete_pool_cmd"))
-	console.AddItem("update_validator_set", inject_globals(UpdateValidatorSet), local.translate("update_validator_set_cmd"))
 
-	console.AddItem("new_single_pool", inject_globals(new_single_pool), local.translate("new_single_pool_cmd"))
-	console.AddItem("activate_single_pool", inject_globals(activate_single_pool), local.translate("activate_single_pool_cmd"))
-	console.AddItem("import_pool", inject_globals(import_pool), local.translate("import_pool_cmd"))
+	if ton.using_pool():
+		from mytonctrl.modules.pool import PoolModule
+		module = PoolModule(ton, local)
+		module.add_console_commands(console)
 
-	if ton.get_mode_value('Controller'):
+	if ton.using_nominator_pool():
+		from mytonctrl.modules.nominator_pool import NominatorPoolModule
+		module = NominatorPoolModule(ton, local)
+		module.add_console_commands(console)
+
+	if ton.get_mode_value('single-nominator'):
+		from mytonctrl.modules.single_pool import SingleNominatorModule
+		module = SingleNominatorModule(ton, local)
+		module.add_console_commands(console)
+
+	if ton.get_mode_value('liquid-staking'):
 		from mytonctrl.modules.controller import ControllerModule
 		module = ControllerModule(ton, local)
 		module.add_console_commands(console)
 
-	# console.AddItem("pt", inject_globals(PrintTest), "PrintTest")
-	# console.AddItem("sl", inject_globals(sl), "sl")
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
 
@@ -379,6 +375,14 @@ def PrintTest(local, args):
 def sl(ton, args):
 	Slashing(ton.local, ton)
 #end define
+
+def mode_status(ton, args):
+	modes = ton.get_modes()
+	text = "########## {bold}Modes{endc} ########## \n"
+	for mode in modes:
+		status = '{green}enabled{endc}' if modes[mode] else '{red}disabled{endc}'
+		text += f"{mode}: {status}\n"
+	color_print(text)
 
 def PrintStatus(local, ton, args):
 	opt = None
@@ -1300,125 +1304,6 @@ def ImportShardOverlayCert(ton, args):
 	ton.ImportShardOverlayCert()
 #end define
 
-def NewNominationController(ton, args):
-	try:
-		name = args[0]
-		nominatorAddr = args[1]
-		rewardShare = args[2]
-		coverAbility = args[3]
-	except:
-		color_print("{red}Bad args. Usage:{endc} new_controller <controller-name> <nominator-addr> <reward-share> <cover-ability>")
-		return
-	ton.CreateNominationController(name, nominatorAddr, rewardShare=rewardShare, coverAbility=coverAbility)
-	color_print("NewNominationController - {green}OK{endc}")
-#end define
-
-def GetNominationControllerData(ton, args):
-	try:
-		addrB64 = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} get_nomination_controller_data <controller-name | controller-addr>")
-		return
-	addrB64 = ton.GetDestinationAddr(addrB64)
-	controllerData = ton.GetControllerData(addrB64)
-	print(json.dumps(controllerData, indent=4))
-#end define
-
-def DepositToNominationController(ton, args):
-	try:
-		walletName = args[0]
-		destination = args[1]
-		amount = float(args[2])
-	except:
-		color_print("{red}Bad args. Usage:{endc} add_to_nomination_controller <wallet-name> <controller-addr> <amount>")
-		return
-	destination = ton.GetDestinationAddr(destination)
-	ton.DepositToNominationController(walletName, destination, amount)
-	color_print("DepositToNominationController - {green}OK{endc}")
-#end define
-
-def WithdrawFromNominationController(ton, args):
-	try:
-		walletName = args[0]
-		destination = args[1]
-		amount = float(args[2])
-	except:
-		color_print("{red}Bad args. Usage:{endc} withdraw_from_nomination_controller <wallet-name> <controller-addr> <amount>")
-		return
-	destination = ton.GetDestinationAddr(destination)
-	ton.WithdrawFromNominationController(walletName, destination, amount)
-	color_print("WithdrawFromNominationController - {green}OK{endc}")
-#end define
-
-def SendRequestToNominationController(ton, args):
-	try:
-		walletName = args[0]
-		destination = args[1]
-	except:
-		color_print("{red}Bad args. Usage:{endc} request_to_nomination_controller <wallet-name> <controller-addr>")
-		return
-	destination = ton.GetDestinationAddr(destination)
-	ton.SendRequestToNominationController(walletName, destination)
-	color_print("SendRequestToNominationController - {green}OK{endc}")
-#end define
-
-def NewRestrictedWallet(ton, args):
-	try:
-		workchain = int(args[0])
-		name = args[1]
-		ownerAddr = args[2]
-		#subwallet = args[3]
-	except:
-		color_print("{red}Bad args. Usage:{endc} new_restricted_wallet <workchain-id> <wallet-name> <owner-addr>")
-		return
-	ton.CreateRestrictedWallet(name, ownerAddr, workchain=workchain)
-	color_print("NewRestrictedWallet - {green}OK{endc}")
-#end define
-
-def NewPool(ton, args):
-	try:
-		pool_name = args[0]
-		validatorRewardSharePercent = float(args[1])
-		maxNominatorsCount = int(args[2])
-		minValidatorStake = int(args[3])
-		minNominatorStake = int(args[4])
-	except:
-		color_print("{red}Bad args. Usage:{endc} new_pool <pool-name> <validator-reward-share-percent> <max-nominators-count> <min-validator-stake> <min-nominator-stake>")
-		return
-	ton.CreatePool(pool_name, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake)
-	color_print("NewPool - {green}OK{endc}")
-#end define
-
-def ActivatePool(local, ton, args):
-	try:
-		pool_name = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} activate_pool <pool-name>")
-		return
-	pool = ton.GetLocalPool(pool_name)
-	if not os.path.isfile(pool.bocFilePath):
-		local.add_log(f"Pool {pool_name} already activated", "warning")
-		return
-	ton.ActivatePool(pool)
-	color_print("ActivatePool - {green}OK{endc}")
-#end define
-
-def PrintPoolsList(ton, args):
-	table = list()
-	table += [["Name", "Status", "Balance", "Version", "Address"]]
-	data = ton.GetPools()
-	if (data is None or len(data) == 0):
-		print("No data")
-		return
-	for pool in data:
-		account = ton.GetAccount(pool.addrB64)
-		if account.status != "active":
-			pool.addrB64 = pool.addrB64_init
-		version = ton.GetVersionFromCodeHash(account.codeHash)
-		table += [[pool.name, account.status, account.balance, version, pool.addrB64]]
-	print_table(table)
-#end define
-
 def GetPoolData(ton, args):
 	try:
 		pool_name = args[0]
@@ -1432,92 +1317,9 @@ def GetPoolData(ton, args):
 		pool_addr = pool.addrB64
 	pool_data = ton.GetPoolData(pool_addr)
 	print(json.dumps(pool_data, indent=4))
-#end define
 
-def DepositToPool(ton, args):
-	try:
-		poll_addr = args[0]
-		amount = float(args[1])
-	except:
-		color_print("{red}Bad args. Usage:{endc} deposit_to_pool <pool-addr> <amount>")
-		return
-	ton.DepositToPool(poll_addr, amount)
-	color_print("DepositToPool - {green}OK{endc}")
-#end define
 
-def WithdrawFromPool(ton, args):
-	try:
-		pool_addr = args[0]
-		amount = float(args[1])
-	except:
-		color_print("{red}Bad args. Usage:{endc} withdraw_from_pool <pool-addr> <amount>")
-		return
-	ton.WithdrawFromPool(pool_addr, amount)
-	color_print("WithdrawFromPool - {green}OK{endc}")
-#end define
-
-def DeletePool(ton, args):
-	try:
-		pool_name = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} delete_pool <pool-name>")
-		return
-	pool = ton.GetLocalPool(pool_name)
-	pool.Delete()
-	color_print("DeletePool - {green}OK{endc}")
-#end define
-
-def UpdateValidatorSet(ton, args):
-	try:
-		pool_addr = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} update_validator_set <pool-addr>")
-		return
-	wallet = ton.GetValidatorWallet()
-	ton.PoolUpdateValidatorSet(pool_addr, wallet)
-	color_print("UpdateValidatorSet - {green}OK{endc}")
-#end define
-
-def new_single_pool(ton, args):
-	try:
-		pool_name = args[0]
-		owner_address = args[1]
-	except:
-		color_print("{red}Bad args. Usage:{endc} new_single_pool <pool-name> <owner_address>")
-		return
-	ton.create_single_pool(pool_name, owner_address)
-	color_print("new_single_pool - {green}OK{endc}")
-#end define
-
-def activate_single_pool(local, ton, args):
-	try:
-		pool_name = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} activate_single_pool <pool-name>")
-		return
-	pool = ton.GetLocalPool(pool_name)
-	if not os.path.isfile(pool.bocFilePath):
-		local.add_log(f"Pool {pool_name} already activated", "warning")
-		return
-	ton.activate_single_pool(pool)
-	color_print("activate_single_pool - {green}OK{endc}")
-#end define
-
-def import_pool(ton, args):
-	try:
-		pool_name = args[0]
-		pool_addr = args[1]
-	except:
-		color_print("{red}Bad args. Usage:{endc} import_pool <pool-name> <pool-addr>")
-		return
-	ton.import_pool(pool_name, pool_addr)
-	color_print("import_pool - {green}OK{endc}")
-#end define
-
-###
 ### Start of the program
-###
-
 def mytonctrl():
 	local = MyPyClass('mytonctrl.py')
 	mytoncore_local = MyPyClass('mytoncore.py')
