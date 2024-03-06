@@ -1,4 +1,5 @@
 import os
+import time
 
 from mypylib.mypylib import color_print
 from mytonctrl.modules.pool import PoolModule
@@ -19,6 +20,17 @@ class NominatorPoolModule(PoolModule):
         self.ton.CreatePool(pool_name, validator_reward_share_percent, max_nominators_count, min_validator_stake, min_nominator_stake)
         color_print("NewPool - {green}OK{endc}")
 
+    def do_activate_pool(self, pool, ex=True):
+        self.ton.local.add_log("start ActivatePool function", "debug")
+        for i in range(10):
+            time.sleep(3)
+            account = self.ton.GetAccount(pool.addrB64)
+            if account.balance > 0:
+                self.ton.SendFile(pool.bocFilePath, pool, timeout=False)
+                return
+        if ex:
+            raise Exception("ActivatePool error: time out")
+
     def activate_pool(self, args):
         try:
             pool_name = args[0]
@@ -29,8 +41,17 @@ class NominatorPoolModule(PoolModule):
         if not os.path.isfile(pool.bocFilePath):
             self.local.add_log(f"Pool {pool_name} already activated", "warning")
             return
-        self.ton.ActivatePool(pool)
+        self.do_activate_pool(pool)
         color_print("ActivatePool - {green}OK{endc}")
+
+    def do_deposit_to_pool(self, pool_addr, amount):
+        wallet = self.ton.GetValidatorWallet()
+        bocPath = self.ton.local.buffer.my_temp_dir + wallet.name + "validator-deposit-query.boc"
+        fiftScript = self.ton.contractsDir + "nominator-pool/func/validator-deposit.fif"
+        args = [fiftScript, bocPath]
+        result = self.ton.fift.Run(args)
+        resultFilePath = self.ton.SignBocWithWallet(wallet, bocPath, pool_addr, amount)
+        self.ton.SendFile(resultFilePath, wallet)
 
     def deposit_to_pool(self, args):
         try:
@@ -39,8 +60,15 @@ class NominatorPoolModule(PoolModule):
         except:
             color_print("{red}Bad args. Usage:{endc} deposit_to_pool <pool-addr> <amount>")
             return
-        self.ton.DepositToPool(poll_addr, amount)
+        self.do_deposit_to_pool(poll_addr, amount)
         color_print("DepositToPool - {green}OK{endc}")
+
+    def do_withdraw_from_pool(self, pool_addr, amount):
+        pool_data = self.ton.GetPoolData(pool_addr)
+        if pool_data["state"] == 0:
+            self.ton.WithdrawFromPoolProcess(pool_addr, amount)
+        else:
+            self.ton.PendWithdrawFromPool(pool_addr, amount)
 
     def withdraw_from_pool(self, args):
         try:
@@ -49,7 +77,7 @@ class NominatorPoolModule(PoolModule):
         except:
             color_print("{red}Bad args. Usage:{endc} withdraw_from_pool <pool-addr> <amount>")
             return
-        self.ton.WithdrawFromPool(pool_addr, amount)
+        self.do_withdraw_from_pool(pool_addr, amount)
         color_print("WithdrawFromPool - {green}OK{endc}")
 
     def update_validator_set(self, args):

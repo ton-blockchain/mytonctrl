@@ -1293,7 +1293,7 @@ class MyTonCore():
 	def GetStake(self, account, args=None):
 		stake = self.local.db.get("stake")
 		usePool = self.using_pool()
-		useController = self.local.db.get("useController") or self.using_liquid_staking()
+		useController = self.using_liquid_staking()
 		stakePercent = self.local.db.get("stakePercent", 99)
 		vconfig = self.GetValidatorConfig()
 		validators = vconfig.get("validators")
@@ -1372,7 +1372,7 @@ class MyTonCore():
 
 	def ElectionEntry(self, args=None):
 		usePool = self.using_pool()
-		useController = self.local.db.get("useController") or self.using_liquid_staking()
+		useController = self.using_liquid_staking()
 		wallet = self.GetValidatorWallet()
 		addrB64 = wallet.addrB64
 		if wallet is None:
@@ -3207,7 +3207,8 @@ class MyTonCore():
 		return self.get_mode_value('single-nominator')
 
 	def using_liquid_staking(self):
-		return self.get_mode_value('liquid-staking')
+		return (self.local.db.get("useController") or  # for backward compatibility
+				self.get_mode_value('liquid-staking'))
 
 	def using_pool(self) -> bool:
 		return self.using_nominator_pool() or self.using_single_nominator()
@@ -3423,36 +3424,6 @@ class MyTonCore():
 		#end for
 	#end define
 
-	def ActivatePool(self, pool, ex=True):
-		self.local.add_log("start ActivatePool function", "debug")
-		for i in range(10):
-			time.sleep(3)
-			account = self.GetAccount(pool.addrB64)
-			if account.balance > 0:
-				self.SendFile(pool.bocFilePath, pool, timeout=False)
-				return
-		if ex:
-			raise Exception("ActivatePool error: time out")
-	#end define
-
-	def DepositToPool(self, poolAddr, amount):
-		wallet = self.GetValidatorWallet()
-		bocPath = self.local.buffer.my_temp_dir + wallet.name + "validator-deposit-query.boc"
-		fiftScript = self.contractsDir + "nominator-pool/func/validator-deposit.fif"
-		args = [fiftScript, bocPath]
-		result = self.fift.Run(args)
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, poolAddr, amount)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def WithdrawFromPool(self, poolAddr, amount):
-		poolData = self.GetPoolData(poolAddr)
-		if poolData["state"] == 0:
-			self.WithdrawFromPoolProcess(poolAddr, amount)
-		else:
-			self.PendWithdrawFromPool(poolAddr, amount)
-	#end define
-
 	def WithdrawFromPoolProcess(self, poolAddr, amount):
 		self.local.add_log("start WithdrawFromPoolProcess function", "debug")
 		wallet = self.GetValidatorWallet()
@@ -3642,35 +3613,6 @@ class MyTonCore():
 		return liquid_pool_addr
 	#end define
 
-	def CreateControllers(self):
-		new_controllers = self.GetControllers()
-		old_controllers = self.local.db.get("using_controllers", list())
-		if new_controllers == old_controllers:
-			return
-		#end if
-
-		self.local.add_log("start CreateControllers function", "debug")
-		wallet = self.GetValidatorWallet()
-		liquid_pool_addr = self.GetLiquidPoolAddr()
-		contractPath = self.contractsDir + "jetton_pool/"
-		if not os.path.isdir(contractPath):
-			self.DownloadContract("https://github.com/igroman787/jetton_pool")
-		#end if
-
-		fileName0 = contractPath + "fift-scripts/deploy_controller0.boc"
-		fileName1 = contractPath + "fift-scripts/deploy_controller1.boc"
-		resultFilePath0 = self.SignBocWithWallet(wallet, fileName0, liquid_pool_addr, 1)
-		self.SendFile(resultFilePath0, wallet)
-		time.sleep(10)
-		resultFilePath1 = self.SignBocWithWallet(wallet, fileName1, liquid_pool_addr, 1)
-		self.SendFile(resultFilePath1, wallet)
-
-		# Сохранить новые контроллеры
-		self.local.db["old_controllers"] = old_controllers
-		self.local.db["using_controllers"] = new_controllers
-		self.local.save()
-	#end define
-
 	def GetControllerAddress(self, controller_id):
 		wallet = self.GetValidatorWallet()
 		addr_hash = HexAddr2Dec(wallet.addr)
@@ -3817,14 +3759,6 @@ class MyTonCore():
 		return result
 	#end define
 
-	def CalculateLoanAmount_test(self):
-		min_loan = self.local.db.get("min_loan", 41000)
-		max_loan = self.local.db.get("max_loan", 43000)
-		max_interest_percent = self.local.db.get("max_interest_percent", 1.5)
-		max_interest = int(max_interest_percent/100*16777216)
-		return self.CalculateLoanAmount(min_loan, max_loan, max_interest)
-	#end define
-
 	def WaitLoan(self, controllerAddr):
 		self.local.add_log("start WaitLoan function", "debug")
 		for i in range(10):
@@ -3840,14 +3774,6 @@ class MyTonCore():
 		wallet = self.GetValidatorWallet()
 		fileName = self.contractsDir + "jetton_pool/fift-scripts/return_unused_loan.boc"
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.05)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def DepositToController(self, controllerAddr, amount):
-		self.local.add_log("start DepositToController function", "debug")
-		wallet = self.GetValidatorWallet()
-		fileName = self.contractsDir + "jetton_pool/fift-scripts/top-up.boc"
-		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, amount)
 		self.SendFile(resultFilePath, wallet)
 	#end define
 
@@ -3971,97 +3897,6 @@ class MyTonCore():
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.04)
 		self.SendFile(resultFilePath, wallet)
 		self.local.add_log("ControllerRecoverStake completed")
-	#end define
-
-	def StopController(self, controllerAddr):
-		stop_controllers_list = self.local.db.get("stop_controllers_list")
-		if stop_controllers_list is None:
-			stop_controllers_list = list()
-		if controllerAddr not in stop_controllers_list:
-			stop_controllers_list.append(controllerAddr)
-		self.local.db["stop_controllers_list"] = stop_controllers_list
-
-		user_controllers = self.local.db.get("user_controllers")
-		if user_controllers is not None and controllerAddr in user_controllers:
-			user_controllers.remove(controllerAddr)
-		self.local.save()
-	#end define
-
-	def AddController(self, controllerAddr):
-		user_controllers = self.local.db.get("user_controllers")
-		if user_controllers is None:
-			user_controllers = list()
-		if controllerAddr not in user_controllers:
-			user_controllers.append(controllerAddr)
-		self.local.db["user_controllers"] = user_controllers
-
-		stop_controllers_list = self.local.db.get("stop_controllers_list")
-		if stop_controllers_list is not None and controllerAddr in stop_controllers_list:
-			stop_controllers_list.remove(controllerAddr)
-		self.local.save()
-	#end define
-
-	def CheckLiquidPool(self):
-		liquid_pool_addr = self.GetLiquidPoolAddr()
-		account = self.GetAccount(liquid_pool_addr)
-		history = self.GetAccountHistory(account, 5000)
-		addrs_list = list()
-		for message in history:
-			if message.srcAddr is None or message.value is None:
-				continue
-			srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
-			destAddFull = f"{message.destWorkchain}:{message.destAddr}"
-			if srcAddrFull == account.addrFull:
-				fromto = destAddFull
-			else:
-				fromto = srcAddrFull
-			fromto = self.AddrFull2AddrB64(fromto)
-			if fromto not in addrs_list:
-				addrs_list.append(fromto)
-		#end for
-
-		for controllerAddr in addrs_list:
-			account = self.GetAccount(controllerAddr)
-			version = self.GetVersionFromCodeHash(account.codeHash)
-			if version is None or "controller" not in version:
-				continue
-			print(f"check controller: {controllerAddr}")
-			self.ControllerUpdateValidatorSet(controllerAddr)
-	#end define
-
-	def create_single_pool(self, pool_name, owner_address):
-		self.local.add_log("start create_single_pool function", "debug")
-
-		file_path = self.poolsDir + pool_name
-		if os.path.isfile(file_path + ".addr"):
-			self.local.add_log("create_single_pool warning: Pool already exists: " + file_path, "warning")
-			return
-		#end if
-
-		fift_script = pkg_resources.resource_filename('mytoncore', 'contracts/single-nominator-pool/init.fif')
-		code_boc = pkg_resources.resource_filename('mytoncore', 'contracts/single-nominator-pool/single-nominator-code.hex')
-		validator_wallet = self.GetValidatorWallet()
-		args = [fift_script, code_boc, owner_address, validator_wallet.addrB64, file_path]
-		result = self.fift.Run(args)
-		if "Saved single nominator pool" not in result:
-			raise Exception("create_single_pool error: " + result)
-		#end if
-
-		pools = self.GetPools()
-		new_pool = self.GetLocalPool(pool_name)
-		for pool in pools:
-			if pool.name != new_pool.name and pool.addrB64 == new_pool.addrB64:
-				new_pool.Delete()
-				raise Exception("create_single_pool error: Pool with the same parameters already exists.")
-		#end for
-	#end define
-
-	def activate_single_pool(self, pool):
-		self.local.add_log("start activate_single_pool function", "debug")
-		boc_mode = "--with-init"
-		validator_wallet = self.GetValidatorWallet()
-		resultFilePath = self.SignBocWithWallet(validator_wallet, pool.bocFilePath, pool.addrB64_init, 1, boc_mode=boc_mode)
-		self.SendFile(resultFilePath, validator_wallet)
 	#end define
 
 	def GetNetworkName(self):

@@ -80,8 +80,11 @@ def ValidatorDownEvent(local):
 
 def Elections(local, ton):
     use_pool = ton.using_pool()
+    use_liquid_staking = ton.using_liquid_staking()
     if use_pool:
         ton.PoolsUpdateValidatorSet()
+    if use_liquid_staking:
+        ton.ControllersUpdateValidatorSet()
     ton.RecoverStake()
     if ton.using_validator():
         ton.ElectionEntry()
