@@ -1131,10 +1131,10 @@ class MyTonCore():
 		return fileName
 	#end define
 
-	def CreateElectionRequest(self, wallet, startWorkTime, adnlAddr, maxFactor):
+	def CreateElectionRequest(self, addrB64, startWorkTime, adnlAddr, maxFactor):
 		self.local.add_log("start CreateElectionRequest function", "debug")
 		fileName = self.tempDir + self.nodeName + str(startWorkTime) + "_validator-to-sign.bin"
-		args = ["validator-elect-req.fif", wallet.addrB64, startWorkTime, maxFactor, adnlAddr, fileName]
+		args = ["validator-elect-req.fif", addrB64, startWorkTime, maxFactor, adnlAddr, fileName]
 		result = self.fift.Run(args)
 		fileName = parse(result, "Saved to file ", '\n')
 		resultList = result.split('\n')
@@ -1292,8 +1292,8 @@ class MyTonCore():
 
 	def GetStake(self, account, args=None):
 		stake = self.local.db.get("stake")
-		usePool = self.local.db.get("usePool")
-		useController = self.local.db.get("useController")
+		usePool = self.using_pool()
+		useController = self.using_liquid_staking()
 		stakePercent = self.local.db.get("stakePercent", 99)
 		vconfig = self.GetValidatorConfig()
 		validators = vconfig.get("validators")
@@ -1319,7 +1319,7 @@ class MyTonCore():
 		#end if
 
 		pool_version = self.GetVersionFromCodeHash(account.codeHash)
-		is_single_nominator = 'spool' in pool_version
+		is_single_nominator = pool_version is not None and 'spool' in pool_version
 
 		if stake is None and usePool and not is_single_nominator:
 			stake = account.balance - 20
@@ -1363,54 +1363,16 @@ class MyTonCore():
 		return maxFactor
 	#end define
 
-	def GetNominationControllerLastSentStakeTime(self, addrB64):
-		cmd = f"runmethodfull {addrB64} all_data"
-		result = self.liteClient.Run(cmd)
-		buff = self.Result2List(result)
-		return buff[-1]
-	#end define
-
-	def IsNominationControllerReadyToStake(self, addrB64):
-		now = get_timestamp()
-		config15 = self.GetConfig15()
-		lastSentStakeTime = self.GetNominationControllerLastSentStakeTime(addrB64)
-		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
-		result = lastSentStakeTime + stakeFreezeDelay < now
-		return result
-	#end define
-
-	def IsNominationControllerReadyToVote(self, addrB64):
-		vwl = self.GetValidatorsWalletsList()
-		result = addrB64 in vwl
-		return result
-	#end define
-
-	def GetNominationController(self, mode):
-		self.local.AddLog("start GetNominationController function", "debug")
-		nominationControllerList = ["nomination_controller_001", "nomination_controller_002"]
-		for item in nominationControllerList:
-			wallet = self.GetLocalWallet(item)
-			if mode == "stake" and self.IsNominationControllerReadyToStake(wallet.addrB64):
-				return wallet
-			if mode == "vote" and self.IsNominationControllerReadyToVote(wallet.addrB64):
-				return wallet
-		raise Exception("Validator сontroller not found")
-	#end define
-
 	def GetValidatorWallet(self, mode="stake"):
 		self.local.add_log("start GetValidatorWallet function", "debug")
-		useNominationController = self.local.db.get("useNominationController")
-		if useNominationController is True:
-			wallet = self.GetNominationController(mode)
-		else:
-			walletName = self.local.db.get("validatorWalletName")
-			wallet = self.GetLocalWallet(walletName)
+		walletName = self.local.db.get("validatorWalletName")
+		wallet = self.GetLocalWallet(walletName)
 		return wallet
 	#end define
 
 	def ElectionEntry(self, args=None):
-		usePool = self.local.db.get("usePool")
-		useController = self.local.db.get("useController")
+		usePool = self.using_pool()
+		useController = self.using_liquid_staking()
 		wallet = self.GetValidatorWallet()
 		addrB64 = wallet.addrB64
 		if wallet is None:
@@ -1495,7 +1457,7 @@ class MyTonCore():
 
 		# Create fift's. Continue with pool or walet
 		if usePool:
-			var1 = self.CreateElectionRequest(pool, startWorkTime, adnl_addr, maxFactor)
+			var1 = self.CreateElectionRequest(pool.addrB64, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 			validatorPubkey, resultFilePath = self.SignElectionRequestWithPoolWithValidator(pool, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
 
@@ -1511,7 +1473,7 @@ class MyTonCore():
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, controllerAddr, 1.03)
 			self.SendFile(resultFilePath, wallet)
 		else:
-			var1 = self.CreateElectionRequest(wallet, startWorkTime, adnl_addr, maxFactor)
+			var1 = self.CreateElectionRequest(wallet.addrB64, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 			validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor)
 
@@ -3237,6 +3199,23 @@ class MyTonCore():
 			raise Exception(f'No mode named {name} found in current modes: {current_modes}')
 		return current_modes[name]
 
+	def using_nominator_pool(self):
+		return (self.local.db.get("usePool") or  # for backward compatibility
+				self.get_mode_value('nominator-pool'))
+
+	def using_single_nominator(self):
+		return self.get_mode_value('single-nominator')
+
+	def using_liquid_staking(self):
+		return (self.local.db.get("useController") or  # for backward compatibility
+				self.get_mode_value('liquid-staking'))
+
+	def using_pool(self) -> bool:
+		return self.using_nominator_pool() or self.using_single_nominator()
+
+	def using_validator(self):
+		return self.get_mode_value('validator')
+
 	def Tlb2Json(self, text):
 		# Заменить скобки
 		start = 0
@@ -3414,71 +3393,6 @@ class MyTonCore():
 		#end if
 	#end define
 
-	def CreateNominationController(self, name, nominatorAddr, **kwargs):
-		workchain = kwargs.get("workchain", -1)
-		subwalletDefault = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
-		rewardShare = kwargs.get("rewardShare", 0)
-		coverAbility = kwargs.get("coverAbility", 0)
-		self.local.AddLog("start CreateNominationController function", "debug")
-		walletPath = self.walletsDir + name
-		contractPath = self.contractsDir + "nomination-contract/"
-		if not os.path.isdir(contractPath):
-			self.DownloadContract("https://github.com/EmelyanenkoK/nomination-contract")
-		#end if
-
-		fiftScript = contractPath + "scripts/new-nomination-controller.fif"
-		args = [fiftScript, workchain, subwallet, nominatorAddr, rewardShare, coverAbility, walletPath]
-		result = self.fift.Run(args)
-		version = "v3r3"
-		wallet = self.GetLocalWallet(name, version)
-		self.SetWalletVersion(wallet.addrB64, version)
-	#end define
-
-	def DepositToNominationController(self, walletName, destAddr, amount):
-		wallet = self.GetLocalWallet(walletName)
-		bocPath = self.contractsDir + "nomination-contract/scripts/add-stake.boc"
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, destAddr, amount)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def WithdrawFromNominationController(self, walletName, destAddr, amount):
-		wallet = self.GetLocalWallet(walletName)
-		fiftScript = self.contractsDir + "nomination-contract/scripts/request-stake.fif" # withdraw-stake.fif
-		bocPath = self.contractsDir + "nomination-contract/scripts/withdraw-stake"
-		args = [fiftScript, amount, bocPath]
-		result = self.fift.Run(args)
-		bocPath = parse(result, "Saved to file ", ")")
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, destAddr, 1)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def SendRequestToNominationController(self, walletName, destAddr):
-		wallet = self.GetLocalWallet(walletName)
-		bocPath = self.contractsDir + "nomination-contract/scripts/elector-refund.boc"
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, destAddr, 1.5)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def CreateRestrictedWallet(self, name, ownerAddr, **kwargs):
-		workchain = kwargs.get("workchain", 0)
-		subwalletDefault = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
-		self.local.AddLog("start CreateRestrictedWallet function", "debug")
-		walletPath = self.walletsDir + name
-		contractPath = self.contractsDir + "nomination-contract/"
-		if not os.path.isdir(contractPath):
-			self.DownloadContract("https://github.com/EmelyanenkoK/nomination-contract")
-		#end if
-
-		fiftScript = contractPath + "scripts/new-restricted-wallet.fif"
-		args = [fiftScript, workchain, subwallet, ownerAddr, walletPath]
-		result = self.fift.Run(args)
-		version = "v3r4"
-		wallet = self.GetLocalWallet(name, version)
-		self.SetWalletVersion(wallet.addrB64, version)
-	#end define
-
 	def CreatePool(self, poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake):
 		self.local.add_log("start CreatePool function", "debug")
 		validatorRewardShare = int(validatorRewardSharePercent * 100)
@@ -3508,36 +3422,6 @@ class MyTonCore():
 				newPool.Delete()
 				raise Exception("CreatePool error: Pool with the same parameters already exists.")
 		#end for
-	#end define
-
-	def ActivatePool(self, pool, ex=True):
-		self.local.add_log("start ActivatePool function", "debug")
-		for i in range(10):
-			time.sleep(3)
-			account = self.GetAccount(pool.addrB64)
-			if account.balance > 0:
-				self.SendFile(pool.bocFilePath, pool, timeout=False)
-				return
-		if ex:
-			raise Exception("ActivatePool error: time out")
-	#end define
-
-	def DepositToPool(self, poolAddr, amount):
-		wallet = self.GetValidatorWallet()
-		bocPath = self.local.buffer.my_temp_dir + wallet.name + "validator-deposit-query.boc"
-		fiftScript = self.contractsDir + "nominator-pool/func/validator-deposit.fif"
-		args = [fiftScript, bocPath]
-		result = self.fift.Run(args)
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, poolAddr, amount)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def WithdrawFromPool(self, poolAddr, amount):
-		poolData = self.GetPoolData(poolAddr)
-		if poolData["state"] == 0:
-			self.WithdrawFromPoolProcess(poolAddr, amount)
-		else:
-			self.PendWithdrawFromPool(poolAddr, amount)
 	#end define
 
 	def WithdrawFromPoolProcess(self, poolAddr, amount):
@@ -3729,35 +3613,6 @@ class MyTonCore():
 		return liquid_pool_addr
 	#end define
 
-	def CreateControllers(self):
-		new_controllers = self.GetControllers()
-		old_controllers = self.local.db.get("using_controllers", list())
-		if new_controllers == old_controllers:
-			return
-		#end if
-
-		self.local.add_log("start CreateControllers function", "debug")
-		wallet = self.GetValidatorWallet()
-		liquid_pool_addr = self.GetLiquidPoolAddr()
-		contractPath = self.contractsDir + "jetton_pool/"
-		if not os.path.isdir(contractPath):
-			self.DownloadContract("https://github.com/igroman787/jetton_pool")
-		#end if
-
-		fileName0 = contractPath + "fift-scripts/deploy_controller0.boc"
-		fileName1 = contractPath + "fift-scripts/deploy_controller1.boc"
-		resultFilePath0 = self.SignBocWithWallet(wallet, fileName0, liquid_pool_addr, 1)
-		self.SendFile(resultFilePath0, wallet)
-		time.sleep(10)
-		resultFilePath1 = self.SignBocWithWallet(wallet, fileName1, liquid_pool_addr, 1)
-		self.SendFile(resultFilePath1, wallet)
-
-		# Сохранить новые контроллеры
-		self.local.db["old_controllers"] = old_controllers
-		self.local.db["using_controllers"] = new_controllers
-		self.local.save()
-	#end define
-
 	def GetControllerAddress(self, controller_id):
 		wallet = self.GetValidatorWallet()
 		addr_hash = HexAddr2Dec(wallet.addr)
@@ -3904,14 +3759,6 @@ class MyTonCore():
 		return result
 	#end define
 
-	def CalculateLoanAmount_test(self):
-		min_loan = self.local.db.get("min_loan", 41000)
-		max_loan = self.local.db.get("max_loan", 43000)
-		max_interest_percent = self.local.db.get("max_interest_percent", 1.5)
-		max_interest = int(max_interest_percent/100*16777216)
-		return self.CalculateLoanAmount(min_loan, max_loan, max_interest)
-	#end define
-
 	def WaitLoan(self, controllerAddr):
 		self.local.add_log("start WaitLoan function", "debug")
 		for i in range(10):
@@ -3927,14 +3774,6 @@ class MyTonCore():
 		wallet = self.GetValidatorWallet()
 		fileName = self.contractsDir + "jetton_pool/fift-scripts/return_unused_loan.boc"
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.05)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def DepositToController(self, controllerAddr, amount):
-		self.local.add_log("start DepositToController function", "debug")
-		wallet = self.GetValidatorWallet()
-		fileName = self.contractsDir + "jetton_pool/fift-scripts/top-up.boc"
-		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, amount)
 		self.SendFile(resultFilePath, wallet)
 	#end define
 
@@ -4058,97 +3897,6 @@ class MyTonCore():
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.04)
 		self.SendFile(resultFilePath, wallet)
 		self.local.add_log("ControllerRecoverStake completed")
-	#end define
-
-	def StopController(self, controllerAddr):
-		stop_controllers_list = self.local.db.get("stop_controllers_list")
-		if stop_controllers_list is None:
-			stop_controllers_list = list()
-		if controllerAddr not in stop_controllers_list:
-			stop_controllers_list.append(controllerAddr)
-		self.local.db["stop_controllers_list"] = stop_controllers_list
-
-		user_controllers = self.local.db.get("user_controllers")
-		if user_controllers is not None and controllerAddr in user_controllers:
-			user_controllers.remove(controllerAddr)
-		self.local.save()
-	#end define
-
-	def AddController(self, controllerAddr):
-		user_controllers = self.local.db.get("user_controllers")
-		if user_controllers is None:
-			user_controllers = list()
-		if controllerAddr not in user_controllers:
-			user_controllers.append(controllerAddr)
-		self.local.db["user_controllers"] = user_controllers
-
-		stop_controllers_list = self.local.db.get("stop_controllers_list")
-		if stop_controllers_list is not None and controllerAddr in stop_controllers_list:
-			stop_controllers_list.remove(controllerAddr)
-		self.local.save()
-	#end define
-
-	def CheckLiquidPool(self):
-		liquid_pool_addr = self.GetLiquidPoolAddr()
-		account = self.GetAccount(liquid_pool_addr)
-		history = self.GetAccountHistory(account, 5000)
-		addrs_list = list()
-		for message in history:
-			if message.srcAddr is None or message.value is None:
-				continue
-			srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
-			destAddFull = f"{message.destWorkchain}:{message.destAddr}"
-			if srcAddrFull == account.addrFull:
-				fromto = destAddFull
-			else:
-				fromto = srcAddrFull
-			fromto = self.AddrFull2AddrB64(fromto)
-			if fromto not in addrs_list:
-				addrs_list.append(fromto)
-		#end for
-
-		for controllerAddr in addrs_list:
-			account = self.GetAccount(controllerAddr)
-			version = self.GetWalletVersionFromHash(account.codeHash)
-			if version is None or "controller" not in version:
-				continue
-			print(f"check controller: {controllerAddr}")
-			self.ControllerUpdateValidatorSet(controllerAddr)
-	#end define
-
-	def create_single_pool(self, pool_name, owner_address):
-		self.local.add_log("start create_single_pool function", "debug")
-
-		file_path = self.poolsDir + pool_name
-		if os.path.isfile(file_path + ".addr"):
-			self.local.add_log("create_single_pool warning: Pool already exists: " + file_path, "warning")
-			return
-		#end if
-
-		fift_script = pkg_resources.resource_filename('mytoncore', 'contracts/single-nominator-pool/init.fif')
-		code_boc = pkg_resources.resource_filename('mytoncore', 'contracts/single-nominator-pool/single-nominator-code.hex')
-		validator_wallet = self.GetValidatorWallet()
-		args = [fift_script, code_boc, owner_address, validator_wallet.addrB64, file_path]
-		result = self.fift.Run(args)
-		if "Saved single nominator pool" not in result:
-			raise Exception("create_single_pool error: " + result)
-		#end if
-
-		pools = self.GetPools()
-		new_pool = self.GetLocalPool(pool_name)
-		for pool in pools:
-			if pool.name != new_pool.name and pool.addrB64 == new_pool.addrB64:
-				new_pool.Delete()
-				raise Exception("create_single_pool error: Pool with the same parameters already exists.")
-		#end for
-	#end define
-
-	def activate_single_pool(self, pool):
-		self.local.add_log("start activate_single_pool function", "debug")
-		boc_mode = "--with-init"
-		validator_wallet = self.GetValidatorWallet()
-		resultFilePath = self.SignBocWithWallet(validator_wallet, pool.bocFilePath, pool.addrB64_init, 1, boc_mode=boc_mode)
-		self.SendFile(resultFilePath, validator_wallet)
 	#end define
 
 	def GetNetworkName(self):

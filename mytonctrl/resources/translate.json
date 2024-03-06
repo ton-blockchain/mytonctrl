@@ -14,6 +14,11 @@
 		"ru": "Показать статус TON",
 		"zh_TW": "顯示 TON 狀態"
 	},
+	"status_modes_cmd": {
+		"en": "Show MTC modes",
+		"ru": "Показать режимы MTC",
+		"zh_TW": "顯示 MTC 模式"
+	},
 	"enable_mode_cmd": {
 		"en": "Enable mode",
 		"ru": "Включить режим",
