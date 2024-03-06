@@ -1363,48 +1363,10 @@ class MyTonCore():
 		return maxFactor
 	#end define
 
-	def GetNominationControllerLastSentStakeTime(self, addrB64):
-		cmd = f"runmethodfull {addrB64} all_data"
-		result = self.liteClient.Run(cmd)
-		buff = self.Result2List(result)
-		return buff[-1]
-	#end define
-
-	def IsNominationControllerReadyToStake(self, addrB64):
-		now = get_timestamp()
-		config15 = self.GetConfig15()
-		lastSentStakeTime = self.GetNominationControllerLastSentStakeTime(addrB64)
-		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
-		result = lastSentStakeTime + stakeFreezeDelay < now
-		return result
-	#end define
-
-	def IsNominationControllerReadyToVote(self, addrB64):
-		vwl = self.GetValidatorsWalletsList()
-		result = addrB64 in vwl
-		return result
-	#end define
-
-	def GetNominationController(self, mode):
-		self.local.AddLog("start GetNominationController function", "debug")
-		nominationControllerList = ["nomination_controller_001", "nomination_controller_002"]
-		for item in nominationControllerList:
-			wallet = self.GetLocalWallet(item)
-			if mode == "stake" and self.IsNominationControllerReadyToStake(wallet.addrB64):
-				return wallet
-			if mode == "vote" and self.IsNominationControllerReadyToVote(wallet.addrB64):
-				return wallet
-		raise Exception("Validator сontroller not found")
-	#end define
-
 	def GetValidatorWallet(self, mode="stake"):
 		self.local.add_log("start GetValidatorWallet function", "debug")
-		useNominationController = self.local.db.get("useNominationController")
-		if useNominationController is True:
-			wallet = self.GetNominationController(mode)
-		else:
-			walletName = self.local.db.get("validatorWalletName")
-			wallet = self.GetLocalWallet(walletName)
+		walletName = self.local.db.get("validatorWalletName")
+		wallet = self.GetLocalWallet(walletName)
 		return wallet
 	#end define
 
@@ -3419,71 +3381,6 @@ class MyTonCore():
 		if len(err) > 0:
 			raise Exception(err)
 		#end if
-	#end define
-
-	def CreateNominationController(self, name, nominatorAddr, **kwargs):
-		workchain = kwargs.get("workchain", -1)
-		subwalletDefault = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
-		rewardShare = kwargs.get("rewardShare", 0)
-		coverAbility = kwargs.get("coverAbility", 0)
-		self.local.AddLog("start CreateNominationController function", "debug")
-		walletPath = self.walletsDir + name
-		contractPath = self.contractsDir + "nomination-contract/"
-		if not os.path.isdir(contractPath):
-			self.DownloadContract("https://github.com/EmelyanenkoK/nomination-contract")
-		#end if
-
-		fiftScript = contractPath + "scripts/new-nomination-controller.fif"
-		args = [fiftScript, workchain, subwallet, nominatorAddr, rewardShare, coverAbility, walletPath]
-		result = self.fift.Run(args)
-		version = "v3r3"
-		wallet = self.GetLocalWallet(name, version)
-		self.SetWalletVersion(wallet.addrB64, version)
-	#end define
-
-	def DepositToNominationController(self, walletName, destAddr, amount):
-		wallet = self.GetLocalWallet(walletName)
-		bocPath = self.contractsDir + "nomination-contract/scripts/add-stake.boc"
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, destAddr, amount)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def WithdrawFromNominationController(self, walletName, destAddr, amount):
-		wallet = self.GetLocalWallet(walletName)
-		fiftScript = self.contractsDir + "nomination-contract/scripts/request-stake.fif" # withdraw-stake.fif
-		bocPath = self.contractsDir + "nomination-contract/scripts/withdraw-stake"
-		args = [fiftScript, amount, bocPath]
-		result = self.fift.Run(args)
-		bocPath = parse(result, "Saved to file ", ")")
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, destAddr, 1)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def SendRequestToNominationController(self, walletName, destAddr):
-		wallet = self.GetLocalWallet(walletName)
-		bocPath = self.contractsDir + "nomination-contract/scripts/elector-refund.boc"
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, destAddr, 1.5)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def CreateRestrictedWallet(self, name, ownerAddr, **kwargs):
-		workchain = kwargs.get("workchain", 0)
-		subwalletDefault = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
-		self.local.AddLog("start CreateRestrictedWallet function", "debug")
-		walletPath = self.walletsDir + name
-		contractPath = self.contractsDir + "nomination-contract/"
-		if not os.path.isdir(contractPath):
-			self.DownloadContract("https://github.com/EmelyanenkoK/nomination-contract")
-		#end if
-
-		fiftScript = contractPath + "scripts/new-restricted-wallet.fif"
-		args = [fiftScript, workchain, subwallet, ownerAddr, walletPath]
-		result = self.fift.Run(args)
-		version = "v3r4"
-		wallet = self.GetLocalWallet(name, version)
-		self.SetWalletVersion(wallet.addrB64, version)
 	#end define
 
 	def CreatePool(self, poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake):
