@@ -518,7 +518,7 @@ def Complaints(local, ton):
 def Slashing(local, ton):
     is_slashing = local.db.get("isSlashing")
     is_validator = ton.using_validator()
-    if is_slashing is not True or is_validator:
+    if is_slashing is not True or not is_validator:
         return
 
     # Creating complaints
