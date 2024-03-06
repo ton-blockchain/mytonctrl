@@ -1293,7 +1293,7 @@ class MyTonCore():
 	def GetStake(self, account, args=None):
 		stake = self.local.db.get("stake")
 		usePool = self.using_pool()
-		useController = self.local.db.get("useController")
+		useController = self.local.db.get("useController") or self.using_liquid_staking()
 		stakePercent = self.local.db.get("stakePercent", 99)
 		vconfig = self.GetValidatorConfig()
 		validators = vconfig.get("validators")
@@ -1372,7 +1372,7 @@ class MyTonCore():
 
 	def ElectionEntry(self, args=None):
 		usePool = self.using_pool()
-		useController = self.local.db.get("useController")
+		useController = self.local.db.get("useController") or self.using_liquid_staking()
 		wallet = self.GetValidatorWallet()
 		addrB64 = wallet.addrB64
 		if wallet is None:
@@ -3203,8 +3203,17 @@ class MyTonCore():
 		return (self.local.db.get("usePool") or  # for backward compatibility
 				self.get_mode_value('nominator-pool'))
 
+	def using_single_nominator(self):
+		return self.get_mode_value('single-nominator')
+
+	def using_liquid_staking(self):
+		return self.get_mode_value('liquid-staking')
+
 	def using_pool(self) -> bool:
-		return self.using_nominator_pool() or self.get_mode_value('single-nominator')
+		return self.using_nominator_pool() or self.using_single_nominator()
+
+	def using_validator(self):
+		return self.get_mode_value('validator')
 
 	def Tlb2Json(self, text):
 		# Заменить скобки

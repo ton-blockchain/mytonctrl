@@ -74,8 +74,12 @@ def Init(local, ton, console, argv):
 	console.AddItem("status_modes", inject_globals(mode_status), local.translate("status_modes_cmd"))
 	console.AddItem("enable_mode", inject_globals(enable_mode), local.translate("enable_mode_cmd"))
 	console.AddItem("disable_mode", inject_globals(disable_mode), local.translate("disable_mode_cmd"))
+	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
+	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
+
 	console.AddItem("seqno", inject_globals(Seqno), local.translate("seqno_cmd"))
 	console.AddItem("getconfig", inject_globals(GetConfig), local.translate("getconfig_cmd"))
+	console.AddItem("get_pool_data", inject_globals(GetPoolData), local.translate("get_pool_data_cmd"))
 
 	console.AddItem("nw", inject_globals(CreatNewWallet), local.translate("nw_cmd"))
 	console.AddItem("aw", inject_globals(ActivateWallet), local.translate("aw_cmd"))
@@ -105,44 +109,42 @@ def Init(local, ton, console, argv):
 	# console.AddItem("gdfa", inject_globals(GetDomainFromAuction), local.translate("gdfa_cmd"))
 
 	console.AddItem("ol", inject_globals(PrintOffersList), local.translate("ol_cmd"))
-	console.AddItem("vo", inject_globals(VoteOffer), local.translate("vo_cmd"))
 	console.AddItem("od", inject_globals(OfferDiff), local.translate("od_cmd"))
 
 	console.AddItem("el", inject_globals(PrintElectionEntriesList), local.translate("el_cmd"))
-	console.AddItem("ve", inject_globals(VoteElectionEntry), local.translate("ve_cmd"))
 	console.AddItem("vl", inject_globals(PrintValidatorList), local.translate("vl_cmd"))
 	console.AddItem("cl", inject_globals(PrintComplaintsList), local.translate("cl_cmd"))
-	console.AddItem("vc", inject_globals(VoteComplaint), local.translate("vc_cmd"))
 
-	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
-	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
 	#console.AddItem("xrestart", inject_globals(Xrestart), local.translate("xrestart_cmd"))
 	#console.AddItem("xlist", inject_globals(Xlist), local.translate("xlist_cmd"))
 	#console.AddItem("gpk", inject_globals(GetPubKey), local.translate("gpk_cmd"))
 	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.translate("ssoc_cmd"))
 	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
 
-	console.AddItem("get_pool_data", inject_globals(GetPoolData), local.translate("get_pool_data_cmd"))
-
-	if ton.using_pool():
-		from mytonctrl.modules.pool import PoolModule
-		module = PoolModule(ton, local)
+	if ton.get_mode_value('validator'):
+		from mytonctrl.modules.validator import ValidatorModule
+		module = ValidatorModule(ton, local)
 		module.add_console_commands(console)
 
-	if ton.using_nominator_pool():
-		from mytonctrl.modules.nominator_pool import NominatorPoolModule
-		module = NominatorPoolModule(ton, local)
-		module.add_console_commands(console)
+		if ton.using_pool():  # add basic pool functions (pools_list, delete_pool, import_pool)
+			from mytonctrl.modules.pool import PoolModule
+			module = PoolModule(ton, local)
+			module.add_console_commands(console)
 
-	if ton.get_mode_value('single-nominator'):
-		from mytonctrl.modules.single_pool import SingleNominatorModule
-		module = SingleNominatorModule(ton, local)
-		module.add_console_commands(console)
+		if ton.using_nominator_pool():
+			from mytonctrl.modules.nominator_pool import NominatorPoolModule
+			module = NominatorPoolModule(ton, local)
+			module.add_console_commands(console)
 
-	if ton.get_mode_value('liquid-staking'):
-		from mytonctrl.modules.controller import ControllerModule
-		module = ControllerModule(ton, local)
-		module.add_console_commands(console)
+		if ton.get_mode_value('single-nominator'):
+			from mytonctrl.modules.single_pool import SingleNominatorModule
+			module = SingleNominatorModule(ton, local)
+			module.add_console_commands(console)
+
+		if ton.using_liquid_staking():
+			from mytonctrl.modules.controller import ControllerModule
+			module = ControllerModule(ton, local)
+			module.add_console_commands(console)
 
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
@@ -1000,15 +1002,6 @@ def PrintOffersList(ton, args):
 		print_table(table)
 #end define
 
-def VoteOffer(ton, args):
-	if len(args) == 0:
-		color_print("{red}Bad args. Usage:{endc} vo <offer-hash>")
-		return
-	for offerHash in args:
-		ton.VoteOffer(offerHash)
-	color_print("VoteOffer - {green}OK{endc}")
-#end define
-
 def OfferDiff(ton, args):
 	try:
 		offerHash = args[0]
@@ -1061,17 +1054,6 @@ def PrintComplaintsList(ton, args):
 				isPassed = bcolors.red_text("false")
 			table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
 		print_table(table)
-#end define
-
-def VoteComplaint(ton, args):
-	try:
-		electionId = args[0]
-		complaintHash = args[1]
-	except:
-		color_print("{red}Bad args. Usage:{endc} vc <election-id> <complaint-hash>")
-		return
-	ton.VoteComplaint(electionId, complaintHash)
-	color_print("VoteComplaint - {green}OK{endc}")
 #end define
 
 def NewDomain(ton, args):
@@ -1170,11 +1152,6 @@ def PrintElectionEntriesList(ton, args):
 				walletAddr = Reduct(walletAddr)
 			table += [[adnl, pubkey, walletAddr, stake, maxFactor]]
 		print_table(table)
-#end define
-
-def VoteElectionEntry(ton, args):
-	Elections(ton.local, ton)
-	color_print("VoteElectionEntry - {green}OK{endc}")
 #end define
 
 def PrintValidatorList(ton, args):

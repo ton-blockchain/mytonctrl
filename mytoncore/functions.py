@@ -82,12 +82,9 @@ def Elections(local, ton):
     use_pool = ton.using_pool()
     if use_pool:
         ton.PoolsUpdateValidatorSet()
-        ton.RecoverStake()
+    ton.RecoverStake()
+    if ton.using_validator():
         ton.ElectionEntry()
-    else:
-        ton.RecoverStake()
-        ton.ElectionEntry()
-# end define
 
 
 def Statistics(local):
@@ -516,10 +513,10 @@ def Complaints(local, ton):
 
 
 def Slashing(local, ton):
-    isSlashing = local.db.get("isSlashing")
-    if isSlashing is not True:
+    is_slashing = local.db.get("isSlashing")
+    is_validator = ton.using_validator()
+    if is_slashing is not True or is_validator:
         return
-    # end if
 
     # Creating complaints
     slash_time = local.buffer.slash_time
