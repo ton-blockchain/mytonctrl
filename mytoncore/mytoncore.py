@@ -1131,10 +1131,10 @@ class MyTonCore():
 		return fileName
 	#end define
 
-	def CreateElectionRequest(self, wallet, startWorkTime, adnlAddr, maxFactor):
+	def CreateElectionRequest(self, addrB64, startWorkTime, adnlAddr, maxFactor):
 		self.local.add_log("start CreateElectionRequest function", "debug")
 		fileName = self.tempDir + self.nodeName + str(startWorkTime) + "_validator-to-sign.bin"
-		args = ["validator-elect-req.fif", wallet.addrB64, startWorkTime, maxFactor, adnlAddr, fileName]
+		args = ["validator-elect-req.fif", addrB64, startWorkTime, maxFactor, adnlAddr, fileName]
 		result = self.fift.Run(args)
 		fileName = parse(result, "Saved to file ", '\n')
 		resultList = result.split('\n')
@@ -1319,7 +1319,7 @@ class MyTonCore():
 		#end if
 
 		pool_version = self.GetVersionFromCodeHash(account.codeHash)
-		is_single_nominator = 'spool' in pool_version
+		is_single_nominator = pool_version is not None and 'spool' in pool_version
 
 		if stake is None and usePool and not is_single_nominator:
 			stake = account.balance - 20
@@ -1457,7 +1457,7 @@ class MyTonCore():
 
 		# Create fift's. Continue with pool or walet
 		if usePool:
-			var1 = self.CreateElectionRequest(pool, startWorkTime, adnl_addr, maxFactor)
+			var1 = self.CreateElectionRequest(pool.addrB64, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 			validatorPubkey, resultFilePath = self.SignElectionRequestWithPoolWithValidator(pool, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
 
@@ -1473,7 +1473,7 @@ class MyTonCore():
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, controllerAddr, 1.03)
 			self.SendFile(resultFilePath, wallet)
 		else:
-			var1 = self.CreateElectionRequest(wallet, startWorkTime, adnl_addr, maxFactor)
+			var1 = self.CreateElectionRequest(wallet.addrB64, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 			validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor)
 
@@ -4022,7 +4022,7 @@ class MyTonCore():
 
 		for controllerAddr in addrs_list:
 			account = self.GetAccount(controllerAddr)
-			version = self.GetWalletVersionFromHash(account.codeHash)
+			version = self.GetVersionFromCodeHash(account.codeHash)
 			if version is None or "controller" not in version:
 				continue
 			print(f"check controller: {controllerAddr}")
