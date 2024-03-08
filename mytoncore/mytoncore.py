@@ -2238,7 +2238,7 @@ class MyTonCore():
 			item["isPassed"] = (weightRemaining < 0)
 			pseudohash = pubkey + str(electionId)
 			item["pseudohash"] = pseudohash
-			complaints[pseudohash] = item
+			complaints[chash] = item
 		#end for
 
 		# Set buffer
@@ -2280,27 +2280,15 @@ class MyTonCore():
 		self.local.add_log("start GetComplaintsNumber function", "debug")
 		result = dict()
 		complaints = self.GetComplaints()
-		votedComplaints = self.GetVotedComplaints()
+		voted_complaints = self.GetVotedComplaints(complaints)
 		buff = 0
-		for key, item in complaints.items():
-			pubkey = item.get("pubkey")
-			electionId = item.get("electionId")
-			pseudohash = pubkey + str(electionId)
-			if pseudohash in votedComplaints:
+		for chash, item in complaints.values():
+			if chash in voted_complaints:
 				continue
 			buff += 1
 		result["all"] = len(complaints)
 		result["new"] = buff
 		return result
-	#end define
-
-	def GetComplaint(self, electionId, complaintHash):
-		self.local.add_log("start GetComplaint function", "debug")
-		complaints = self.GetComplaints(electionId)
-		for key, item in complaints.items():
-			if complaintHash == item.get("hash"):
-				return item
-		raise Exception("GetComplaint error: complaint not found.")
 	#end define
 
 	def SignProposalVoteRequestWithValidator(self, offerHash, validatorIndex, validatorPubkey_b64, validatorSignature):
@@ -2391,51 +2379,56 @@ class MyTonCore():
 		return ok
 	#end define
 
-	def complaint_is_valid(self, complaint: dict):
-		self.local.add_log("start complaint_is_valid function", "debug")
-
-		election_id = complaint['electionId']
-		voted_complaints = self.GetVotedComplaints(election_id)
-		if complaint['pseudohash'] in voted_complaints:
-			self.local.add_log(f"skip checking complaint {complaint['hash_hex']}: "
-							   f"complaint with this pseudohash ({complaint['pseudohash']})"
-							   f" has already been voted", "debug")
-			return False
-
-		# check that complaint is valid
+	def get_valid_complaints(self, complaints: dict, election_id: int):
+		self.local.add_log("start get_valid_complaints function", "debug")
 		config32 = self.GetConfig32()
 		start = config32.get("startWorkTime")
-		if election_id != start:
-			self.local.add_log(f"skip checking complaint {complaint['hash_hex']}: "
-							   f"election_id ({election_id}) doesn't match with "
-							   f"start work time ({config32.get('startWorkTime')})", "info")
-			return False
+		assert start == election_id, 'provided election_id != election_id from config32'
 		end = config32.get("endWorkTime")
-		data = self.GetValidatorsLoad(start, end - 60, saveCompFiles=False)
-
-		exists = False
-		for item in data.values():
-			pubkey = item.get("pubkey")
-			if pubkey is None:
+		validators_load = self.GetValidatorsLoad(start, end - 60, saveCompFiles=True)
+		voted_complaints = self.GetVotedComplaints(complaints)
+		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
+		result = {}
+		for complaint in complaints.values():
+			if complaint['pseudohash'] in voted_complaints_pseudohashes or complaint['pseudohash'] in result:
+				self.local.add_log(f"skip checking complaint {complaint['hash_hex']}: "
+								   f"complaint with this pseudohash ({complaint['pseudohash']})"
+								   f" has already been voted", "debug")
 				continue
-			pseudohash = pubkey + str(election_id)
-			if pseudohash == complaint['pseudohash']:
-				exists = True
-				break
+			# check that complaint is valid
 
-		if not exists:
-			self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found", "info")
-			return False
+			if complaint['electionId'] != start:
+				self.local.add_log(f"skip checking complaint {complaint['hash_hex']}: "
+								   f"election_id ({election_id}) doesn't match with "
+								   f"start work time ({config32.get('startWorkTime')})", "info")
+				continue
 
-		# check complaint fine value
-		if complaint['suggestedFine'] != 101:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3708
-			self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine value is {complaint['suggestedFine']} ton", "info")
-			return False
-		if complaint['suggestedFinePart'] != 0:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3709
-			self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine part value is {complaint['suggestedFinePart']} ton", "info")
-			return False
+			exists = False
+			for item in validators_load.values():
+				if 'fileName' not in item:
+					continue
+				pubkey = item.get("pubkey")
+				if pubkey is None:
+					continue
+				pseudohash = pubkey + str(election_id)
+				if pseudohash == complaint['pseudohash']:
+					exists = True
+					break
 
-		return True
+			if not exists:
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
+				continue
+
+			# check complaint fine value
+			if complaint['suggestedFine'] != 101:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3708
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine value is {complaint['suggestedFine']} ton", "info")
+				continue
+			if complaint['suggestedFinePart'] != 0:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3709
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine part value is {complaint['suggestedFinePart']} ton", "info")
+				continue
+
+			result[complaint['pseudohash']] = complaint
+		return result
 
 	def GetOnlineValidators(self):
 		onlineValidators = list()
@@ -2449,7 +2442,7 @@ class MyTonCore():
 		return onlineValidators
 	#end define
 
-	def GetValidatorsLoad(self, start, end, saveCompFiles=False):
+	def GetValidatorsLoad(self, start, end, saveCompFiles=False) -> dict:
 		# Get buffer
 		bname = f"validatorsLoad{start}{end}"
 		buff = self.GetFunctionBuffer(bname, timeout=60)
@@ -2574,6 +2567,7 @@ class MyTonCore():
 		self.local.add_log("start CheckValidators function", "debug")
 		electionId = start
 		complaints = self.GetComplaints(electionId)
+		valid_complaints = self.get_valid_complaints(complaints, electionId)
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
@@ -2592,7 +2586,7 @@ class MyTonCore():
 			var2 = item.get("var2")
 			pubkey = item.get("pubkey")
 			pseudohash = pubkey + str(electionId)
-			if pseudohash in complaints:
+			if pseudohash in valid_complaints:
 				continue
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)
@@ -2990,23 +2984,14 @@ class MyTonCore():
 			self.local.save()
 	#end define
 
-	def GetVotedComplaints(self, election_id: int = None):
-		complaints = self.GetComplaints(election_id)
+	def GetVotedComplaints(self, complaints: dict):
 		result = {}
 		validator_index = self.GetValidatorIndex()
-		for pseudohash, complaint in complaints.items():
-			votedValidators = complaint.get("votedValidators")
-			if validator_index in votedValidators:
-				result[pseudohash] = complaint
+		for chash, complaint in complaints.items():
+			voted_validators = complaint.get("votedValidators")
+			if validator_index in voted_validators:
+				result[chash] = complaint
 		return result
-	#end define
-
-	def AddVotedComplaints(self, complaint):
-		pseudohash = complaint.get("pseudohash")
-		votedComplaints = self.GetVotedComplaints()
-		if pseudohash not in votedComplaints:
-			votedComplaints[pseudohash] = complaint
-			self.local.save()
 	#end define
 
 	def GetDestinationAddr(self, destination):

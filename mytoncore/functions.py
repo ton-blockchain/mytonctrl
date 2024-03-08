@@ -506,12 +506,12 @@ def Complaints(local, ton):
 
     # Voting for complaints
     config32 = ton.GetConfig32()
-    electionId = config32.get("startWorkTime")
-    complaints = ton.GetComplaints(electionId)  # get complaints from Elector
-    for c in complaints.values():
+    election_id = config32.get("startWorkTime")
+    complaints = ton.GetComplaints(election_id)  # get complaints from Elector
+    valid_complaints = ton.get_valid_complaints(complaints, election_id)
+    for c in valid_complaints.values():
         complaint_hash = c.get("hash")
-        if ton.complaint_is_valid(c):
-            ton.VoteComplaint(electionId, complaint_hash)
+        ton.VoteComplaint(election_id, complaint_hash)
 # end define
 
 
