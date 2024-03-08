@@ -511,8 +511,7 @@ def Complaints(local, ton):
     valid_complaints = ton.get_valid_complaints(complaints, election_id)
     for c in valid_complaints.values():
         complaint_hash = c.get("hash")
-        if ton.complaint_is_valid(c):
-            ton.VoteComplaint(election_id, complaint_hash)
+        ton.VoteComplaint(election_id, complaint_hash)
 # end define
 
 
