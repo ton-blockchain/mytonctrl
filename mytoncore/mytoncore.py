@@ -2282,7 +2282,7 @@ class MyTonCore():
 		complaints = self.GetComplaints()
 		voted_complaints = self.GetVotedComplaints(complaints)
 		buff = 0
-		for chash, item in complaints.values():
+		for chash in complaints:
 			if chash in voted_complaints:
 				continue
 			buff += 1
