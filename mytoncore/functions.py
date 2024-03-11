@@ -353,7 +353,11 @@ def Offers(local, ton):
         offer_hash = offer.get("hash")
         if offer_hash in save_offers:
             offer_pseudohash = offer.get("pseudohash")
-            save_offer_pseudohash = save_offers.get(offer_hash)
+            save_offer = save_offers.get(offer_hash)
+            if isinstance(save_offer, list):  # new version of save offers {"hash": ["pseudohash", param_id]}
+                save_offer_pseudohash = save_offer[0]
+            else:  # old version of save offers {"hash": "pseudohash"}
+                save_offer_pseudohash = save_offer
             if offer_pseudohash == save_offer_pseudohash and offer_pseudohash is not None:
                 ton.VoteOffer(offer_hash)
 # end define
