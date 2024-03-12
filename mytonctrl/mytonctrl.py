@@ -42,7 +42,7 @@ from mytoncore.functions import (
 	GetBinGitHash,
 )
 from mytonctrl.migrate import run_migrations
-from mytonctrl.utils import GetItemFromList
+from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime
 
 import sys, getopt, os
 
@@ -661,12 +661,12 @@ def PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkT
 	startNextElection = startElection + validatorsElectedFor
 
 	# timestamp to datetime
-	rootWorkchainEnabledTime = timestamp2datetime(rootWorkchainEnabledTime_int)
-	startValidationTime = timestamp2datetime(startValidation)
-	endValidationTime = timestamp2datetime(endValidation)
-	startElectionTime = timestamp2datetime(startElection)
-	endElectionTime = timestamp2datetime(endElection)
-	startNextElectionTime = timestamp2datetime(startNextElection)
+	rootWorkchainEnabledTime = timestamp2utcdatetime(rootWorkchainEnabledTime_int)
+	startValidationTime = timestamp2utcdatetime(startValidation)
+	endValidationTime = timestamp2utcdatetime(endValidation)
+	startElectionTime = timestamp2utcdatetime(startElection)
+	endElectionTime = timestamp2utcdatetime(endElection)
+	startNextElectionTime = timestamp2utcdatetime(startNextElection)
 
 	# datetime to color text
 	rootWorkchainEnabledTime_text = local.translate("times_root_workchain_enabled_time").format(bcolors.yellow_text(rootWorkchainEnabledTime))
