@@ -2,7 +2,7 @@ import os
 import time
 
 from mypylib.mypylib import color_print
-from mytonctrl.modules.pool import PoolModule
+from modules.pool import PoolModule
 
 
 class NominatorPoolModule(PoolModule):

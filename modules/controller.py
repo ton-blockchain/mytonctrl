@@ -5,7 +5,7 @@ import time
 from mypylib.mypylib import color_print, print_table
 
 from mytonctrl.utils import GetItemFromList
-from mytonctrl.modules.module import MtcModule
+from modules.module import MtcModule
 
 
 class ControllerModule(MtcModule):

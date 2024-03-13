@@ -3155,10 +3155,30 @@ class MyTonCore():
 		self.local.save()
 	#end define
 
+	def migrate_to_modes(self):
+		usePool = self.local.db.get('usePool')
+		if usePool is not None:
+			if usePool:
+				self.enable_mode('nominator-pool')
+			self.local.db.pop('usePool')
+
+		useController = self.local.db.get('useController')
+		if useController is not None:
+			if useController:
+				self.enable_mode('liquid-staking')
+			self.local.db.pop('useController')
+		self.local.save()
+
+	def rollback_modes(self):
+		self.local.db['usePool'] = self.get_mode_value('nominator-pool')
+		self.local.db['useController'] = self.get_mode_value('liquid-staking')
+		self.local.save()
+
 	def get_modes(self):
 		current_modes = self.local.db.get('modes', {})
 		if 'modes' not in self.local.db:
 			self.local.db['modes'] = current_modes
+		self.migrate_to_modes()
 		for mode in MODES:
 			if mode not in current_modes:
 				current_modes[mode] = MODES[mode]  # assign default mode value
@@ -3185,15 +3205,13 @@ class MyTonCore():
 		return current_modes[name]
 
 	def using_nominator_pool(self):
-		return (self.local.db.get("usePool") or  # for backward compatibility
-				self.get_mode_value('nominator-pool'))
+		return self.get_mode_value('nominator-pool')
 
 	def using_single_nominator(self):
 		return self.get_mode_value('single-nominator')
 
 	def using_liquid_staking(self):
-		return (self.local.db.get("useController") or  # for backward compatibility
-				self.get_mode_value('liquid-staking'))
+		return self.get_mode_value('liquid-staking')
 
 	def using_pool(self) -> bool:
 		return self.using_nominator_pool() or self.using_single_nominator()

@@ -1,5 +1,5 @@
 from mypylib.mypylib import color_print
-from mytonctrl.modules.module import MtcModule
+from modules.module import MtcModule
 
 from mytoncore.functions import Elections
 

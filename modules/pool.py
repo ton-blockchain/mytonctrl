@@ -1,7 +1,5 @@
-import os
-
 from mypylib.mypylib import color_print, print_table
-from mytonctrl.modules.module import MtcModule
+from modules.module import MtcModule
 
 
 class PoolModule(MtcModule):

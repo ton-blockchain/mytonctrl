@@ -7,7 +7,6 @@ import inspect
 import pkg_resources
 import socket
 
-from shutil import copyfile
 from functools import partial
 
 from mypylib.mypylib import (
@@ -35,14 +34,13 @@ from mypylib.mypylib import (
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore.mytoncore import MyTonCore
 from mytoncore.functions import (
-	Slashing, 
-	Elections,
+	Slashing,
 	GetMemoryInfo,
 	GetSwapInfo,
 	GetBinGitHash,
 )
 from mytonctrl.migrate import run_migrations
-from mytonctrl.utils import GetItemFromList
+from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime
 
 import sys, getopt, os
 
@@ -121,28 +119,28 @@ def Init(local, ton, console, argv):
 	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.translate("ssoc_cmd"))
 	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
 
-	if ton.get_mode_value('validator'):
-		from mytonctrl.modules.validator import ValidatorModule
+	if ton.using_validator():
+		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
 		module.add_console_commands(console)
 
 		if ton.using_pool():  # add basic pool functions (pools_list, delete_pool, import_pool)
-			from mytonctrl.modules.pool import PoolModule
+			from modules.pool import PoolModule
 			module = PoolModule(ton, local)
 			module.add_console_commands(console)
 
 		if ton.using_nominator_pool():
-			from mytonctrl.modules.nominator_pool import NominatorPoolModule
+			from modules.nominator_pool import NominatorPoolModule
 			module = NominatorPoolModule(ton, local)
 			module.add_console_commands(console)
 
 		if ton.get_mode_value('single-nominator'):
-			from mytonctrl.modules.single_pool import SingleNominatorModule
+			from modules.single_pool import SingleNominatorModule
 			module = SingleNominatorModule(ton, local)
 			module.add_console_commands(console)
 
 		if ton.using_liquid_staking():
-			from mytonctrl.modules.controller import ControllerModule
+			from modules.controller import ControllerModule
 			module = ControllerModule(ton, local)
 			module.add_console_commands(console)
 
@@ -661,12 +659,12 @@ def PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkT
 	startNextElection = startElection + validatorsElectedFor
 
 	# timestamp to datetime
-	rootWorkchainEnabledTime = timestamp2datetime(rootWorkchainEnabledTime_int)
-	startValidationTime = timestamp2datetime(startValidation)
-	endValidationTime = timestamp2datetime(endValidation)
-	startElectionTime = timestamp2datetime(startElection)
-	endElectionTime = timestamp2datetime(endElection)
-	startNextElectionTime = timestamp2datetime(startNextElection)
+	rootWorkchainEnabledTime = timestamp2utcdatetime(rootWorkchainEnabledTime_int)
+	startValidationTime = timestamp2utcdatetime(startValidation)
+	endValidationTime = timestamp2utcdatetime(endValidation)
+	startElectionTime = timestamp2utcdatetime(startElection)
+	endElectionTime = timestamp2utcdatetime(endElection)
+	startNextElectionTime = timestamp2utcdatetime(startNextElection)
 
 	# datetime to color text
 	rootWorkchainEnabledTime_text = local.translate("times_root_workchain_enabled_time").format(bcolors.yellow_text(rootWorkchainEnabledTime))
@@ -1214,6 +1212,10 @@ def SetSettings(ton, args):
 		value = args[1]
 	except:
 		color_print("{red}Bad args. Usage:{endc} set <settings-name> <settings-value>")
+		return
+	if name == 'usePool' or name == 'useController':
+		mode_name = 'nominator-pool' if name == 'usePool' else 'liquid-staking'
+		color_print("{red}" + f"Error: set {name} ... is deprecated and does not work" + "{endc}" + f"\nInstead, use <bold>enable_mode {mode_name}<endc>")
 		return
 	ton.SetSettings(name, value)
 	color_print("SetSettings - {green}OK{endc}")

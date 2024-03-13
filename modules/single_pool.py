@@ -3,7 +3,7 @@ import os
 import pkg_resources
 
 from mypylib.mypylib import color_print
-from mytonctrl.modules.pool import PoolModule
+from modules.pool import PoolModule
 
 
 class SingleNominatorModule(PoolModule):
