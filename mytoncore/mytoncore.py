@@ -3158,12 +3158,14 @@ class MyTonCore():
 	def migrate_to_modes(self):
 		usePool = self.local.db.get('usePool')
 		if usePool is not None:
-			self.enable_mode('nominator-pool')
+			if usePool:
+				self.enable_mode('nominator-pool')
 			self.local.db.pop('usePool')
 
 		useController = self.local.db.get('useController')
 		if useController is not None:
-			self.enable_mode('liquid-staking')
+			if useController:
+				self.enable_mode('liquid-staking')
 			self.local.db.pop('useController')
 		self.local.save()
 
