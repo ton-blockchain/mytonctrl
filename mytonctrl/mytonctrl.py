@@ -7,7 +7,6 @@ import inspect
 import pkg_resources
 import socket
 
-from shutil import copyfile
 from functools import partial
 
 from mypylib.mypylib import (
@@ -35,8 +34,7 @@ from mypylib.mypylib import (
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore.mytoncore import MyTonCore
 from mytoncore.functions import (
-	Slashing, 
-	Elections,
+	Slashing,
 	GetMemoryInfo,
 	GetSwapInfo,
 	GetBinGitHash,
@@ -122,27 +120,27 @@ def Init(local, ton, console, argv):
 	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
 
 	if ton.using_validator():
-		from mytonctrl.modules.validator import ValidatorModule
+		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
 		module.add_console_commands(console)
 
 		if ton.using_pool():  # add basic pool functions (pools_list, delete_pool, import_pool)
-			from mytonctrl.modules.pool import PoolModule
+			from modules.pool import PoolModule
 			module = PoolModule(ton, local)
 			module.add_console_commands(console)
 
 		if ton.using_nominator_pool():
-			from mytonctrl.modules.nominator_pool import NominatorPoolModule
+			from modules.nominator_pool import NominatorPoolModule
 			module = NominatorPoolModule(ton, local)
 			module.add_console_commands(console)
 
 		if ton.get_mode_value('single-nominator'):
-			from mytonctrl.modules.single_pool import SingleNominatorModule
+			from modules.single_pool import SingleNominatorModule
 			module = SingleNominatorModule(ton, local)
 			module.add_console_commands(console)
 
 		if ton.using_liquid_staking():
-			from mytonctrl.modules.controller import ControllerModule
+			from modules.controller import ControllerModule
 			module = ControllerModule(ton, local)
 			module.add_console_commands(console)
 
