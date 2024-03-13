@@ -20,7 +20,14 @@
 
 4. Use the `aw` command to activate your validator wallet.
 
-5. Create two pools (for even and odd validation rounds):
+5. Activate pool mode:
+
+    ```bash
+    enable_mode nominator-pool 
+    set stake null
+    ```
+
+6. Create two pools (for even and odd validation rounds):
    
    ```bash
    new_pool p1 0 1 1000 300000
@@ -38,7 +45,7 @@
 
    > (!) Use https://tonmon.xyz/ to determine the current minimum validator stake.
 
-6. Type `pools_list` to display pool addresses:
+7. Type `pools_list` to display pool addresses:
 
    ```bash
    pools_list
@@ -47,7 +54,7 @@
    p2    empty   0        0f9qtmnzs2-PumMisKDmv6KNjNfOMDQG70mQdp-BcAhnV5jL
    ```
 
-7. Send 1 TON to each pool and activate the pools:
+8. Send 1 TON to each pool and activate the pools:
 
    ```bash
    mg validator_wallet_001 0f98YhXA9wnr0d5XRXT-I2yH54nyQzn0tuAYC4FunT780qIT 1
@@ -56,7 +63,7 @@
    activate_pool p2
    ```
 
-8. Type `pools_list` to display pools:
+9. Type `pools_list` to display pools:
 
    ```bash
    pools_list
@@ -65,9 +72,9 @@
    p2    active  0.731199806  kf9qtmnzs2-PumMisKDmv6KNjNfOMDQG70mQdp-BcAhnV8UO
    ```
 
-9. Open each pool via the link "https://tonscan.org/nominator/<address_of_pool>" and verify pool configurations.
+10. Open each pool via the link "https://tonscan.org/nominator/<address_of_pool>" and verify pool configurations.
 
-10. Proceed with the validator deposit to each pool:
+11. Proceed with the validator deposit to each pool:
 
     ```bash
     deposit_to_pool validator_wallet_001 <address_of_pool_1> 1005
@@ -76,7 +83,7 @@
 
    In these commands, `1005` TON is the deposit amount. Be aware that 1 TON will be deducted by the pool for processing the deposit.
 
-11. Proceed with the nominator deposit to each pool:
+12. Proceed with the nominator deposit to each pool:
 
     Visit the pool link (from **Step 9**) and click **ADD STAKE**. 
     You can also make a deposit using **mytonctrl**, using the following commands:
@@ -92,13 +99,6 @@
 
    > To withdraw a nominator deposit, send a transaction with the comment `w` to the pool address (attach 1 TON to process the transaction). You can also perform this action using **mytonctrl**.
 
-12. Activate pool mode:
-
-    ```bash
-    set usePool true
-    set stake null
-    ```
-    
 13. Invite nominators to deposit into your pools. The participation in validation will commence automatically.
 
     > (!) Ensure that you have at least 200 TON/month in your validator wallet for operation fees.

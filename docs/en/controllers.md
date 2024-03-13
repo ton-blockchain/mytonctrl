@@ -25,12 +25,21 @@
 	```
 	Exit installer mode with `Ctrl+D`
 
-7. Set the liquid pool address, which will lend TON for validation:
+7. Set liquid-staking mode:
+
+ ```bash
+ enable_mode liquid-staking 
+ set stake null
+ ```
+
+> (!) If you were previously using nominator pools, do not forget to disable them using the `disable_mode nominator-pool` command.
+
+8Set the liquid pool address, which will lend TON for validation:
    ```
    set liquid_pool_addr <liquid-pool-address>
    ```
 
-8. Set the lending parameters that acceptable to you:
+9. Set the lending parameters that acceptable to you:
    ```
    set min_loan 41000
    set max_loan 43000
@@ -42,18 +51,18 @@
 * `43000` is the maximum loan amount we are willing to receive from the liquid pool,
 *   `1.5` 1.5 is the maximum interest rate value for the liquid pool per validation cycle, which we have agreed upon.
 
-9. Display the annual percentage of profit from the liquid pool:
+10. Display the annual percentage of profit from the liquid pool:
 	```
 	calculate_annual_controller_percentage
 	```
 
-10. Create two controllers with a single command:
+11. Create two controllers with a single command:
 
    ```
    new_controllers
    ```
 
-11. Enter `controllers_list` to display the controller addresses:
+12. Enter `controllers_list` to display the controller addresses:
 
    ```
    controllers_list
@@ -62,7 +71,7 @@
    kf_lT8QNykLh5PN5ictNX22maiyIf9iK787fXg6nJ_zB-jbN    active  0.720866
    ```
 
-12. Make a validator deposit in each controller:
+13. Make a validator deposit in each controller:
 
 
 ```
@@ -73,17 +82,7 @@ deposit_to_controller kf_lT8QNykLh5PN5ictNX22maiyIf9iK787fXg6nJ_zB-jbN 10000
 
 where `10000` TON is the deposit amount.
 
-13. Get approval for the controllers. Each pool may have its own approval issuance policy, check with the operator.
-
-14. Set controller mode:
-
- ```bash
- set useController true
- set stake null
- ```
-
-> (!) If you were previously using nominator pools, do not forget to disable them using the `set usePool false` command.
-
+14. Get approval for the controllers. Each pool may have its own approval issuance policy, check with the operator.
 
 ## Switching a Regular Validator to Controller Operating Mode
 

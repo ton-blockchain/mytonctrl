@@ -121,7 +121,7 @@ def Init(local, ton, console, argv):
 	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.translate("ssoc_cmd"))
 	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
 
-	if ton.get_mode_value('validator'):
+	if ton.using_validator():
 		from mytonctrl.modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
 		module.add_console_commands(console)
@@ -1214,6 +1214,10 @@ def SetSettings(ton, args):
 		value = args[1]
 	except:
 		color_print("{red}Bad args. Usage:{endc} set <settings-name> <settings-value>")
+		return
+	if name == 'usePool' or name == 'useController':
+		mode_name = 'nominator-pool' if name == 'usePool' else 'liquid-staking'
+		color_print("{red}" + f"Error: set {name} ... is deprecated and does not work" + "{endc}" + f"\nInstead, use <bold>enable_mode {mode_name}<endc>")
 		return
 	ton.SetSettings(name, value)
 	color_print("SetSettings - {green}OK{endc}")
