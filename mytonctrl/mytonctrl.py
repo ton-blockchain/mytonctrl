@@ -272,10 +272,18 @@ def check_git(input_args, default_repo, text):
 		need_repo = local_repo
 	if need_branch is None:
 		need_branch = local_branch
-	#end if
-
+	check_branch_exists(need_author, need_repo, need_branch)
 	return need_author, need_repo, need_branch
-#end define
+
+
+def check_branch_exists(author, repo, branch):
+	url = f"https://github.com/{author}/{repo}.git"
+	args = ["git", "ls-remote", "--heads", url, branch]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	output = process.stdout.decode("utf-8")
+	if branch not in output:
+		raise Exception(f"Branch {branch} not found in {url}")
+
 
 def Update(local, args):
 	repo = "mytonctrl"
