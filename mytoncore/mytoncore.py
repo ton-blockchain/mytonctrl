@@ -3172,13 +3172,14 @@ class MyTonCore():
 	def rollback_modes(self):
 		self.local.db['usePool'] = self.get_mode_value('nominator-pool')
 		self.local.db['useController'] = self.get_mode_value('liquid-staking')
+		self.local.db.pop('modes')
 		self.local.save()
 
 	def get_modes(self):
 		current_modes = self.local.db.get('modes', {})
 		if 'modes' not in self.local.db:
 			self.local.db['modes'] = current_modes
-		self.migrate_to_modes()
+			self.migrate_to_modes()
 		for mode in MODES:
 			if mode not in current_modes:
 				current_modes[mode] = MODES[mode]  # assign default mode value

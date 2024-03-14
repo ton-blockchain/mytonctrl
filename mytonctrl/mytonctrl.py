@@ -74,6 +74,7 @@ def Init(local, ton, console, argv):
 	console.AddItem("disable_mode", inject_globals(disable_mode), local.translate("disable_mode_cmd"))
 	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
+	console.AddItem("rollback", inject_globals(rollback_to_mtc1), local.translate("rollback_cmd"))
 
 	console.AddItem("seqno", inject_globals(Seqno), local.translate("seqno_cmd"))
 	console.AddItem("getconfig", inject_globals(GetConfig), local.translate("getconfig_cmd"))
@@ -324,6 +325,17 @@ def Upgrade(ton, args):
 		text = "Upgrade - {red}Error{endc}"
 	color_print(text)
 #end define
+
+def rollback_to_mtc1(ton, args):
+	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
+	a = input("Do you want to continue? [Y/n]")
+	if a.lower() != 'y':
+		print('aborted.')
+		return
+	ton.rollback_modes()
+	rollback_script_path = pkg_resources.resource_filename('mytonctrl', 'migrations/roll_back_001.sh')
+	run_args = ["bash", rollback_script_path]
+	exit_code = run_as_root(run_args)
 
 def cleanup_validator_db(ton, args):
 	cleanup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/cleanup.sh')
@@ -1215,7 +1227,8 @@ def SetSettings(ton, args):
 		return
 	if name == 'usePool' or name == 'useController':
 		mode_name = 'nominator-pool' if name == 'usePool' else 'liquid-staking'
-		color_print("{red}" + f"Error: set {name} ... is deprecated and does not work" + "{endc}" + f"\nInstead, use <bold>enable_mode {mode_name}<endc>")
+		color_print(f"{{red}} Error: set {name} ... is deprecated and does not work {{endc}}."
+					f"\nInstead, use {{bold}}enable_mode {mode_name}{{endc}}")
 		return
 	ton.SetSettings(name, value)
 	color_print("SetSettings - {green}OK{endc}")
