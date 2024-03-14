@@ -332,18 +332,26 @@ def Upgrade(ton, args):
 	else:
 		text = "Upgrade - {red}Error{endc}"
 	color_print(text)
-#end define
 
-def rollback_to_mtc1(ton, args):
+
+def rollback_to_mtc1(local, ton,  args):
 	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
-	a = input("Do you want to continue? [Y/n]")
+	a = input("Do you want to continue? [Y/n]\n")
 	if a.lower() != 'y':
 		print('aborted.')
 		return
 	ton.rollback_modes()
+
+	workdir = local.buffer.my_work_dir
+	version_file_path = os.path.join(workdir, 'VERSION')
+	if os.path.exists(version_file_path):
+		os.remove(version_file_path)
+
 	rollback_script_path = pkg_resources.resource_filename('mytonctrl', 'migrations/roll_back_001.sh')
 	run_args = ["bash", rollback_script_path]
-	exit_code = run_as_root(run_args)
+	run_as_root(run_args)
+	local.exit()
+
 
 def cleanup_validator_db(ton, args):
 	cleanup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/cleanup.sh')
