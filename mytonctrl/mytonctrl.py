@@ -272,10 +272,18 @@ def check_git(input_args, default_repo, text):
 		need_repo = local_repo
 	if need_branch is None:
 		need_branch = local_branch
-	#end if
-
+	check_branch_exists(need_author, need_repo, need_branch)
 	return need_author, need_repo, need_branch
-#end define
+
+
+def check_branch_exists(author, repo, branch):
+	url = f"https://github.com/{author}/{repo}.git"
+	args = ["git", "ls-remote", "--heads", url, branch]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	output = process.stdout.decode("utf-8")
+	if branch not in output:
+		raise Exception(f"Branch {branch} not found in {url}")
+
 
 def Update(local, args):
 	repo = "mytonctrl"
@@ -324,18 +332,26 @@ def Upgrade(ton, args):
 	else:
 		text = "Upgrade - {red}Error{endc}"
 	color_print(text)
-#end define
 
-def rollback_to_mtc1(ton, args):
+
+def rollback_to_mtc1(local, ton,  args):
 	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
-	a = input("Do you want to continue? [Y/n]")
+	a = input("Do you want to continue? [Y/n]\n")
 	if a.lower() != 'y':
 		print('aborted.')
 		return
 	ton.rollback_modes()
+
+	workdir = local.buffer.my_work_dir
+	version_file_path = os.path.join(workdir, 'VERSION')
+	if os.path.exists(version_file_path):
+		os.remove(version_file_path)
+
 	rollback_script_path = pkg_resources.resource_filename('mytonctrl', 'migrations/roll_back_001.sh')
 	run_args = ["bash", rollback_script_path]
-	exit_code = run_as_root(run_args)
+	run_as_root(run_args)
+	local.exit()
+
 
 def cleanup_validator_db(ton, args):
 	cleanup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/cleanup.sh')
