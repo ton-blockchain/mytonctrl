@@ -106,7 +106,7 @@ cd $SOURCES_DIR/${repo}
 
 pip3 install -U .  # TODO: make installation from git directly
 
-echo -e "${COLOR}[3/5]${ENDC} Running mytoninstaller"
+echo -e "${COLOR}[4/5]${ENDC} Running mytoninstaller"
 # DEBUG
 
 parent_name=$(ps -p $PPID -o comm=)
@@ -125,5 +125,5 @@ mkdir -p ${version_dir}
 echo ${migrate_version} > ${version_path}
 chown ${user}:${user} ${version_dir} ${version_path}
 
-echo -e "${COLOR}[4/4]${ENDC} Mytonctrl installation completed"
+echo -e "${COLOR}[5/5]${ENDC} Mytonctrl installation completed"
 exit 0

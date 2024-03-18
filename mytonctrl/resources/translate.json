@@ -14,6 +14,26 @@
 		"ru": "Показать статус TON",
 		"zh_TW": "顯示 TON 狀態"
 	},
+	"status_modes_cmd": {
+		"en": "Show MTC modes",
+		"ru": "Показать режимы MTC",
+		"zh_TW": "顯示 MTC 模式"
+	},
+	"enable_mode_cmd": {
+		"en": "Enable mode",
+		"ru": "Включить режим",
+		"zh_TW": "啟用模式"
+	},
+	"disable_mode_cmd": {
+		"en": "Disable mode",
+		"ru": "Выключить режим",
+		"zh_TW": "禁用模式"
+	},
+	"rollback_cmd" : {
+		"en": "Rollback to mytonctrl 1.0",
+		"ru": "Откатиться к mytonctrl 1.0",
+		"zh_TW": "回滾到 mytonctrl 1.0"
+	},
 	"seqno_cmd": {
 		"en": "Get seqno wallet",
 		"ru": "Получить seqno кошелька",
@@ -238,6 +258,11 @@
 		"en": "Validator efficiency: {0}",
 		"ru": "Эффективность валидатора: {0}",
 		"zh_TW": "驗證者效率: {0}"
+	},
+	"local_status_validator_efficiency_ver2": {
+		"en": "Validator efficiency, ver.2: {0}",
+		"ru": "Эффективность валидатора, вер.2: {0}",
+		"zh_TW": "驗證器效率，版本2： {0}"
 	},
 	"local_status_adnl_addr": {
 		"en": "ADNL address of local validator: {0}",

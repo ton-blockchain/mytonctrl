@@ -79,15 +79,15 @@ def ValidatorDownEvent(local):
 
 
 def Elections(local, ton):
-    usePool = local.db.get("usePool")
-    if usePool == True:
+    use_pool = ton.using_pool()
+    use_liquid_staking = ton.using_liquid_staking()
+    if use_pool:
         ton.PoolsUpdateValidatorSet()
-        ton.RecoverStake()
+    if use_liquid_staking:
+        ton.ControllersUpdateValidatorSet()
+    ton.RecoverStake()
+    if ton.using_validator():
         ton.ElectionEntry()
-    else:
-        ton.RecoverStake()
-        ton.ElectionEntry()
-# end define
 
 
 def Statistics(local):
@@ -353,7 +353,11 @@ def Offers(local, ton):
         offer_hash = offer.get("hash")
         if offer_hash in save_offers:
             offer_pseudohash = offer.get("pseudohash")
-            save_offer_pseudohash = save_offers.get(offer_hash)
+            save_offer = save_offers.get(offer_hash)
+            if isinstance(save_offer, list):  # new version of save offers {"hash": ["pseudohash", param_id]}
+                save_offer_pseudohash = save_offer[0]
+            else:  # old version of save offers {"hash": "pseudohash"}
+                save_offer_pseudohash = save_offer
             if offer_pseudohash == save_offer_pseudohash and offer_pseudohash is not None:
                 ton.VoteOffer(offer_hash)
 # end define
@@ -506,20 +510,20 @@ def Complaints(local, ton):
 
     # Voting for complaints
     config32 = ton.GetConfig32()
-    electionId = config32.get("startWorkTime")
-    complaints = ton.GetComplaints(electionId)  # get complaints from Elector
-    for c in complaints.values():
+    election_id = config32.get("startWorkTime")
+    complaints = ton.GetComplaints(election_id)  # get complaints from Elector
+    valid_complaints = ton.get_valid_complaints(complaints, election_id)
+    for c in valid_complaints.values():
         complaint_hash = c.get("hash")
-        if ton.complaint_is_valid(c):
-            ton.VoteComplaint(electionId, complaint_hash)
+        ton.VoteComplaint(election_id, complaint_hash)
 # end define
 
 
 def Slashing(local, ton):
-    isSlashing = local.db.get("isSlashing")
-    if isSlashing is not True:
+    is_slashing = local.db.get("isSlashing")
+    is_validator = ton.using_validator()
+    if is_slashing is not True or not is_validator:
         return
-    # end if
 
     # Creating complaints
     slash_time = local.buffer.slash_time

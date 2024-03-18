@@ -92,10 +92,10 @@ pip3 install psutil crc16 requests
 # build openssl 3.0
 echo -e "${COLOR}[2/6]${ENDC} Building OpenSSL 3.0"
 rm -rf $BIN_DIR/openssl_3
-git clone --branch openssl-3.1.4 https://github.com/openssl/openssl $BIN_DIR/openssl_3
+git clone https://github.com/openssl/openssl $BIN_DIR/openssl_3
 cd $BIN_DIR/openssl_3
 opensslPath=`pwd`
-git checkout 
+git checkout openssl-3.1.4
 ./config
 make build_libs -j$(nproc)
 
@@ -134,21 +134,24 @@ else
 	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
 fi
 
-# Компилируем из исходников
-echo -e "${COLOR}[4/6]${ENDC} Source Compilation"
+# Расчитываем количество процессоров для сборки
 if [[ "$OSTYPE" =~ darwin.* ]]; then
-	cpuNumber=$(sysctl -n hw.logicalcpu)
+	cpu_number=$(sysctl -n hw.logicalcpu)
 else
 	memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
-	cpuNumber=$(cat /proc/cpuinfo | grep "processor" | wc -l)
-	if [ ${cpuNumber} == 0 ]; then
+	cpu_number=$(($memory/2100000))
+	max_cpu_number=$(nproc)
+	if [ ${cpu_number} -gt ${max_cpu_number} ]; then
+		cpu_number=$((${max_cpu_number}-1))
+	fi
+	if [ ${cpu_number} == 0 ]; then
 		echo "Warning! insufficient RAM"
-		cpuNumber=1
+		cpu_number=1
 	fi
 fi
 
-echo "use ${cpuNumber} cpus"
-ninja -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
+echo -e "${COLOR}[4/6]${ENDC} Source compilation, use ${cpu_number} cpus"
+ninja -j ${cpu_number} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
