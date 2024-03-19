@@ -176,13 +176,27 @@ def Init(local, ton, console, argv):
 	local.db.config.logLevel = "debug" if console.debug else "info"
 	local.db.config.isLocaldbSaving = False
 	local.run()
-#end define
+
+
+def check_installer_user():
+	args = ["whoami"]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	username = process.stdout.decode("utf-8").strip()
+
+	args = ["ls", "-lh", "/var/ton-work/keys/"]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	output = process.stdout.decode("utf-8")
+	actual_user = output.split('\n')[1].split()[2]
+
+	if username != actual_user:
+		raise Exception(f'mytonctrl was installed by another user. Probably you need to launch mtc with `{actual_user}` user.')
+
 
 def PreUp(local, ton):
 	CheckMytonctrlUpdate(local)
+	check_installer_user()
 	check_vport(local, ton)
 	# CheckTonUpdate()
-#end define
 
 def Installer(args):
 	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
@@ -208,7 +222,7 @@ def GetAuthorRepoBranchFromArgs(args):
 	if arg2:
 		data["branch"] = arg2
 	return data
-#end define
+
 
 def check_vport(local, ton):
 	try:
@@ -222,7 +236,6 @@ def check_vport(local, ton):
 		result = client_socket.connect_ex((ip, addr.port))
 	if result != 0:
 		color_print(local.translate("vport_error"))
-#end define
 
 
 def fix_git_config(git_path: str):
