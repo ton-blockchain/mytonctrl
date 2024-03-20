@@ -1318,8 +1318,7 @@ class MyTonCore():
 				stake = account.balance - 10
 		#end if
 
-		pool_version = self.GetVersionFromCodeHash(account.codeHash)
-		is_single_nominator = pool_version is not None and 'spool' in pool_version
+		is_single_nominator = self.is_account_single_nominator(account)
 
 		if stake is None and usePool and not is_single_nominator:
 			stake = account.balance - 20
@@ -1377,7 +1376,6 @@ class MyTonCore():
 		addrB64 = wallet.addrB64
 		if wallet is None:
 			raise Exception("Validator wallet not found")
-		#end if
 
 		self.local.add_log("start ElectionEntry function", "debug")
 		# Check if validator is not synchronized
@@ -1386,7 +1384,6 @@ class MyTonCore():
 		if validatorOutOfSync > 60:
 			self.local.add_log("Validator is not synchronized", "error")
 			return
-		#end if
 
 		# Get startWorkTime and endWorkTime
 		fullElectorAddr = self.GetFullElectorAddr()
@@ -1425,17 +1422,15 @@ class MyTonCore():
 		if adnl_addr in entries:
 			self.local.add_log("Elections entry already completed", "info")
 			return
-		#end if
 
 		if usePool:
-			pool = self.GetPool(mode="stake")
+			pool = self.get_pool()
 			addrB64 = pool.addrB64
 		elif useController:
 			controllerAddr = self.GetController(mode="stake")
 			self.CheckController(controllerAddr)
 			self.CreateLoanRequest(controllerAddr)
 			addrB64 = controllerAddr
-		#end if
 
 		# Calculate stake
 		account = self.GetAccount(addrB64)
@@ -3547,38 +3542,42 @@ class MyTonCore():
 			pool = self.GetLocalPool(poolName)
 			pools.append(pool)
 		return pools
-	#end define
 
-	def GetPool(self, mode):
+	def get_pool(self):
 		pools = self.GetPools()
 		for pool in pools:
-			if mode == "stake" and self.IsPoolReadyToStake(pool.addrB64):
-				return pool
-			if mode == "vote" and self.IsPoolReadyToVote(pool.addrB64):
+			if self.is_pool_ready_to_stake(pool):
 				return pool
 		raise Exception("Validator pool not found or not ready")
-	#end define
 
-	def GetPoolLastSentStakeTime(self, addrB64):
-		poolData = self.GetPoolData(addrB64)
-		return poolData["stakeAt"]
-	#end define
+	def get_pool_last_sent_stake_time(self, addrB64):
+		pool_data = self.GetPoolData(addrB64)
+		return pool_data["stakeAt"]
 
-	def IsPoolReadyToStake(self, addrB64):
+	def is_pool_ready_to_stake(self, pool: Pool):
+		addr = pool.addrB64
+		account = self.GetAccount(addr)
+		is_single_nominator = self.is_account_single_nominator(account)
+		if self.using_single_nominator() and not is_single_nominator:
+			return False
+		try:  # check that account balance is enough for stake
+			stake = self.GetStake(account)
+			if not stake:
+				raise Exception(f'Stake is {stake}')
+		except Exception as e:
+			self.local.add_log(f"Failed to get stake for pool {addr}: {e}", "debug")
+			return False
 		now = get_timestamp()
 		config15 = self.GetConfig15()
-		lastSentStakeTime = self.GetPoolLastSentStakeTime(addrB64)
-		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
-		result = lastSentStakeTime + stakeFreezeDelay < now
-		print(f"{addrB64}: {result}. {lastSentStakeTime}, {stakeFreezeDelay}, {now}")
+		last_sent_stake_time = self.get_pool_last_sent_stake_time(addr)
+		stake_freeze_delay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
+		result = last_sent_stake_time + stake_freeze_delay < now
+		print(f"{addr}: {result}. {last_sent_stake_time}, {stake_freeze_delay}, {now}")
 		return result
-	#end define
 
-	def IsPoolReadyToVote(self, addrB64):
-		vwl = self.GetValidatorsWalletsList()
-		result = addrB64 in vwl
-		return result
-	#end define
+	def is_account_single_nominator(self, account: Account):
+		account_version = self.GetVersionFromCodeHash(account.codeHash)
+		return account_version is not None and 'spool' in account_version
 
 	def GetPoolData(self, addrB64):
 		self.local.add_log("start GetPoolData function", "debug")
