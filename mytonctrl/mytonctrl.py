@@ -190,6 +190,7 @@ def check_installer_user():
 
 	if username != actual_user:
 		raise Exception(f'mytonctrl was installed by another user. Probably you need to launch mtc with `{actual_user}` user.')
+#end define
 
 
 def PreUp(local, ton):
@@ -197,12 +198,15 @@ def PreUp(local, ton):
 	check_installer_user()
 	check_vport(local, ton)
 	# CheckTonUpdate()
+#end define
+
 
 def Installer(args):
 	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
 	args = ["python3", "-m", "mytoninstaller"]
 	subprocess.run(args)
 #end define
+
 
 def GetAuthorRepoBranchFromArgs(args):
 	data = dict()
@@ -222,6 +226,7 @@ def GetAuthorRepoBranchFromArgs(args):
 	if arg2:
 		data["branch"] = arg2
 	return data
+#end define
 
 
 def check_vport(local, ton):
@@ -236,6 +241,7 @@ def check_vport(local, ton):
 		result = client_socket.connect_ex((ip, addr.port))
 	if result != 0:
 		color_print(local.translate("vport_error"))
+#end define
 
 
 def fix_git_config(git_path: str):
