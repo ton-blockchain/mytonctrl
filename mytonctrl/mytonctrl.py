@@ -264,7 +264,8 @@ def check_git(input_args, default_repo, text):
 	git_path = f"{src_dir}/{default_repo}"
 	fix_git_config(git_path)
 	default_author = "ton-blockchain"
-	default_branch = "master"
+	# default_branch = "master"
+	default_branch = "mytonctrl2"
 
 	# Get author, repo, branch
 	local_author, local_repo = get_git_author_and_repo(git_path)
