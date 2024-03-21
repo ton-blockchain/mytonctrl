@@ -1316,7 +1316,6 @@ class MyTonCore():
 			# Limit stake to maximum available amount minus 10 (for transaction fees)
 			if stake > account.balance - 10:
 				stake = account.balance - 10
-		#end if
 
 		pool_version = self.GetVersionFromCodeHash(account.codeHash)
 		is_single_nominator = pool_version is not None and 'spool' in pool_version
@@ -1331,9 +1330,10 @@ class MyTonCore():
 				self.local.add_log("Wrong stakePercent value. Using default stake.", "warning")
 			elif len(vconfig.validators) == 0:
 				stake = int(account.balance*sp/2)
+				if stake < config17["minStake"]:  # not enough funds to divide them by 2
+					stake = int(account.balance*sp)
 			elif len(vconfig.validators) > 0:
 				stake = int(account.balance*sp)
-		#end if
 
 		# Check if we have enough coins
 		if stake > config17["maxStake"]:
@@ -1348,10 +1348,8 @@ class MyTonCore():
 			text = "Don't have enough coins. stake: {stake}, account balance: {balance}".format(stake=stake, balance=account.balance)
 			# self.local.add_log(text, "error")
 			raise Exception(text)
-		#end if
 
 		return stake
-	#end define
 
 	def GetMaxFactor(self):
 		# Either use defined maxFactor, or set maximal allowed by config17

@@ -176,19 +176,37 @@ def Init(local, ton, console, argv):
 	local.db.config.logLevel = "debug" if console.debug else "info"
 	local.db.config.isLocaldbSaving = False
 	local.run()
+
+
+def check_installer_user():
+	args = ["whoami"]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	username = process.stdout.decode("utf-8").strip()
+
+	args = ["ls", "-lh", "/var/ton-work/keys/"]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	output = process.stdout.decode("utf-8")
+	actual_user = output.split('\n')[1].split()[2]
+
+	if username != actual_user:
+		raise Exception(f'mytonctrl was installed by another user. Probably you need to launch mtc with `{actual_user}` user.')
 #end define
+
 
 def PreUp(local, ton):
 	CheckMytonctrlUpdate(local)
+	check_installer_user()
 	check_vport(local, ton)
 	# CheckTonUpdate()
 #end define
+
 
 def Installer(args):
 	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
 	args = ["python3", "-m", "mytoninstaller"]
 	subprocess.run(args)
 #end define
+
 
 def GetAuthorRepoBranchFromArgs(args):
 	data = dict()
@@ -209,6 +227,7 @@ def GetAuthorRepoBranchFromArgs(args):
 		data["branch"] = arg2
 	return data
 #end define
+
 
 def check_vport(local, ton):
 	try:
@@ -245,7 +264,8 @@ def check_git(input_args, default_repo, text):
 	git_path = f"{src_dir}/{default_repo}"
 	fix_git_config(git_path)
 	default_author = "ton-blockchain"
-	default_branch = "master"
+	# default_branch = "master"
+	default_branch = "mytonctrl2"
 
 	# Get author, repo, branch
 	local_author, local_repo = get_git_author_and_repo(git_path)
