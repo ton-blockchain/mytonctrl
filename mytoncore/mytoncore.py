@@ -1376,6 +1376,7 @@ class MyTonCore():
 		addrB64 = wallet.addrB64
 		if wallet is None:
 			raise Exception("Validator wallet not found")
+		#end if
 
 		self.local.add_log("start ElectionEntry function", "debug")
 		# Check if validator is not synchronized
@@ -1384,6 +1385,7 @@ class MyTonCore():
 		if validatorOutOfSync > 60:
 			self.local.add_log("Validator is not synchronized", "error")
 			return
+		#end if
 
 		# Get startWorkTime and endWorkTime
 		fullElectorAddr = self.GetFullElectorAddr()
@@ -1405,6 +1407,7 @@ class MyTonCore():
 			if (startWorkTime - now) > self.local.db["participateBeforeEnd"] and \
 			   (now + self.local.db["periods"]["elections"]) < startWorkTime:
 				return
+		#end if
 
 		vconfig = self.GetValidatorConfig()
 
@@ -1414,14 +1417,17 @@ class MyTonCore():
 			if base64.b64decode(a.id) == adnl_addr_bytes:
 				have_adnl = True
 				break
+		#end for
 		if not have_adnl:
 			raise Exception('ADNL address is not found')
+		#end if
 
 		# Check if election entry already completed
 		entries = self.GetElectionEntries()
 		if adnl_addr in entries:
 			self.local.add_log("Elections entry already completed", "info")
 			return
+		#end if
 
 		if usePool:
 			pool = self.get_pool()
@@ -3542,6 +3548,7 @@ class MyTonCore():
 			pool = self.GetLocalPool(poolName)
 			pools.append(pool)
 		return pools
+	#end define
 
 	def get_pool(self):
 		pools = self.GetPools()
@@ -3549,10 +3556,12 @@ class MyTonCore():
 			if self.is_pool_ready_to_stake(pool):
 				return pool
 		raise Exception("Validator pool not found or not ready")
+	#end define
 
 	def get_pool_last_sent_stake_time(self, addrB64):
 		pool_data = self.GetPoolData(addrB64)
 		return pool_data["stakeAt"]
+	#end define
 
 	def is_pool_ready_to_stake(self, pool: Pool):
 		addr = pool.addrB64
@@ -3574,10 +3583,12 @@ class MyTonCore():
 		result = last_sent_stake_time + stake_freeze_delay < now
 		print(f"{addr}: {result}. {last_sent_stake_time}, {stake_freeze_delay}, {now}")
 		return result
+	#end define
 
 	def is_account_single_nominator(self, account: Account):
 		account_version = self.GetVersionFromCodeHash(account.codeHash)
 		return account_version is not None and 'spool' in account_version
+	#end define
 
 	def GetPoolData(self, addrB64):
 		self.local.add_log("start GetPoolData function", "debug")
