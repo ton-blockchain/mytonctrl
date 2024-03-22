@@ -7,6 +7,37 @@ from modules.pool import PoolModule
 
 class NominatorPoolModule(PoolModule):
 
+    def do_create_pool(self, pool_name, validator_reward_share_percent, max_nominators_count, min_validator_stake,
+                       min_nominator_stake):
+        self.ton.local.add_log("start CreatePool function", "debug")
+        validator_reward_share = int(validator_reward_share_percent * 100)
+
+        self.check_download_pool_contract_scripts()
+
+        file_path = self.ton.poolsDir + pool_name
+        if os.path.isfile(file_path + ".addr"):
+            self.ton.local.add_log("CreatePool warning: Pool already exists: " + file_path, "warning")
+            return
+        # end if
+
+        fift_script = self.ton.contractsDir + "nominator-pool/func/new-pool.fif"
+        wallet = self.ton.GetValidatorWallet()
+        args = [fift_script, wallet.addrB64, validator_reward_share, max_nominators_count, min_validator_stake,
+                min_nominator_stake, file_path]
+        result = self.ton.fift.Run(args)
+        if "Saved pool" not in result:
+            raise Exception("CreatePool error: " + result)
+        # end if
+
+        pools = self.ton.GetPools()
+        new_pool = self.ton.GetLocalPool(pool_name)
+        for pool in pools:
+            if pool.name != new_pool.name and pool.addrB64 == new_pool.addrB64:
+                new_pool.Delete()
+                raise Exception("CreatePool error: Pool with the same parameters already exists.")
+        # end for
+    # end define
+
     def new_pool(self, args):
         try:
             pool_name = args[0]
@@ -17,7 +48,7 @@ class NominatorPoolModule(PoolModule):
         except:
             color_print("{red}Bad args. Usage:{endc} new_pool <pool-name> <validator-reward-share-percent> <max-nominators-count> <min-validator-stake> <min-nominator-stake>")
             return
-        self.ton.CreatePool(pool_name, validator_reward_share_percent, max_nominators_count, min_validator_stake, min_nominator_stake)
+        self.do_create_pool(pool_name, validator_reward_share_percent, max_nominators_count, min_validator_stake, min_nominator_stake)
         color_print("NewPool - {green}OK{endc}")
 
     def do_activate_pool(self, pool, ex=True):
