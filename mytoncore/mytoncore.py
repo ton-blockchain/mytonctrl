@@ -1733,13 +1733,6 @@ class MyTonCore():
 		return wallet.addrB64, key
 	#end define
 
-	def import_pool(self, pool_name, addr_b64):
-		addr_bytes = self.addr_b64_to_bytes(addr_b64)
-		pool_path = self.poolsDir + pool_name
-		with open(pool_path + ".addr", 'wb') as file:
-			file.write(addr_bytes)
-	#end define
-
 	def GetWalletsNameList(self):
 		self.local.add_log("start GetWalletsNameList function", "debug")
 		walletsNameList = list()
@@ -3394,37 +3387,6 @@ class MyTonCore():
 		if len(err) > 0:
 			raise Exception(err)
 		#end if
-	#end define
-
-	def CreatePool(self, poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake):
-		self.local.add_log("start CreatePool function", "debug")
-		validatorRewardShare = int(validatorRewardSharePercent * 100)
-		contractPath = self.contractsDir + "nominator-pool/"
-		if not os.path.isdir(contractPath):
-			self.DownloadContract("https://github.com/ton-blockchain/nominator-pool")
-		#end if
-
-		filePath = self.poolsDir + poolName
-		if os.path.isfile(filePath + ".addr"):
-			self.local.add_log("CreatePool warning: Pool already exists: " + filePath, "warning")
-			return
-		#end if
-
-		fiftScript = self.contractsDir + "nominator-pool/func/new-pool.fif"
-		wallet = self.GetValidatorWallet()
-		args = [fiftScript, wallet.addrB64, validatorRewardShare, maxNominatorsCount, minValidatorStake, minNominatorStake, filePath]
-		result = self.fift.Run(args)
-		if "Saved pool" not in result:
-			raise Exception("CreatePool error: " + result)
-		#end if
-
-		pools = self.GetPools()
-		newPool = self.GetLocalPool(poolName)
-		for pool in pools:
-			if pool.name != newPool.name and pool.addrB64 == newPool.addrB64:
-				newPool.Delete()
-				raise Exception("CreatePool error: Pool with the same parameters already exists.")
-		#end for
 	#end define
 
 	def WithdrawFromPoolProcess(self, poolAddr, amount):
