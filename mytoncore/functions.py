@@ -426,10 +426,15 @@ def parse_db_stats(path: str):
     result = {}
     for line in lines:
         s = line.strip().split(maxsplit=1)
-        result[s[0]] = {}
         items = re.findall(r"(\S+)\s:\s(\S+)", s[1])
-        for k, v in items:
-            result[s[0]][k] = v
+        if len(items) == 1:
+            item = items[0]
+            if float(item[1]) > 0:
+                result[s[0]] = float(item[1])
+        else:
+            if any(float(v) > 0 for k, v in items):
+                result[s[0]] = {}
+                result[s[0]] = {k: float(v) for k, v in items}
     return result
 
 
