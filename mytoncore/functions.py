@@ -8,8 +8,8 @@ import json
 import requests
 import subprocess
 
-from mytoncore.mytoncore import MyTonCore, Dec2HexAddr
-from mytoncore.tonblocksscanner import TonBlocksScanner
+from mytoncore.mytoncore import MyTonCore
+from mytoncore.utils import parse_db_stats
 from mypylib.mypylib import (
     b2mb,
     get_timestamp,
@@ -419,6 +419,47 @@ def GetValidatorProcessInfo():
 # end define
 
 
+def get_db_stats():
+    result = {
+        'rocksdb': {
+            'ok': True,
+            'message': '',
+            'data': {}
+        },
+        'celldb': {
+            'ok': True,
+            'message': '',
+            'data': {}
+        },
+    }
+    rocksdb_stats_path = '/var/ton-work/db/db_stats.txt'
+    celldb_stats_path = '/var/ton-work/db/celldb/db_stats.txt'
+    if os.path.exists(rocksdb_stats_path):
+        try:
+            result['rocksdb']['data'] = parse_db_stats(rocksdb_stats_path)
+        except Exception as e:
+            result['rocksdb']['ok'] = False
+            result['rocksdb']['message'] = f'failed to fetch db stats: {e}'
+    else:
+        result['rocksdb']['ok'] = False
+        result['rocksdb']['message'] = 'db stats file is not exists'
+    # end if
+
+    if os.path.exists(celldb_stats_path):
+        try:
+            result['celldb']['data'] = parse_db_stats(celldb_stats_path)
+        except Exception as e:
+            result['celldb']['ok'] = False
+            result['celldb']['message'] = f'failed to fetch db stats: {e}'
+    else:
+        result['celldb']['ok'] = False
+        result['celldb']['message'] = 'db stats file is not exists'
+    # end if
+
+    return result
+# end define
+
+
 def Telemetry(local, ton):
     sendTelemetry = local.db.get("sendTelemetry")
     if sendTelemetry is not True:
@@ -442,6 +483,7 @@ def Telemetry(local, ton):
     data["swap"] = GetSwapInfo()
     data["uname"] = GetUname()
     data["vprocess"] = GetValidatorProcessInfo()
+    data["dbStats"] = get_db_stats()
     elections = local.try_function(ton.GetElectionEntries)
     complaints = local.try_function(ton.GetComplaints)
 
