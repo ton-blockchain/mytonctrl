@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-l
 import os
-import re
 import sys
 import psutil
 import time
@@ -9,8 +8,8 @@ import json
 import requests
 import subprocess
 
-from mytoncore.mytoncore import MyTonCore, Dec2HexAddr
-from mytoncore.tonblocksscanner import TonBlocksScanner
+from mytoncore.mytoncore import MyTonCore
+from mytoncore.utils import parse_db_stats
 from mypylib.mypylib import (
     b2mb,
     get_timestamp,
@@ -420,24 +419,6 @@ def GetValidatorProcessInfo():
 # end define
 
 
-def parse_db_stats(path: str):
-    with open(path) as f:
-        lines = f.readlines()
-    result = {}
-    for line in lines:
-        s = line.strip().split(maxsplit=1)
-        items = re.findall(r"(\S+)\s:\s(\S+)", s[1])
-        if len(items) == 1:
-            item = items[0]
-            if float(item[1]) > 0:
-                result[s[0]] = float(item[1])
-        else:
-            if any(float(v) > 0 for k, v in items):
-                result[s[0]] = {}
-                result[s[0]] = {k: float(v) for k, v in items}
-    return result
-
-
 def get_db_stats():
     result = {
         'rocksdb': {
@@ -462,6 +443,8 @@ def get_db_stats():
     else:
         result['rocksdb']['ok'] = False
         result['rocksdb']['message'] = 'db stats file is not exists'
+    # end if
+
     if os.path.exists(celldb_stats_path):
         try:
             result['celldb']['data'] = parse_db_stats(celldb_stats_path)
@@ -471,7 +454,10 @@ def get_db_stats():
     else:
         result['celldb']['ok'] = False
         result['celldb']['message'] = 'db stats file is not exists'
+    # end if
+
     return result
+# end define
 
 
 def Telemetry(local, ton):
@@ -497,7 +483,7 @@ def Telemetry(local, ton):
     data["swap"] = GetSwapInfo()
     data["uname"] = GetUname()
     data["vprocess"] = GetValidatorProcessInfo()
-    data["db"] = get_db_stats()
+    data["dbStats"] = get_db_stats()
     elections = local.try_function(ton.GetElectionEntries)
     complaints = local.try_function(ton.GetComplaints)
 
