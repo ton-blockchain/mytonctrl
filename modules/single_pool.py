@@ -8,6 +8,8 @@ from modules.pool import PoolModule
 
 class SingleNominatorModule(PoolModule):
 
+    description = 'Orbs\'s single nominator pools.'
+
     def do_create_single_pool(self, pool_name, owner_address):
         self.ton.local.add_log("start create_single_pool function", "debug")
 

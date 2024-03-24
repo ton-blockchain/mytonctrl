@@ -10,6 +10,8 @@ from modules.module import MtcModule
 
 class ControllerModule(MtcModule):
 
+    description = 'Liquid staking controllers.'
+
     def do_create_controllers(self):
         new_controllers = self.ton.GetControllers()
         old_controllers = self.ton.local.db.get("using_controllers", list())

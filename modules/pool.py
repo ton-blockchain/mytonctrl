@@ -6,6 +6,8 @@ from modules.module import MtcModule
 
 class PoolModule(MtcModule):
 
+    description = 'Basic pools functions.'
+
     def print_pools_list(self, args):
         table = list()
         table += [["Name", "Status", "Balance", "Version", "Address"]]

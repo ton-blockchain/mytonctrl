@@ -6,6 +6,9 @@ from mytoncore.functions import Elections
 
 class ValidatorModule(MtcModule):
 
+    description = ('Validator functions. Activates participating in elections and staking. '
+                   'If pools and l/s modes are disabled stakes from validator wallet.')
+
     def vote_offer(self, args):
         if len(args) == 0:
             color_print("{red}Bad args. Usage:{endc} vo <offer-hash>")

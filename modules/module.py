@@ -4,6 +4,8 @@ from mytoncore.mytoncore import MyTonCore
 
 class MtcModule(ABC):
 
+    description = ''
+
     def __init__(self, ton, local, *args, **kwargs):
         self.ton: MyTonCore = ton
         self.local = local
