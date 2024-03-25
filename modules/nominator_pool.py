@@ -8,6 +8,7 @@ from modules.pool import PoolModule
 class NominatorPoolModule(PoolModule):
 
     description = 'Standard nominator pools.'
+    default_value = False
 
     def do_create_pool(self, pool_name, validator_reward_share_percent, max_nominators_count, min_validator_stake,
                        min_nominator_stake):

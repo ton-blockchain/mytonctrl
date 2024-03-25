@@ -424,13 +424,18 @@ def sl(ton, args):
 	Slashing(ton.local, ton)
 #end define
 
+
 def mode_status(ton, args):
+	from modules import get_mode
 	modes = ton.get_modes()
-	text = "########## {bold}Modes{endc} ########## \n"
-	for mode in modes:
-		status = '{green}enabled{endc}' if modes[mode] else '{red}disabled{endc}'
-		text += f"{mode}: {status}\n"
-	color_print(text)
+	table = [["Name", "Status", "Description"]]
+	for mode_name in modes:
+		mode = get_mode(mode_name)
+		status = color_text('{green}enabled{endc}' if modes[mode_name] else '{red}disabled{endc}')
+		table.append([mode_name, status, mode.description])
+	print_table(table)
+#end define
+
 
 def PrintStatus(local, ton, args):
 	opt = None
