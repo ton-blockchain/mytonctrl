@@ -4064,6 +4064,67 @@ def GetSwapInfo():
 	return result
 #end define
 
+
+def parse_db_stats(path: str):
+	with open(path) as f:
+		lines = f.readlines()
+	result = {}
+	for line in lines:
+		s = line.strip().split(maxsplit=1)
+		items = re.findall(r"(\S+)\s:\s(\S+)", s[1])
+		if len(items) == 1:
+			item = items[0]
+			if float(item[1]) > 0:
+				result[s[0]] = float(item[1])
+		else:
+			if any(float(v) > 0 for k, v in items):
+				result[s[0]] = {}
+				result[s[0]] = {k: float(v) for k, v in items}
+	return result
+# end define
+
+
+def get_db_stats():
+    result = {
+        'rocksdb': {
+            'ok': True,
+            'message': '',
+            'data': {}
+        },
+        'celldb': {
+            'ok': True,
+            'message': '',
+            'data': {}
+        },
+    }
+    rocksdb_stats_path = '/var/ton-work/db/db_stats.txt'
+    celldb_stats_path = '/var/ton-work/db/celldb/db_stats.txt'
+    if os.path.exists(rocksdb_stats_path):
+        try:
+            result['rocksdb']['data'] = parse_db_stats(rocksdb_stats_path)
+        except Exception as e:
+            result['rocksdb']['ok'] = False
+            result['rocksdb']['message'] = f'failed to fetch db stats: {e}'
+    else:
+        result['rocksdb']['ok'] = False
+        result['rocksdb']['message'] = 'db stats file is not exists'
+    # end if
+
+    if os.path.exists(celldb_stats_path):
+        try:
+            result['celldb']['data'] = parse_db_stats(celldb_stats_path)
+        except Exception as e:
+            result['celldb']['ok'] = False
+            result['celldb']['message'] = f'failed to fetch db stats: {e}'
+    else:
+        result['celldb']['ok'] = False
+        result['celldb']['message'] = 'db stats file is not exists'
+    # end if
+
+    return result
+# end define
+
+
 def GetValidatorProcessInfo():
 	pid = get_service_pid("validator")
 	if pid == None or pid == 0:
@@ -4108,6 +4169,7 @@ def Telemetry(ton):
 	data["swap"] = GetSwapInfo()
 	data["uname"] = GetUname()
 	data["vprocess"] = GetValidatorProcessInfo()
+	data["dbStats"] = get_db_stats()
 	elections = local.try_function(ton.GetElectionEntries)
 	complaints = local.try_function(ton.GetComplaints)
 
