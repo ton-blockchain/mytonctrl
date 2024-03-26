@@ -11,6 +11,7 @@ from mypylib.mypylib import MyPyClass, run_as_root, color_print
 from mypyconsole.mypyconsole import MyPyConsole
 
 from mytoninstaller.config import GetLiteServerConfig, get_ls_proxy_config
+from mytoninstaller.node_args import get_node_args
 from mytoninstaller.utils import GetInitBlock
 from mytoncore.utils import dict2b64, str2bool, b642dict
 
@@ -111,16 +112,22 @@ def Status(local, args):
 	liteserver_key = keys_dir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
+	statuses = {
+		'Full node status': os.path.isfile(local.buffer.vconfig_path),
+		'Mytoncore status': os.path.isfile(local.buffer.mconfig_path),
+		'V.console status': os.path.isfile(server_key) or os.path.isfile(client_key),
+		'Liteserver status': os.path.isfile(liteserver_pubkey)
+	}
 
-	fnStatus = os.path.isfile(local.buffer.vconfig_path)
-	mtcStatus = os.path.isfile(local.buffer.mconfig_path)
-	vcStatus = os.path.isfile(server_key) or os.path.isfile(client_key)
-	lsStatus = os.path.isfile(liteserver_pubkey)
+	color_print("{cyan}===[ Services status ]==={endc}")
+	for item in statuses.items():
+		status = '{green}enabled{endc}' if item[1] else '{red}disabled{endc}'
+		color_print(f"{item[0]}: {status}")
 
-	print("Full node status:", fnStatus)
-	print("Mytoncore status:", mtcStatus)
-	print("V.console status:", vcStatus)
-	print("Liteserver status:", lsStatus)
+	node_args = get_node_args()
+	color_print("{cyan}===[ Node arguments ]==={endc}")
+	for key, value in node_args.items():
+		print(f"{key}: {value}")
 #end define
 
 
