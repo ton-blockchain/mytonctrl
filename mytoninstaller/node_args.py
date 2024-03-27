@@ -26,6 +26,8 @@ def get_node_args(command: str = None):
         elif key:
             result[key] = c
             key = ''
+    if key:
+        result[key] = ''
     return result
 
 
