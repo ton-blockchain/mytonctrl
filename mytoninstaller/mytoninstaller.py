@@ -25,7 +25,9 @@ from mytoninstaller.settings import (
 	EnableTonHttpApi,
 	DangerousRecoveryValidatorConfigFile,
 	CreateSymlinks,
-	enable_ls_proxy
+	enable_ls_proxy,
+	enable_ton_storage,
+	enable_ton_storage_provider
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
@@ -172,6 +174,7 @@ def Enable(local, args):
 		print("'JR' - jsonrpc")
 		print("'THA' - ton-http-api")
 		print("'LSP' - ls-proxy")
+		print("'TSP' - ton-storage + ton-storage-provider")
 		print("Example: 'enable FN'")
 		return
 	if name == "THA":
@@ -236,6 +239,9 @@ def Event(local, name):
 		EnableTonHttpApi(local)
 	if name == "enableLSP":
 		enable_ls_proxy(local)
+	if name == "enableTSP":
+		enable_ton_storage(local)
+		enable_ton_storage_provider(local)
 	if name == "clc":
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]

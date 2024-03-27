@@ -17,7 +17,7 @@ from mypylib.mypylib import (
 	Dict
 )
 from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, get_ed25519_pubkey
-from mytoninstaller.config import SetConfig, GetConfig, get_own_ip
+from mytoninstaller.config import SetConfig, GetConfig, get_own_ip, backup_config
 from mytoncore.utils import hex2b64
 
 
@@ -439,8 +439,8 @@ def EnableJsonRpc(local):
 
 	jsonrpcinstaller_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'jsonrpcinstaller.sh')
 	local.add_log(f"Running script: {jsonrpcinstaller_path}", "debug")
-	exitCode = run_as_root(["bash", jsonrpcinstaller_path, "-u", user])  # TODO: fix path
-	if exitCode == 0:
+	exit_code = run_as_root(["bash", jsonrpcinstaller_path, "-u", user])  # TODO: fix path
+	if exit_code == 0:
 		text = "EnableJsonRpc - {green}OK{endc}"
 	else:
 		text = "EnableJsonRpc - {red}Error{endc}"
@@ -452,8 +452,8 @@ def EnableTonHttpApi(local):
 	user = local.buffer.user
 
 	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'tonhttpapiinstaller.sh')
-	exitCode = run_as_root(["bash", ton_http_api_installer_path, "-u", user])
-	if exitCode == 0:
+	exit_code = run_as_root(["bash", ton_http_api_installer_path, "-u", user])
+	if exit_code == 0:
 		text = "EnableTonHttpApi - {green}OK{endc}"
 	else:
 		text = "EnableTonHttpApi - {red}Error{endc}"
@@ -472,9 +472,10 @@ def enable_ls_proxy(local):
 
 	installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'ls_proxy_installer.sh')
 	local.add_log(f"Running script: {installer_path}", "debug")
-	exitCode = run_as_root(["bash", installer_path, "-u", user])
-	if exitCode != 0:
+	exit_code = run_as_root(["bash", installer_path, "-u", user])
+	if exit_code != 0:
 		color_print("enable_ls_proxy - {red}Error{endc}")
+		raise Exception("enable_ls_proxy - Error")
 	#end if
 
 	# Прописать автозагрузку
@@ -517,6 +518,142 @@ def enable_ls_proxy(local):
 	# start ls_proxy
 	start_service(local, bin_name)
 	color_print("enable_ls_proxy - {green}OK{endc}")
+#end define
+
+def enable_ton_storage(local):
+	local.add_log("start enable_ton_storage function", "debug")
+	user = local.buffer.user
+	udp_port = random.randint(2000, 65000)
+	api_port = random.randint(2000, 65000)
+	bin_name = "ton_storage"
+	db_path = f"/var/{bin_name}"
+	bin_path = f"{db_path}/{bin_name}"
+	config_path = f"{db_path}/tonutils-storage-db/config.json"
+	network_config = "/usr/bin/ton/global.config.json"
+
+	installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'ton_storage_installer.sh')
+	local.add_log(f"Running script: {installer_path}", "debug")
+	exit_code = run_as_root(["bash", installer_path, "-u", user])
+	if exit_code != 0:
+		color_print("enable_ton_storage - {red}Error{endc}")
+		raise Exception("enable_ton_storage - Error")
+	#end if
+
+	# Прописать автозагрузку
+	start_cmd = f"{bin_path} -network-config {network_config} -daemon -api 127.0.0.1:{api_port}"
+	add2systemd(name=bin_name, user=user, start=start_cmd, workdir=db_path, force=True)
+
+	# Первый запуск - создание конфига
+	start_service(local, bin_name, sleep=10)
+	stop_service(local, bin_name)
+
+	# read ton_storage config
+	local.add_log("read ton_storage config", "debug")
+	ton_storage_config = GetConfig(path=config_path)
+
+	# prepare config
+	ton_storage_config.ListenAddr = f"0.0.0.0:{udp_port}"
+	ton_storage_config.ExternalIP = get_own_ip()
+
+	# write ton_storage config
+	local.add_log("write ton_storage config", "debug")
+	SetConfig(path=config_path, data=ton_storage_config)
+
+	# backup config
+	backup_config(local, config_path)
+
+	# read mconfig
+	local.add_log("read mconfig", "debug")
+	mconfig_path = local.buffer.mconfig_path
+	mconfig = GetConfig(path=mconfig_path)
+
+	# edit mytoncore config file
+	local.add_log("edit mytoncore config file", "debug")
+	ton_storage = Dict()
+	ton_storage.udp_port = udp_port
+	ton_storage.api_port = api_port
+	mconfig.ton_storage = ton_storage
+
+	# write mconfig
+	local.add_log("write mconfig", "debug")
+	SetConfig(path=mconfig_path, data=mconfig)
+
+	# start ton_storage
+	start_service(local, bin_name)
+	color_print("enable_ton_storage - {green}OK{endc}")
+#end define
+
+def enable_ton_storage_provider(local):
+	local.add_log("start enable_ton_storage_provider function", "debug")
+	user = local.buffer.user
+	udp_port = random.randint(2000, 65000)
+	bin_name = "ton_storage_provider"
+	db_path = f"/var/{bin_name}"
+	bin_path = f"{db_path}/{bin_name}"
+	config_path = f"{db_path}/config.json"
+	network_config = "/usr/bin/ton/global.config.json"
+
+	installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'ton_storage_provider_installer.sh')
+	local.add_log(f"Running script: {installer_path}", "debug")
+	exit_code = run_as_root(["bash", installer_path, "-u", user])
+	if exit_code != 0:
+		color_print("enable_ton_storage_provider - {red}Error{endc}")
+		raise Exception("enable_ton_storage_provider - Error")
+	#end if
+
+	# Прописать автозагрузку
+	start_cmd = f"{bin_path} -network-config {network_config}"
+	add2systemd(name=bin_name, user=user, start=start_cmd, workdir=db_path, force=True)
+
+	# Первый запуск - создание конфига
+	start_service(local, bin_name, sleep=10)
+	stop_service(local, bin_name)
+
+	# read mconfig
+	local.add_log("read mconfig", "debug")
+	mconfig_path = local.buffer.mconfig_path
+	mconfig = GetConfig(path=mconfig_path)
+
+	# read ton_storage_provider config
+	local.add_log("read ton_storage_provider config", "debug")
+	config = GetConfig(path=config_path)
+
+	# prepare config
+	config.ListenAddr = f"0.0.0.0:{udp_port}"
+	config.ExternalIP = get_own_ip()
+	config.Storages[0].BaseURL = f"http://127.0.0.1:{mconfig.ton_storage.api_port}"
+
+	# write ton_storage_provider config
+	local.add_log("write ton_storage_provider config", "debug")
+	SetConfig(path=config_path, data=config)
+
+	# backup config
+	backup_config(local, config_path)
+
+	# get provider pubkey
+	key_bytes = base64.b64decode(config.ProviderKey)
+	pubkey_bytes = key_bytes[32:64]
+
+	# edit mytoncore config file
+	local.add_log("edit mytoncore config file", "debug")
+	provider = Dict()
+	provider.udp_port = udp_port
+	provider.config_path = config_path
+	provider.pubkey = pubkey_bytes.hex()
+	mconfig.ton_storage.provider = provider
+
+	# write mconfig
+	local.add_log("write mconfig", "debug")
+	SetConfig(path=mconfig_path, data=mconfig)
+
+	# Подтянуть событие в mytoncore.py
+	cmd = 'python3 -m mytoncore -e "enable_ton_storage_provider"'
+	args = ["su", "-l", user, "-c", cmd]
+	subprocess.run(args)
+
+	# start ton_storage_provider
+	start_service(local, bin_name)
+	color_print("enable_ton_storage_provider - {green}OK{endc}")
 #end define
 
 def DangerousRecoveryValidatorConfigFile(local):

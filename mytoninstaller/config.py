@@ -34,6 +34,14 @@ def SetConfig(**kwargs):
 #end define
 
 
+def backup_config(local, config_path):
+	backup_path = f"{config_path}.backup"
+	local.add_log(f"Backup config file '{config_path}' to '{backup_path}'", "debug")
+	args = ["cp", config_path, backup_path]
+	subprocess.run(args)
+#end define
+
+
 def BackupVconfig(local):
 	local.add_log("Backup validator config file 'config.json' to 'config.json.backup'", "debug")
 	vconfig_path = local.buffer.vconfig_path

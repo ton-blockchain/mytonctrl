@@ -1656,17 +1656,11 @@ class MyTonCore():
 		if os.path.isfile(walletPath + ".pk") and "v3" not in version:
 			self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
 		else:
-			if "v1" in version:
-				fiftScript = "new-wallet.fif"
-				args = [fiftScript, workchain, walletPath]
-			if "v2" in version:
-				fiftScript = "new-wallet-v2.fif"
-				args = [fiftScript, workchain, walletPath]
-			if "v3" in version:
-				fiftScript = "new-wallet-v3.fif"
-				args = [fiftScript, workchain, subwallet, walletPath]
-			result = self.fift.Run(args)
+			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+				wallet_path=wallet_path, subwallet=subwallet)
+			result = self.fift.Run(fift_args)
 			if "Creating new" not in result:
+				print(result)
 				raise Exception("CreateWallet error")
 			#end if
 		wallet = self.GetLocalWallet(name, version)
@@ -1715,6 +1709,49 @@ class MyTonCore():
 		with open(wallet_path + ".pk", 'wb') as file:
 			file.write(pk_bytes)
 		return wallet_name
+	#end define
+
+	def import_wallet_with_version(self, key, version, **kwargs):
+		wallet_name = kwargs.get("wallet_name")
+		workchain = kwargs.get("workchain", 0)
+		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
+		subwallet = kwargs.get("subwallet", subwallet_default)
+		if type(key) == bytes:
+			pk_bytes = key
+		else:
+			pk_bytes = base64.b64decode(key)
+		if wallet_name == None:
+			wallet_name = self.GenerateWalletName()
+		wallet_path = self.walletsDir + wallet_name
+		with open(wallet_path + ".pk", 'wb') as file:
+			file.write(pk_bytes)
+		fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+			wallet_path=wallet_path, subwallet=subwallet)
+		result = self.fift.Run(fift_args)
+		if "Creating new" not in result:
+			print(result)
+			raise Exception("import_wallet_with_version error")
+		wallet = self.GetLocalWallet(wallet_name, version)
+		self.SetWalletVersion(wallet.addrB64, version)
+		return wallet
+	#end define
+
+	def get_new_wallet_fift_args(self, version, **kwargs):
+		workchain = kwargs.get("workchain")
+		wallet_path = kwargs.get("wallet_path")
+		subwallet = kwargs.get("subwallet")
+		if "v1" in version:
+			fift_script = "new-wallet.fif"
+			args = [fift_script, workchain, wallet_path]
+		elif "v2" in version:
+			fift_script = "new-wallet-v2.fif"
+			args = [fift_script, workchain, wallet_path]
+		elif "v3" in version:
+			fift_script = "new-wallet-v3.fif"
+			args = [fift_script, workchain, subwallet, wallet_path]
+		else:
+			raise Exception(f"get_wallet_fift error: fift script for `{version}` not found")
+		return args
 	#end define
 
 	def addr_b64_to_bytes(self, addr_b64):

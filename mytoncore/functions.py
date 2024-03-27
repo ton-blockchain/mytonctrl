@@ -5,11 +5,13 @@ import sys
 import psutil
 import time
 import json
+import base64
 import requests
 import subprocess
 
 from mytoncore.mytoncore import MyTonCore
 from mytoncore.utils import parse_db_stats
+from mytoninstaller.config import GetConfig
 from mypylib.mypylib import (
     b2mb,
     get_timestamp,
@@ -26,8 +28,8 @@ def Init(local):
     # Event reaction
     if ("-e" in sys.argv):
         x = sys.argv.index("-e")
-        eventName = sys.argv[x+1]
-        Event(local, eventName)
+        event_name = sys.argv[x+1]
+        Event(local, event_name)
     # end if
 
     local.run()
@@ -46,11 +48,13 @@ def Init(local):
 # end define
 
 
-def Event(local, eventName):
-    if eventName == "enableVC":
+def Event(local, event_name):
+    if event_name == "enableVC":
         EnableVcEvent(local)
-    elif eventName == "validator down":
+    elif event_name == "validator down":
         ValidatorDownEvent(local)
+    elif event_name == "enable_ton_storage_provider":
+        enable_ton_storage_provider_event(local)
     local.exit()
 # end define
 
@@ -76,6 +80,15 @@ def ValidatorDownEvent(local):
     local.add_log("start ValidatorDownEvent function", "debug")
     local.add_log("Validator is down", "error")
 # end define
+
+
+def enable_ton_storage_provider_event(local):
+    config_path = local.db.ton_storage.provider.config_path
+    config = GetConfig(path=config_path)
+    key_bytes = base64.b64decode(config.ProviderKey)
+    ton = MyTonCore(local)
+    ton.import_wallet_with_version(key_bytes[:32], version="v3r2", wallet_name="provider_wallet_001")
+#end define
 
 
 def Elections(local, ton):
