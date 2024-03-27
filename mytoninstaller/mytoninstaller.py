@@ -11,7 +11,7 @@ from mypylib.mypylib import MyPyClass, run_as_root, color_print
 from mypyconsole.mypyconsole import MyPyConsole
 
 from mytoninstaller.config import GetLiteServerConfig, get_ls_proxy_config
-from mytoninstaller.node_args import get_node_args
+from mytoninstaller.node_args import get_node_args, set_node_arg
 from mytoninstaller.utils import GetInitBlock
 from mytoncore.utils import dict2b64, str2bool, b642dict
 
@@ -63,6 +63,7 @@ def Init(local, console):
 	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.AddItem("status", inject_globals(Status), "Print TON component status")
+	console.AddItem("set_node_argument", inject_globals(set_node_argument), "Set node argument")
 	console.AddItem("enable", inject_globals(Enable), "Enable some function")
 	console.AddItem("update", inject_globals(Enable), "Update some function: 'JR' - jsonrpc.  Example: 'update JR'") 
 	console.AddItem("plsc", inject_globals(PrintLiteServerConfig), "Print lite-server config")
@@ -128,6 +129,34 @@ def Status(local, args):
 	color_print("{cyan}===[ Node arguments ]==={endc}")
 	for key, value in node_args.items():
 		print(f"{key}: {value}")
+#end define
+
+
+def restart_node():
+	exit_code = run_as_root(["systemctl", "daemon-reload"])
+	if not exit_code:
+		raise Exception(f"`systemctl daemon-reload` failed with exit code {exit_code}")
+	exit_code = run_as_root(["systemctl", "restart", "validator"])
+	if not exit_code:
+		raise Exception(f"`systemctl restart validator` failed with exit code {exit_code}")
+#end define
+
+
+def set_node_argument(local, args):
+	if len(args) < 1:
+		color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)]")
+		return
+	arg_name = args[0]
+	if len(args) == 1:
+		set_node_arg(arg_name)
+	else:
+		arg_value = args[1]
+		if arg_value == "-d":
+			set_node_arg(arg_name, None)
+		else:
+			set_node_arg(arg_name, arg_value)
+	restart_node()
+	color_print("set_node_argument - {green}OK{endc}")
 #end define
 
 
