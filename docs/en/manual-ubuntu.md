@@ -41,16 +41,30 @@ Check out the list of available wallets. For instance, during the installation o
 
 ![wallet list](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-wl_ru.png)
 
-## 4. Send the Required Number of Coins to the Wallet and Activate It
+## 4. Deploy Single Nominator (optional, more secured)
+Go to https://orbs-network.github.io/single-nominator-client/deploy-single-nominator and deploy the single nominator contract. 
+You will need 2 addresses for the deployment:
+* Owner - control the funds and should be a highly secured wallet.
+* Validator - operates the validator machine and send transactions to the single nominator. You can use validator_wallet_001 as the validator wallet. 
+
+If the single nominator deployment is successful, you can retrieve the zipped folder titled mytonctrl-sn-files.zip. Download the folder to the same machine where you installed mytonctrl, extract the files and execute:
+
+```sh
+chmod +x mytonctrl-add-sn-files.sh
+./mytonctrl-add-sn-files.sh
+```
+
+## 5. Send the Required Number of Coins to the Wallet and Activate It
 
 To determine the minimum amount of coins required to participate in one election round, head to **tonmon.xyz** > **Participant stakes**. 
 
 * Use the `vas` command to display the history of transfers
 * Activate the wallet using the `aw` command 
+* If you use **single-nominator**, it is recommended to use the **validator-ui-client** to deposit funds or transfer funds directly to the single-nominator. validator_wallet_001 can be used as the validator address and should contain a sufficient amount exclusively for covering gas fees.
 
     ![account history](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_mytonctrl-vas-aw_ru.png)
 
-## 5. Your Validator is Now Ready
+## 6. Your Validator is Now Ready
 
 **mytoncore** will automatically join the elections. It divides the wallet balance into two parts and uses them as a stake to participate in the elections. You can also manually set the stake size:
 
