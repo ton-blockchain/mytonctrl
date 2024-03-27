@@ -134,10 +134,10 @@ def Status(local, args):
 
 def restart_node():
 	exit_code = run_as_root(["systemctl", "daemon-reload"])
-	if not exit_code:
+	if exit_code:
 		raise Exception(f"`systemctl daemon-reload` failed with exit code {exit_code}")
 	exit_code = run_as_root(["systemctl", "restart", "validator"])
-	if not exit_code:
+	if exit_code:
 		raise Exception(f"`systemctl restart validator` failed with exit code {exit_code}")
 #end define
 
