@@ -72,6 +72,7 @@ def Init(local, ton, console, argv):
 	console.AddItem("status_modes", inject_globals(mode_status), local.translate("status_modes_cmd"))
 	console.AddItem("enable_mode", inject_globals(enable_mode), local.translate("enable_mode_cmd"))
 	console.AddItem("disable_mode", inject_globals(disable_mode), local.translate("disable_mode_cmd"))
+	console.AddItem("about", inject_globals(about), local.translate("about_cmd"))
 	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
 	console.AddItem("rollback", inject_globals(rollback_to_mtc1), local.translate("rollback_cmd"))
@@ -176,6 +177,21 @@ def Init(local, ton, console, argv):
 	local.db.config.logLevel = "debug" if console.debug else "info"
 	local.db.config.isLocaldbSaving = False
 	local.run()
+#end define
+
+
+def about(local, ton, args):
+	if len(args) != 1:
+		color_print("{red}Bad args. Usage:{endc} about <mode_name>")
+	mode_name = args[0]
+	mode = ton.get_mode(mode_name)
+	if mode is None:
+		color_print(f"{{red}}Mode {mode_name} not found{{endc}}")
+		return
+	color_print(f'''{{cyan}}===[ {mode_name} MODE ]==={{cyan}}=''')
+	color_print(f'''Description: {mode.description}''')
+	color_print('Enabled: ' + color_text('{green}yes{endc}' if ton.get_mode_value(mode_name) else '{red}no{endc}'))
+#end define
 
 
 def check_installer_user():
