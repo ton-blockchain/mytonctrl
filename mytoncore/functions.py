@@ -481,6 +481,29 @@ def is_host_virtual():
         return {'virtual': None, 'product_name': None}
 
 
+def do_beacon_ping(host, count, timeout):
+    args = ['ping', '-c', str(count), '-W', str(timeout), host]
+    process = subprocess.run(args, stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+    output = process.stdout.decode("utf-8")
+    avg = output.split('\n')[-1].split('=')[1].split('/')[1]
+    return float(avg)
+
+
+def get_pings_values():
+    return {
+        'beacon-eu-01.toncenter.com': do_beacon_ping('beacon-eu-01.toncenter.com', 1, 3),
+        'beacon-apac-01.toncenter.com': do_beacon_ping('beacon-apac-01.toncenter.com', 1, 3)
+    }
+
+
+def get_validator_disk_name():
+    process = subprocess.run("df -h /var/ton-work/ | sed -n '2 p' | awk '{print $1}'", stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3, shell=True)
+    output = process.stdout.decode("utf-8")
+    return output.strip()
+
+
 def Telemetry(local, ton):
     sendTelemetry = local.db.get("sendTelemetry")
     if sendTelemetry is not True:
@@ -507,6 +530,8 @@ def Telemetry(local, ton):
     data["dbStats"] = get_db_stats()
     data["nodeArgs"] = get_node_args()
     data["cpuInfo"] = {'cpuName': get_cpu_name(), 'virtual': is_host_virtual()}
+    data["validatorDiskName"] = get_validator_disk_name()
+    data["pings"] = get_pings_values()
     elections = local.try_function(ton.GetElectionEntries)
     complaints = local.try_function(ton.GetComplaints)
 
