@@ -20,6 +20,7 @@ from mypylib.mypylib import (
     thr_sleep,
     Dict
 )
+from mytoninstaller.node_args import get_node_args
 
 
 def Init(local):
@@ -460,6 +461,26 @@ def get_db_stats():
 # end define
 
 
+def get_cpu_name():
+    with open('/proc/cpuinfo') as f:
+        for line in f:
+            if line.strip():
+                if line.rstrip('\n').startswith('model name'):
+                    return line.rstrip('\n').split(':')[1].strip()
+    return None
+
+
+def is_host_virtual():
+    try:
+        with open('/sys/class/dmi/id/product_name') as f:
+            product_name = f.read().strip().lower()
+            if 'virtual' in product_name or 'kvm' in product_name or 'qemu' in product_name or 'vmware' in product_name:
+                return {'virtual': True, 'product_name': product_name}
+            return {'virtual': False, 'product_name': product_name}
+    except FileNotFoundError:
+        return {'virtual': None, 'product_name': None}
+
+
 def Telemetry(local, ton):
     sendTelemetry = local.db.get("sendTelemetry")
     if sendTelemetry is not True:
@@ -484,6 +505,8 @@ def Telemetry(local, ton):
     data["uname"] = GetUname()
     data["vprocess"] = GetValidatorProcessInfo()
     data["dbStats"] = get_db_stats()
+    data["nodeArgs"] = get_node_args()
+    data["cpuInfo"] = {'cpuName': get_cpu_name(), 'virtual': is_host_virtual()}
     elections = local.try_function(ton.GetElectionEntries)
     complaints = local.try_function(ton.GetComplaints)
 
