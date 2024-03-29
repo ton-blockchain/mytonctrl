@@ -499,7 +499,9 @@ def do_beacon_ping(host, count, timeout):
     process = subprocess.run(args, stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
     output = process.stdout.decode("utf-8")
-    avg = output.split('\n')[-1].split('=')[1].split('/')[1]
+    output_lines = output.split('\n')
+    rtt_line = list(filter(None, output_lines))[-1]
+    avg = rtt_line.split('=')[1].split('/')[1]
     return float(avg)
 
 
