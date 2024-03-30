@@ -505,8 +505,8 @@ def do_beacon_ping(host, count, timeout):
 
 def get_pings_values():
     return {
-        'beacon-eu-01.toncenter.com': do_beacon_ping('beacon-eu-01.toncenter.com', 5, 3),
-        'beacon-apac-01.toncenter.com': do_beacon_ping('beacon-apac-01.toncenter.com', 5, 3)
+        'beacon-eu-01.toncenter.com': do_beacon_ping('beacon-eu-01.toncenter.com', 5, 10),
+        'beacon-apac-01.toncenter.com': do_beacon_ping('beacon-apac-01.toncenter.com', 5, 10)
     }
 
 
