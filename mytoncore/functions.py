@@ -499,16 +499,14 @@ def do_beacon_ping(host, count, timeout):
     process = subprocess.run(args, stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
     output = process.stdout.decode("utf-8")
-    output_lines = output.split('\n')
-    rtt_line = list(filter(None, output_lines))[-1]
-    avg = rtt_line.split('=')[1].split('/')[1]
+    avg = output.split('\n')[-2].split('=')[1].split('/')[1]
     return float(avg)
 
 
 def get_pings_values():
     return {
-        'beacon-eu-01.toncenter.com': do_beacon_ping('beacon-eu-01.toncenter.com', 1, 3),
-        'beacon-apac-01.toncenter.com': do_beacon_ping('beacon-apac-01.toncenter.com', 1, 3)
+        'beacon-eu-01.toncenter.com': do_beacon_ping('beacon-eu-01.toncenter.com', 5, 10),
+        'beacon-apac-01.toncenter.com': do_beacon_ping('beacon-apac-01.toncenter.com', 5, 10)
     }
 
 
