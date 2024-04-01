@@ -7,11 +7,13 @@ import random
 import json
 import subprocess
 
+import pkg_resources
+
 from mypylib.mypylib import MyPyClass, run_as_root, color_print
 from mypyconsole.mypyconsole import MyPyConsole
 
 from mytoninstaller.config import GetLiteServerConfig, get_ls_proxy_config
-from mytoninstaller.node_args import get_node_args, set_node_arg
+from mytoninstaller.node_args import get_node_args
 from mytoninstaller.utils import GetInitBlock
 from mytoncore.utils import dict2b64, str2bool, b642dict
 
@@ -139,14 +141,9 @@ def set_node_argument(local, args):
 		color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)]")
 		return
 	arg_name = args[0]
-	if len(args) == 1:
-		set_node_arg(arg_name)
-	else:
-		arg_value = args[1]
-		if arg_value == "-d":
-			set_node_arg(arg_name, None)
-		else:
-			set_node_arg(arg_name, arg_value)
+	args = [arg_name, args[1] if len(args) > 1 else ""]
+	script_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'set_node_argument.py')
+	run_as_root(['python3', script_path] + args)
 	color_print("set_node_argument - {green}OK{endc}")
 #end define
 
