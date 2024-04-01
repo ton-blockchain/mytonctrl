@@ -134,16 +134,6 @@ def Status(local, args):
 #end define
 
 
-def restart_node():
-	exit_code = run_as_root(["systemctl", "daemon-reload"])
-	if exit_code:
-		raise Exception(f"`systemctl daemon-reload` failed with exit code {exit_code}")
-	exit_code = run_as_root(["systemctl", "restart", "validator"])
-	if exit_code:
-		raise Exception(f"`systemctl restart validator` failed with exit code {exit_code}")
-#end define
-
-
 def set_node_argument(local, args):
 	if len(args) < 1:
 		color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)]")
@@ -157,7 +147,6 @@ def set_node_argument(local, args):
 			set_node_arg(arg_name, None)
 		else:
 			set_node_arg(arg_name, arg_value)
-	restart_node()
 	color_print("set_node_argument - {green}OK{endc}")
 #end define
 

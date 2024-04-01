@@ -1,9 +1,11 @@
+from mypylib.mypylib import run_as_root
 
 
 def get_validator_service():
     path = '/etc/systemd/system/validator.service'
     with open(path, 'r') as f:
         return f.read()
+#end define
 
 
 def get_node_start_command():
@@ -11,6 +13,7 @@ def get_node_start_command():
     for line in service.split('\n'):
         if 'ExecStart' in line:
             return line.split('=')[1].strip()
+#end define
 
 
 def get_node_args(command: str = None):
@@ -29,6 +32,17 @@ def get_node_args(command: str = None):
     if key:
         result[key] = ''
     return result
+#end define
+
+
+def restart_node():
+    exit_code = run_as_root(["systemctl", "daemon-reload"])
+    if exit_code:
+        raise Exception(f"`systemctl daemon-reload` failed with exit code {exit_code}")
+    exit_code = run_as_root(["systemctl", "restart", "validator"])
+    if exit_code:
+        raise Exception(f"`systemctl restart validator` failed with exit code {exit_code}")
+#end define
 
 
 def set_node_arg(arg_name: str, arg_value: str = ''):
@@ -49,5 +63,7 @@ def set_node_arg(arg_name: str, arg_value: str = ''):
         args[arg_name] = arg_value
     new_command = command.split(' ')[0] + ' ' + ' '.join([f'{k} {v}' for k, v in args.items()])
     new_service = service.replace(command, new_command)
-    with open('/etc/systemd/system/validator.service', 'w') as f:
-        f.write(new_service)
+    c = f"with open('/etc/systemd/system/validator.service', 'w') as f: f.write('''{new_service}''')"
+    run_as_root(['python3', '-c', f'"{c}"'])
+    restart_node()
+#end define
