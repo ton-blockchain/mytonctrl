@@ -13,7 +13,7 @@ from mypylib.mypylib import MyPyClass, run_as_root, color_print
 from mypyconsole.mypyconsole import MyPyConsole
 
 from mytoninstaller.config import GetLiteServerConfig, get_ls_proxy_config
-from mytoninstaller.node_args import get_node_args, set_node_arg
+from mytoninstaller.node_args import get_node_args
 from mytoninstaller.utils import GetInitBlock
 from mytoncore.utils import dict2b64, str2bool, b642dict
 
