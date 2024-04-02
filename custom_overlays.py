@@ -1,7 +1,7 @@
 import json
 
 from mypylib.mypylib import color_print
-from mytoncore import local as mytoncore_local, hex2base64, MyTonCore
+from mytoncore import local as mytoncore_local, hex2base64
 from mytonctrl import ton
 
 
@@ -18,11 +18,6 @@ def parse_config(name: str, config: dict, vset: list = None):
         "nodes": []
     }
     for k, v in config.items():
-        result["nodes"].append({
-            "adnl_id": hex2base64(k),
-            "msg_sender": v["msg_sender"],
-            "msg_sender_priority": v["msg_sender_priority"],
-        })
         if k == '@validators' and v:
             if vset is None:
                 raise Exception("Validators set is not defined but @validators is in config")
@@ -31,7 +26,14 @@ def parse_config(name: str, config: dict, vset: list = None):
                     "adnl_id": hex2base64(v_adnl),
                     "msg_sender": False,
                 })
-        return result
+        else:
+            result["nodes"].append({
+                "adnl_id": hex2base64(k),
+                "msg_sender": v["msg_sender"],
+            })
+            if v["msg_sender"]:
+                result["nodes"][-1]["msg_sender_priority"] = v["msg_sender_priority"]
+    return result
 
 
 def add_custom_overlay(args):
