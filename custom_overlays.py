@@ -1,13 +1,14 @@
+import base64
 import json
 
 from mypylib.mypylib import color_print
-from mytoncore import hex2base64
-from mytonctrl import ton
 
 
-def add_log(message: str, level: str = 'info'):
-    from mytoncore import local
-    local.add_log(message, level)
+def hex2base64(h):
+    b = bytes.fromhex(h)
+    b64 = base64.b64encode(b)
+    s = b64.decode("utf-8")
+    return s
 
 
 def parse_config(name: str, config: dict, vset: list = None):
@@ -42,6 +43,7 @@ def parse_config(name: str, config: dict, vset: list = None):
 
 
 def add_custom_overlay(args):
+    from mytonctrl import ton
     if len(args) != 2:
         color_print("{red}Bad args. Usage:{endc} add_custom_overlay <name> <path_to_config>")
         return
@@ -53,6 +55,7 @@ def add_custom_overlay(args):
 
 
 def list_custom_overlays(args):
+    from mytonctrl import ton
     if not ton.get_custom_overlays():
         color_print("{red}No custom overlays{endc}")
         return
@@ -62,6 +65,7 @@ def list_custom_overlays(args):
 
 
 def delete_custom_overlay(args):
+    from mytonctrl import ton
     if len(args) != 1:
         color_print("{red}Bad args. Usage:{endc} delete_custom_overlay <name>")
         return
@@ -69,13 +73,12 @@ def delete_custom_overlay(args):
     color_print("delete_custom_overlay - {green}OK{endc}")
 
 
-def delete_custom_overlay_from_vc(name: str):
+def delete_custom_overlay_from_vc(ton, name: str):
     result = ton.validatorConsole.Run(f"delcustomoverlay {name}")
     return 'success' in result
 
 
-def add_custom_overlay_to_vc(config: dict):
-    add_log(f"Adding custom overlay {config['name']}", "debug")
+def add_custom_overlay_to_vc(ton, config: dict):
     path = ton.tempDir + f'/custom_overlay_{config["name"]}.json'
     with open(path, 'w') as f:
         json.dump(config, f)
@@ -83,7 +86,7 @@ def add_custom_overlay_to_vc(config: dict):
     return 'success' in result
 
 
-def deploy_custom_overlays():
+def deploy_custom_overlays(local, ton):
     result = ton.validatorConsole.Run("showcustomoverlays")
     if 'unknown command' in result:
         return  # node old version
@@ -108,13 +111,13 @@ def deploy_custom_overlays():
             pure_name = '_'.join(name.split('_')[:-1])
             el_id = int(suffix.split('elid')[-1].isdigit())
             if el_id not in (current_el_id, next_el_id):
-                add_log(f"Overlay {name} is not in current or next election, deleting", "debug")
-                delete_custom_overlay_from_vc(name)  # delete overlay if election id is not in current or next election
+                local.add_log(f"Overlay {name} is not in current or next election, deleting", "debug")
+                delete_custom_overlay_from_vc(ton, name)  # delete overlay if election id is not in current or next election
                 continue
 
-        if pure_name not in ton.get_custom_overlays():
-            add_log(f"Overlay {name} is not in mtc db, deleting", "debug")
-            delete_custom_overlay_from_vc(name)  # delete overlay if it's not in mtc db
+        elif pure_name not in ton.get_custom_overlays():
+            local.add_log(f"Overlay {name} is not in mtc db, deleting", "debug")
+            delete_custom_overlay_from_vc(ton, name)  # delete overlay if it's not in mtc db
 
     for name, config in ton.get_custom_overlays().items():
         if name in names:
@@ -123,13 +126,16 @@ def deploy_custom_overlays():
             new_name = name + '_elid' + str(current_el_id)
             if new_name not in names:
                 node_config = parse_config(new_name, config, current_vset)
-                add_custom_overlay_to_vc(node_config)
+                local.add_log(f"Adding custom overlay {config['name']}", "debug")
+                add_custom_overlay_to_vc(ton, node_config)
 
             if next_el_id != 0:
                 new_name = name + '_elid' + str(next_el_id)
                 if new_name not in names:
                     node_config = parse_config(new_name, config, next_vset)
-                    add_custom_overlay_to_vc(node_config)
+                    local.add_log(f"Adding custom overlay {config['name']}", "debug")
+                    add_custom_overlay_to_vc(ton, node_config)
         else:
             node_config = parse_config(name, config)
-            add_custom_overlay_to_vc(node_config)
+            local.add_log(f"Adding custom overlay {config['name']}", "debug")
+            add_custom_overlay_to_vc(ton, node_config)
