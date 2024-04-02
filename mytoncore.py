@@ -3646,6 +3646,23 @@ class MyTonCore():
 		return poolData
 	#end define
 
+	def get_custom_overlays(self):
+		if 'custom_overlays' not in local.db:
+			local.db['custom_overlays'] = {}
+		return local.db['custom_overlays']
+
+	def set_custom_overlay(self, name: str, config: dict):
+		overlays = self.get_custom_overlays()
+		overlays[name] = config
+		local.save()
+
+	def delete_custom_overlay(self, name: str):
+		del local.db['custom_overlays'][name]
+		local.save()
+
+	def add_log(self, text, level="info"):
+		local.add_log(text, level)
+
 	def GetNetworkName(self):
 		mainnetValidatorsElectedFor = 65536
 		mainnetZerostateRootHash = "x55B13F6D0E1D0C34C9C2160F6F918E92D82BF9DDCF8DE2E4C94A3FDF39D15446"
