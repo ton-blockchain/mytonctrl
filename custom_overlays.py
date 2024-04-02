@@ -93,7 +93,7 @@ def deploy_custom_overlays(local, ton):
     names = []
     for line in result.split('\n'):
         if line.startswith('Overlay'):
-            names.append(line.split(' ')[1].replace('"', ''))
+            names.append(line.split(' ')[1].replace('"', '').replace(':', ''))
 
     config34 = ton.GetConfig34()
     current_el_id = config34['startWorkTime']
@@ -109,14 +109,14 @@ def deploy_custom_overlays(local, ton):
         suffix = name.split('_')[-1]
         if suffix.startswith('elid') and suffix.split('elid')[-1].isdigit():  # probably election id
             pure_name = '_'.join(name.split('_')[:-1])
-            el_id = int(suffix.split('elid')[-1].isdigit())
+            el_id = int(suffix.split('elid')[-1])
             if el_id not in (current_el_id, next_el_id):
                 local.add_log(f"Overlay {name} is not in current or next election, deleting", "debug")
                 delete_custom_overlay_from_vc(ton, name)  # delete overlay if election id is not in current or next election
                 continue
 
-        elif pure_name not in ton.get_custom_overlays():
-            local.add_log(f"Overlay {name} is not in mtc db, deleting", "debug")
+        if pure_name not in ton.get_custom_overlays():
+            local.add_log(f"Overlay {name} ({pure_name}) is not in mtc db, deleting", "debug")
             delete_custom_overlay_from_vc(ton, name)  # delete overlay if it's not in mtc db
 
     for name, config in ton.get_custom_overlays().items():
@@ -126,16 +126,16 @@ def deploy_custom_overlays(local, ton):
             new_name = name + '_elid' + str(current_el_id)
             if new_name not in names:
                 node_config = parse_config(new_name, config, current_vset)
-                local.add_log(f"Adding custom overlay {config['name']}", "debug")
+                local.add_log(f"Adding custom overlay {name}", "debug")
                 add_custom_overlay_to_vc(ton, node_config)
 
             if next_el_id != 0:
                 new_name = name + '_elid' + str(next_el_id)
                 if new_name not in names:
                     node_config = parse_config(new_name, config, next_vset)
-                    local.add_log(f"Adding custom overlay {config['name']}", "debug")
+                    local.add_log(f"Adding custom overlay {name}", "debug")
                     add_custom_overlay_to_vc(ton, node_config)
         else:
             node_config = parse_config(name, config)
-            local.add_log(f"Adding custom overlay {config['name']}", "debug")
+            local.add_log(f"Adding custom overlay {name}", "debug")
             add_custom_overlay_to_vc(ton, node_config)
