@@ -126,14 +126,14 @@ def deploy_custom_overlays(local, ton):
             new_name = name + '_elid' + str(current_el_id)
             if new_name not in names:
                 node_config = parse_config(new_name, config, current_vset)
-                local.add_log(f"Adding custom overlay {name}", "debug")
+                local.add_log(f"Adding custom overlay {new_name}", "debug")
                 add_custom_overlay_to_vc(ton, node_config)
 
             if next_el_id != 0:
                 new_name = name + '_elid' + str(next_el_id)
                 if new_name not in names:
                     node_config = parse_config(new_name, config, next_vset)
-                    local.add_log(f"Adding custom overlay {name}", "debug")
+                    local.add_log(f"Adding custom overlay {new_name}", "debug")
                     add_custom_overlay_to_vc(ton, node_config)
         else:
             node_config = parse_config(name, config)
