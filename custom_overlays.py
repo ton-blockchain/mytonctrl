@@ -5,6 +5,11 @@ from mytoncore import hex2base64
 from mytonctrl import ton
 
 
+def add_log(message: str, level: str = 'info'):
+    from mytoncore import local
+    local.add_log(message, level)
+
+
 def parse_config(name: str, config: dict, vset: list = None):
     """
     Converts config to validator-console friendly format
@@ -44,9 +49,13 @@ def add_custom_overlay(args):
     with open(path, 'r') as f:
         config = json.load(f)
     ton.set_custom_overlay(args[0], config)
+    color_print("add_custom_overlay - {green}OK{endc}")
 
 
 def list_custom_overlays(args):
+    if not ton.get_custom_overlays():
+        color_print("{red}No custom overlays{endc}")
+        return
     for k, v in ton.get_custom_overlays().items():
         color_print(f"Custom overlay {{bold}}{k}{{endc}}:")
         print(json.dumps(v, indent=4))
@@ -57,6 +66,7 @@ def delete_custom_overlay(args):
         color_print("{red}Bad args. Usage:{endc} delete_custom_overlay <name>")
         return
     ton.delete_custom_overlay(args[0])
+    color_print("delete_custom_overlay - {green}OK{endc}")
 
 
 def delete_custom_overlay_from_vc(name: str):
@@ -65,7 +75,7 @@ def delete_custom_overlay_from_vc(name: str):
 
 
 def add_custom_overlay_to_vc(config: dict):
-    ton.add_log(f"Adding custom overlay {config['name']}", "debug")
+    add_log(f"Adding custom overlay {config['name']}", "debug")
     path = ton.tempDir + f'/custom_overlay_{config["name"]}.json'
     with open(path, 'w') as f:
         json.dump(config, f)
@@ -98,12 +108,12 @@ def deploy_custom_overlays():
             pure_name = '_'.join(name.split('_')[:-1])
             el_id = int(suffix.split('elid')[-1].isdigit())
             if el_id not in (current_el_id, next_el_id):
-                ton.add_log(f"Overlay {name} is not in current or next election, deleting", "debug")
+                add_log(f"Overlay {name} is not in current or next election, deleting", "debug")
                 delete_custom_overlay_from_vc(name)  # delete overlay if election id is not in current or next election
                 continue
 
         if pure_name not in ton.get_custom_overlays():
-            ton.add_log(f"Overlay {name} is not in mtc db, deleting", "debug")
+            add_log(f"Overlay {name} is not in mtc db, deleting", "debug")
             delete_custom_overlay_from_vc(name)  # delete overlay if it's not in mtc db
 
     for name, config in ton.get_custom_overlays().items():
