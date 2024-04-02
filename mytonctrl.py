@@ -4,7 +4,6 @@
 from mypylib.mypylib import *
 from mypyconsole.mypyconsole import *
 from mytoncore import *
-from custom_overlays import add_custom_overlay, list_custom_overlays, delete_custom_overlay
 import sys, getopt, os
 
 local = MyPyClass(__file__)
@@ -26,6 +25,7 @@ def Init(argv):
 	console.AddItem("seqno", Seqno, local.translate("seqno_cmd"))
 	console.AddItem("getconfig", GetConfig, local.translate("getconfig_cmd"))
 
+	from custom_overlays import add_custom_overlay, list_custom_overlays, delete_custom_overlay
 	console.AddItem("add_custom_overlay", add_custom_overlay, local.translate("add_custom_overlay_cmd"))
 	console.AddItem("list_custom_overlays", list_custom_overlays, local.translate("list_custom_overlays_cmd"))
 	console.AddItem("delete_custom_overlay", delete_custom_overlay, local.translate("delete_custom_overlay_cmd"))

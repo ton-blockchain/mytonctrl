@@ -8,7 +8,6 @@ import hashlib
 import requests
 import re
 from mypylib.mypylib import *
-from custom_overlays import deploy_custom_overlays
 
 local = MyPyClass(__file__)
 
@@ -4298,6 +4297,7 @@ def General():
 	local.start_cycle(Telemetry, sec=60, args=(ton, ))
 	local.start_cycle(OverlayTelemetry, sec=7200, args=(ton, ))
 	local.start_cycle(ScanLiteServers, sec=60, args=(ton,))
+	from custom_overlays import deploy_custom_overlays
 	local.start_cycle(deploy_custom_overlays, sec=60)
 	thr_sleep()
 #end define
