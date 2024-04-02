@@ -43,6 +43,8 @@ def add_custom_overlay(args):
     path = args[1]
     with open(path, 'r') as f:
         config = json.load(f)
+    if 'custom_overlays' not in mytoncore_local.db:
+        mytoncore_local.db['custom_overlays'] = {}
     mytoncore_local.db['custom_overlays'][args[0]] = config
 
 
