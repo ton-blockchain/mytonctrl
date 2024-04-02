@@ -3,6 +3,8 @@
 
 from mypylib.mypylib import *
 from mypyconsole.mypyconsole import *
+from custom_overlays import add_custom_overlay, list_custom_overlays, delete_custom_overlay
+
 from mytoncore import *
 import sys, getopt, os
 
@@ -24,6 +26,10 @@ def Init(argv):
 	console.AddItem("status", PrintStatus, local.translate("status_cmd"))
 	console.AddItem("seqno", Seqno, local.translate("seqno_cmd"))
 	console.AddItem("getconfig", GetConfig, local.translate("getconfig_cmd"))
+
+	console.AddItem("add_custom_overlay", add_custom_overlay, local.translate("add_custom_overlay_cmd"))
+	console.AddItem("list_custom_overlays", list_custom_overlays, local.translate("list_custom_overlays_cmd"))
+	console.AddItem("delete_custom_overlay", delete_custom_overlay, local.translate("delete_custom_overlay_cmd"))
 
 	console.AddItem("nw", CreatNewWallet, local.translate("nw_cmd"))
 	console.AddItem("aw", ActivateWallet, local.translate("aw_cmd"))
