@@ -77,10 +77,10 @@ def delete_custom_overlay(args):
     if len(args) != 1:
         color_print("{red}Bad args. Usage:{endc} delete_custom_overlay <name>")
         return
+    ton.delete_custom_overlay(args[0])
     if '@validators' in ton.get_custom_overlays().get(args[0], {}):
         print('Dynamic overlay will be deleted within 1 minute')
     else:
-        ton.delete_custom_overlay(args[0])
         result = delete_custom_overlay_from_vc(ton, args[0])
         if not result:
             print('Failed to delete overlay from validator console')
