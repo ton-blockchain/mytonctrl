@@ -51,6 +51,14 @@ def add_custom_overlay(args):
     with open(path, 'r') as f:
         config = json.load(f)
     ton.set_custom_overlay(args[0], config)
+    if '@validators' in config:
+        print('Dynamic overlay will be added within 1 minute')
+    else:
+        result = add_custom_overlay_to_vc(ton, parse_config(args[0], config))
+        if not result:
+            print('Failed to add overlay to validator console')
+            color_print("add_custom_overlay - {red}ERROR{endc}")
+            return
     color_print("add_custom_overlay - {green}OK{endc}")
 
 
@@ -69,7 +77,15 @@ def delete_custom_overlay(args):
     if len(args) != 1:
         color_print("{red}Bad args. Usage:{endc} delete_custom_overlay <name>")
         return
-    ton.delete_custom_overlay(args[0])
+    if '@validators' in ton.get_custom_overlays().get(args[0], {}):
+        print('Dynamic overlay will be deleted within 1 minute')
+    else:
+        ton.delete_custom_overlay(args[0])
+        result = delete_custom_overlay_from_vc(ton, args[0])
+        if not result:
+            print('Failed to delete overlay from validator console')
+            color_print("delete_custom_overlay - {red}ERROR{endc}")
+            return
     color_print("delete_custom_overlay - {green}OK{endc}")
 
 
@@ -84,6 +100,13 @@ def add_custom_overlay_to_vc(ton, config: dict):
         json.dump(config, f)
     result = ton.validatorConsole.Run(f"addcustomoverlay {path}")
     return 'success' in result
+
+
+def custom_overlays(local, ton):
+    config = get_default_custom_overlay(local, ton)
+    if config is not None:
+        ton.set_custom_overlay('default', config)
+    deploy_custom_overlays(local, ton)
 
 
 def deploy_custom_overlays(local, ton):
@@ -139,3 +162,50 @@ def deploy_custom_overlays(local, ton):
             node_config = parse_config(name, config)
             local.add_log(f"Adding custom overlay {name}", "debug")
             add_custom_overlay_to_vc(ton, node_config)
+
+
+MAINNET_DEFAULT_CUSTOM_OVERLAY = {
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": {
+        "msg_sender": True,
+        "msg_sender_priority": 15
+    },
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB": {
+        "msg_sender": True,
+        "msg_sender_priority": 10
+    },
+    "@validators": True
+}
+
+
+TESTNET_DEFAULT_CUSTOM_OVERLAY = {
+    "DF27B30444D07087863B77F8BD27BABA8E57EDECA393605F6610FDCB64FFECD1": {
+        "msg_sender": True,
+        "msg_sender_priority": 15
+    },
+    "B360D229CA597906ADFC522FAC3EB5F8AE9D80981693225E7083577A4F016118": {
+        "msg_sender": True,
+        "msg_sender_priority": 10
+    },
+    "F794DE0B21423B6F4C168C5652758E5743CD977ACE13B3B2BA88E28580D9BEDB": {
+        "msg_sender": True,
+        "msg_sender_priority": 10
+    },
+    "6447CEAC80573AF2ABCA741FC940BB690AC263DC4B779FB6609CE5E9A4B31AE1": {
+        "msg_sender": True,
+        "msg_sender_priority": 5,
+    },
+    "@validators": True
+}
+
+
+def get_default_custom_overlay(local, ton):
+    if not local.db.get('useDefaultCustomOverlays', True):
+        return None
+    network = ton.GetNetworkName()
+    if network == 'mainnet':
+        config = MAINNET_DEFAULT_CUSTOM_OVERLAY
+    elif network == 'testnet':
+        config = TESTNET_DEFAULT_CUSTOM_OVERLAY
+    else:
+        return None
+    return config
