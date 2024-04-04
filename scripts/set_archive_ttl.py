@@ -23,7 +23,7 @@ t = exec_start.split(' ')
 t.pop(t.index('--threads') + 1)  # pop threads value since it's different for each node
 
 if ' '.join(t) != default_command:
-    print('ExecStart is not default. Please set archive-ttl manually')
+    print('ExecStart is not default. Please set archive-ttl manually in `/etc/systemd/system/validator.service`.')
     sys.exit(101)
 
 archive_ttl = sys.argv[1]
