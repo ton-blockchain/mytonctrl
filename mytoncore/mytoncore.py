@@ -1316,10 +1316,8 @@ class MyTonCore():
 			# Limit stake to maximum available amount minus 10 (for transaction fees)
 			if stake > account.balance - 10:
 				stake = account.balance - 10
-		#end if
 
-		pool_version = self.GetVersionFromCodeHash(account.codeHash)
-		is_single_nominator = pool_version is not None and 'spool' in pool_version
+		is_single_nominator = self.is_account_single_nominator(account)
 
 		if stake is None and usePool and not is_single_nominator:
 			stake = account.balance - 20
@@ -1331,9 +1329,10 @@ class MyTonCore():
 				self.local.add_log("Wrong stakePercent value. Using default stake.", "warning")
 			elif len(vconfig.validators) == 0:
 				stake = int(account.balance*sp/2)
+				if stake < config17["minStake"]:  # not enough funds to divide them by 2
+					stake = int(account.balance*sp)
 			elif len(vconfig.validators) > 0:
 				stake = int(account.balance*sp)
-		#end if
 
 		# Check if we have enough coins
 		if stake > config17["maxStake"]:
@@ -1348,10 +1347,8 @@ class MyTonCore():
 			text = "Don't have enough coins. stake: {stake}, account balance: {balance}".format(stake=stake, balance=account.balance)
 			# self.local.add_log(text, "error")
 			raise Exception(text)
-		#end if
 
 		return stake
-	#end define
 
 	def GetMaxFactor(self):
 		# Either use defined maxFactor, or set maximal allowed by config17
@@ -1408,6 +1405,7 @@ class MyTonCore():
 			if (startWorkTime - now) > self.local.db["participateBeforeEnd"] and \
 			   (now + self.local.db["periods"]["elections"]) < startWorkTime:
 				return
+		#end if
 
 		vconfig = self.GetValidatorConfig()
 
@@ -1417,8 +1415,10 @@ class MyTonCore():
 			if base64.b64decode(a.id) == adnl_addr_bytes:
 				have_adnl = True
 				break
+		#end for
 		if not have_adnl:
 			raise Exception('ADNL address is not found')
+		#end if
 
 		# Check if election entry already completed
 		entries = self.GetElectionEntries()
@@ -1428,14 +1428,13 @@ class MyTonCore():
 		#end if
 
 		if usePool:
-			pool = self.GetPool(mode="stake")
+			pool = self.get_pool()
 			addrB64 = pool.addrB64
 		elif useController:
 			controllerAddr = self.GetController(mode="stake")
 			self.CheckController(controllerAddr)
 			self.CreateLoanRequest(controllerAddr)
 			addrB64 = controllerAddr
-		#end if
 
 		# Calculate stake
 		account = self.GetAccount(addrB64)
@@ -1651,23 +1650,17 @@ class MyTonCore():
 
 	def CreateWallet(self, name, workchain=0, version="v1", **kwargs):
 		self.local.add_log("start CreateWallet function", "debug")
-		subwalletDefault = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
-		walletPath = self.walletsDir + name
-		if os.path.isfile(walletPath + ".pk") and "v3" not in version:
+		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
+		subwallet = kwargs.get("subwallet", subwallet_default)
+		wallet_path = self.walletsDir + name
+		if os.path.isfile(wallet_path + ".pk") and "v3" not in version:
 			self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
 		else:
-			if "v1" in version:
-				fiftScript = "new-wallet.fif"
-				args = [fiftScript, workchain, walletPath]
-			if "v2" in version:
-				fiftScript = "new-wallet-v2.fif"
-				args = [fiftScript, workchain, walletPath]
-			if "v3" in version:
-				fiftScript = "new-wallet-v3.fif"
-				args = [fiftScript, workchain, subwallet, walletPath]
-			result = self.fift.Run(args)
+			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+				wallet_path=wallet_path, subwallet=subwallet)
+			result = self.fift.Run(fift_args)
 			if "Creating new" not in result:
+				print(result)
 				raise Exception("CreateWallet error")
 			#end if
 		wallet = self.GetLocalWallet(name, version)
@@ -1677,15 +1670,15 @@ class MyTonCore():
 
 	def CreateHighWallet(self, name, **kwargs):
 		workchain = kwargs.get("workchain", 0)
-		subwalletDefault = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
+		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
+		subwallet = kwargs.get("subwallet", subwallet_default)
 		version = kwargs.get("version", "hv1")
 		self.local.AddLog("start CreateHighWallet function", "debug")
-		walletPath = self.walletsDir + name
-		if os.path.isfile(walletPath + ".pk") and os.path.isfile(walletPath + str(subwallet) + ".addr"):
+		wallet_path = self.walletsDir + name
+		if os.path.isfile(wallet_path + ".pk") and os.path.isfile(wallet_path + str(subwallet) + ".addr"):
 			self.local.AddLog("CreateHighWallet error: Wallet already exists: " + name + str(subwallet), "warning")
 		else:
-			args = ["new-highload-wallet.fif", workchain, subwallet, walletPath]
+			args = ["new-highload-wallet.fif", workchain, subwallet, wallet_path]
 			result = self.fift.Run(args)
 			if "Creating new high-load wallet" not in result:
 				raise Exception("CreateHighWallet error")
@@ -1718,6 +1711,49 @@ class MyTonCore():
 		return wallet_name
 	#end define
 
+	def import_wallet_with_version(self, key, version, **kwargs):
+		wallet_name = kwargs.get("wallet_name")
+		workchain = kwargs.get("workchain", 0)
+		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
+		subwallet = kwargs.get("subwallet", subwallet_default)
+		if type(key) == bytes:
+			pk_bytes = key
+		else:
+			pk_bytes = base64.b64decode(key)
+		if wallet_name == None:
+			wallet_name = self.GenerateWalletName()
+		wallet_path = self.walletsDir + wallet_name
+		with open(wallet_path + ".pk", 'wb') as file:
+			file.write(pk_bytes)
+		fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+			wallet_path=wallet_path, subwallet=subwallet)
+		result = self.fift.Run(fift_args)
+		if "Creating new" not in result:
+			print(result)
+			raise Exception("import_wallet_with_version error")
+		wallet = self.GetLocalWallet(wallet_name, version)
+		self.SetWalletVersion(wallet.addrB64, version)
+		return wallet
+	#end define
+
+	def get_new_wallet_fift_args(self, version, **kwargs):
+		workchain = kwargs.get("workchain")
+		wallet_path = kwargs.get("wallet_path")
+		subwallet = kwargs.get("subwallet")
+		if "v1" in version:
+			fift_script = "new-wallet.fif"
+			args = [fift_script, workchain, wallet_path]
+		elif "v2" in version:
+			fift_script = "new-wallet-v2.fif"
+			args = [fift_script, workchain, wallet_path]
+		elif "v3" in version:
+			fift_script = "new-wallet-v3.fif"
+			args = [fift_script, workchain, subwallet, wallet_path]
+		else:
+			raise Exception(f"get_wallet_fift error: fift script for `{version}` not found")
+		return args
+	#end define
+
 	def addr_b64_to_bytes(self, addr_b64):
 		workchain, addr, bounceable = self.ParseAddrB64(addr_b64)
 		workchain_bytes = int.to_bytes(workchain, 4, "big", signed=True)
@@ -1732,13 +1768,6 @@ class MyTonCore():
 			data = file.read()
 		key = base64.b64encode(data).decode("utf-8")
 		return wallet.addrB64, key
-	#end define
-
-	def import_pool(self, pool_name, addr_b64):
-		addr_bytes = self.addr_b64_to_bytes(addr_b64)
-		pool_path = self.poolsDir + pool_name
-		with open(pool_path + ".addr", 'wb') as file:
-			file.write(addr_bytes)
 	#end define
 
 	def GetWalletsNameList(self):
@@ -3397,37 +3426,6 @@ class MyTonCore():
 		#end if
 	#end define
 
-	def CreatePool(self, poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake):
-		self.local.add_log("start CreatePool function", "debug")
-		validatorRewardShare = int(validatorRewardSharePercent * 100)
-		contractPath = self.contractsDir + "nominator-pool/"
-		if not os.path.isdir(contractPath):
-			self.DownloadContract("https://github.com/ton-blockchain/nominator-pool")
-		#end if
-
-		filePath = self.poolsDir + poolName
-		if os.path.isfile(filePath + ".addr"):
-			self.local.add_log("CreatePool warning: Pool already exists: " + filePath, "warning")
-			return
-		#end if
-
-		fiftScript = self.contractsDir + "nominator-pool/func/new-pool.fif"
-		wallet = self.GetValidatorWallet()
-		args = [fiftScript, wallet.addrB64, validatorRewardShare, maxNominatorsCount, minValidatorStake, minNominatorStake, filePath]
-		result = self.fift.Run(args)
-		if "Saved pool" not in result:
-			raise Exception("CreatePool error: " + result)
-		#end if
-
-		pools = self.GetPools()
-		newPool = self.GetLocalPool(poolName)
-		for pool in pools:
-			if pool.name != newPool.name and pool.addrB64 == newPool.addrB64:
-				newPool.Delete()
-				raise Exception("CreatePool error: Pool with the same parameters already exists.")
-		#end for
-	#end define
-
 	def WithdrawFromPoolProcess(self, poolAddr, amount):
 		self.local.add_log("start WithdrawFromPoolProcess function", "debug")
 		wallet = self.GetValidatorWallet()
@@ -3549,35 +3547,44 @@ class MyTonCore():
 		return pools
 	#end define
 
-	def GetPool(self, mode):
+	def get_pool(self):
 		pools = self.GetPools()
 		for pool in pools:
-			if mode == "stake" and self.IsPoolReadyToStake(pool.addrB64):
-				return pool
-			if mode == "vote" and self.IsPoolReadyToVote(pool.addrB64):
+			if self.is_pool_ready_to_stake(pool):
 				return pool
 		raise Exception("Validator pool not found or not ready")
 	#end define
 
-	def GetPoolLastSentStakeTime(self, addrB64):
-		poolData = self.GetPoolData(addrB64)
-		return poolData["stakeAt"]
+	def get_pool_last_sent_stake_time(self, addrB64):
+		pool_data = self.GetPoolData(addrB64)
+		return pool_data["stakeAt"]
 	#end define
 
-	def IsPoolReadyToStake(self, addrB64):
+	def is_pool_ready_to_stake(self, pool: Pool):
+		addr = pool.addrB64
+		account = self.GetAccount(addr)
+		is_single_nominator = self.is_account_single_nominator(account)
+		if self.using_single_nominator() and not is_single_nominator:
+			return False
+		try:  # check that account balance is enough for stake
+			stake = self.GetStake(account)
+			if not stake:
+				raise Exception(f'Stake is {stake}')
+		except Exception as e:
+			self.local.add_log(f"Failed to get stake for pool {addr}: {e}", "debug")
+			return False
 		now = get_timestamp()
 		config15 = self.GetConfig15()
-		lastSentStakeTime = self.GetPoolLastSentStakeTime(addrB64)
-		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
-		result = lastSentStakeTime + stakeFreezeDelay < now
-		print(f"{addrB64}: {result}. {lastSentStakeTime}, {stakeFreezeDelay}, {now}")
+		last_sent_stake_time = self.get_pool_last_sent_stake_time(addr)
+		stake_freeze_delay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
+		result = last_sent_stake_time + stake_freeze_delay < now
+		print(f"{addr}: {result}. {last_sent_stake_time}, {stake_freeze_delay}, {now}")
 		return result
 	#end define
 
-	def IsPoolReadyToVote(self, addrB64):
-		vwl = self.GetValidatorsWalletsList()
-		result = addrB64 in vwl
-		return result
+	def is_account_single_nominator(self, account: Account):
+		account_version = self.GetVersionFromCodeHash(account.codeHash)
+		return account_version is not None and 'spool' in account_version
 	#end define
 
 	def GetPoolData(self, addrB64):

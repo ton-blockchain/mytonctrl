@@ -5,11 +5,13 @@ import sys
 import psutil
 import time
 import json
+import base64
 import requests
 import subprocess
 
-from mytoncore.mytoncore import MyTonCore, Dec2HexAddr
-from mytoncore.tonblocksscanner import TonBlocksScanner
+from mytoncore.mytoncore import MyTonCore
+from mytoncore.utils import parse_db_stats
+from mytoninstaller.config import GetConfig
 from mypylib.mypylib import (
     b2mb,
     get_timestamp,
@@ -20,14 +22,15 @@ from mypylib.mypylib import (
     thr_sleep,
     Dict
 )
+from mytoninstaller.node_args import get_node_args
 
 
 def Init(local):
     # Event reaction
     if ("-e" in sys.argv):
         x = sys.argv.index("-e")
-        eventName = sys.argv[x+1]
-        Event(local, eventName)
+        event_name = sys.argv[x+1]
+        Event(local, event_name)
     # end if
 
     local.run()
@@ -46,11 +49,13 @@ def Init(local):
 # end define
 
 
-def Event(local, eventName):
-    if eventName == "enableVC":
+def Event(local, event_name):
+    if event_name == "enableVC":
         EnableVcEvent(local)
-    elif eventName == "validator down":
+    elif event_name == "validator down":
         ValidatorDownEvent(local)
+    elif event_name == "enable_ton_storage_provider":
+        enable_ton_storage_provider_event(local)
     local.exit()
 # end define
 
@@ -76,6 +81,15 @@ def ValidatorDownEvent(local):
     local.add_log("start ValidatorDownEvent function", "debug")
     local.add_log("Validator is down", "error")
 # end define
+
+
+def enable_ton_storage_provider_event(local):
+    config_path = local.db.ton_storage.provider.config_path
+    config = GetConfig(path=config_path)
+    key_bytes = base64.b64decode(config.ProviderKey)
+    ton = MyTonCore(local)
+    ton.import_wallet_with_version(key_bytes[:32], version="v3r2", wallet_name="provider_wallet_001")
+#end define
 
 
 def Elections(local, ton):
@@ -419,6 +433,90 @@ def GetValidatorProcessInfo():
 # end define
 
 
+def get_db_stats():
+    result = {
+        'rocksdb': {
+            'ok': True,
+            'message': '',
+            'data': {}
+        },
+        'celldb': {
+            'ok': True,
+            'message': '',
+            'data': {}
+        },
+    }
+    rocksdb_stats_path = '/var/ton-work/db/db_stats.txt'
+    celldb_stats_path = '/var/ton-work/db/celldb/db_stats.txt'
+    if os.path.exists(rocksdb_stats_path):
+        try:
+            result['rocksdb']['data'] = parse_db_stats(rocksdb_stats_path)
+        except Exception as e:
+            result['rocksdb']['ok'] = False
+            result['rocksdb']['message'] = f'failed to fetch db stats: {e}'
+    else:
+        result['rocksdb']['ok'] = False
+        result['rocksdb']['message'] = 'db stats file is not exists'
+    # end if
+
+    if os.path.exists(celldb_stats_path):
+        try:
+            result['celldb']['data'] = parse_db_stats(celldb_stats_path)
+        except Exception as e:
+            result['celldb']['ok'] = False
+            result['celldb']['message'] = f'failed to fetch db stats: {e}'
+    else:
+        result['celldb']['ok'] = False
+        result['celldb']['message'] = 'db stats file is not exists'
+    # end if
+
+    return result
+# end define
+
+
+def get_cpu_name():
+    with open('/proc/cpuinfo') as f:
+        for line in f:
+            if line.strip():
+                if line.rstrip('\n').startswith('model name'):
+                    return line.rstrip('\n').split(':')[1].strip()
+    return None
+
+
+def is_host_virtual():
+    try:
+        with open('/sys/class/dmi/id/product_name') as f:
+            product_name = f.read().strip().lower()
+            if 'virtual' in product_name or 'kvm' in product_name or 'qemu' in product_name or 'vmware' in product_name:
+                return {'virtual': True, 'product_name': product_name}
+            return {'virtual': False, 'product_name': product_name}
+    except FileNotFoundError:
+        return {'virtual': None, 'product_name': None}
+
+
+def do_beacon_ping(host, count, timeout):
+    args = ['ping', '-c', str(count), '-W', str(timeout), host]
+    process = subprocess.run(args, stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+    output = process.stdout.decode("utf-8")
+    avg = output.split('\n')[-2].split('=')[1].split('/')[1]
+    return float(avg)
+
+
+def get_pings_values():
+    return {
+        'beacon-eu-01.toncenter.com': do_beacon_ping('beacon-eu-01.toncenter.com', 5, 10),
+        'beacon-apac-01.toncenter.com': do_beacon_ping('beacon-apac-01.toncenter.com', 5, 10)
+    }
+
+
+def get_validator_disk_name():
+    process = subprocess.run("df -h /var/ton-work/ | sed -n '2 p' | awk '{print $1}'", stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3, shell=True)
+    output = process.stdout.decode("utf-8")
+    return output.strip()
+
+
 def Telemetry(local, ton):
     sendTelemetry = local.db.get("sendTelemetry")
     if sendTelemetry is not True:
@@ -442,6 +540,11 @@ def Telemetry(local, ton):
     data["swap"] = GetSwapInfo()
     data["uname"] = GetUname()
     data["vprocess"] = GetValidatorProcessInfo()
+    data["dbStats"] = get_db_stats()
+    data["nodeArgs"] = get_node_args()
+    data["cpuInfo"] = {'cpuName': get_cpu_name(), 'virtual': is_host_virtual()}
+    data["validatorDiskName"] = get_validator_disk_name()
+    data["pings"] = get_pings_values()
     elections = local.try_function(ton.GetElectionEntries)
     complaints = local.try_function(ton.GetComplaints)
 

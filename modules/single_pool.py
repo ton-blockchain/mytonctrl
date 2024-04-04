@@ -11,6 +11,8 @@ class SingleNominatorModule(PoolModule):
     def do_create_single_pool(self, pool_name, owner_address):
         self.ton.local.add_log("start create_single_pool function", "debug")
 
+        self.check_download_pool_contract_scripts()
+
         file_path = self.ton.poolsDir + pool_name
         if os.path.isfile(file_path + ".addr"):
             self.ton.local.add_log("create_single_pool warning: Pool already exists: " + file_path, "warning")

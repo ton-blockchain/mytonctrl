@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 
 
 def str2b64(s):
@@ -49,19 +50,19 @@ def b642hex(input):
 
 
 def xhex2hex(x):
-	try:
-		b = x[1:]
-		h = b.lower()
-		return h
-	except:
-		return None
+    try:
+        b = x[1:]
+        h = b.lower()
+        return h
+    except:
+        return None
 #end define
 
 def hex2base64(h):  # TODO: remove duplicates
-	b = bytes.fromhex(h)
-	b64 = base64.b64encode(b)
-	s = b64.decode("utf-8")
-	return s
+    b = bytes.fromhex(h)
+    b64 = base64.b64encode(b)
+    s = b64.decode("utf-8")
+    return s
 #end define
 
 
@@ -73,7 +74,26 @@ def str2bool(str):
 
 
 def ng2g(ng):
-	if ng is None:
-		return
-	return int(ng)/10**9
+    if ng is None:
+        return
+    return int(ng)/10**9
 #end define
+
+
+def parse_db_stats(path: str):
+    with open(path) as f:
+        lines = f.readlines()
+    result = {}
+    for line in lines:
+        s = line.strip().split(maxsplit=1)
+        items = re.findall(r"(\S+)\s:\s(\S+)", s[1])
+        if len(items) == 1:
+            item = items[0]
+            if float(item[1]) > 0:
+                result[s[0]] = float(item[1])
+        else:
+            if any(float(v) > 0 for k, v in items):
+                result[s[0]] = {}
+                result[s[0]] = {k: float(v) for k, v in items}
+    return result
+# end define

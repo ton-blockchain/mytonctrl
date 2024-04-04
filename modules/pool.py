@@ -1,3 +1,5 @@
+import os
+
 from mypylib.mypylib import color_print, print_table
 from modules.module import MtcModule
 
@@ -28,6 +30,15 @@ class PoolModule(MtcModule):
         pool = self.ton.GetLocalPool(pool_name)
         pool.Delete()
         color_print("DeletePool - {green}OK{endc}")
+    # end define
+
+    def do_import_pool(self, pool_name, addr_b64):
+        self.check_download_pool_contract_scripts()
+        addr_bytes = self.ton.addr_b64_to_bytes(addr_b64)
+        pool_path = self.ton.poolsDir + pool_name
+        with open(pool_path + ".addr", 'wb') as file:
+            file.write(addr_bytes)
+    # end define
 
     def import_pool(self, args):
         try:
@@ -36,8 +47,13 @@ class PoolModule(MtcModule):
         except:
             color_print("{red}Bad args. Usage:{endc} import_pool <pool-name> <pool-addr>")
             return
-        self.ton.import_pool(pool_name, pool_addr)
+        self.do_import_pool(pool_name, pool_addr)
         color_print("import_pool - {green}OK{endc}")
+
+    def check_download_pool_contract_scripts(self):
+        contract_path = self.ton.contractsDir + "nominator-pool/"
+        if not os.path.isdir(contract_path):
+            self.ton.DownloadContract("https://github.com/ton-blockchain/nominator-pool")
 
     def add_console_commands(self, console):
         console.AddItem("pools_list", self.print_pools_list, self.local.translate("pools_list_cmd"))
