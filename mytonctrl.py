@@ -30,6 +30,7 @@ def Init(argv):
 	console.AddItem("add_custom_overlay", add_custom_overlay, local.translate("add_custom_overlay_cmd"))
 	console.AddItem("list_custom_overlays", list_custom_overlays, local.translate("list_custom_overlays_cmd"))
 	console.AddItem("delete_custom_overlay", delete_custom_overlay, local.translate("delete_custom_overlay_cmd"))
+	console.AddItem("set_archive_ttl", set_archive_ttl, local.translate("set_archive_ttl_cmd"))
 
 	console.AddItem("nw", CreatNewWallet, local.translate("nw_cmd"))
 	console.AddItem("aw", ActivateWallet, local.translate("aw_cmd"))
@@ -1210,6 +1211,19 @@ def UpdateValidatorSet(args):
 	wallet = self.GetValidatorWallet()
 	self.PoolUpdateValidatorSet(poolAddr, wallet)
 	color_print("DeletePool - {green}OK{endc}")
+#end define
+
+
+def set_archive_ttl(args):
+	if len(args) != 1:
+		color_print("{red}Bad args. Usage:{endc} set_archive_ttl <ttl>")
+		return
+	ttl = args[0]
+	result = run_as_root(['python3', '/usr/src/mytonctrl/scripts/set_archive_ttl.py', ttl])
+	if result:
+		color_print("set_archive_ttl - {red}Error{endc}")
+		return
+	color_print("set_archive_ttl - {green}OK{endc}")
 #end define
 
 
