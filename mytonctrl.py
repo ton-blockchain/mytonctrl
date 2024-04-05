@@ -110,6 +110,7 @@ def Init(argv):
 
 def PreUp():
 	CheckMytonctrlUpdate()
+	CheckDiskUsage()
 	check_vport()
 	# CheckTonUpdate()
 #end define
@@ -140,26 +141,26 @@ def check_git(input_args, default_repo, text):
 	git_path = f"{src_dir}/{default_repo}"
 	default_author = "ton-blockchain"
 	default_branch = "master"
-	
+
 	# Get author, repo, branch
 	local_author, local_repo = get_git_author_and_repo(git_path)
 	local_branch = get_git_branch(git_path)
-	
+
 	# Set author, repo, branch
 	data = GetAuthorRepoBranchFromArgs(input_args)
 	need_author = data.get("author")
 	need_repo = data.get("repo")
 	need_branch = data.get("branch")
-	
+
 	# Check if remote repo is different from default
-	if ((need_author is None and local_author != default_author) or 
+	if ((need_author is None and local_author != default_author) or
 		(need_repo is None and local_repo != default_repo)):
 		remote_url = f"https://github.com/{local_author}/{local_repo}/tree/{need_branch if need_branch else local_branch}"
 		raise Exception(f"{text} error: You are on {remote_url} remote url, to {text} to the tip use `{text} {remote_url}` command")
 	elif need_branch is None and local_branch != default_branch:
 		raise Exception(f"{text} error: You are on {local_branch} branch, to {text} to the tip of {local_branch} branch use `{text} {local_branch}` command")
 	#end if
-	
+
 	if need_author is None:
 		need_author = local_author
 	if need_repo is None:
@@ -167,7 +168,7 @@ def check_git(input_args, default_repo, text):
 	if need_branch is None:
 		need_branch = local_branch
 	#end if
-	
+
 	return need_author, need_repo, need_branch
 #end define
 
@@ -209,7 +210,7 @@ def Update(args):
 def Upgrade(args):
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
-	
+
 	# Run script
 	runArgs = ["bash", "/usr/src/mytonctrl/scripts/upgrade.sh", "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
@@ -226,6 +227,14 @@ def CheckMytonctrlUpdate():
 	if result is True:
 		color_print(local.translate("mytonctrl_update_available"))
 #end define
+
+
+def CheckDiskUsage():
+	usage = ton.GetDbUsage()
+	if usage > 90:
+		color_print(local.translate("disk_usage_warning"))
+#end define
+
 
 def CheckTonUpdate():
 	git_path = "/usr/src/ton"
@@ -405,7 +414,7 @@ def PrintLocalStatus(adnlAddr, validatorIndex, validatorEfficiency, validatorWal
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
 	dbStatus_text = local.translate("local_status_db").format(dbSize_text, dbUsage_text)
-	
+
 	# Mytonctrl and validator git hash
 	mtcGitPath = "/usr/src/mytonctrl"
 	validatorGitPath = "/usr/src/ton"
@@ -430,7 +439,7 @@ def PrintLocalStatus(adnlAddr, validatorIndex, validatorEfficiency, validatorWal
 	print(cpuLoad_text)
 	print(netLoad_text)
 	print(memoryLoad_text)
-	
+
 	print(disksLoad_text)
 	print(mytoncoreStatus_text)
 	print(validatorStatus_text)
