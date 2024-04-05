@@ -232,7 +232,9 @@ def CheckMytonctrlUpdate():
 def CheckDiskUsage():
 	usage = ton.GetDbUsage()
 	if usage > 90:
+		print('============================================================================================')
 		color_print(local.translate("disk_usage_warning"))
+		print('============================================================================================')
 #end define
 
 
