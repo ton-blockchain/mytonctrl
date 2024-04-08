@@ -43,7 +43,7 @@ def parse_config(name: str, config: dict, vset: list = None):
 
 
 def add_custom_overlay(args):
-    from mytonctrl import ton
+    from mytonctrl import ton, local
     if len(args) != 2:
         color_print("{red}Bad args. Usage:{endc} add_custom_overlay <name> <path_to_config>")
         return
@@ -54,7 +54,7 @@ def add_custom_overlay(args):
     if '@validators' in config:
         print('Dynamic overlay will be added within 1 minute')
     else:
-        result = add_custom_overlay_to_vc(ton, parse_config(args[0], config))
+        result = add_custom_overlay_to_vc(local, ton, parse_config(args[0], config))
         if not result:
             print('Failed to add overlay to validator console')
             color_print("add_custom_overlay - {red}ERROR{endc}")
@@ -77,10 +77,11 @@ def delete_custom_overlay(args):
     if len(args) != 1:
         color_print("{red}Bad args. Usage:{endc} delete_custom_overlay <name>")
         return
-    ton.delete_custom_overlay(args[0])
     if '@validators' in ton.get_custom_overlays().get(args[0], {}):
+        ton.delete_custom_overlay(args[0])
         print('Dynamic overlay will be deleted within 1 minute')
     else:
+        ton.delete_custom_overlay(args[0])
         result = delete_custom_overlay_from_vc(ton, args[0])
         if not result:
             print('Failed to delete overlay from validator console')
@@ -89,12 +90,26 @@ def delete_custom_overlay(args):
     color_print("delete_custom_overlay - {green}OK{endc}")
 
 
+def check_node_eligible_for_custom_overlay(ton, config: dict):
+    vconfig = ton.GetValidatorConfig()
+    my_adnls = vconfig.adnl
+    node_adnls = [i["adnl_id"] for i in config["nodes"]]
+    for adnl in my_adnls:
+        if adnl.id in node_adnls:
+            return True
+    return False
+
+
 def delete_custom_overlay_from_vc(ton, name: str):
     result = ton.validatorConsole.Run(f"delcustomoverlay {name}")
     return 'success' in result
 
 
-def add_custom_overlay_to_vc(ton, config: dict):
+def add_custom_overlay_to_vc(local, ton, config: dict):
+    if not check_node_eligible_for_custom_overlay(ton, config):
+        local.add_log(f"Node has no adnl address required for custom overlay {config.get('name')}", "debug")
+        return False
+    local.add_log(f"Adding custom overlay {config.get('name')}", "debug")
     path = ton.tempDir + f'/custom_overlay_{config["name"]}.json'
     with open(path, 'w') as f:
         json.dump(config, f)
@@ -149,19 +164,16 @@ def deploy_custom_overlays(local, ton):
             new_name = name + '_elid' + str(current_el_id)
             if new_name not in names:
                 node_config = parse_config(new_name, config, current_vset)
-                local.add_log(f"Adding custom overlay {new_name}", "debug")
-                add_custom_overlay_to_vc(ton, node_config)
+                add_custom_overlay_to_vc(local, ton, node_config)
 
             if next_el_id != 0:
                 new_name = name + '_elid' + str(next_el_id)
                 if new_name not in names:
                     node_config = parse_config(new_name, config, next_vset)
-                    local.add_log(f"Adding custom overlay {new_name}", "debug")
-                    add_custom_overlay_to_vc(ton, node_config)
+                    add_custom_overlay_to_vc(local, ton, node_config)
         else:
             node_config = parse_config(name, config)
-            local.add_log(f"Adding custom overlay {name}", "debug")
-            add_custom_overlay_to_vc(ton, node_config)
+            add_custom_overlay_to_vc(local, ton, node_config)
 
 
 MAINNET_DEFAULT_CUSTOM_OVERLAY = {
