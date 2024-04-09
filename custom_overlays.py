@@ -1,5 +1,6 @@
 import base64
 import json
+import requests
 
 from mypylib.mypylib import color_print
 
@@ -176,48 +177,15 @@ def deploy_custom_overlays(local, ton):
             add_custom_overlay_to_vc(local, ton, node_config)
 
 
-MAINNET_DEFAULT_CUSTOM_OVERLAY = {
-    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": {
-        "msg_sender": True,
-        "msg_sender_priority": 15
-    },
-    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB": {
-        "msg_sender": True,
-        "msg_sender_priority": 10
-    },
-    "@validators": True
-}
-
-
-TESTNET_DEFAULT_CUSTOM_OVERLAY = {
-    "DF27B30444D07087863B77F8BD27BABA8E57EDECA393605F6610FDCB64FFECD1": {
-        "msg_sender": True,
-        "msg_sender_priority": 15
-    },
-    "B360D229CA597906ADFC522FAC3EB5F8AE9D80981693225E7083577A4F016118": {
-        "msg_sender": True,
-        "msg_sender_priority": 10
-    },
-    "F794DE0B21423B6F4C168C5652758E5743CD977ACE13B3B2BA88E28580D9BEDB": {
-        "msg_sender": True,
-        "msg_sender_priority": 10
-    },
-    "6447CEAC80573AF2ABCA741FC940BB690AC263DC4B779FB6609CE5E9A4B31AE1": {
-        "msg_sender": True,
-        "msg_sender_priority": 5,
-    },
-    "@validators": True
-}
-
-
 def get_default_custom_overlay(local, ton):
     if not local.db.get('useDefaultCustomOverlays', True):
         return None
     network = ton.GetNetworkName()
-    if network == 'mainnet':
-        config = MAINNET_DEFAULT_CUSTOM_OVERLAY
-    elif network == 'testnet':
-        config = TESTNET_DEFAULT_CUSTOM_OVERLAY
-    else:
+    default_url = 'https://raw.githubusercontent.com/ton-blockchain/mytonctrl/mytonctrl1_dev/default_custom_overlays.json'  # todo: change to master
+    url = local.db.get('defaultCustomOverlaysUrl', default_url)
+    resp = requests.get(url)
+    if resp.status_code != 200:
+        local.add_log(f"Failed to get default custom overlays from {url}", "error")
         return None
-    return config
+    config = resp.json()
+    return config.get(network)
