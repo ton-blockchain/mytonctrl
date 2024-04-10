@@ -181,7 +181,7 @@ def get_default_custom_overlay(local, ton):
     if not local.db.get('useDefaultCustomOverlays', True):
         return None
     network = ton.GetNetworkName()
-    default_url = 'https://raw.githubusercontent.com/ton-blockchain/mytonctrl/mytonctrl1_dev/default_custom_overlays.json'  # todo: change to master
+    default_url = 'https://ton-blockchain.github.io/fallback_custom_overlays.json'
     url = local.db.get('defaultCustomOverlaysUrl', default_url)
     resp = requests.get(url)
     if resp.status_code != 200:
