@@ -3910,6 +3910,21 @@ class MyTonCore():
 		self.local.add_log("ControllerRecoverStake completed")
 	#end define
 
+	def get_custom_overlays(self):
+		if 'custom_overlays' not in self.local.db:
+			self.local.db['custom_overlays'] = {}
+		return self.local.db['custom_overlays']
+
+	def set_custom_overlay(self, name: str, config: dict):
+		overlays = self.get_custom_overlays()
+		overlays[name] = config
+		self.local.save()
+
+	def delete_custom_overlay(self, name: str):
+		del self.local.db['custom_overlays'][name]
+		self.local.save()
+
+
 	def GetNetworkName(self):
 		data = self.local.read_db(self.liteClient.configPath)
 		mainnet_zero_state_root_hash = "F6OpKZKqvqeFp6CQmFomXNMfMj2EnaUSOXN+Mh+wVWk="

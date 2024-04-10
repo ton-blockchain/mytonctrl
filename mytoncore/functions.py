@@ -690,6 +690,10 @@ def General(local):
     local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
     local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
     local.start_cycle(ScanLiteServers, sec=60, args=(local, ton,))
+
+    from modules.custom_overlays import CustomOverlayModule
+    local.start_cycle(CustomOverlayModule(ton, local).custom_overlays, sec=60, args=())
+
     thr_sleep()
 # end define
 
