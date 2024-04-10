@@ -120,6 +120,10 @@ def Init(local, ton, console, argv):
 	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.translate("ssoc_cmd"))
 	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
 
+	from modules.custom_overlays import CustomOverlayModule
+	module = CustomOverlayModule(ton, local)
+	module.add_console_commands(console)
+
 	if ton.using_validator():
 		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
