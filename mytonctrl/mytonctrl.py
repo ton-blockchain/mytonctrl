@@ -461,7 +461,6 @@ def mode_status(ton, args):
 
 def settings_status(ton, args):
 	from modules import SETTINGS
-	color_print(f'''{{cyan}}===[ SETTINGS ]==={{endc}}''')
 	table = [["Name", "Description", "Mode", "Default value", "Current value"]]
 	for name, setting in SETTINGS.items():
 		current_value = ton.local.db.get(name)
