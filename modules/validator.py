@@ -1,8 +1,6 @@
 from mypylib.mypylib import color_print
 from modules.module import MtcModule
 
-from mytoncore.functions import Elections
-
 
 class ValidatorModule(MtcModule):
 
@@ -20,6 +18,7 @@ class ValidatorModule(MtcModule):
         color_print("VoteOffer - {green}OK{endc}")
 
     def vote_election_entry(self, args):
+        from mytoncore.functions import Elections
         Elections(self.ton.local, self.ton)
         color_print("VoteElectionEntry - {green}OK{endc}")
 
