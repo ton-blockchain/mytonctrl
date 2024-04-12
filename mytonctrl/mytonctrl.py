@@ -70,6 +70,7 @@ def Init(local, ton, console, argv):
 	console.AddItem("installer", inject_globals(Installer), local.translate("installer_cmd"))
 	console.AddItem("status", inject_globals(PrintStatus), local.translate("status_cmd"))
 	console.AddItem("status_modes", inject_globals(mode_status), local.translate("status_modes_cmd"))
+	console.AddItem("status_settings", inject_globals(settings_status), local.translate("settings_status_cmd"))
 	console.AddItem("enable_mode", inject_globals(enable_mode), local.translate("enable_mode_cmd"))
 	console.AddItem("disable_mode", inject_globals(disable_mode), local.translate("disable_mode_cmd"))
 	console.AddItem("about", inject_globals(about), local.translate("about_cmd"))
@@ -454,6 +455,17 @@ def mode_status(ton, args):
 		mode = get_mode(mode_name)
 		status = color_text('{green}enabled{endc}' if modes[mode_name] else '{red}disabled{endc}')
 		table.append([mode_name, status, mode.description])
+	print_table(table)
+#end define
+
+
+def settings_status(ton, args):
+	from modules import SETTINGS
+	color_print(f'''{{cyan}}===[ SETTINGS ]==={{endc}}''')
+	table = [["Name", "Description", "Mode", "Default value", "Current value"]]
+	for name, setting in SETTINGS.items():
+		current_value = ton.local.db.get(name)
+		table.append([name, setting.description, setting.mode, setting.default_value, current_value])
 	print_table(table)
 #end define
 
