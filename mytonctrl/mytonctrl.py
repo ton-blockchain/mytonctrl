@@ -181,16 +181,21 @@ def Init(local, ton, console, argv):
 
 
 def about(local, ton, args):
+	from modules import get_mode, get_mode_settings
 	if len(args) != 1:
 		color_print("{red}Bad args. Usage:{endc} about <mode_name>")
 	mode_name = args[0]
-	mode = ton.get_mode(mode_name)
+	mode = get_mode(mode_name)
 	if mode is None:
 		color_print(f"{{red}}Mode {mode_name} not found{{endc}}")
 		return
+	mode_settings = get_mode_settings(mode_name)
 	color_print(f'''{{cyan}}===[ {mode_name} MODE ]==={{cyan}}=''')
 	color_print(f'''Description: {mode.description}''')
 	color_print('Enabled: ' + color_text('{green}yes{endc}' if ton.get_mode_value(mode_name) else '{red}no{endc}'))
+	print('Settings:', 'no' if len(mode_settings) == 0 else '')
+	for setting_name, setting in mode_settings.items():
+		print(f'  {setting_name}: {setting.description}. Default value: {setting.default_value}')
 #end define
 
 
@@ -1287,6 +1292,18 @@ def SetSettings(ton, args):
 		color_print(f"{{red}} Error: set {name} ... is deprecated and does not work {{endc}}."
 					f"\nInstead, use {{bold}}enable_mode {mode_name}{{endc}}")
 		return
+	force = False
+	if len(args) > 2:
+		if args[2] == "--force":
+			force = True
+	from modules import get_setting
+	setting = get_setting(name)
+	if setting is None and not force:
+		color_print(f"{{red}} Error: setting {name} not found {{endc}}. use flag --force to set it anyway")
+	if setting.mode is not None:
+		if not ton.get_mode_value(setting.mode) and not force:
+			color_print(f"{{red}} Error: mode {setting.mode} is disabled {{endc}}. Use flag --force to set it anyway")
+			return
 	ton.SetSettings(name, value)
 	color_print("SetSettings - {green}OK{endc}")
 #end define
