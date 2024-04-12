@@ -190,12 +190,12 @@ def about(local, ton, args):
 		color_print(f"{{red}}Mode {mode_name} not found{{endc}}")
 		return
 	mode_settings = get_mode_settings(mode_name)
-	color_print(f'''{{cyan}}===[ {mode_name} MODE ]==={{cyan}}=''')
+	color_print(f'''{{cyan}}===[ {mode_name} MODE ]==={{endc}}''')
 	color_print(f'''Description: {mode.description}''')
 	color_print('Enabled: ' + color_text('{green}yes{endc}' if ton.get_mode_value(mode_name) else '{red}no{endc}'))
 	print('Settings:', 'no' if len(mode_settings) == 0 else '')
 	for setting_name, setting in mode_settings.items():
-		print(f'  {setting_name}: {setting.description}. Default value: {setting.default_value}')
+		color_print(f'  {{bold}}{setting_name}{{endc}}: {setting.description}.\n    Default value: {setting.default_value}')
 #end define
 
 

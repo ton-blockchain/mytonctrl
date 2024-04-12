@@ -29,7 +29,7 @@ class Setting:
 
 
 SETTINGS = {
-    'stake': Setting('validator', False, 'Stake amount'),
+    'stake': Setting('validator', None, 'Stake amount'),
     'stakePercent': Setting('validator', 99, 'Stake percent if `stake` is null'),
     'isSlashing': Setting('validator', None, 'Create complaints to validators'),
     'maxFactor': Setting('validator', None, 'Param send to Elector. if null will be taken from 17 config param'),
