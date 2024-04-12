@@ -1650,10 +1650,10 @@ class MyTonCore():
 
 	def CreateWallet(self, name, workchain=0, version="v1", **kwargs):
 		self.local.add_log("start CreateWallet function", "debug")
-		subwalletDefault = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
-		walletPath = self.walletsDir + name
-		if os.path.isfile(walletPath + ".pk") and "v3" not in version:
+		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
+		subwallet = kwargs.get("subwallet", subwallet_default)
+		wallet_path = self.walletsDir + name
+		if os.path.isfile(wallet_path + ".pk") and "v3" not in version:
 			self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
 		else:
 			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
@@ -1670,15 +1670,15 @@ class MyTonCore():
 
 	def CreateHighWallet(self, name, **kwargs):
 		workchain = kwargs.get("workchain", 0)
-		subwalletDefault = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
+		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
+		subwallet = kwargs.get("subwallet", subwallet_default)
 		version = kwargs.get("version", "hv1")
 		self.local.AddLog("start CreateHighWallet function", "debug")
-		walletPath = self.walletsDir + name
-		if os.path.isfile(walletPath + ".pk") and os.path.isfile(walletPath + str(subwallet) + ".addr"):
+		wallet_path = self.walletsDir + name
+		if os.path.isfile(wallet_path + ".pk") and os.path.isfile(wallet_path + str(subwallet) + ".addr"):
 			self.local.AddLog("CreateHighWallet error: Wallet already exists: " + name + str(subwallet), "warning")
 		else:
-			args = ["new-highload-wallet.fif", workchain, subwallet, walletPath]
+			args = ["new-highload-wallet.fif", workchain, subwallet, wallet_path]
 			result = self.fift.Run(args)
 			if "Creating new high-load wallet" not in result:
 				raise Exception("CreateHighWallet error")
