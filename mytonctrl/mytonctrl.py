@@ -1299,10 +1299,11 @@ def SetSettings(ton, args):
 	from modules import get_setting
 	setting = get_setting(name)
 	if setting is None and not force:
-		color_print(f"{{red}} Error: setting {name} not found {{endc}}. use flag --force to set it anyway")
-	if setting.mode is not None:
+		color_print(f"{{red}} Error: setting {name} not found.{{endc}} Use flag --force to set it anyway")
+		return
+	if setting is not None and setting.mode is not None:
 		if not ton.get_mode_value(setting.mode) and not force:
-			color_print(f"{{red}} Error: mode {setting.mode} is disabled {{endc}}. Use flag --force to set it anyway")
+			color_print(f"{{red}} Error: mode {setting.mode} is disabled.{{endc}} Use flag --force to set it anyway")
 			return
 	ton.SetSettings(name, value)
 	color_print("SetSettings - {green}OK{endc}")
