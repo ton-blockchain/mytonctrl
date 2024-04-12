@@ -122,6 +122,10 @@ def Init(local, ton, console, argv):
 	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.translate("ssoc_cmd"))
 	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
 
+	from modules.custom_overlays import CustomOverlayModule
+	module = CustomOverlayModule(ton, local)
+	module.add_console_commands(console)
+
 	if ton.using_validator():
 		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
@@ -149,6 +153,7 @@ def Init(local, ton, console, argv):
 
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
+	console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -178,6 +183,24 @@ def Init(local, ton, console, argv):
 	local.db.config.logLevel = "debug" if console.debug else "info"
 	local.db.config.isLocaldbSaving = False
 	local.run()
+#end define
+
+
+
+def activate_ton_storage_provider(local, ton, args):
+	wallet_name = "provider_wallet_001"
+	wallet = ton.GetLocalWallet(wallet_name)
+	account = ton.GetAccount(wallet.addrB64)
+	if account.status == "active":
+		color_print("activate_ton_storage_provider - {green}Already activated{endc}")
+		#return
+	ton.ActivateWallet(wallet)
+	destination = "0:7777777777777777777777777777777777777777777777777777777777777777"
+	ton_storage = ton.GetSettings("ton_storage")
+	comment = f"tsp-{ton_storage.provider.pubkey}"
+	flags = ["-n", "-C", comment]
+	ton.MoveCoins(wallet, destination, 0.01, flags=flags)
+	color_print("activate_ton_storage_provider - {green}OK{endc}")
 #end define
 
 

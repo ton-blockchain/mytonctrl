@@ -7,10 +7,13 @@ import random
 import json
 import subprocess
 
+import pkg_resources
+
 from mypylib.mypylib import MyPyClass, run_as_root, color_print
 from mypyconsole.mypyconsole import MyPyConsole
 
 from mytoninstaller.config import GetLiteServerConfig, get_ls_proxy_config
+from mytoninstaller.node_args import get_node_args
 from mytoninstaller.utils import GetInitBlock
 from mytoncore.utils import dict2b64, str2bool, b642dict
 
@@ -24,7 +27,9 @@ from mytoninstaller.settings import (
 	EnableTonHttpApi,
 	DangerousRecoveryValidatorConfigFile,
 	CreateSymlinks,
-	enable_ls_proxy
+	enable_ls_proxy,
+	enable_ton_storage,
+	enable_ton_storage_provider
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
@@ -62,6 +67,7 @@ def Init(local, console):
 	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.AddItem("status", inject_globals(Status), "Print TON component status")
+	console.AddItem("set_node_argument", inject_globals(set_node_argument), "Set node argument")
 	console.AddItem("enable", inject_globals(Enable), "Enable some function")
 	console.AddItem("update", inject_globals(Enable), "Update some function: 'JR' - jsonrpc.  Example: 'update JR'") 
 	console.AddItem("plsc", inject_globals(PrintLiteServerConfig), "Print lite-server config")
@@ -111,16 +117,34 @@ def Status(local, args):
 	liteserver_key = keys_dir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
+	statuses = {
+		'Full node status': os.path.isfile(local.buffer.vconfig_path),
+		'Mytoncore status': os.path.isfile(local.buffer.mconfig_path),
+		'V.console status': os.path.isfile(server_key) or os.path.isfile(client_key),
+		'Liteserver status': os.path.isfile(liteserver_pubkey)
+	}
 
-	fnStatus = os.path.isfile(local.buffer.vconfig_path)
-	mtcStatus = os.path.isfile(local.buffer.mconfig_path)
-	vcStatus = os.path.isfile(server_key) or os.path.isfile(client_key)
-	lsStatus = os.path.isfile(liteserver_pubkey)
+	color_print("{cyan}===[ Services status ]==={endc}")
+	for item in statuses.items():
+		status = '{green}enabled{endc}' if item[1] else '{red}disabled{endc}'
+		color_print(f"{item[0]}: {status}")
 
-	print("Full node status:", fnStatus)
-	print("Mytoncore status:", mtcStatus)
-	print("V.console status:", vcStatus)
-	print("Liteserver status:", lsStatus)
+	node_args = get_node_args()
+	color_print("{cyan}===[ Node arguments ]==={endc}")
+	for key, value in node_args.items():
+		print(f"{key}: {value}")
+#end define
+
+
+def set_node_argument(local, args):
+	if len(args) < 1:
+		color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)]")
+		return
+	arg_name = args[0]
+	args = [arg_name, args[1] if len(args) > 1 else ""]
+	script_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'set_node_argument.py')
+	run_as_root(['python3', script_path] + args)
+	color_print("set_node_argument - {green}OK{endc}")
 #end define
 
 
@@ -136,6 +160,7 @@ def Enable(local, args):
 		print("'JR' - jsonrpc")
 		print("'THA' - ton-http-api")
 		print("'LSP' - ls-proxy")
+		print("'TSP' - ton-storage + ton-storage-provider")
 		print("Example: 'enable FN'")
 		return
 	if name == "THA":
@@ -200,6 +225,9 @@ def Event(local, name):
 		EnableTonHttpApi(local)
 	if name == "enableLSP":
 		enable_ls_proxy(local)
+	if name == "enableTSP":
+		enable_ton_storage(local)
+		enable_ton_storage_provider(local)
 	if name == "clc":
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]
