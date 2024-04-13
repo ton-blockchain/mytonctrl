@@ -12,6 +12,8 @@ def set_node_arg(arg_name: str, arg_value: str = ''):
     assert arg_name.startswith('-'), 'arg_name must start with "-" or "--"'
     service = get_validator_service()
     command = get_node_start_command()
+    if command.split(' ')[0] != '/usr/bin/ton/validator-engine/validator-engine':
+        raise Exception('Invalid node start command in service file')
     if command is None:
         raise Exception('Cannot find node start command in service file')
     args = get_node_args(command)

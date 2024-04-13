@@ -70,8 +70,10 @@ def Init(local, ton, console, argv):
 	console.AddItem("installer", inject_globals(Installer), local.translate("installer_cmd"))
 	console.AddItem("status", inject_globals(PrintStatus), local.translate("status_cmd"))
 	console.AddItem("status_modes", inject_globals(mode_status), local.translate("status_modes_cmd"))
+	console.AddItem("status_settings", inject_globals(settings_status), local.translate("settings_status_cmd"))
 	console.AddItem("enable_mode", inject_globals(enable_mode), local.translate("enable_mode_cmd"))
 	console.AddItem("disable_mode", inject_globals(disable_mode), local.translate("disable_mode_cmd"))
+	console.AddItem("about", inject_globals(about), local.translate("about_cmd"))
 	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
 	console.AddItem("rollback", inject_globals(rollback_to_mtc1), local.translate("rollback_cmd"))
@@ -184,6 +186,7 @@ def Init(local, ton, console, argv):
 #end define
 
 
+
 def activate_ton_storage_provider(local, ton, args):
 	wallet_name = "provider_wallet_001"
 	wallet = ton.GetLocalWallet(wallet_name)
@@ -198,6 +201,25 @@ def activate_ton_storage_provider(local, ton, args):
 	flags = ["-n", "-C", comment]
 	ton.MoveCoins(wallet, destination, 0.01, flags=flags)
 	color_print("activate_ton_storage_provider - {green}OK{endc}")
+#end define
+
+
+def about(local, ton, args):
+	from modules import get_mode, get_mode_settings
+	if len(args) != 1:
+		color_print("{red}Bad args. Usage:{endc} about <mode_name>")
+	mode_name = args[0]
+	mode = get_mode(mode_name)
+	if mode is None:
+		color_print(f"{{red}}Mode {mode_name} not found{{endc}}")
+		return
+	mode_settings = get_mode_settings(mode_name)
+	color_print(f'''{{cyan}}===[ {mode_name} MODE ]==={{endc}}''')
+	color_print(f'''Description: {mode.description}''')
+	color_print('Enabled: ' + color_text('{green}yes{endc}' if ton.get_mode_value(mode_name) else '{red}no{endc}'))
+	print('Settings:', 'no' if len(mode_settings) == 0 else '')
+	for setting_name, setting in mode_settings.items():
+		color_print(f'  {{bold}}{setting_name}{{endc}}: {setting.description}.\n    Default value: {setting.default_value}')
 #end define
 
 
@@ -447,13 +469,28 @@ def sl(ton, args):
 	Slashing(ton.local, ton)
 #end define
 
+
 def mode_status(ton, args):
+	from modules import get_mode
 	modes = ton.get_modes()
-	text = "########## {bold}Modes{endc} ########## \n"
-	for mode in modes:
-		status = '{green}enabled{endc}' if modes[mode] else '{red}disabled{endc}'
-		text += f"{mode}: {status}\n"
-	color_print(text)
+	table = [["Name", "Status", "Description"]]
+	for mode_name in modes:
+		mode = get_mode(mode_name)
+		status = color_text('{green}enabled{endc}' if modes[mode_name] else '{red}disabled{endc}')
+		table.append([mode_name, status, mode.description])
+	print_table(table)
+#end define
+
+
+def settings_status(ton, args):
+	from modules import SETTINGS
+	table = [["Name", "Description", "Mode", "Default value", "Current value"]]
+	for name, setting in SETTINGS.items():
+		current_value = ton.local.db.get(name)
+		table.append([name, setting.description, setting.mode, setting.default_value, current_value])
+	print_table(table)
+#end define
+
 
 def PrintStatus(local, ton, args):
 	opt = None
@@ -1289,6 +1326,19 @@ def SetSettings(ton, args):
 		color_print(f"{{red}} Error: set {name} ... is deprecated and does not work {{endc}}."
 					f"\nInstead, use {{bold}}enable_mode {mode_name}{{endc}}")
 		return
+	force = False
+	if len(args) > 2:
+		if args[2] == "--force":
+			force = True
+	from modules import get_setting
+	setting = get_setting(name)
+	if setting is None and not force:
+		color_print(f"{{red}} Error: setting {name} not found.{{endc}} Use flag --force to set it anyway")
+		return
+	if setting is not None and setting.mode is not None:
+		if not ton.get_mode_value(setting.mode) and not force:
+			color_print(f"{{red}} Error: mode {setting.mode} is disabled.{{endc}} Use flag --force to set it anyway")
+			return
 	ton.SetSettings(name, value)
 	color_print("SetSettings - {green}OK{endc}")
 #end define

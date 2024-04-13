@@ -11,7 +11,7 @@ import pkg_resources
 import requests
 from fastcrc import crc16
 
-from mytoncore.modes import MODES
+from modules import MODES
 from mytoncore.utils import xhex2hex, ng2g
 from mytoncore.liteclient import LiteClient
 from mytoncore.validator_console import ValidatorConsole
@@ -3209,9 +3209,9 @@ class MyTonCore():
 		if 'modes' not in self.local.db:
 			self.local.db['modes'] = current_modes
 			self.migrate_to_modes()
-		for mode in MODES:
-			if mode not in current_modes:
-				current_modes[mode] = MODES[mode]  # assign default mode value
+		for name, mode in MODES.items():
+			if name not in current_modes:
+				current_modes[name] = mode.default_value  # assign default mode value
 		return current_modes
 
 	def enable_mode(self, name):
