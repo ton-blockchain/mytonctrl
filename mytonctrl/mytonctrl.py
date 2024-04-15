@@ -242,6 +242,7 @@ def PreUp(local, ton):
 	CheckMytonctrlUpdate(local)
 	check_installer_user()
 	check_vport(local, ton)
+	warnings(local, ton)
 	# CheckTonUpdate()
 #end define
 
@@ -453,6 +454,21 @@ def CheckMytonctrlUpdate(local):
 	if result is True:
 		color_print(local.translate("mytonctrl_update_available"))
 #end define
+
+def print_warning(local, warning_name: str):
+	color_print("============================================================================================")
+	color_print(local.translate(warning_name))
+	color_print("============================================================================================")
+#end define
+
+def check_disk_usage(local, ton):
+	usage = ton.GetDbUsage()
+	if usage > 90:
+		print_warning(local, "disk_usage_warning")
+#end define
+
+def warnings(local, ton):
+	check_disk_usage(local, ton)
 
 def CheckTonUpdate(local):
 	git_path = "/usr/src/ton"
