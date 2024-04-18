@@ -2087,8 +2087,8 @@ class MyTonCore():
 
 			# Create dict
 			# parser from: https://github.com/ton-blockchain/ton/blob/dab7ee3f9794db5a6d32c895dbc2564f681d9126/crypto/smartcont/config-code.fc#L607
-			item = dict()
-			item["config"] = dict()
+			item = Dict()
+			item["config"] = Dict()
 			item["hash"] = hash
 			item["endTime"] = subdata[0] # *expires*
 			item["critFlag"] = subdata[1] # *critical*

@@ -1104,7 +1104,7 @@ def PrintOffersList(ton, args):
 		print(text)
 	else:
 		table = list()
-		table += [["Hash", "Votes", "W/L", "Approved", "Is passed"]]
+		table += [["Hash", "Config", "Votes", "W/L", "Approved", "Is passed"]]
 		for item in data:
 			hash = item.get("hash")
 			votedValidators = len(item.get("votedValidators"))
@@ -1120,7 +1120,7 @@ def PrintOffersList(ton, args):
 				isPassed = bcolors.green_text("true")
 			if isPassed == False:
 				isPassed = bcolors.red_text("false")
-			table += [[hash, votedValidators, wl, approvedPercent_text, isPassed]]
+			table += [[hash, item.config.id, votedValidators, wl, approvedPercent_text, isPassed]]
 		print_table(table)
 #end define
 
