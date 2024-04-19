@@ -506,6 +506,11 @@ def Slashing(local, ton):
 # end define
 
 
+def save_past_events(local, ton):
+    local.try_function(ton.GetElectionEntries)
+    local.try_function(ton.GetComplaints)
+
+
 def ScanLiteServers(local, ton):
     # Считать список серверов
     filePath = ton.liteClient.configPath
@@ -540,6 +545,7 @@ def General(local):
     local.start_cycle(Elections, sec=600, args=(local, ton, ))
     local.start_cycle(Statistics, sec=10, args=(local, ))
     local.start_cycle(Offers, sec=600, args=(local, ton, ))
+    local.start_cycle(save_past_events, sec=300, args=(local, ton, ))
 
     t = 600
     if ton.GetNetworkName() != 'mainnet':
