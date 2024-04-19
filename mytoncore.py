@@ -2478,12 +2478,12 @@ class MyTonCore():
 		if validatorIndex in offer.get("votedValidators"):
 			local.add_log("Proposal already has been voted", "debug")
 			return
+		self.AddSaveOffer(offer)
 		var1 = self.CreateConfigProposalRequest(offerHash, validatorIndex)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 		resultFilePath = self.SignProposalVoteRequestWithValidator(offerHash, validatorIndex, validatorPubkey_b64, validatorSignature)
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, fullConfigAddr, 1.5)
 		self.SendFile(resultFilePath, wallet)
-		self.AddSaveOffer(offer)
 	#end define
 
 	def VoteComplaint(self, electionId, complaintHash):
