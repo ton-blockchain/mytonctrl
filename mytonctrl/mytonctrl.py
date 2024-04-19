@@ -223,7 +223,7 @@ def about(local, ton, args):
 #end define
 
 
-def check_installer_user():
+def check_installer_user(local):
 	args = ["whoami"]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
 	username = process.stdout.decode("utf-8").strip()
@@ -234,13 +234,13 @@ def check_installer_user():
 	actual_user = output.split('\n')[1].split()[2]
 
 	if username != actual_user:
-		raise Exception(f'mytonctrl was installed by another user. Probably you need to launch mtc with `{actual_user}` user.')
+		local.add_log(f'mytonctrl was installed by another user. Probably you need to launch mtc with `{actual_user}` user.', 'error')
 #end define
 
 
 def PreUp(local, ton):
 	CheckMytonctrlUpdate(local)
-	check_installer_user()
+	check_installer_user(local)
 	check_vport(local, ton)
 	warnings(local, ton)
 	# CheckTonUpdate()
