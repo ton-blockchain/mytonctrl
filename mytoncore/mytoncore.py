@@ -810,42 +810,48 @@ class MyTonCore():
 
 	def GetValidatorStatus(self):
 		# Get buffer
-		bname = "validatorStatus"
+		bname = "validator_status"
 		buff = self.GetFunctionBuffer(bname)
 		if buff:
 			return buff
 		#end if
 
 		self.local.add_log("start GetValidatorStatus function", "debug")
-		validatorStatus = dict()
+		status = Dict()
 		try:
-			validatorStatus["isWorking"] = True
+			# Parse
+			status.is_working = True
 			result = self.validatorConsole.Run("getstats")
-			validatorStatus["unixtime"] = int(parse(result, "unixtime", '\n'))
-			validatorStatus["masterchainblocktime"] = int(parse(result, "masterchainblocktime", '\n'))
-			validatorStatus["stateserializermasterchainseqno"] = int(parse(result, "stateserializermasterchainseqno", '\n'))
-			validatorStatus["shardclientmasterchainseqno"] = int(parse(result, "shardclientmasterchainseqno", '\n'))
+			status.unixtime = int(parse(result, "unixtime", '\n'))
+			status.masterchainblocktime = int(parse(result, "masterchainblocktime", '\n'))
+			status.stateserializermasterchainseqno = int(parse(result, "stateserializermasterchainseqno", '\n'))
+			status.shardclientmasterchainseqno = int(parse(result, "shardclientmasterchainseqno", '\n'))
 			buff = parse(result, "masterchainblock", '\n')
-			validatorStatus["masterchainblock"] = self.GVS_GetItemFromBuff(buff)
+			status.masterchainblock = self.GVS_GetItemFromBuff(buff)
 			buff = parse(result, "gcmasterchainblock", '\n')
-			validatorStatus["gcmasterchainblock"] = self.GVS_GetItemFromBuff(buff)
+			status.gcmasterchainblock = self.GVS_GetItemFromBuff(buff)
 			buff = parse(result, "keymasterchainblock", '\n')
-			validatorStatus["keymasterchainblock"] = self.GVS_GetItemFromBuff(buff)
+			status.keymasterchainblock = self.GVS_GetItemFromBuff(buff)
 			buff = parse(result, "rotatemasterchainblock", '\n')
-			validatorStatus["rotatemasterchainblock"] = self.GVS_GetItemFromBuff(buff)
-			validatorStatus["transNum"] = self.local.buffer.get("transNum", -1)
-			validatorStatus["blocksNum"] = self.local.buffer.get("blocksNum", -1)
-			validatorStatus["masterBlocksNum"] = self.local.buffer.get("masterBlocksNum", -1)
+			status.rotatemasterchainblock = self.GVS_GetItemFromBuff(buff)
+			# Calculate
+			status.masterchain_out_of_sync = status.unixtime - status.masterchainblocktime
+			status.shardchain_out_of_sync = status.masterchainblock - status.shardclientmasterchainseqno
+			status.masterchain_out_of_ser = status.masterchainblock - status.stateserializermasterchainseqno
+			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
+			status.out_of_ser = status.masterchain_out_of_ser
 		except Exception as ex:
 			self.local.add_log(f"GetValidatorStatus warning: {ex}", "warning")
-			validatorStatus["isWorking"] = False
-			validatorStatus["unixtime"] = get_timestamp()
-			validatorStatus["masterchainblocktime"] = 0
-		validatorStatus["outOfSync"] = validatorStatus["unixtime"] - validatorStatus["masterchainblocktime"]
+			status.is_working = False
+		#end try
+
+		# old vars
+		status.outOfSync = status.out_of_sync
+		status.isWorking = status.is_working
 
 		# Set buffer
-		self.SetFunctionBuffer(bname, validatorStatus)
-		return validatorStatus
+		self.SetFunctionBuffer(bname, status)
+		return status
 	#end define
 
 	def GVS_GetItemFromBuff(self, buff):
@@ -2087,8 +2093,8 @@ class MyTonCore():
 
 			# Create dict
 			# parser from: https://github.com/ton-blockchain/ton/blob/dab7ee3f9794db5a6d32c895dbc2564f681d9126/crypto/smartcont/config-code.fc#L607
-			item = dict()
-			item["config"] = dict()
+			item = Dict()
+			item["config"] = Dict()
 			item["hash"] = hash
 			item["endTime"] = subdata[0] # *expires*
 			item["critFlag"] = subdata[1] # *critical*
@@ -2349,12 +2355,12 @@ class MyTonCore():
 		if validatorIndex in offer.get("votedValidators"):
 			self.local.add_log("Proposal already has been voted", "debug")
 			return
+		self.add_save_offer(offer)
 		var1 = self.CreateConfigProposalRequest(offerHash, validatorIndex)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 		resultFilePath = self.SignProposalVoteRequestWithValidator(offerHash, validatorIndex, validatorPubkey_b64, validatorSignature)
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, fullConfigAddr, 1.5)
 		self.SendFile(resultFilePath, wallet)
-		self.add_save_offer(offer)
 	#end define
 
 	def VoteComplaint(self, electionId, complaintHash):

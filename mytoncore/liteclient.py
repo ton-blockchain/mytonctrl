@@ -17,13 +17,12 @@ class LiteClient:
 		liteclient_timeout = self.local.db.liteclient_timeout if self.local.db.liteclient_timeout else 3
 		timeout = kwargs.get("timeout", liteclient_timeout)
 		useLocalLiteServer = kwargs.get("useLocalLiteServer", True)
-		validatorStatus = self.ton.GetValidatorStatus()
-		validatorOutOfSync = validatorStatus.get("outOfSync")
+		validator_status = self.ton.GetValidatorStatus()
 		args = [self.appPath, "--global-config", self.configPath, "--verbosity", "0", "--cmd", cmd]
 		if index is not None:
 			index = str(index)
 			args += ["-i", index]
-		elif useLocalLiteServer and self.pubkeyPath and validatorOutOfSync < 20:
+		elif useLocalLiteServer and self.pubkeyPath and validator_status.out_of_sync and validator_status.out_of_sync < 20:
 			args = [self.appPath, "--addr", self.addr, "--pub", self.pubkeyPath, "--verbosity", "0", "--cmd", cmd]
 		else:
 			liteServers = self.local.db.get("liteServers")

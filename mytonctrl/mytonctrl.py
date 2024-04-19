@@ -597,7 +597,7 @@ def PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shar
 	print()
 #end define
 
-def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg):
+def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg):
 	if validatorWallet is None:
 		return
 	walletAddr = validatorWallet.addrB64
@@ -610,7 +610,6 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	netLoad1 = netLoadAvg[0]
 	netLoad5 = netLoadAvg[1]
 	netLoad15 = netLoadAvg[2]
-	validatorOutOfSync = validatorStatus.get("outOfSync")
 
 	validatorIndex_text = GetColorInt(validatorIndex, 0, logic="more")
 	validatorIndex_text = local.translate("local_status_validator_index").format(validatorIndex_text)
@@ -671,11 +670,12 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	validatorUptime = get_service_uptime("validator")
 	mytoncoreUptime_text = bcolors.green_text(time2human(mytoncoreUptime))
 	validatorUptime_text = bcolors.green_text(time2human(validatorUptime))
-	mytoncoreStatus = GetColorStatus(mytoncoreStatus_bool)
-	validatorStatus = GetColorStatus(validatorStatus_bool)
-	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus, mytoncoreUptime_text)
-	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus, validatorUptime_text)
-	validatorOutOfSync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, logic="less", ending=" s"))
+	mytoncoreStatus_color = GetColorStatus(mytoncoreStatus_bool)
+	validatorStatus_color = GetColorStatus(validatorStatus_bool)
+	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus_color, mytoncoreUptime_text)
+	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus_color, validatorUptime_text)
+	validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less", ending=" s"))
+	validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(GetColorInt(validator_status.out_of_ser, 20, logic="less", ending=" blocks"))
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
 	dbStatus_text = local.translate("local_status_db").format(dbSize_text, dbUsage_text)
@@ -708,7 +708,8 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	print(disksLoad_text)
 	print(mytoncoreStatus_text)
 	print(validatorStatus_text)
-	print(validatorOutOfSync_text)
+	print(validator_out_of_sync_text)
+	print(validator_out_of_ser_text)
 	print(dbStatus_text)
 	print(mtcVersion_text)
 	print(validatorVersion_text)
@@ -717,7 +718,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 
 def GetColorInt(data, border, logic, ending=None):
 	if data is None:
-		result = bcolors.green_text("n/a")
+		result = "n/a"
 	elif logic == "more":
 		if data >= border:
 			result = bcolors.green_text(data, ending)
@@ -1104,7 +1105,7 @@ def PrintOffersList(ton, args):
 		print(text)
 	else:
 		table = list()
-		table += [["Hash", "Votes", "W/L", "Approved", "Is passed"]]
+		table += [["Hash", "Config", "Votes", "W/L", "Approved", "Is passed"]]
 		for item in data:
 			hash = item.get("hash")
 			votedValidators = len(item.get("votedValidators"))
@@ -1120,7 +1121,7 @@ def PrintOffersList(ton, args):
 				isPassed = bcolors.green_text("true")
 			if isPassed == False:
 				isPassed = bcolors.red_text("false")
-			table += [[hash, votedValidators, wl, approvedPercent_text, isPassed]]
+			table += [[hash, item.config.id, votedValidators, wl, approvedPercent_text, isPassed]]
 		print_table(table)
 #end define
 
