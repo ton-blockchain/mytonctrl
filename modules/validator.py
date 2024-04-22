@@ -1,10 +1,13 @@
 from mypylib.mypylib import color_print
 from modules.module import MtcModule
 
-from mytoncore.functions import Elections
-
 
 class ValidatorModule(MtcModule):
+
+    description = ('Validator functions. Activates participating in elections and staking. '
+                   'If pools and l/s modes are disabled stakes from validator wallet.')
+
+    default_value = True
 
     def vote_offer(self, args):
         if len(args) == 0:
@@ -15,6 +18,7 @@ class ValidatorModule(MtcModule):
         color_print("VoteOffer - {green}OK{endc}")
 
     def vote_election_entry(self, args):
+        from mytoncore.functions import Elections
         Elections(self.ton.local, self.ton)
         color_print("VoteElectionEntry - {green}OK{endc}")
 

@@ -19,6 +19,16 @@
 		"ru": "Показать режимы MTC",
 		"zh_TW": "顯示 MTC 模式"
 	},
+	"settings_status_cmd": {
+		"en": "Show all available settings with their description and values",
+		"ru": "Показать все доступные настройки с их описанием и значениями",
+		"zh_TW": "顯示所有可用設定及其描述和值"
+	},
+	"about_cmd": {
+		"en": "Mode description",
+		"ru": "Описание режима",
+		"zh_TW": "模式描述"
+	},
 	"enable_mode_cmd": {
 		"en": "Enable mode",
 		"ru": "Включить режим",
@@ -312,6 +322,11 @@
 	"local_status_validator_out_of_sync": {
 		"en": "Local validator out of sync: {0}",
 		"ru": "Рассинхронизация локального валидатора: {0}",
+		"zh_TW": "本地驗證者不同步: {0}"
+	},
+	"local_status_validator_out_of_ser": {
+		"en": "Local validator out of ser: {0}",
+		"ru": "Рассериализация локального валидатора: {0}",
 		"zh_TW": "本地驗證者不同步: {0}"
 	},
 	"local_status_db": {
