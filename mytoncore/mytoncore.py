@@ -2715,11 +2715,11 @@ class MyTonCore():
 		url = 'http://45.129.96.53/adnl_check'
 		try:
 			data = self.get_local_adnl_data()
-			response = requests.post(url, json=data, timeout=3).json()
+			response = requests.post(url, json=data, timeout=5).json()
 		except Exception as e:
-			self.local.add_log(f'Failed to check adnl connection: {type(e)}: {e}')
+			self.local.add_log(f'Failed to check adnl connection: {type(e)}: {e}', 'error')
 			return False
-		result = response.json().get("ok")
+		result = response.get("ok")
 		if not result:
 			self.local.add_log(f'Failed to check adnl connection to local node: {response.get("message")}', 'error')
 		return result
@@ -2733,14 +2733,14 @@ class MyTonCore():
 
 		vconfig = self.GetValidatorConfig()
 
-		data = {"ip": int2ip(vconfig["addrs"][0]["ip"]), "port": vconfig["addrs"][0]["port"]}
+		data = {"host": int2ip(vconfig["addrs"][0]["ip"]), "port": vconfig["addrs"][0]["port"]}
 
 		dht_id = vconfig["dht"][0]["id"]
 		dht_id_hex = base64.b64decode(dht_id).hex().upper()
 
 		result = self.validatorConsole.Run(f"exportpub {dht_id_hex}")
 		pubkey = parse(result, "got public key: ", "\n")
-		data["pubkey"] = base64.b64encode(base64.b64decode(pubkey)[4:])
+		data["pubkey"] = base64.b64encode(base64.b64decode(pubkey)[4:]).decode()
 		return data
 	#end define
 
