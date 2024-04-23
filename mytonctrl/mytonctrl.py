@@ -242,6 +242,7 @@ def PreUp(local, ton):
 	CheckMytonctrlUpdate(local)
 	check_installer_user(local)
 	check_vport(local, ton)
+	ton.check_adnl()
 	warnings(local, ton)
 	# CheckTonUpdate()
 #end define
