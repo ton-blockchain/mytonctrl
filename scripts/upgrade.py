@@ -1,9 +1,10 @@
-# Говнокод ON
 import os
 from sys import path
-from os.path import dirname as dir
-path.append(dir(path[0]))
-# Говнокод OFF
+from os.path import dirname, abspath
+
+# Add the parent directory of the current script to the Python module search path
+current_dir = dirname(abspath(__file__))
+path.append(current_dir)
 
 from mypylib.mypylib import *
 
