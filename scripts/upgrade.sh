@@ -29,7 +29,7 @@ COLOR='\033[92m'
 ENDC='\033[0m'
 
 # Установить дополнительные зависимости
-apt-get install -y libsecp256k1-dev libsodium-dev ninja-build
+apt-get install -y libsecp256k1-dev libsodium-dev ninja-build liblz4-dev
 
 # bugfix if the files are in the wrong place
 wget "https://ton-blockchain.github.io/global.config.json" -O global.config.json
