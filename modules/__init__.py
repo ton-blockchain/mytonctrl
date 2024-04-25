@@ -44,6 +44,7 @@ SETTINGS = {
     'overlayTelemetryUrl': Setting(None, 'https://telemetry.toncenter.com/report_overlays', 'Overlay telemetry url'),
     'duplicateApi': Setting(None, 'sendTelemetry', 'Duplicate external to Toncenter'),
     'duplicateApiUrl': Setting(None, 'https://[testnet.]toncenter.com/api/v2/sendBoc', 'Toncenter api url for duplicate'),
+    'checkAdnl': Setting(None, 'sendTelemetry', 'Check local udp port and adnl connection'),
     'liteclient_timeout': Setting(None, 3, 'Liteclient default timeout'),
     'console_timeout': Setting(None, 3, 'Validator console default timeout'),
     'fift_timeout': Setting(None, 3, 'Fift default timeout'),

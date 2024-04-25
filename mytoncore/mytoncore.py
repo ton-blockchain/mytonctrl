@@ -2707,6 +2707,43 @@ class MyTonCore():
 		return result
 	#end define
 
+	def check_adnl(self):
+		telemetry = self.local.db.get("sendTelemetry", False)
+		check_adnl = self.local.db.get("checkAdnl", telemetry)
+		if not check_adnl:
+			return
+		url = 'http://45.129.96.53/adnl_check'
+		try:
+			data = self.get_local_adnl_data()
+			response = requests.post(url, json=data, timeout=5).json()
+		except Exception as e:
+			self.local.add_log(f'Failed to check adnl connection: {type(e)}: {e}', 'error')
+			return False
+		result = response.get("ok")
+		if not result:
+			self.local.add_log(f'Failed to check adnl connection to local node: {response.get("message")}', 'error')
+		return result
+	#end define
+
+	def get_local_adnl_data(self):
+
+		def int2ip(dec):
+			import socket
+			return socket.inet_ntoa(struct.pack("!i", dec))
+
+		vconfig = self.GetValidatorConfig()
+
+		data = {"host": int2ip(vconfig["addrs"][0]["ip"]), "port": vconfig["addrs"][0]["port"]}
+
+		dht_id = vconfig["dht"][0]["id"]
+		dht_id_hex = base64.b64decode(dht_id).hex().upper()
+
+		result = self.validatorConsole.Run(f"exportpub {dht_id_hex}")
+		pubkey = parse(result, "got public key: ", "\n")
+		data["pubkey"] = base64.b64encode(base64.b64decode(pubkey)[4:]).decode()
+		return data
+	#end define
+
 	def Result2List(self, text):
 		buff = parse(text, "result:", "\n")
 		if buff is None or "error" in buff:
