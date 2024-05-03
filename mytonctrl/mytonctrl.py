@@ -186,7 +186,6 @@ def Init(local, ton, console, argv):
 #end define
 
 
-
 def activate_ton_storage_provider(local, ton, args):
 	wallet_name = "provider_wallet_001"
 	wallet = ton.GetLocalWallet(wallet_name)
@@ -304,7 +303,7 @@ def fix_git_config(git_path: str):
 			subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
 		else:
 			raise Exception(f'Failed to check git status: {err}')
-
+#end define
 
 def check_git(input_args, default_repo, text):
 	src_dir = "/usr/src"
@@ -341,7 +340,7 @@ def check_git(input_args, default_repo, text):
 		need_branch = local_branch
 	check_branch_exists(need_author, need_repo, need_branch)
 	return need_author, need_repo, need_branch
-
+#end define
 
 def check_branch_exists(author, repo, branch):
 	url = f"https://github.com/{author}/{repo}.git"
@@ -350,7 +349,7 @@ def check_branch_exists(author, repo, branch):
 	output = process.stdout.decode("utf-8")
 	if branch not in output:
 		raise Exception(f"Branch {branch} not found in {url}")
-
+#end define
 
 def Update(local, args):
 	repo = "mytonctrl"
@@ -399,7 +398,7 @@ def Upgrade(ton, args):
 	else:
 		text = "Upgrade - {red}Error{endc}"
 	color_print(text)
-
+#end define
 
 def rollback_to_mtc1(local, ton,  args):
 	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
@@ -418,7 +417,7 @@ def rollback_to_mtc1(local, ton,  args):
 	run_args = ["bash", rollback_script_path]
 	run_as_root(run_args)
 	local.exit()
-
+#end define
 
 def cleanup_validator_db(ton, args):
 	cleanup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/cleanup.sh')
@@ -470,6 +469,7 @@ def check_disk_usage(local, ton):
 
 def warnings(local, ton):
 	check_disk_usage(local, ton)
+#end define
 
 def CheckTonUpdate(local):
 	git_path = "/usr/src/ton"
@@ -513,49 +513,67 @@ def PrintStatus(local, ton, args):
 	opt = None
 	if len(args) == 1:
 		opt = args[0]
-	adnlAddr = ton.GetAdnlAddr()
-	rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
-	config34 = ton.GetConfig34()
-	config36 = ton.GetConfig36()
-	totalValidators = config34["totalValidators"]
+
+	# Local status
+	validator_status = ton.GetValidatorStatus()
+	vconfig = self.GetValidatorConfig()
+	adnl_addr = ton.GetAdnlAddr()
+	validator_index = None
 	onlineValidators = None
-	validatorEfficiency = None
-	if opt != "fast":
-		onlineValidators = ton.GetOnlineValidators()
-		validatorEfficiency = ton.GetValidatorEfficiency()
-	if onlineValidators:
-		onlineValidators = len(onlineValidators)
-	oldStartWorkTime = config36.get("startWorkTime")
-	if oldStartWorkTime is None:
-		oldStartWorkTime = config34.get("startWorkTime")
-	shardsNumber = ton.GetShardsNumber()
-	validatorStatus = ton.GetValidatorStatus()
-	config15 = ton.GetConfig15()
-	config17 = ton.GetConfig17()
-	fullConfigAddr = ton.GetFullConfigAddr()
-	fullElectorAddr = ton.GetFullElectorAddr()
-	startWorkTime = ton.GetActiveElectionId(fullElectorAddr)
-	validatorIndex = ton.GetValidatorIndex()
-	validatorWallet = ton.GetValidatorWallet()
-	dbSize = ton.GetDbSize()
-	dbUsage = ton.GetDbUsage()
-	memoryInfo = GetMemoryInfo()
-	swapInfo = GetSwapInfo()
-	offersNumber = ton.GetOffersNumber()
-	complaintsNumber = ton.GetComplaintsNumber()
+	validator_efficiency = None
+	validator_wallet = ton.GetValidatorWallet()
+	validator_account = Dict()
+	db_size = ton.GetDbSize()
+	db_usage = ton.GetDbUsage()
+	memory_info = GetMemoryInfo()
+	swap_info = GetSwapInfo()
 	statistics = ton.GetSettings("statistics")
-	tpsAvg = ton.GetStatistics("tpsAvg", statistics)
-	netLoadAvg = ton.GetStatistics("netLoadAvg", statistics)
-	disksLoadAvg = ton.GetStatistics("disksLoadAvg", statistics)
-	disksLoadPercentAvg = ton.GetStatistics("disksLoadPercentAvg", statistics)
-	if validatorWallet is not None:
-		validatorAccount = ton.GetAccount(validatorWallet.addrB64)
-	else:
-		validatorAccount = None
-	PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
-	PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validatorStatus, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg)
-	PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
-	PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
+	net_load_avg = ton.GetStatistics("netLoadAvg", statistics)
+	disks_load_avg = ton.GetStatistics("disksLoadAvg", statistics)
+	disks_load_percent_avg = ton.GetStatistics("disksLoadPercentAvg", statistics)
+
+	#is_validator = len(vconfig.validators) > 0
+	all_status = validator_status.is_working == True and validator_status.out_of_sync < 20
+	if all_status:
+		rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
+		config34 = ton.GetConfig34()
+		config36 = ton.GetConfig36()
+		totalValidators = config34["totalValidators"]
+		
+		if opt != "fast":
+			onlineValidators = ton.GetOnlineValidators()
+			validator_efficiency = ton.GetValidatorEfficiency()
+		if onlineValidators:
+			onlineValidators = len(onlineValidators)
+
+		oldStartWorkTime = config36.get("startWorkTime")
+		if oldStartWorkTime is None:
+			oldStartWorkTime = config34.get("startWorkTime")
+		shardsNumber = ton.GetShardsNumber()
+		
+		config15 = ton.GetConfig15()
+		config17 = ton.GetConfig17()
+		fullConfigAddr = ton.GetFullConfigAddr()
+		fullElectorAddr = ton.GetFullElectorAddr()
+		startWorkTime = ton.GetActiveElectionId(fullElectorAddr)
+		validator_index = ton.GetValidatorIndex()
+		
+		offersNumber = ton.GetOffersNumber()
+		complaintsNumber = ton.GetComplaintsNumber()
+		
+		tpsAvg = ton.GetStatistics("tpsAvg", statistics)
+		
+		if validator_wallet is not None:
+			validator_account = ton.GetAccount(validator_wallet.addrB64)
+	#end if
+
+	if all_status:
+		PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
+	PrintLocalStatus(local, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status, 
+		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg)
+	if all_status:
+		PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
+		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
 
 def PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg):
@@ -1371,7 +1389,7 @@ def enable_mode(local, ton, args):
 	ton.enable_mode(name)
 	color_print("enable_mode - {green}OK{endc}")
 	local.exit()
-
+#end define
 
 def disable_mode(local, ton, args):
 	try:
@@ -1382,7 +1400,7 @@ def disable_mode(local, ton, args):
 	ton.disable_mode(name)
 	color_print("disable_mode - {green}OK{endc}")
 	local.exit()
-
+#end define
 
 def Xrestart(inputArgs):
 	if len(inputArgs) < 2:
@@ -1436,6 +1454,7 @@ def GetPoolData(ton, args):
 		pool_addr = pool.addrB64
 	pool_data = ton.GetPoolData(pool_addr)
 	print(json.dumps(pool_data, indent=4))
+#end define
 
 
 ### Start of the program
