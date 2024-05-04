@@ -516,7 +516,6 @@ def PrintStatus(local, ton, args):
 
 	# Local status
 	validator_status = ton.GetValidatorStatus()
-	vconfig = self.GetValidatorConfig()
 	adnl_addr = ton.GetAdnlAddr()
 	validator_index = None
 	onlineValidators = None
@@ -532,7 +531,6 @@ def PrintStatus(local, ton, args):
 	disks_load_avg = ton.GetStatistics("disksLoadAvg", statistics)
 	disks_load_percent_avg = ton.GetStatistics("disksLoadPercentAvg", statistics)
 
-	#is_validator = len(vconfig.validators) > 0
 	all_status = validator_status.is_working == True and validator_status.out_of_sync < 20
 	if all_status:
 		rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
