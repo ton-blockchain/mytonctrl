@@ -224,6 +224,11 @@
 		"ru": "{cyan}===[ Статус сети TON ]==={endc}",
 		"zh_TW": "{cyan}===[ TON 網路狀態 ]==={endc}"
 	},
+	"ton_status_network_name": {
+		"en": "Network name: {0}",
+		"ru": "Название сети: {0}",
+		"zh_TW": "網路名字: {0}"
+	},
 	"ton_status_tps": {
 		"en": "Transactions per second (TPS): {0}, {1}, {2}",
 		"ru": "Транзакций в секунду (TPS): {0}, {1}, {2}",

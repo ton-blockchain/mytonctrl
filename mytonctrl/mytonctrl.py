@@ -533,6 +533,7 @@ def PrintStatus(local, ton, args):
 
 	all_status = validator_status.is_working == True and validator_status.out_of_sync < 20
 	if all_status:
+		network_name = ton.GetNetworkName()
 		rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
 		config34 = ton.GetConfig34()
 		config36 = ton.GetConfig36()
@@ -566,7 +567,7 @@ def PrintStatus(local, ton, args):
 	#end if
 
 	if all_status:
-		PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
+		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
 	PrintLocalStatus(local, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status, 
 		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg)
 	if all_status:
@@ -574,19 +575,22 @@ def PrintStatus(local, ton, args):
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
 
-def PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg):
-	tps1 = tpsAvg[0]
-	tps5 = tpsAvg[1]
-	tps15 = tpsAvg[2]
+def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg):
+	#tps1 = tpsAvg[0]
+	#tps5 = tpsAvg[1]
+	#tps15 = tpsAvg[2]
 	allValidators = totalValidators
 	newOffers = offersNumber.get("new")
 	allOffers = offersNumber.get("all")
 	newComplaints = complaintsNumber.get("new")
 	allComplaints = complaintsNumber.get("all")
-	tps1_text = bcolors.green_text(tps1)
-	tps5_text = bcolors.green_text(tps5)
-	tps15_text = bcolors.green_text(tps15)
-	tps_text = local.translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
+	#tps1_text = bcolors.green_text(tps1)
+	#tps5_text = bcolors.green_text(tps5)
+	#tps15_text = bcolors.green_text(tps15)
+
+	color_network_name = bcolors.green_text(network_name) if network_name == "mainnet" else bcolors.yellow_text(network_name)
+	network_name_text = local.translate("ton_status_network_name").format(color_network_name)
+	#tps_text = local.translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
 	onlineValidators_text = GetColorInt(onlineValidators, border=allValidators*2/3, logic="more")
 	allValidators_text = bcolors.yellow_text(allValidators)
 	validators_text = local.translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
@@ -605,7 +609,8 @@ def PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shar
 	election_text = local.translate("ton_status_election").format(election_text)
 
 	color_print(local.translate("ton_status_head"))
-	print(tps_text)
+	print(network_name_text)
+	#print(tps_text)
 	print(validators_text)
 	print(shards_text)
 	print(offers_text)

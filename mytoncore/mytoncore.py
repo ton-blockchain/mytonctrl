@@ -1208,6 +1208,8 @@ class MyTonCore():
 		elif "v3" in wallet.version:
 			fift_script = "wallet-v3.fif"
 			args = [fift_script, wallet.path, dest, subwallet, seqno, coins, boc_mode, boc_path, result_file_path]
+		else:
+			raise Exception(f"SignBocWithWallet error: Wallet version '{wallet.version}' is not supported")
 		if flags:
 			args += flags
 		result = self.fift.Run(args)
@@ -1912,6 +1914,8 @@ class MyTonCore():
 		elif "v3" in wallet.version:
 			fiftScript = "wallet-v3.fif"
 			args = [fiftScript, wallet.path, dest, subwallet, seqno, coins, "-m", mode, resultFilePath]
+		else:
+			raise Exception(f"MoveCoins error: Wallet version '{wallet.version}' is not supported")
 		if flags:
 			args += flags
 		result = self.fift.Run(args)
