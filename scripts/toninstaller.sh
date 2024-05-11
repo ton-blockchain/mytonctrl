@@ -84,7 +84,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
 		apt-get update
-		apt-get install -y build-essential git cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip libsecp256k1-dev libsodium-dev liblz4-dev
+		apt-get install -y build-essential git cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip libsecp256k1-dev libsodium-dev liblz4-dev libjemalloc-dev
 
 		# Install ninja
 		apt-get install -y ninja-build
@@ -172,7 +172,7 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
 		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja
 	fi
 else
-	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
+	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DTON_USE_JEMALLOC=ON -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
 fi
 
 # Компилируем из исходников
