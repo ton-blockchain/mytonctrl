@@ -29,7 +29,7 @@ COLOR='\033[92m'
 ENDC='\033[0m'
 
 # Установить дополнительные зависимости
-apt-get install -y libsecp256k1-dev libsodium-dev ninja-build liblz4-dev
+apt-get install -y libsecp256k1-dev libsodium-dev ninja-build liblz4-dev libjemalloc-dev
 
 # bugfix if the files are in the wrong place
 wget "https://ton-blockchain.github.io/global.config.json" -O global.config.json
@@ -72,7 +72,7 @@ rm -rf .ninja_*
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000" || cpuNumber=1
 
-cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
+cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DTON_USE_JEMALLOC=ON -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
 ninja -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 systemctl restart validator
 
