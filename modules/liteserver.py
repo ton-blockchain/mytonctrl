@@ -1,7 +1,6 @@
 import psutil
 
 from modules.module import MtcModule
-from mytoninstaller.mytoninstaller import set_node_argument
 
 
 class LiteserverModule(MtcModule):
@@ -10,6 +9,7 @@ class LiteserverModule(MtcModule):
     default_value = False
 
     def enable(self):
+        from mytoninstaller.mytoninstaller import set_node_argument
         set_node_argument(self.local, ["--celldb-no-preload-all"])
         data = psutil.virtual_memory()
         ram = data.total / 2**30
@@ -17,6 +17,7 @@ class LiteserverModule(MtcModule):
             set_node_argument(self.local, ["--celldb-cache-size", "1073741824"])
 
     def disable(self):
+        from mytoninstaller.mytoninstaller import set_node_argument
         from mytoninstaller.node_args import get_node_args
         set_node_argument(self.local, ["--celldb-no-preload-all", "-d"])
         if get_node_args()['--celldb-cache-size']:
