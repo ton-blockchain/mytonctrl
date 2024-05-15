@@ -13,7 +13,7 @@ class LiteserverModule(MtcModule):
     def enable(self):
         set_node_argument(self.local, ["--celldb-no-preload-all"])
         data = psutil.virtual_memory()
-        ram = round(data.total / 2**30, 2)
+        ram = data.total / 2**30
         if ram < 100:
             set_node_argument(self.local, ["--celldb-cache-size", "1073741824"])
 
