@@ -29,7 +29,8 @@ from mytoninstaller.settings import (
 	CreateSymlinks,
 	enable_ls_proxy,
 	enable_ton_storage,
-	enable_ton_storage_provider
+	enable_ton_storage_provider,
+	EnableMode
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
@@ -255,6 +256,10 @@ def General(local):
 		mx = sys.argv.index("--dump")
 		dump = sys.argv[mx+1]
 		local.buffer.dump = str2bool(dump)
+	if "-m" in sys.argv:
+		mx = sys.argv.index("-m")
+		mode = sys.argv[mx+1]
+		local.buffer.mode = mode
 	#end if
 
 	FirstMytoncoreSettings(local)
@@ -264,6 +269,7 @@ def General(local):
 	BackupVconfig(local)
 	BackupMconfig(local)
 	CreateSymlinks(local)
+	EnableMode(local)
 #end define
 
 
