@@ -5,6 +5,13 @@
 #
 import os
 import sys
+import subprocess
+
+requirements_path = "/usr/src/mytonctrl/requirements.txt"
+if os.path.isfile(requirements_path):
+    args = ["pip3", "install", "-r", requirements_path]
+    subprocess.run(args)
+#end if
 
 sys.path.insert(0, '/usr/bin/mytonctrl')  # Add path to mytonctrl module
 

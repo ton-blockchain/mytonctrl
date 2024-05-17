@@ -141,7 +141,7 @@ def Init(local, ton, console, argv):
 			module = NominatorPoolModule(ton, local)
 			module.add_console_commands(console)
 
-		if ton.get_mode_value('single-nominator'):
+		if ton.using_single_nominator():
 			from modules.single_pool import SingleNominatorModule
 			module = SingleNominatorModule(ton, local)
 			module.add_console_commands(console)
