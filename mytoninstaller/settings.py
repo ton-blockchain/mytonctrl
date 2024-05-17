@@ -888,3 +888,9 @@ def CreateSymlinks(local):
 		file.write(fiftpath + '\n')
 	file.close()
 #end define
+
+
+def EnableMode(local):
+	if local.buffer.mode == 'liteserver':
+		args = ["python3", "-m", "mytoncore", "-e", "enable_liteserver_mode"]
+		subprocess.run(args)

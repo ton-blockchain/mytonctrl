@@ -7,6 +7,7 @@ from modules.nominator_pool import NominatorPoolModule
 from modules.single_pool import SingleNominatorModule
 from modules.validator import ValidatorModule
 from modules.controller import ControllerModule
+from modules.liteserver import LiteserverModule
 
 
 MODES = {
@@ -14,6 +15,7 @@ MODES = {
     'nominator-pool': NominatorPoolModule,
     'single-nominator': SingleNominatorModule,
     'liquid-staking': ControllerModule,
+    'liteserver': LiteserverModule
 }
 
 

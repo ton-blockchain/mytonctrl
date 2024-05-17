@@ -15,16 +15,18 @@ fi
 author="ton-blockchain"
 repo="mytonctrl"
 branch="master"
+mode="validator"
 
 show_help_and_exit() {
-    echo 'Supported argumets:'
-    echo ' -c  PATH         Provide custom config for toninstaller.sh'
-    echo ' -t               Disable telemetry'
-    echo ' -i               Ignore minimum reqiurements'
-    echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
-    echo ' -a               Set MyTonCtrl git repo author'
+  echo 'Supported argumets:'
+  echo ' -c  PATH         Provide custom config for toninstaller.sh'
+  echo ' -t               Disable telemetry'
+  echo ' -i               Ignore minimum reqiurements'
+  echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
+  echo ' -a               Set MyTonCtrl git repo author'
 	echo ' -r               Set MyTonCtrl git repo'
 	echo ' -b               Set MyTonCtrl git repo branch'
+	echo ' -m  MODE             Install MyTonCtrl with specified mode (validator or liteserver)'
 	echo ' -h               Show this help'
     exit
 }
@@ -40,7 +42,8 @@ ignore=false
 dump=false
 
 
-while getopts c:tida:r:b: flag
+
+while getopts c:tida:r:b:m: flag
 do
 	case "${flag}" in
 		c) config=${OPTARG};;
@@ -50,6 +53,7 @@ do
 		a) author=${OPTARG};;
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
+    m) mode=${OPTARG};;
 		h) show_help_and_exit;;
 		*)
             echo "Flag -${flag} is not recognized. Aborting"
@@ -115,7 +119,7 @@ if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ]; then
     user=$(logname)
 fi
 echo "User: $user"
-python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump}
+python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode}
 
 # set migrate version
 migrate_version=1
