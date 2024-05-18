@@ -20,7 +20,7 @@ def Init():
 
 	# Check tests wallet balance
 	account = ton.GetAccount(testsWallet.addr)
-	local.AddLog("wallet: {addr}, status: {status}, balance: {balance}".format(addr=testsWallet.addr, status=account.status, balance=account.balance))
+	local.add_log("wallet: {addr}, status: {status}, balance: {balance}".format(addr=testsWallet.addr, status=account.status, balance=account.balance))
 	if account.balance == 0:
 		raise Exception(testsWallet.name + " wallet balance is empty.")
 	if account.status == "uninit":
@@ -50,7 +50,7 @@ def Init():
 			buff_wallet = wallet
 			buff_wallet.oldseqno = ton.GetSeqno(wallet)
 			ton.MoveGrams(wallet, testsWallet.addr, need, wait=False)
-			Local.AddLog(testsWallet.name + " <<< " + wallet.name)
+			Local.add_log(testsWallet.name + " <<< " + wallet.name)
 	if buff_wallet:
 		ton.WaitTransaction(buff_wallet, False)
 	#end for
@@ -63,7 +63,7 @@ def Init():
 		if wallet.account.status == "uninit":
 			wallet.oldseqno = ton.GetSeqno(wallet)
 			ton.SendFile(wallet.bocFilePath)
-		Local.AddLog(str(wallet.subwallet) + " - OK")
+		Local.add_log(str(wallet.subwallet) + " - OK")
 	ton.WaitTransaction(wallets[-1])
 #end define
 
@@ -78,7 +78,7 @@ def Work():
 		wallet2 = wallets[i+1]
 		wallet1.oldseqno = ton.GetSeqno(wallet1)
 		ton.MoveGrams(wallet1, wallet2.addr, 3.14, wait=False)
-		Local.AddLog(wallet1.name + " >>> " + wallet2.name)
+		Local.add_log(wallet1.name + " >>> " + wallet2.name)
 	ton.WaitTransaction(wallets[-1])
 #end define
 
@@ -87,7 +87,7 @@ def General():
 	while True:
 		time.sleep(1)
 		Work()
-		Local.AddLog("Work - OK")
+		Local.add_log("Work - OK")
 	#end while
 #end define
 
