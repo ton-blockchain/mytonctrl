@@ -1302,8 +1302,8 @@ class MyTonCore():
 		useController = self.using_liquid_staking()
 		stakePercent = self.local.db.get("stakePercent", 99)
 		vconfig = self.GetValidatorConfig()
-		validators = vconfig.get("validators")
 		config17 = self.GetConfig17()
+		config15 = self.GetConfig15()
 
 		# Check if optional arguments have been passed to us
 		if args:
@@ -1331,14 +1331,21 @@ class MyTonCore():
 			stake = account.balance - 50
 		if stake is None:
 			sp = stakePercent / 100
+
 			if sp > 1 or sp < 0:
 				self.local.add_log("Wrong stakePercent value. Using default stake.", "warning")
-			elif len(vconfig.validators) == 0:
-				stake = int(account.balance*sp/2)
-				if stake < config17["minStake"]:  # not enough funds to divide them by 2
-					stake = int(account.balance*sp)
-			elif len(vconfig.validators) > 0:
-				stake = int(account.balance*sp)
+			else:
+				for validator in vconfig.validators:
+					# Check validator is in active period
+					if validator.election_date - config15["elections_end_before"] < get_timestamp() < validator.expire_at:
+						# Check validator is elected
+						if self.GetAdnlAddr() in self.GetValidatorsList():
+							stake = int(account.balance*sp)
+							break
+				else:
+					stake = int(account.balance*sp/2)
+					if stake < config17["minStake"]:  # not enough funds to divide them by 2
+						stake = int(account.balance*sp)
 
 		# Check if we have enough coins
 		if stake > config17["maxStake"]:
@@ -1662,7 +1669,7 @@ class MyTonCore():
 		if os.path.isfile(wallet_path + ".pk") and "v3" not in version:
 			self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
 		else:
-			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
 				wallet_path=wallet_path, subwallet=subwallet)
 			result = self.fift.Run(fift_args)
 			if "Creating new" not in result:
@@ -1731,7 +1738,7 @@ class MyTonCore():
 		wallet_path = self.walletsDir + wallet_name
 		with open(wallet_path + ".pk", 'wb') as file:
 			file.write(pk_bytes)
-		fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+		fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
 			wallet_path=wallet_path, subwallet=subwallet)
 		result = self.fift.Run(fift_args)
 		if "Creating new" not in result:
@@ -2577,7 +2584,10 @@ class MyTonCore():
 			start = config.get("startWorkTime")
 			end = config.get("endWorkTime") - 60
 		#end if
-		validatorsLoad = self.GetValidatorsLoad(start, end)
+		if self.GetNetworkName() != "testnet":
+			validatorsLoad = self.GetValidatorsLoad(start, end)
+		else:
+			validatorsLoad = []
 		validators = config["validators"]
 		electionId = config.get("startWorkTime")
 		saveElectionEntries = self.GetSaveElectionEntries(electionId)
