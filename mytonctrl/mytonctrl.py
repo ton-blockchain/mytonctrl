@@ -40,7 +40,7 @@ from mytoncore.functions import (
 	GetBinGitHash,
 )
 from mytonctrl.migrate import run_migrations
-from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime
+from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config
 
 import sys, getopt, os
 
@@ -289,21 +289,6 @@ def check_vport(local, ton):
 		color_print(local.translate("vport_error"))
 #end define
 
-
-def fix_git_config(git_path: str):
-	args = ["git", "status"]
-	try:
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path, timeout=3)
-		err = process.stderr.decode("utf-8")
-	except Exception as e:
-		err = str(e)
-	if err:
-		if 'git config --global --add safe.directory' in err:
-			args = ["git", "config", "--global", "--add", "safe.directory", git_path]
-			subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
-		else:
-			raise Exception(f'Failed to check git status: {err}')
-#end define
 
 def check_git(input_args, default_repo, text):
 	src_dir = "/usr/src"
@@ -708,6 +693,8 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
 	mtcGitHash = get_git_hash(mtcGitPath, short=True)
 	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+	fix_git_config(mtcGitPath)
+	fix_git_config(validatorGitPath)
 	mtcGitBranch = get_git_branch(mtcGitPath)
 	validatorGitBranch = get_git_branch(validatorGitPath)
 	mtcGitHash_text = bcolors.yellow_text(mtcGitHash)
