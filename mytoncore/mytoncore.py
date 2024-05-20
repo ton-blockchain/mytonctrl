@@ -2280,6 +2280,9 @@ class MyTonCore():
 			complaints[chash] = item
 		#end for
 
+		# sort complaints by their creation time and hash
+		complaints = dict(sorted(complaints.items(), key=lambda item: (item[1]["createdTime"], item[0])))
+
 		# Set buffer
 		self.SetFunctionBuffer(bname, complaints)
 
