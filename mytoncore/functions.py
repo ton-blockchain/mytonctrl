@@ -57,6 +57,8 @@ def Event(local, event_name):
         enable_ton_storage_provider_event(local)
     elif event_name == "enable_liteserver_mode":
         enable_liteserver_mode(local)
+    elif event_name == "enable_validator_mode":
+        enable_validator_mode(local)
     local.exit()
 # end define
 
@@ -93,10 +95,17 @@ def enable_ton_storage_provider_event(local):
 #end define
 
 
+def enable_validator_mode(local):
+    from mytoninstaller.mytoninstaller import set_node_argument
+    set_node_argument(local, ['--archive-ttl', '86400'])  # limit validator archive ttl to 1 day
+
+
 def enable_liteserver_mode(local):
+    from mytoninstaller.mytoninstaller import set_node_argument
     ton = MyTonCore(local)
     ton.disable_mode('validator')
     ton.enable_mode('liteserver')
+    set_node_argument(local, ['--archive-ttl', '2592000'])  # limit liteserver archive ttl to 30 days
 #end define
 
 
