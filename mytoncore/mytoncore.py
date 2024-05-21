@@ -1337,9 +1337,9 @@ class MyTonCore():
 			else:
 				for validator in vconfig.validators:
 					# Check validator is in active period
-					if validator.election_date - config15["elections_end_before"] < get_timestamp() < validator.expire_at:
+					if validator.election_date - config15["electionsEndBefore"] < get_timestamp() < validator.expire_at:
 						# Check validator is elected
-						if self.GetAdnlAddr() in self.GetValidatorsList():
+						if self.GetAdnlAddr() in [x["adnlAddr"] for x in self.GetValidatorsList()]:
 							stake = int(account.balance*sp)
 							break
 				else:
