@@ -249,8 +249,10 @@ def PreUp(local, ton):
 
 def Installer(args):
 	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
-	args = ["python3", "-m", "mytoninstaller"]
-	subprocess.run(args)
+	cmd = ["python3", "-m", "mytoninstaller"]
+	if args:
+		cmd += ["-c", *args]
+	subprocess.run(cmd)
 #end define
 
 
