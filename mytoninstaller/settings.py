@@ -891,6 +891,9 @@ def CreateSymlinks(local):
 
 
 def EnableMode(local):
+	args = ["python3", "-m", "mytoncore", "-e"]
 	if local.buffer.mode == 'liteserver':
-		args = ["python3", "-m", "mytoncore", "-e", "enable_liteserver_mode"]
-		subprocess.run(args)
+		args.append("enable_liteserver_mode")
+	elif local.buffer.mode == 'validator':
+		args.append("enable_validator_mode")
+	subprocess.run(args)

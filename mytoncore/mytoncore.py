@@ -3269,7 +3269,6 @@ class MyTonCore():
 			if self.using_validator():
 				raise Exception(f'Cannot enable liteserver mode while validator mode is enabled. '
 								f'Use `disable_mode validator` first.')
-			MODES['liteserver'](self, self.local).enable()
 		if name == 'validator':
 			if self.using_liteserver():
 				raise Exception(f'Cannot enable validator mode while liteserver mode is enabled. '
@@ -3287,8 +3286,6 @@ class MyTonCore():
 		current_modes = self.get_modes()
 		if name not in current_modes:
 			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
-		if name == 'liteserver':
-			MODES['liteserver'](self, self.local).disable()
 		current_modes[name] = False
 		self.local.save()
 
