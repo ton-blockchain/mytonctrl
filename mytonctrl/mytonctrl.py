@@ -464,7 +464,10 @@ def check_sync(local, ton):
 def check_validator_balance(local, ton):
 	if ton.using_validator():
 		validator_wallet = ton.GetValidatorWallet()
-		validator_account = ton.GetAccount(validator_wallet.addrB64)
+		validator_account = local.try_function(ton.GetAccount, args=[validator_wallet.addrB64])
+		if validator_account is None:
+			local.add_log(f"Failed to check validator wallet balance", "warning")
+			return
 		if validator_account.balance < 100:
 			print_warning(local, "validator_balance_warning")
 #end define
