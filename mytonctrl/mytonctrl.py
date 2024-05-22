@@ -39,6 +39,7 @@ from mytoncore.functions import (
 	GetSwapInfo,
 	GetBinGitHash,
 )
+from mytoncore.telemetry import is_host_virtual
 from mytonctrl.migrate import run_migrations
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config
 
@@ -237,7 +238,7 @@ def check_installer_user(local):
 #end define
 
 
-def PreUp(local, ton):
+def PreUp(local: MyPyClass, ton: MyTonCore):
 	CheckMytonctrlUpdate(local)
 	check_installer_user(local)
 	check_vport(local, ton)
@@ -452,8 +453,31 @@ def check_disk_usage(local, ton):
 		print_warning(local, "disk_usage_warning")
 #end define
 
+def check_sync(local, ton):
+	validator_status = ton.GetValidatorStatus()
+	if validator_status.out_of_sync >= 20:
+		print_warning(local, "sync_warning")
+#end define
+
+def check_validator_balance(local, ton):
+	if ton.using_validator():
+		validator_wallet = ton.GetValidatorWallet()
+		validator_account = ton.GetAccount(validator_wallet.addrB64)
+		if validator_account.balance < 100:
+			print_warning(local, "validator_balance_warning")
+#end define
+
+def check_vps(local, ton):
+	if ton.using_validator():
+		data = local.try_function(is_host_virtual)
+		if data and data["virtual"]:
+			color_print(f"Virtualization detected: {data['product_name']}")
+
 def warnings(local, ton):
 	check_disk_usage(local, ton)
+	check_sync(local, ton)
+	check_validator_balance(local, ton)
+	check_vps(local, ton)
 #end define
 
 def CheckTonUpdate(local):
