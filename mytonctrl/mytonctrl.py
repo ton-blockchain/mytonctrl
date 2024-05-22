@@ -455,7 +455,7 @@ def check_disk_usage(local, ton):
 
 def check_sync(local, ton):
 	validator_status = ton.GetValidatorStatus()
-	if validator_status.out_of_sync >= 20:
+	if not validator_status.is_working or validator_status.out_of_sync >= 20:
 		print_warning(local, "sync_warning")
 #end define
 
