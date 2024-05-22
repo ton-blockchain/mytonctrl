@@ -894,4 +894,4 @@ def EnableMode(local):
 	args = ["python3", "-m", "mytoncore", "-e"]
 	if local.buffer.mode == 'liteserver':
 		args.append("enable_liteserver_mode")
-	subprocess.run(args)
+	subprocess.run(args, user=local.buffer.user)
