@@ -39,8 +39,9 @@ from mytoncore.functions import (
 	GetSwapInfo,
 	GetBinGitHash,
 )
+from mytoncore.telemetry import is_host_virtual
 from mytonctrl.migrate import run_migrations
-from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime
+from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config
 
 import sys, getopt, os
 
@@ -237,7 +238,7 @@ def check_installer_user(local):
 #end define
 
 
-def PreUp(local, ton):
+def PreUp(local: MyPyClass, ton: MyTonCore):
 	CheckMytonctrlUpdate(local)
 	check_installer_user(local)
 	check_vport(local, ton)
@@ -249,8 +250,10 @@ def PreUp(local, ton):
 
 def Installer(args):
 	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
-	args = ["python3", "-m", "mytoninstaller"]
-	subprocess.run(args)
+	cmd = ["python3", "-m", "mytoninstaller"]
+	if args:
+		cmd += ["-c", *args]
+	subprocess.run(cmd)
 #end define
 
 
@@ -289,21 +292,6 @@ def check_vport(local, ton):
 		color_print(local.translate("vport_error"))
 #end define
 
-
-def fix_git_config(git_path: str):
-	args = ["git", "status"]
-	try:
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path, timeout=3)
-		err = process.stderr.decode("utf-8")
-	except Exception as e:
-		err = str(e)
-	if err:
-		if 'git config --global --add safe.directory' in err:
-			args = ["git", "config", "--global", "--add", "safe.directory", git_path]
-			subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
-		else:
-			raise Exception(f'Failed to check git status: {err}')
-#end define
 
 def check_git(input_args, default_repo, text):
 	src_dir = "/usr/src"
@@ -467,8 +455,34 @@ def check_disk_usage(local, ton):
 		print_warning(local, "disk_usage_warning")
 #end define
 
+def check_sync(local, ton):
+	validator_status = ton.GetValidatorStatus()
+	if not validator_status.is_working or validator_status.out_of_sync >= 20:
+		print_warning(local, "sync_warning")
+#end define
+
+def check_validator_balance(local, ton):
+	if ton.using_validator():
+		validator_wallet = ton.GetValidatorWallet()
+		validator_account = local.try_function(ton.GetAccount, args=[validator_wallet.addrB64])
+		if validator_account is None:
+			local.add_log(f"Failed to check validator wallet balance", "warning")
+			return
+		if validator_account.balance < 100:
+			print_warning(local, "validator_balance_warning")
+#end define
+
+def check_vps(local, ton):
+	if ton.using_validator():
+		data = local.try_function(is_host_virtual)
+		if data and data["virtual"]:
+			color_print(f"Virtualization detected: {data['product_name']}")
+
 def warnings(local, ton):
 	check_disk_usage(local, ton)
+	check_sync(local, ton)
+	check_validator_balance(local, ton)
+	check_vps(local, ton)
 #end define
 
 def CheckTonUpdate(local):
@@ -708,6 +722,8 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
 	mtcGitHash = get_git_hash(mtcGitPath, short=True)
 	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+	fix_git_config(mtcGitPath)
+	fix_git_config(validatorGitPath)
 	mtcGitBranch = get_git_branch(mtcGitPath)
 	validatorGitBranch = get_git_branch(validatorGitPath)
 	mtcGitHash_text = bcolors.yellow_text(mtcGitHash)

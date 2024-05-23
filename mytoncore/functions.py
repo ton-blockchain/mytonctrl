@@ -10,6 +10,7 @@ import requests
 import subprocess
 
 from mytoncore.mytoncore import MyTonCore
+from mytonctrl.utils import fix_git_config
 from mytoninstaller.config import GetConfig
 from mypylib.mypylib import (
     b2mb,
@@ -420,7 +421,9 @@ def Telemetry(local, ton):
 
     # Get git hashes
     gitHashes = dict()
-    gitHashes["mytonctrl"] = get_git_hash("/usr/src/mytonctrl")
+    mtc_path = "/usr/src/mytonctrl"
+    local.try_function(fix_git_config, args=[mtc_path])
+    gitHashes["mytonctrl"] = get_git_hash(mtc_path)
     gitHashes["validator"] = GetBinGitHash(
         "/usr/bin/ton/validator-engine/validator-engine")
     data["gitHashes"] = gitHashes
