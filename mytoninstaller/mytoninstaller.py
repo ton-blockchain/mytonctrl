@@ -29,7 +29,8 @@ from mytoninstaller.settings import (
 	CreateSymlinks,
 	enable_ls_proxy,
 	enable_ton_storage,
-	enable_ton_storage_provider
+	enable_ton_storage_provider,
+	EnableMode
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
@@ -237,12 +238,29 @@ def Event(local, name):
 #end define
 
 
-def General(local):
+def Command(local, args, console):
+	cmd = args[0]
+	args = args[1:]
+	for item in console.menu_items:
+		if cmd == item.cmd:
+			console._try(item.func, args)
+			print()
+			local.exit()
+	print(console.unknown_cmd)
+	local.exit()
+#end define
+
+
+def General(local, console):
 	if "-u" in sys.argv:
 		ux = sys.argv.index("-u")
 		user = sys.argv[ux+1]
 		local.buffer.user = user
 		Refresh(local)
+	if "-c" in sys.argv:
+		cx = sys.argv.index("-c")
+		args = sys.argv[cx+1:]
+		Command(local, args, console)
 	if "-e" in sys.argv:
 		ex = sys.argv.index("-e")
 		name = sys.argv[ex+1]
@@ -255,6 +273,10 @@ def General(local):
 		mx = sys.argv.index("--dump")
 		dump = sys.argv[mx+1]
 		local.buffer.dump = str2bool(dump)
+	if "-m" in sys.argv:
+		mx = sys.argv.index("-m")
+		mode = sys.argv[mx+1]
+		local.buffer.mode = mode
 	#end if
 
 	FirstMytoncoreSettings(local)
@@ -264,6 +286,7 @@ def General(local):
 	BackupVconfig(local)
 	BackupMconfig(local)
 	CreateSymlinks(local)
+	EnableMode(local)
 #end define
 
 
@@ -276,7 +299,7 @@ def mytoninstaller():
 
 	Init(local, console)
 	if len(sys.argv) > 1:
-		General(local)
+		General(local, console)
 	else:
 		console.Run()
 	local.exit()

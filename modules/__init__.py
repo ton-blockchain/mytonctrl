@@ -7,6 +7,7 @@ from modules.nominator_pool import NominatorPoolModule
 from modules.single_pool import SingleNominatorModule
 from modules.validator import ValidatorModule
 from modules.controller import ControllerModule
+from modules.liteserver import LiteserverModule
 
 
 MODES = {
@@ -14,6 +15,7 @@ MODES = {
     'nominator-pool': NominatorPoolModule,
     'single-nominator': SingleNominatorModule,
     'liquid-staking': ControllerModule,
+    'liteserver': LiteserverModule
 }
 
 
@@ -44,6 +46,7 @@ SETTINGS = {
     'overlayTelemetryUrl': Setting(None, 'https://telemetry.toncenter.com/report_overlays', 'Overlay telemetry url'),
     'duplicateApi': Setting(None, 'sendTelemetry', 'Duplicate external to Toncenter'),
     'duplicateApiUrl': Setting(None, 'https://[testnet.]toncenter.com/api/v2/sendBoc', 'Toncenter api url for duplicate'),
+    'checkAdnl': Setting(None, 'sendTelemetry', 'Check local udp port and adnl connection'),
     'liteclient_timeout': Setting(None, 3, 'Liteclient default timeout'),
     'console_timeout': Setting(None, 3, 'Validator console default timeout'),
     'fift_timeout': Setting(None, 3, 'Fift default timeout'),

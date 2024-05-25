@@ -1208,6 +1208,8 @@ class MyTonCore():
 		elif "v3" in wallet.version:
 			fift_script = "wallet-v3.fif"
 			args = [fift_script, wallet.path, dest, subwallet, seqno, coins, boc_mode, boc_path, result_file_path]
+		else:
+			raise Exception(f"SignBocWithWallet error: Wallet version '{wallet.version}' is not supported")
 		if flags:
 			args += flags
 		result = self.fift.Run(args)
@@ -1912,6 +1914,8 @@ class MyTonCore():
 		elif "v3" in wallet.version:
 			fiftScript = "wallet-v3.fif"
 			args = [fiftScript, wallet.path, dest, subwallet, seqno, coins, "-m", mode, resultFilePath]
+		else:
+			raise Exception(f"MoveCoins error: Wallet version '{wallet.version}' is not supported")
 		if flags:
 			args += flags
 		result = self.fift.Run(args)
@@ -2275,6 +2279,9 @@ class MyTonCore():
 			item["pseudohash"] = pseudohash
 			complaints[chash] = item
 		#end for
+
+		# sort complaints by their creation time and hash
+		complaints = dict(sorted(complaints.items(), key=lambda item: (item[1]["createdTime"], item[0])))
 
 		# Set buffer
 		self.SetFunctionBuffer(bname, complaints)
@@ -2705,6 +2712,43 @@ class MyTonCore():
 				totalSize += os.path.getsize(filePath)
 		result = round(totalSize / 10**9, 2)
 		return result
+	#end define
+
+	def check_adnl(self):
+		telemetry = self.local.db.get("sendTelemetry", False)
+		check_adnl = self.local.db.get("checkAdnl", telemetry)
+		if not check_adnl:
+			return
+		url = 'http://45.129.96.53/adnl_check'
+		try:
+			data = self.get_local_adnl_data()
+			response = requests.post(url, json=data, timeout=5).json()
+		except Exception as e:
+			self.local.add_log(f'Failed to check adnl connection: {type(e)}: {e}', 'error')
+			return False
+		result = response.get("ok")
+		if not result:
+			self.local.add_log(f'Failed to check adnl connection to local node: {response.get("message")}', 'error')
+		return result
+	#end define
+
+	def get_local_adnl_data(self):
+
+		def int2ip(dec):
+			import socket
+			return socket.inet_ntoa(struct.pack("!i", dec))
+
+		vconfig = self.GetValidatorConfig()
+
+		data = {"host": int2ip(vconfig["addrs"][0]["ip"]), "port": vconfig["addrs"][0]["port"]}
+
+		dht_id = vconfig["dht"][0]["id"]
+		dht_id_hex = base64.b64decode(dht_id).hex().upper()
+
+		result = self.validatorConsole.Run(f"exportpub {dht_id_hex}")
+		pubkey = parse(result, "got public key: ", "\n")
+		data["pubkey"] = base64.b64encode(base64.b64decode(pubkey)[4:]).decode()
+		return data
 	#end define
 
 	def Result2List(self, text):
@@ -3220,9 +3264,20 @@ class MyTonCore():
 				current_modes[name] = mode.default_value  # assign default mode value
 		return current_modes
 
+	def check_enable_mode(self, name):
+		if name == 'liteserver':
+			if self.using_validator():
+				raise Exception(f'Cannot enable liteserver mode while validator mode is enabled. '
+								f'Use `disable_mode validator` first.')
+		if name == 'validator':
+			if self.using_liteserver():
+				raise Exception(f'Cannot enable validator mode while liteserver mode is enabled. '
+								f'Use `disable_mode liteserver` first.')
+
 	def enable_mode(self, name):
 		if name not in MODES:
 			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
+		self.check_enable_mode(name)
 		current_modes = self.get_modes()
 		current_modes[name] = True
 		self.local.save()
@@ -3254,6 +3309,9 @@ class MyTonCore():
 
 	def using_validator(self):
 		return self.get_mode_value('validator')
+
+	def using_liteserver(self):
+		return self.get_mode_value('liteserver')
 
 	def Tlb2Json(self, text):
 		# Заменить скобки

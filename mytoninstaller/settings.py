@@ -34,6 +34,7 @@ def FirstNodeSettings(local):
 	validatorAppPath = local.buffer.validator_app_path
 	globalConfigPath = local.buffer.global_config_path
 	vconfig_path = local.buffer.vconfig_path
+	archive_ttl = 2592000 if local.buffer.mode == 'liteserver' else 86400
 
 	# Проверить конфигурацию
 	if os.path.isfile(vconfig_path):
@@ -57,8 +58,7 @@ def FirstNodeSettings(local):
 
 	# Прописать автозагрузку
 	cpus = psutil.cpu_count() - 1
-	cmd = "{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
-	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, ton_db_dir=ton_db_dir, tonLogPath=tonLogPath, cpus=cpus)
+	cmd = f"{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --state-ttl 604800 --archive-ttl {archive_ttl} --verbosity 1"
 	add2systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
@@ -888,3 +888,13 @@ def CreateSymlinks(local):
 		file.write(fiftpath + '\n')
 	file.close()
 #end define
+
+
+def EnableMode(local):
+	args = ["python3", "-m", "mytoncore", "-e"]
+	if local.buffer.mode == 'liteserver':
+		args.append("enable_liteserver_mode")
+	else:
+		return
+	args = ["su", "-l", local.buffer.user, "-c", ' '.join(args)]
+	subprocess.run(args)

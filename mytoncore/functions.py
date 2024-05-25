@@ -10,6 +10,7 @@ import requests
 import subprocess
 
 from mytoncore.mytoncore import MyTonCore
+from mytonctrl.utils import fix_git_config
 from mytoninstaller.config import GetConfig
 from mypylib.mypylib import (
     b2mb,
@@ -54,6 +55,8 @@ def Event(local, event_name):
         ValidatorDownEvent(local)
     elif event_name == "enable_ton_storage_provider":
         enable_ton_storage_provider_event(local)
+    elif event_name == "enable_liteserver_mode":
+        enable_liteserver_mode(local)
     local.exit()
 # end define
 
@@ -87,6 +90,13 @@ def enable_ton_storage_provider_event(local):
     key_bytes = base64.b64decode(config.ProviderKey)
     ton = MyTonCore(local)
     ton.import_wallet_with_version(key_bytes[:32], version="v3r2", wallet_name="provider_wallet_001")
+#end define
+
+
+def enable_liteserver_mode(local):
+    ton = MyTonCore(local)
+    ton.disable_mode('validator')
+    ton.enable_mode('liteserver')
 #end define
 
 
@@ -411,7 +421,9 @@ def Telemetry(local, ton):
 
     # Get git hashes
     gitHashes = dict()
-    gitHashes["mytonctrl"] = get_git_hash("/usr/src/mytonctrl")
+    mtc_path = "/usr/src/mytonctrl"
+    local.try_function(fix_git_config, args=[mtc_path])
+    gitHashes["mytonctrl"] = get_git_hash(mtc_path)
     gitHashes["validator"] = GetBinGitHash(
         "/usr/bin/ton/validator-engine/validator-engine")
     data["gitHashes"] = gitHashes
