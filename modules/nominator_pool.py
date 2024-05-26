@@ -56,14 +56,14 @@ class NominatorPoolModule(PoolModule):
 
     def do_activate_pool(self, pool, ex=True):
         self.ton.local.add_log("start ActivatePool function", "debug")
-        for i in range(10):
-            time.sleep(3)
-            account = self.ton.GetAccount(pool.addrB64)
-            if account.balance > 0:
-                self.ton.SendFile(pool.bocFilePath, pool, timeout=False)
-                return
-        if ex:
-            raise Exception("ActivatePool error: time out")
+        account = self.ton.GetAccount(pool.addrB64)
+        if account.status == "empty":
+            raise Exception("do_activate_pool error: account status is empty")
+        elif account.status == "active":
+            self.local.add_log("do_activate_pool warning: account status is active", "warning")
+        else:
+            self.SendFile(pool.bocFilePath, pool, timeout=False, remove=False)
+    #end define
 
     def activate_pool(self, args):
         try:
@@ -72,9 +72,6 @@ class NominatorPoolModule(PoolModule):
             color_print("{red}Bad args. Usage:{endc} activate_pool <pool-name>")
             return
         pool = self.ton.GetLocalPool(pool_name)
-        if not os.path.isfile(pool.bocFilePath):
-            self.local.add_log(f"Pool {pool_name} already activated", "warning")
-            return
         self.do_activate_pool(pool)
         color_print("ActivatePool - {green}OK{endc}")
 
