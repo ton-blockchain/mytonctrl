@@ -462,6 +462,10 @@ def check_sync(local, ton):
 #end define
 
 def check_validator_balance(local, ton):
+	validator_status = ton.GetValidatorStatus()
+	if not validator_status.is_working or validator_status.out_of_sync >= 20:
+		# Do not check the validator wallet balance if the node is not synchronized (via public lite-servers)
+		return
 	if ton.using_validator():
 		validator_wallet = ton.GetValidatorWallet()
 		validator_account = local.try_function(ton.GetAccount, args=[validator_wallet.addrB64])
@@ -477,6 +481,7 @@ def check_vps(local, ton):
 		data = local.try_function(is_host_virtual)
 		if data and data["virtual"]:
 			color_print(f"Virtualization detected: {data['product_name']}")
+#end define
 
 def warnings(local, ton):
 	check_disk_usage(local, ton)
