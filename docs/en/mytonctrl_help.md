@@ -1,7 +1,13 @@
-# List of all mytonctrl commands on TestNet
+# mytonctrl2 functionality
 
 ## General Commands
-**update**: Update mytonctrl.
+
+### Update mytonctrl
+
+```bash
+MyTonCtrl> update
+```
+
 Param combinations:
 
 | Format name            | Format                                                                     | Example                                                                     | Description                                                             |
@@ -11,7 +17,12 @@ Param combinations:
 | Branch Only format     | `update [BRANCH]`                                                          | `update mytonctrl2`                                                         | Update from specified branch of current repo                            |
 | Branch Override format | `update [https://github.com/authorName/repoName/tree/branchName] [BRANCH]` | `update https://github.com/ton-blockchain/mytonctrl/tree/master mytonctrl2` | Update from branch specified by second argument of specified repository |                       
 
-**upgrade**: Update node.
+### Update node
+
+```bash
+MyTonCtrl> upgrade
+```
+
 Param combinations:
 
 | Format name            | Format                                                                      | Example                                                             | Description                                                              |
@@ -21,7 +32,12 @@ Param combinations:
 | Branch Only format     | `upgrade [BRANCH]`                                                          | `upgrade master`                                                    | Upgrade from specified branch of current repo                            |
 | Branch Override format | `upgrade [https://github.com/authorName/repoName/tree/branchName] [BRANCH]` | `upgrade https://github.com/ton-blockchain/ton/tree/master testnet` | Upgrade from branch specified by second argument of specified repository |
 
-**status**: Get current mytonctrl and node status.
+### Get mytonctrl status
+
+```bash
+MyTonCtrl> status
+```
+
 Param combinations:
 
 | Format name | Format        | Example       | Description                                                                                      |
@@ -29,35 +45,81 @@ Param combinations:
 | No args     | `status`      | `status`      | Full status report including validator efficiency and online validators.                         |
 | Fast        | `status fast` | `status fast` | Must be used on TestNet. Status report without validator efficiency and online validators count. |
 
-TODO explain all fields of responses
+TODO: explain all fields of responses
 
 - **installer**: Run the installer of TON modules.
     - No parameters required. It runs `python3 /usr/src/mytonctrl/mytoninstaller.py` and do nothing else.
 
+### Show MTC modes
 
+```bash
+MyTonCtrl> status_modes
+```
 
-- **status_modes**: Show MTC modes.
-    - No parameters required.
+### Show all settings
 
-- **status_settings**: Show all available settings with their description and values.
-    - No parameters required.
-- **enable_mode [mode]**: Enable a specific mode.
-    - `mode`: The name of the mode to enable.
-- **disable_mode [mode]**: Disable a specific mode.
-    - `mode`: The name of the mode to disable.
-- **about**: Provide a description of the current mode.
-    - No parameters required.
-- **get [setting]**: Get the value of a specific setting.
-    - `setting`: The name of the setting to retrieve.
-- **set [setting] [value]**: Set the value of a specific setting.
-    - `setting`: The name of the setting to modify.
-    - `value`: The new value for the setting.
-- **rollback**: Rollback to mytonctrl 1.0.
-    - No parameters required.
+Show all available settings with their description and values.
+
+```bash
+MyTonCtrl> status_settings
+```
+
+### Enable a specific mode
+
+```bash
+MyTonCtrl> enable_mode <mode_name>
+```
+
+### Disable a specific mode
+
+```bash
+MyTonCtrl> disable_mode <mode_name>
+```
+
+### Mode descriptions
+
+Provide a description of the specific mode.
+
+```bash
+MyTonCtrl> about <mode_name>
+```
+
+### Get settings value
+
+Get the value of a specific setting.
+
+```bash
+MyTonCtrl> get <settings-name>
+```
+
+### Set settings value
+
+Set the value of a specific setting.
+
+```bash
+MyTonCtrl> set <settings-name> <settings-value>
+```
+
+### Rollback to mytonctrl 1.0
+
+```bash
+MyTonCtrl> rollback
+```
 
 ## Wallet Commands
-- **seqno**: Get the sequence number of the wallet.
-    - No parameters required.
+
+### Get the sequence number of the wallet
+
+```bash
+MyTonCtrl> seqno <wallet-name>
+```
+
+### Get the sequence number of the wallet
+
+```bash
+MyTonCtrl> seqno <wallet-name>
+```
+
 - **nw [wallet_name]**: Create a new local wallet.
     - `wallet_name`: The desired name for the new wallet.
 - **aw [wallet_name]**: Activate a local wallet.
@@ -129,7 +191,7 @@ TODO explain all fields of responses
 - **activate_single_pool [pool_id]**: Activate a single pool.
     - `pool_id`: The identifier of the pool to activate.
 
-## Miscellaneous Commands
+## Various Commands
 - **add_custom_overlay [overlay_id]**: Add a custom overlay.
     - `overlay_id`: The identifier of the overlay to add.
 - **list_custom_overlays**: List all custom overlays.
