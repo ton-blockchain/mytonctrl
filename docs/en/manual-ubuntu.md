@@ -1,11 +1,11 @@
 # MyTonCtrl (v0.2, OS Ubuntu)
 
 This page contains:
-1. Node types overview
-2. MyTonCtrl installing
-3. Become a validator
-4. Liteserver installation
-5. Archive node installation
+1. [Node types overview](/docs/en/manual-ubuntu#node-types-overview)
+2. [MyTonCtrl installing](/docs/en/manual-ubuntu#mytonctrl-install)
+3. [Become a validator](/docs/en/manual-ubuntu#how-to-become-a-validator-with-mytonctrl)
+4. [Liteserver installation](/docs/en/manual-ubuntu#liteserver-installation)
+5. [Archive node installation](/docs/en/manual-ubuntu#archive-node-installation)
 
 More information can be found in [TON Node & mytonctrl documentation](https://docs.ton.org/participate/nodes/node-types)
 
