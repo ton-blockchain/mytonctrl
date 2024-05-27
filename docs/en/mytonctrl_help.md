@@ -120,20 +120,51 @@ MyTonCtrl> seqno <wallet-name>
 MyTonCtrl> seqno <wallet-name>
 ```
 
-- **nw [wallet_name]**: Create a new local wallet.
-    - `wallet_name`: The desired name for the new wallet.
-- **aw [wallet_name]**: Activate a local wallet.
-    - `wallet_name`: The name of the wallet to activate.
-- **wl**: Show the list of wallets.
-    - No parameters required.
-- **iw [wallet_file]**: Import a wallet from a file.
-    - `wallet_file`: The file containing the wallet data.
-- **swv [version]**: Set the wallet version.
-    - `version`: The version number to set for the wallet.
-- **ew [wallet_name]**: Export a wallet to a file.
-    - `wallet_name`: The name of the wallet to export.
-- **dw [wallet_name]**: Delete a local wallet.
-    - `wallet_name`: The name of the wallet to delete.
+### Create a new local wallet
+
+```bash
+MyTonCtrl> nw <workchain-id> <wallet-name> [<version> <subwallet>]
+```
+
+![](/docs/img/nw.png)
+
+### Activate a local wallet
+
+```bash
+MyTonCtrl> aw <wallet-name>
+```
+
+### Show the list of wallets
+
+```bash
+MyTonCtrl> wl
+```
+
+![](/docs/img/wl.png)
+
+### Import a wallet
+
+```bash
+MyTonCtrl> iw <wallet-addr> <wallet-secret-key>
+```
+
+### Set a wallet version
+
+```bash
+MyTonCtrl> swv <wallet-addr> <wallet-version>
+```
+
+### Export a wallet
+
+```bash
+MyTonCtrl> ew <wallet-name>
+```
+
+### Delete a local wallet
+
+```bash
+MyTonCtrl> dw <wallet-name>
+```
 
 ## Account and Transaction Commands
 - **vas [account_address]**: View the status of an account.
