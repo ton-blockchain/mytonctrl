@@ -8,8 +8,6 @@ The contract provides an alternative simplified implementation for the core team
 
 Currently [mytonctrl](https://github.com/ton-blockchain/mytonctrl) supports `single_nominator` contracts, but firstly you need to install mytonctrl 2.0.
 
-### Launch mytonctrl 2.0
-
 If you already have installed mytonctrl just use command `update mytonctrl2`. If you have no mytonctrl installed, follow these steps:
 
 1. Download installation script:
@@ -24,7 +22,7 @@ wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/mytonctrl2/scrip
 sudo bash ./install.sh -b mytonctrl2
 ```
 
-### Set up single-nominator
+## Set up single-nominator
 
 After you have [created](/participate/run-nodes/full-node#import-existed-account) and [activated](/participate/run-nodes/full-node#activate-the-wallets) validator's wallet, follow these steps:
 
@@ -78,138 +76,6 @@ test-pool  active  0.99389  spool_r2  kf_JcC5pn3etTAdwOnc16_tyMmKE8-ftNUnf0OnUjA
 
 Now you can work with this pool via mytonctrl like with a standard nominator pool.
 
-## Start without mytonctrl
-
-#### Prepare launched Validator
-
-  If you have mytonctrl installed and validator running:
-
-  1. Stop validation and withdraw all funds.
-
-#### Prepare from the beginning
-  If you had no Validator before, do the following:
-   1. [Run a Validator](/participate/run-nodes/full-node) and make sure it's synced.
-   2. Stop validation and withdraw all funds.
-
-
-### Prepare Single Nominator
-
-
-1. Install [nodejs](https://nodejs.org/en) v.16 and later and npm  ([detailed instructions](https://github.com/nodesource/distributions#debian-and-ubuntu-based-distributions))
-
-2. Install `ts-node` and `arg` module
-
-```bash
-$ sudo apt install ts-node
-$ sudo npm i arg -g
-```
-
-4. Create symlinks for compilers:
-
-```bash
-$ sudo ln -s /usr/bin/ton/crypto/fift /usr/local/bin/fift
-$ sudo ln -s /usr/bin/ton/crypto/func /usr/local/bin/func
-```
-
-5. Run test to make sure everything is set up properly:
-
-```bash
-$ npm run test
-```
-
-6. Replace mytonctrl nominator-pool scripts: https://raw.githubusercontent.com/orbs-network/single-nominator/main/mytonctrl-scripts/install-pool-scripts.sh
-
-### Create Single Nominator Pool
-
-1. Get Toncenter API key from a Telegram [@tonapibot](https://t.me/tonapibot)
-2. Set env variables:
-
-```bash
-export OWNER_ADDRESS=<owner_address>
-export VALIDATOR_ADDRESS=<validator_wallet_address>
-export TON_ENDPOINT=https://toncenter.com/api/v2/jsonRPC
-export TON_API_KEY=<toncenter api key>
-```
-
-2. Create deployer address:
-
-```bash
-$ npm run init-deploy-wallet
-Insufficient Deployer [EQAo5U...yGgbvR] funds 0
-```
-
-3. Topup deployer address with 2.1 TON
-4. Deploy pool contract, you will get pool address: `Ef-kC0..._WLqgs`:
-
-```
-$ npm run deploy
-```
-
-5. Convert address to .addr:
-
-```
-$ fift -s ./scripts/fift/str-to-addr.fif Ef-kC0..._WLqgs
-```
-
-(Saving address to file single-nominator.addr)
-
-6. Backup deployer private key "./build/deploy.config.json" and "single-nominator.addr" files
-7. Copy "single-nominator.addr" to "mytoncore/pools/single-nominator-1.addr"
-8. Send stake from owner address to single nominator address
-
-### Withdrawals from Single Nominator
-
-Using wallets to withdraw from Single Nominator
-Fift:
-
-1. Create "withdraw.boc" request with amount:
-
-```bash
-$ fift -s ./scripts/fift/withdraw.fif <withdraw_amount>
-```
-
-2. Create and sign request from owner's wallet:
-
-```bash
-$ fift -s wallet-v3.fif <my-wallet> <single_nominator_address> <sub_wallet_id> <seqno> <amount=1> -B withdraw.boc
-```
-
-3. Broadcast query:
-
-```bash
-$ lite-client -C global.config.json -c 'sendfile wallet-query.boc'
-tons
-```
-
-1. Create "withdraw.boc" request with amount:
-
-```bash
-$ fift -s ./scripts/fift/withdraw.fif <withdraw_amount>
-```
-
-2. Send request to single nominator address:
-
-a.
-
-```bash
-$ tons wallet transfer <my-wallet> <single_nominator_address> <amount=1> --body withdraw.boc
-tonkeeper
-```
-
-b.
-
-```
-npm link typescript
-```
-
-c.
-
-```
-npx ts-node scripts/ts/withdraw-deeplink.ts <single-nominator-addr> <withdraw-amount>
-```
-
-d. Open deeplink on the owner's phone
-
 ## Deposit pool
 
 1. Go to the pool’s page https://tonscan.org/nominator/<pool_address>.
@@ -234,16 +100,19 @@ or
 MyTonCtrl> deposit_to_pool <pool-addr> <amount>
 ```
 
-which deposits pool from validation wallet.
+which deposits pool from validator wallet.
 
 **MyTonCtrl** will automatically join the elections. You can set the stake amount that mytonctrl sends to [Elector contract](/develop/smart-contracts/governance#elector) ~ every 18 hours.
 
 ```sh
 MyTonCtrl> set stake 50000
 ```
+
 Minimal stake amount could be found using `status` command.
 
-![](/img/docs/single-nominator/tetsnet-conf.png)
+![](/docs/img/tetsnet-conf.png)
+
+Or you can set `stake` as `null` and it will be calculated according to the `stakePercent` value (could be checked with `status_settings` command).
 
 ## Stop participating (withdraw)
 

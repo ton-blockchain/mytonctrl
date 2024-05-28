@@ -1,15 +1,41 @@
 # MyTonCtrl2 Account and Transaction commands
 
-- **vas [account_address]**: View the status of an account.
-    - `account_address`: The address of the account to check.
-- **vah [account_address]**: View the transaction history of an account.
-    - `account_address`: The address of the account to check.
-- **mg [from_wallet] [to_account] [amount]**: Move coins to an account.
-    - `from_wallet`: The wallet from which to move coins.
-    - `to_account`: The account to which to move coins.
-    - `amount`: The amount of coins to move.
-- **mgtp [from_wallet] [to_account] [amount] [proxy]**: Move coins through a proxy.
-    - `from_wallet`: The wallet from which to move coins.
-    - `to_account`: The account to which to move coins.
-    - `amount`: The amount of coins to move.
-    - `proxy`: The proxy through which to move coins.
+## Account status
+
+To check account status and its transaction history use the following command:
+
+```bash
+MyTonCtrl> vas <account-addr>
+```
+
+![](/docs/img/vas.png)
+
+## Account history
+
+To check account transaction history use the following command using the number of listed operations as `limit` (but not less then 10):
+
+```bash
+MyTonCtrl> vah <account-addr> <limit>
+```
+
+![](/docs/img/vah.png)
+
+## Transfer coins
+
+Transfer coins from local wallet to an account:
+
+```bash
+MyTonCtrl> mg <wallet-name> <account-addr | bookmark-name> <amount>
+```
+
+> [!WARNING] 
+> **Wallet version 'v4' is not supported for transfering from**
+
+
+## Transfer coins through a proxy
+
+Transfer coins from local wallet to an account through a proxy:
+
+```bash
+MyTonCtrl> mgtp <wallet-name> <account-addr | bookmark-name> <amount>
+```
