@@ -1,8 +1,6 @@
-# mytonctrl2 functionality
+# MyTonCtrl2 general commands
 
-## General Commands
-
-### Update mytonctrl
+## Update mytonctrl
 
 ```bash
 MyTonCtrl> update
@@ -17,7 +15,7 @@ Param combinations:
 | Branch Only format     | `update [BRANCH]`                                                          | `update mytonctrl2`                                                         | Update from specified branch of current repo                            |
 | Branch Override format | `update [https://github.com/authorName/repoName/tree/branchName] [BRANCH]` | `update https://github.com/ton-blockchain/mytonctrl/tree/master mytonctrl2` | Update from branch specified by second argument of specified repository |                       
 
-### Update node
+## Update node
 
 ```bash
 MyTonCtrl> upgrade
@@ -32,7 +30,7 @@ Param combinations:
 | Branch Only format     | `upgrade [BRANCH]`                                                          | `upgrade master`                                                    | Upgrade from specified branch of current repo                            |
 | Branch Override format | `upgrade [https://github.com/authorName/repoName/tree/branchName] [BRANCH]` | `upgrade https://github.com/ton-blockchain/ton/tree/master testnet` | Upgrade from branch specified by second argument of specified repository |
 
-### Get mytonctrl status
+## Get mytonctrl status
 
 ```bash
 MyTonCtrl> status
@@ -50,13 +48,13 @@ TODO: explain all fields of responses
 - **installer**: Run the installer of TON modules.
     - No parameters required. It runs `python3 /usr/src/mytonctrl/mytoninstaller.py` and do nothing else.
 
-### Show MTC modes
+## Show MTC modes
 
 ```bash
 MyTonCtrl> status_modes
 ```
 
-### Show all settings
+## Show all settings
 
 Show all available settings with their description and values.
 
@@ -64,19 +62,19 @@ Show all available settings with their description and values.
 MyTonCtrl> status_settings
 ```
 
-### Enable a specific mode
+## Enable a specific mode
 
 ```bash
 MyTonCtrl> enable_mode <mode_name>
 ```
 
-### Disable a specific mode
+## Disable a specific mode
 
 ```bash
 MyTonCtrl> disable_mode <mode_name>
 ```
 
-### Mode descriptions
+## Mode descriptions
 
 Provide a description of the specific mode.
 
@@ -84,7 +82,7 @@ Provide a description of the specific mode.
 MyTonCtrl> about <mode_name>
 ```
 
-### Get settings value
+## Get settings value
 
 Get the value of a specific setting.
 
@@ -92,7 +90,7 @@ Get the value of a specific setting.
 MyTonCtrl> get <settings-name>
 ```
 
-### Set settings value
+## Set settings value
 
 Set the value of a specific setting.
 
@@ -100,86 +98,11 @@ Set the value of a specific setting.
 MyTonCtrl> set <settings-name> <settings-value>
 ```
 
-### Rollback to mytonctrl 1.0
+## Rollback to mytonctrl 1.0
 
 ```bash
 MyTonCtrl> rollback
 ```
-
-## Wallet Commands
-
-### Get the sequence number of the wallet
-
-```bash
-MyTonCtrl> seqno <wallet-name>
-```
-
-### Get the sequence number of the wallet
-
-```bash
-MyTonCtrl> seqno <wallet-name>
-```
-
-### Create a new local wallet
-
-```bash
-MyTonCtrl> nw <workchain-id> <wallet-name> [<version> <subwallet>]
-```
-
-![](/docs/img/nw.png)
-
-### Activate a local wallet
-
-```bash
-MyTonCtrl> aw <wallet-name>
-```
-
-### Show the list of wallets
-
-```bash
-MyTonCtrl> wl
-```
-
-![](/docs/img/wl.png)
-
-### Import a wallet
-
-```bash
-MyTonCtrl> iw <wallet-addr> <wallet-secret-key>
-```
-
-### Set a wallet version
-
-```bash
-MyTonCtrl> swv <wallet-addr> <wallet-version>
-```
-
-### Export a wallet
-
-```bash
-MyTonCtrl> ew <wallet-name>
-```
-
-### Delete a local wallet
-
-```bash
-MyTonCtrl> dw <wallet-name>
-```
-
-## Account and Transaction Commands
-- **vas [account_address]**: View the status of an account.
-    - `account_address`: The address of the account to check.
-- **vah [account_address]**: View the transaction history of an account.
-    - `account_address`: The address of the account to check.
-- **mg [from_wallet] [to_account] [amount]**: Move coins to an account.
-    - `from_wallet`: The wallet from which to move coins.
-    - `to_account`: The account to which to move coins.
-    - `amount`: The amount of coins to move.
-- **mgtp [from_wallet] [to_account] [amount] [proxy]**: Move coins through a proxy.
-    - `from_wallet`: The wallet from which to move coins.
-    - `to_account`: The account to which to move coins.
-    - `amount`: The amount of coins to move.
-    - `proxy`: The proxy through which to move coins.
 
 ## Bookmark Commands
 - **nb [bookmark_name] [account_address]**: Create a new bookmark.
