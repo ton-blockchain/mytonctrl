@@ -176,7 +176,7 @@ class CustomOverlayModule(MtcModule):
         network = self.ton.GetNetworkName()
         default_url = 'https://ton-blockchain.github.io/fallback_custom_overlays.json'
         url = self.ton.local.db.get('defaultCustomOverlaysUrl', default_url)
-        resp = requests.get(url)
+        resp = requests.get(url, timeout=3)
         if resp.status_code != 200:
             self.ton.local.add_log(f"Failed to get default custom overlays from {url}", "error")
             return None
