@@ -31,12 +31,20 @@ class CustomOverlayModule(MtcModule):
                         "msg_sender": False,
                     })
             else:
-                result["nodes"].append({
-                    "adnl_id": hex2base64(k),
-                    "msg_sender": v["msg_sender"],
-                })
-                if v["msg_sender"]:
-                    result["nodes"][-1]["msg_sender_priority"] = v["msg_sender_priority"]
+                if "block_sender" in v:
+                    result["nodes"].append({
+                        "adnl_id": hex2base64(k),
+                        "block_sender": v["block_sender"],
+                    })
+                elif "msg_sender" in v:
+                    result["nodes"].append({
+                        "adnl_id": hex2base64(k),
+                        "msg_sender": v["msg_sender"],
+                    })
+                    if v["msg_sender"]:
+                        result["nodes"][-1]["msg_sender_priority"] = v["msg_sender_priority"]
+                else:
+                    raise Exception("Unknown node type")
         return result
 
     def add_custom_overlay(self, args):
