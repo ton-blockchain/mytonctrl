@@ -1,8 +1,7 @@
 # Single Nominator Pool
 
-[Single Nominator](https://github.com/orbs-network/single-nominator) is a new TON smart contract that enables secure validation for TON blockchain via an air gapped cold wallet.The contract is designed for TON validators that have enough self stake to validate by themselves without relying on third-party nominators.
+[Single Nominator](https://github.com/orbs-network/single-nominator) is a TON smart contract that enables secure validation for TON blockchain. The contract is designed for TON validators that have enough self stake to validate by themselves without relying on third-party nominators stakes. The contract provides an alternative simplified implementation for the Nominator Pool smart contract that supports a single nominator only.
 
-The contract provides an alternative simplified implementation for the core team’s Nominator Pool smart contract that supports a single nominator only. The benefit of this implementation is that it's more secure since the attack surface is considerably smaller. This is due to a massive reduction in complexity of the Nominator Pool that has to support multiple third-party nominators.
 
 ## Start using mytonctrl
 
@@ -149,34 +148,6 @@ async function main() {
         bounce: true,
         body: messageBody
     });
-}
-```
-
-</TabItem>
-
-<TabItem value="tonconnect" label="Golang">
-
-```go
-func WithdrawSingleNominatorMessage(single_nominator_address string, query_id, amount uint64) (*tonconnect.Message, error) {
-
-	const WITHDRAW_OP = 0x1000
-
-	payload, _ := cell.BeginCell().
-		MustStoreUInt(WITHDRAW_OP, 32). // op code for withdrawal
-		MustStoreUInt(query_id, 64).    // query_id
-		MustStoreCoins(amount).         // amount to withdraw
-		EndCell().MarshalJSON()
-
-	msg, err := tonconnect.NewMessage(
-		single_nominator_address,
-		tlb.MustFromTON("1").Nano().String(), // nanocoins to transfer/compute message
-		tonconnect.WithPayload(payload))
-
-	if err != nil {
-		return nil, err
-	}
-
-	return msg, nil
 }
 ```
 

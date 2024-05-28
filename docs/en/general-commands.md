@@ -133,18 +133,6 @@ MyTonCtrl> rollback
 - **vc [complaint_id]**: Vote for a specific complaint.
     - `complaint_id`: The identifier of the complaint to vote for.
 
-## Pool Commands
-- **pools_list**: List all pools.
-    - No parameters required.
-- **delete_pool [pool_id]**: Delete a specific pool.
-    - `pool_id`: The identifier of the pool to delete.
-- **import_pool [pool_file]**: Import a pool from a file.
-    - `pool_file`: The file containing the pool data.
-- **new_single_pool [pool_name]**: Create a new single pool.
-    - `pool_name`: The desired name for the new pool.
-- **activate_single_pool [pool_id]**: Activate a single pool.
-    - `pool_id`: The identifier of the pool to activate.
-
 ## Various Commands
 - **add_custom_overlay [overlay_id]**: Add a custom overlay.
     - `overlay_id`: The identifier of the overlay to add.

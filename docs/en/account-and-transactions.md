@@ -12,7 +12,7 @@ MyTonCtrl> vas <account-addr>
 
 ## Account history
 
-To check account transaction history use the following command using the number of listed operations as `limit` (but not less then 10):
+To check account transaction history use the following command using the number of listed operations as `limit`:
 
 ```bash
 MyTonCtrl> vah <account-addr> <limit>
