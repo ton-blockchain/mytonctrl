@@ -29,7 +29,7 @@ MyTonCtrl> mg <wallet-name> <account-addr | bookmark-name> <amount>
 ```
 
 > [!WARNING] 
-> **Wallet version 'v4' is not supported for transfering from**
+> **Wallet version 'v4' is not supported for the transfering**
 
 
 ## Transfer coins through a proxy
