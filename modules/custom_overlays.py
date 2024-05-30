@@ -31,12 +31,20 @@ class CustomOverlayModule(MtcModule):
                         "msg_sender": False,
                     })
             else:
-                result["nodes"].append({
-                    "adnl_id": hex2base64(k),
-                    "msg_sender": v["msg_sender"],
-                })
-                if v["msg_sender"]:
-                    result["nodes"][-1]["msg_sender_priority"] = v["msg_sender_priority"]
+                if "block_sender" in v:
+                    result["nodes"].append({
+                        "adnl_id": hex2base64(k),
+                        "block_sender": v["block_sender"],
+                    })
+                elif "msg_sender" in v:
+                    result["nodes"].append({
+                        "adnl_id": hex2base64(k),
+                        "msg_sender": v["msg_sender"],
+                    })
+                    if v["msg_sender"]:
+                        result["nodes"][-1]["msg_sender_priority"] = v["msg_sender_priority"]
+                else:
+                    raise Exception("Unknown node type")
         return result
 
     def add_custom_overlay(self, args):
@@ -168,7 +176,7 @@ class CustomOverlayModule(MtcModule):
         network = self.ton.GetNetworkName()
         default_url = 'https://ton-blockchain.github.io/fallback_custom_overlays.json'
         url = self.ton.local.db.get('defaultCustomOverlaysUrl', default_url)
-        resp = requests.get(url)
+        resp = requests.get(url, timeout=3)
         if resp.status_code != 200:
             self.ton.local.add_log(f"Failed to get default custom overlays from {url}", "error")
             return None
