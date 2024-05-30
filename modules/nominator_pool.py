@@ -62,7 +62,7 @@ class NominatorPoolModule(PoolModule):
         elif account.status == "active":
             self.local.add_log("do_activate_pool warning: account status is active", "warning")
         else:
-            self.SendFile(pool.bocFilePath, pool, timeout=False, remove=False)
+            self.ton.SendFile(pool.bocFilePath, pool, timeout=False, remove=False)
     #end define
 
     def activate_pool(self, args):
