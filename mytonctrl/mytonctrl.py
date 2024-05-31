@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-
+import base64
 import subprocess
 import json
 import psutil
@@ -553,6 +554,12 @@ def PrintStatus(local, ton, args):
 	all_status = validator_status.is_working == True and validator_status.out_of_sync < 20
 	config15 = None
 
+	try:
+		vconfig = ton.GetValidatorConfig()
+		fullnode_adnl = base64.b64decode(vconfig.fullnode).hex().upper()
+	except:
+		fullnode_adnl = 'n/a'
+
 	if all_status:
 		network_name = ton.GetNetworkName()
 		rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
@@ -590,7 +597,7 @@ def PrintStatus(local, ton, args):
 	if all_status:
 		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
 	PrintLocalStatus(local, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status, 
-		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, config15)
+		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, config15, fullnode_adnl)
 	if all_status:
 		PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
@@ -640,7 +647,7 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	print()
 #end define
 
-def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, config15):
+def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, config15, fullnode_adnl):
 	if validatorWallet is None:
 		return
 	walletAddr = validatorWallet.addrB64
@@ -659,6 +666,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	validatorEfficiency_text = GetColorInt(validatorEfficiency, 10, logic="more", ending=" %")
 	validatorEfficiency_text = local.translate("local_status_validator_efficiency").format(validatorEfficiency_text)
 	adnlAddr_text = local.translate("local_status_adnl_addr").format(bcolors.yellow_text(adnlAddr))
+	fullnode_adnl_text = local.translate("local_status_fullnode_adnl").format(bcolors.yellow_text(fullnode_adnl))
 	walletAddr_text = local.translate("local_status_wallet_addr").format(bcolors.yellow_text(walletAddr))
 	walletBalance_text = local.translate("local_status_wallet_balance").format(bcolors.green_text(walletBalance))
 
@@ -751,6 +759,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	print(validatorIndex_text)
 	print(validatorEfficiency_text)
 	print(adnlAddr_text)
+	print(fullnode_adnl_text)
 	print(walletAddr_text)
 	print(walletBalance_text)
 	print(cpuLoad_text)

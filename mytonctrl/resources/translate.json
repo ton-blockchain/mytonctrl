@@ -284,6 +284,11 @@
 		"ru": "ADNL адрес локального валидатора: {0}",
 		"zh_TW": "本地驗證者的 ADNL 地址: {0}"
 	},
+	"local_status_fullnode_adnl": {
+		"en": "Public ADNL address of node: {0}",
+		"ru": "Публичный ADNL адрес ноды: {0}",
+		"zh_TW": "節點的公共 ADNL 地址: {0}"
+	},
 	"local_status_wallet_addr": {
 		"en": "Local validator wallet address: {0}",
 		"ru": "Адрес кошелька локального валидатора: {0}",
