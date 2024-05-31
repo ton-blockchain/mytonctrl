@@ -724,7 +724,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	if config15:
 		t = config15["validatorsElectedFor"] * 2
 		if validator_status.out_of_ser * 5 > t:
-			validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{{redc}}{validator_status.out_of_ser} blocks ago{{endc}}')
+			validator_out_of_ser_text = color_text(local.translate("local_status_validator_out_of_ser").format(f'{{red}}{validator_status.out_of_ser} blocks ago{{endc}}'))
 
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
