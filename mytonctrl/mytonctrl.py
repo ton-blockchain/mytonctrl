@@ -552,7 +552,6 @@ def PrintStatus(local, ton, args):
 	disks_load_percent_avg = ton.GetStatistics("disksLoadPercentAvg", statistics)
 
 	all_status = validator_status.is_working == True and validator_status.out_of_sync < 20
-	config15 = None
 
 	try:
 		vconfig = ton.GetValidatorConfig()
@@ -597,7 +596,7 @@ def PrintStatus(local, ton, args):
 	if all_status:
 		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
 	PrintLocalStatus(local, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status, 
-		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, config15, fullnode_adnl)
+		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl)
 	if all_status:
 		PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
@@ -647,7 +646,7 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	print()
 #end define
 
-def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, config15, fullnode_adnl):
+def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl):
 	if validatorWallet is None:
 		return
 	walletAddr = validatorWallet.addrB64
@@ -728,11 +727,6 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less", ending=" s"))
 
 	validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
-
-	if config15:
-		t = config15["validatorsElectedFor"] * 2
-		if validator_status.out_of_ser * 5 > t:
-			validator_out_of_ser_text = color_text(local.translate("local_status_validator_out_of_ser").format(f'{{red}}{validator_status.out_of_ser} blocks ago{{endc}}'))
 
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
