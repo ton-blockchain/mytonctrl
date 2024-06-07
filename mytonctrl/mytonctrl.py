@@ -381,8 +381,13 @@ def Upgrade(ton, args):
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
 	if ton.using_validator():
-		from mytoninstaller.mytoninstaller import set_node_argument
-		set_node_argument(ton.local, ["--state-ttl", "-d"])
+		try:
+			from mytoninstaller.mytoninstaller import set_node_argument, get_node_args
+			node_args = get_node_args()
+			if node_args['--state-ttl'] == 604800:
+				set_node_argument(ton.local, ["--state-ttl", "-d"])
+		except Exception as e:
+			color_print(f"{{red}}Failed to set node argument: {e} {{endc}}")
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
