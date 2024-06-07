@@ -76,6 +76,14 @@ cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DTON_USE_JEMALLOC=ON
 ninja -j ${cpuNumber} fift validator-engine lite-client pow-miner validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
 systemctl restart validator
 
+if [ -e /usr/src/mytonctrl/scripts/set_state_ttl.py ]
+then
+  /usr/bin/python3 /usr/src/mytonctrl/scripts/set_state_ttl.py
+else
+    echo "Set state ttl script is not found!"
+fi
+
+
 # Конец
 echo -e "${COLOR}[1/1]${ENDC} TON components update completed"
 exit 0
