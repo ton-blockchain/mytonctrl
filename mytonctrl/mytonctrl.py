@@ -382,6 +382,9 @@ def Upgrade(ton, args):
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
+	if ton.using_validator():
+		from mytoninstaller.mytoninstaller import set_node_argument
+		set_node_argument(ton.local, ["--state-ttl", "-d"])
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
