@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-
+import base64
 import subprocess
 import json
 import psutil
@@ -293,13 +294,11 @@ def check_vport(local, ton):
 #end define
 
 
-def check_git(input_args, default_repo, text):
+def check_git(input_args, default_repo, text, default_branch='master'):
 	src_dir = "/usr/src"
 	git_path = f"{src_dir}/{default_repo}"
 	fix_git_config(git_path)
 	default_author = "ton-blockchain"
-	# default_branch = "master"
-	default_branch = "mytonctrl2"
 
 	# Get author, repo, branch
 	local_author, local_repo = get_git_author_and_repo(git_path)
@@ -341,7 +340,7 @@ def check_branch_exists(author, repo, branch):
 
 def Update(local, args):
 	repo = "mytonctrl"
-	author, repo, branch = check_git(args, repo, "update")
+	author, repo, branch = check_git(args, repo, "update", default_branch='mytonctrl2')
 
 	# Run script
 	update_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/update.sh')
@@ -381,6 +380,14 @@ def Upgrade(ton, args):
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
+	if ton.using_validator():
+		try:
+			from mytoninstaller.mytoninstaller import set_node_argument, get_node_args
+			node_args = get_node_args()
+			if node_args['--state-ttl'] == '604800':
+				set_node_argument(ton.local, ["--state-ttl", "-d"])
+		except Exception as e:
+			color_print(f"{{red}}Failed to set node argument: {e} {{endc}}")
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
@@ -551,6 +558,13 @@ def PrintStatus(local, ton, args):
 	disks_load_percent_avg = ton.GetStatistics("disksLoadPercentAvg", statistics)
 
 	all_status = validator_status.is_working == True and validator_status.out_of_sync < 20
+
+	try:
+		vconfig = ton.GetValidatorConfig()
+		fullnode_adnl = base64.b64decode(vconfig.fullnode).hex().upper()
+	except:
+		fullnode_adnl = 'n/a'
+
 	if all_status:
 		network_name = ton.GetNetworkName()
 		rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
@@ -588,7 +602,7 @@ def PrintStatus(local, ton, args):
 	if all_status:
 		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
 	PrintLocalStatus(local, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status, 
-		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg)
+		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl)
 	if all_status:
 		PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
@@ -638,7 +652,7 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	print()
 #end define
 
-def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg):
+def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl):
 	if validatorWallet is None:
 		return
 	walletAddr = validatorWallet.addrB64
@@ -657,6 +671,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	validatorEfficiency_text = GetColorInt(validatorEfficiency, 10, logic="more", ending=" %")
 	validatorEfficiency_text = local.translate("local_status_validator_efficiency").format(validatorEfficiency_text)
 	adnlAddr_text = local.translate("local_status_adnl_addr").format(bcolors.yellow_text(adnlAddr))
+	fullnode_adnl_text = local.translate("local_status_fullnode_adnl").format(bcolors.yellow_text(fullnode_adnl))
 	walletAddr_text = local.translate("local_status_wallet_addr").format(bcolors.yellow_text(walletAddr))
 	walletBalance_text = local.translate("local_status_wallet_balance").format(bcolors.green_text(walletBalance))
 
@@ -716,7 +731,9 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus_color, mytoncoreUptime_text)
 	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus_color, validatorUptime_text)
 	validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less", ending=" s"))
-	validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(GetColorInt(validator_status.out_of_ser, 20, logic="less", ending=" blocks"))
+
+	validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
+
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
 	dbStatus_text = local.translate("local_status_db").format(dbSize_text, dbUsage_text)
@@ -742,6 +759,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	print(validatorIndex_text)
 	print(validatorEfficiency_text)
 	print(adnlAddr_text)
+	print(fullnode_adnl_text)
 	print(walletAddr_text)
 	print(walletBalance_text)
 	print(cpuLoad_text)

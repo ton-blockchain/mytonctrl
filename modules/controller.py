@@ -48,8 +48,9 @@ class ControllerModule(MtcModule):
         old_controllers = self.ton.GetSettings("old_controllers")
         user_controllers_list = self.ton.GetSettings("user_controllers_list")
         print("using controllers:")
-        self.print_controllers_list_process(using_controllers)
-        if new_controllers != using_controllers:
+        if using_controllers is not None:
+            self.print_controllers_list_process(using_controllers)
+        if new_controllers is not None and new_controllers != using_controllers:
             print()
             print("new controllers:")
             self.print_controllers_list_process(new_controllers)
