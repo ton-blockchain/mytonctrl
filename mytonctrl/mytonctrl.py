@@ -294,13 +294,11 @@ def check_vport(local, ton):
 #end define
 
 
-def check_git(input_args, default_repo, text):
+def check_git(input_args, default_repo, text, default_branch='master'):
 	src_dir = "/usr/src"
 	git_path = f"{src_dir}/{default_repo}"
 	fix_git_config(git_path)
 	default_author = "ton-blockchain"
-	# default_branch = "master"
-	default_branch = "mytonctrl2"
 
 	# Get author, repo, branch
 	local_author, local_repo = get_git_author_and_repo(git_path)
@@ -342,7 +340,7 @@ def check_branch_exists(author, repo, branch):
 
 def Update(local, args):
 	repo = "mytonctrl"
-	author, repo, branch = check_git(args, repo, "update")
+	author, repo, branch = check_git(args, repo, "update", default_branch='mytonctrl2')
 
 	# Run script
 	update_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/update.sh')
