@@ -7,7 +7,7 @@ Here are the steps to become a validator using mytonctrl. This example is applic
 1. Download the installation script. We recommend installing the tool under your local user account, not as Root. In our example, a local user account is used:
 
     ```sh
-    wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
+    wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/mytonctrl2/scripts/install.sh
     ```
 
     ![wget output](https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/screens/manual-ubuntu_wget-ls_ru.png)
@@ -15,7 +15,7 @@ Here are the steps to become a validator using mytonctrl. This example is applic
 2. Run the installation script as an administrator:
 
     ```sh
-    sudo bash install.sh -m full
+    sudo bash ./install.sh -b mytonctrl2
     ```
 
 ## 2. Conduct an Operability Test:
