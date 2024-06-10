@@ -497,20 +497,18 @@ class MyTonCore():
 	#end define
 
 	def WalletVersion2Wallet(self, wallet):
-		self.local.add_log("start WalletVersion2Wallet function", "debug")
 		if wallet.version is not None:
 			return
+		self.local.add_log("start WalletVersion2Wallet function", "debug")
 		walletsVersionList = self.GetWalletsVersionList()
-		account = self.GetAccount(wallet.addrB64)
 		version = walletsVersionList.get(wallet.addrB64)
 		if version is None:
+			account = self.GetAccount(wallet.addrB64)
 			version = self.GetVersionFromCodeHash(account.codeHash)
+			self.SetWalletVersion(wallet.addrB64, version)
 		if version is None:
 			self.local.add_log("Wallet version not found: " + wallet.addrB64, "warning")
 			return
-		#end if
-
-		self.SetWalletVersion(wallet.addrB64, version)
 		wallet.version = version
 	#end define
 
@@ -3047,7 +3045,7 @@ class MyTonCore():
 	def GetSaveOffers(self):
 		bname = "saveOffers"
 		save_offers = self.local.db.get(bname)
-		if save_offers is None:
+		if save_offers is None or isinstance(save_offers, list):
 			save_offers = dict()
 			self.local.db[bname] = save_offers
 		self.offers_gc(save_offers)

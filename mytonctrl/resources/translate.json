@@ -284,6 +284,11 @@
 		"ru": "ADNL адрес локального валидатора: {0}",
 		"zh_TW": "本地驗證者的 ADNL 地址: {0}"
 	},
+	"local_status_fullnode_adnl": {
+		"en": "Public ADNL address of node: {0}",
+		"ru": "Публичный ADNL адрес ноды: {0}",
+		"zh_TW": "節點的公共 ADNL 地址: {0}"
+	},
 	"local_status_wallet_addr": {
 		"en": "Local validator wallet address: {0}",
 		"ru": "Адрес кошелька локального валидатора: {0}",
@@ -330,9 +335,9 @@
 		"zh_TW": "本地驗證者不同步: {0}"
 	},
 	"local_status_validator_out_of_ser": {
-		"en": "Local validator out of ser: {0}",
-		"ru": "Рассериализация локального валидатора: {0}",
-		"zh_TW": "本地驗證者不同步: {0}"
+		"en": "Local validator last state serialization: {0}",
+		"ru": "Серализация стейта локального валидатора была: {0}",
+		"zh_TW": "本地驗證者最後一次狀態序列化: {0}"
 	},
 	"local_status_db": {
 		"en": "Local validator database size: {0}, {1}",

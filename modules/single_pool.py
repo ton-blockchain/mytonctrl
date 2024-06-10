@@ -67,6 +67,18 @@ class SingleNominatorModule(PoolModule):
         self.do_activate_single_pool(pool)
         color_print("activate_single_pool - {green}OK{endc}")
 
+    def withdraw_from_single_pool(self, args):
+        try:
+            pool_addr = args[0]
+            amount = float(args[1])
+        except:
+            color_print("{red}Bad args. Usage:{endc} withdraw_from_single_pool <pool-addr> <amount>")
+            return
+        self.ton.WithdrawFromPoolProcess(pool_addr, amount)
+        color_print("withdraw_from_single_pool - {green}OK{endc}")
+    #end define
+
     def add_console_commands(self, console):
         console.AddItem("new_single_pool", self.new_single_pool, self.local.translate("new_single_pool_cmd"))
         console.AddItem("activate_single_pool", self.activate_single_pool, self.local.translate("activate_single_pool_cmd"))
+        console.AddItem("withdraw_from_single_pool", self.withdraw_from_single_pool, self.local.translate("withdraw_from_single_pool_cmd"))
