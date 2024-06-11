@@ -9,10 +9,9 @@ from mypylib.mypylib import *
 
 
 # validator.service
-file = open("/etc/systemd/system/validator.service", 'rt')
-text = file.read()
-file.close()
-lines = text.split('\n')
+with open("/etc/systemd/system/validator.service", 'rt') as file:
+	text = file.read()
+	lines = text.split('\n')
 
 for i in range(len(lines)):
 	line = lines[i]
