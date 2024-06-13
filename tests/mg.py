@@ -16,7 +16,7 @@ def TestMoveCoins(wallet, dest, coins, **kwargs):
 	ton.MoveCoins(wallet, dest, coins, timeout=600, **kwargs)
 	end = time.time()
 	diff = int(end - start)
-	local.AddLog(f"{wallet.addrB64} -> {dest}, diff: {diff}")
+	local.add_log(f"{wallet.addrB64} -> {dest}, diff: {diff}")
 #end define
 
 def Init():
