@@ -244,7 +244,7 @@ def Str2Bool(str):
 #end define
 
 def FirstNodeSettings():
-	local.add_log("start FirstNodeSettings fuction", "debug")
+	local.add_log("start FirstNodeSettings function", "debug")
 
 	# Создать переменные
 	user = local.buffer.user
@@ -259,7 +259,7 @@ def FirstNodeSettings():
 
 	# Проверить конфигурацию
 	if os.path.isfile(vconfig_path):
-		local.add_log("Validators config.json already exist. Break FirstNodeSettings fuction", "warning")
+		local.add_log("Validators config.json already exist. Break FirstNodeSettings function", "warning")
 		return
 	#end if
 
@@ -312,9 +312,9 @@ def DownloadDump():
 		return
 	#end if
 
-	local.add_log("start DownloadDump fuction", "debug")
+	local.add_log("start DownloadDump function", "debug")
 	url = "https://dump.ton.org"
-	dumpSize = requests.get(url + "/dumps/latest.size.archive.txt").text
+	dumpSize = requests.get(url + "/dumps/latest.tar.size.disk.txt").text
 	print("dumpSize:", dumpSize)
 	needSpace = int(dumpSize) * 3
 	diskSpace = psutil.disk_usage("/var")
@@ -332,7 +332,7 @@ def DownloadDump():
 #end define
 
 def FirstMytoncoreSettings():
-	local.add_log("start FirstMytoncoreSettings fuction", "debug")
+	local.add_log("start FirstMytoncoreSettings function", "debug")
 	user = local.buffer.user
 
 	# Прописать mytoncore.py в автозагрузку
@@ -342,7 +342,7 @@ def FirstMytoncoreSettings():
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
 	if os.path.isfile(path) or os.path.isfile(path2):
-		local.add_log("mytoncore.db already exist. Break FirstMytoncoreSettings fuction", "warning")
+		local.add_log("mytoncore.db already exist. Break FirstMytoncoreSettings function", "warning")
 		return
 	#end if
 
@@ -418,7 +418,7 @@ def EnableValidatorConsole():
 
 	# Check if key exist
 	if os.path.isfile(server_key) or os.path.isfile(client_key):
-		local.add_log("Server or client key already exist. Break EnableValidatorConsole fuction", "warning")
+		local.add_log("Server or client key already exist. Break EnableValidatorConsole function", "warning")
 		return
 	#end if
 
@@ -512,7 +512,7 @@ def EnableLiteServer():
 
 	# Check if key exist
 	if os.path.isfile(liteserver_pubkey):
-		local.add_log("Liteserver key already exist. Break EnableLiteServer fuction", "warning")
+		local.add_log("Liteserver key already exist. Break EnableLiteServer function", "warning")
 		return
 	#end if
 
@@ -880,7 +880,7 @@ def b642hex(input):
 #end define
 
 def CreateSymlinks():
-	local.add_log("start CreateSymlinks fuction", "debug")
+	local.add_log("start CreateSymlinks function", "debug")
 	cport = local.buffer.cport
 
 	mytonctrl_file = "/usr/bin/mytonctrl"
@@ -927,7 +927,7 @@ def EnableDhtServer():
 
 	# Проверить конфигурацию
 	if os.path.isfile("/var/ton-dht-server/config.json"):
-		local.add_log("DHT-Server config.json already exist. Break EnableDhtServer fuction", "warning")
+		local.add_log("DHT-Server config.json already exist. Break EnableDhtServer function", "warning")
 		return
 	#end if
 
