@@ -67,7 +67,7 @@ make build_libs -j12
 
 # Update binary
 cd ${bindir}/${repo}
-ls --hide=global.config.json | xargs -d '\n' rm -rf
+ls --hide=global.config.json --hide=local.config.json | xargs -d '\n' rm -rf
 rm -rf .ninja_*
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 let "cpuNumber = memory / 2100000" || cpuNumber=1
