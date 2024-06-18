@@ -70,7 +70,7 @@ If you wish to change the working directory of the validator prior to installati
 2. **Create a symbolic link** - You can also create a symbolic link with the following command:
 
     ```bash
-    ln -s /opt/ton/var/ton
+    ln -s /opt/ton /var/ton
     ```
 This command will create a link `/var/ton` that points to `/opt/ton`.
 
