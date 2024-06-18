@@ -8,11 +8,11 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 show_help_and_exit() {
-    echo 'Supported argumets:'
+    echo 'Supported arguments:'
     echo ' -m [lite|full]   Choose installation mode'
     echo ' -c  PATH         Provide custom config for toninstaller.sh'
     echo ' -t               Disable telemetry'
-    echo ' -i               Ignore minimum reqiurements'
+    echo ' -i               Ignore minimum requirements'
     echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
     echo ' -h               Show this help'
     exit
