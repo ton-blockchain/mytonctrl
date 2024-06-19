@@ -370,9 +370,9 @@
 		"zh_TW": "{green}MyTonCtrl 有可用更新. {red}請使用 `update` 命令進行更新.{endc}"
 	},
 	"update_mtc2_warning": {
-		"en": "If you are not a validator and using node only as liteserver, {bold} update to the MyTonCtrl2.0:{endc} `update mytonctrl2`. After updating turn \"liteserver\" mode on: `disable_mode validator`; `enable_mode liteserver`",
-		"ru": "Если вы не валидатор и используете ноду только как лайтсервер, {bold} обновитесь до MyTonCtrl2.0:{endc} `update mytonctrl2`. После обновления включите режим \"Лайтсервера\": `disable_mode validator`; `enable_mode liteserver`",
-		"zh_TW": "如果您不是驗證者，僅將節點用作 liteserver，{bold} 更新到 MyTonCtrl2.0:{endc} `update mytonctrl2`。更新後，將 \"liteserver\" 模式打開: `disable_mode validator`; `enable_mode liteserver`"
+		"en": "{red} If you are not a validator and using node only as liteserver, update to the MyTonCtrl2.0:{endc} `update mytonctrl2`. After updating turn \"liteserver\" mode on: `disable_mode validator`; `enable_mode liteserver` {endc}",
+		"ru": "{red} Если вы не валидатор и используете ноду только как лайтсервер, обновитесь до MyTonCtrl2.0:{endc} `update mytonctrl2`. После обновления включите режим \"Лайтсервера\": `disable_mode validator`; `enable_mode liteserver` {endc}",
+		"zh_TW": "{red} 如果您不是驗證者，僅將節點用作 liteserver，{bold} 更新到 MyTonCtrl2.0: `update mytonctrl2`。更新後，將 \"liteserver\" 模式打開: `disable_mode validator`; `enable_mode liteserver` {endc}"
 	},
 	"disk_usage_warning": {
 		"en": "{red} Disk is almost full, clean the TON database immediately: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}",
