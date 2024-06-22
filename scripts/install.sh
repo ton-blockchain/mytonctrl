@@ -14,7 +14,7 @@ fi
 
 author="ton-blockchain"
 repo="mytonctrl"
-branch="master"
+branch="mytonctrl2"
 mode="validator"
 
 show_help_and_exit() {
