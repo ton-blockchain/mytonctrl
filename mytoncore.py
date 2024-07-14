@@ -3066,7 +3066,7 @@ class MyTonCore():
 	def GetSaveOffers(self):
 		bname = "saveOffers"
 		saveOffers = local.db.get(bname)
-		if saveOffers is None:
+		if saveOffers is None or isinstance(saveOffers, list):
 			saveOffers = dict()
 			local.db[bname] = saveOffers
 		return saveOffers
