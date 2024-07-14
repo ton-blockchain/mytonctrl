@@ -109,7 +109,8 @@ def Init(argv):
 #end define
 
 def PreUp():
-	CheckMytonctrlUpdate()
+	CheckMytonctrlUpdate()  # check mtc current branch update only if there wasnt warning about mtc2
+	CheckMytonctrl2Update()
 	CheckDiskUsage()
 	check_vport()
 	# CheckTonUpdate()
@@ -227,6 +228,17 @@ def CheckMytonctrlUpdate():
 	if result is True:
 		color_print(local.translate("mytonctrl_update_available"))
 #end define
+
+
+def CheckMytonctrl2Update():
+	try:
+		if not ton.find_myself_in_el():  # we are not validator in current and prev rounds
+			print('============================================================================================')
+			color_print(local.translate("update_mtc2_warning"))
+			print('============================================================================================')
+	except Exception as err:
+		local.add_log(f'Failed to check node as validator: {err}', "error")
+# end define
 
 
 def CheckDiskUsage():
