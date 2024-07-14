@@ -2677,14 +2677,15 @@ class MyTonCore():
 		return validators
 	#end define
 
-	def find_myself_in_vl(self):
-		current_vl = self.GetValidatorsList()
-		past_vl = self.GetValidatorsList(past=True)
+	def find_myself_in_el(self):
+		save_elections = self.GetSaveElections()
 		my_adnl = self.GetAdnlAddr()
-		for validator in current_vl + past_vl:
-			if validator["adnlAddr"] == my_adnl:
-				return True
+		for election_id, election in save_elections.items():
+			for adnl in election:
+				if adnl == my_adnl:
+					return True
 		return False
+	#end define
 
 	def CheckValidators(self, start, end):
 		local.add_log("start CheckValidators function", "debug")

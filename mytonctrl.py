@@ -232,12 +232,12 @@ def CheckMytonctrlUpdate():
 
 def CheckMytonctrl2Update():
 	try:
-		if not ton.find_myself_in_vl():  # we are not validator in current and prev rounds
+		if not ton.find_myself_in_el():  # we are not validator in current and prev rounds
 			print('============================================================================================')
 			color_print(local.translate("update_mtc2_warning"))
 			print('============================================================================================')
 	except Exception as err:
-		print(f'Failed to check node as validator: {err}')
+		local.add_log(f'Failed to check node as validator: {err}', "error")
 # end define
 
 
