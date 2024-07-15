@@ -31,6 +31,7 @@ while getopts ":c:v" flag; do
     esac
 done
 
+echo " config 42: ${config}"
 echo "checkout to ${ton_node_version}"
 #
 ## Цвета
