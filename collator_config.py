@@ -49,9 +49,9 @@ def set_collator_config(args):
     if len(args) != 1:
         color_print("{red}Bad args. Usage:{endc} set_collator_config <path/url>")
         return
-    path = args[1]
-    config = get_config(path)
-    local.db['collator_config'] = config
+    location = args[0]
+    config = get_config(location)
+    local.db['collator_config'] = location
     local.save()
     added, msg = add_collator_config_to_vc(local, ton, config)
     if not added:
