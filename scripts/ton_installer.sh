@@ -2,22 +2,29 @@
 #!/bin/bash
 set -e
 
+#todo remove - debug only
+# fork tonstackers
+
+
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
 	echo "Please run script as root"
 	exit 1
 fi
 
-# Get arguments
-# todo set vars
-#config=https://ton-blockchain.github.io/global.config.json
-config="https://ton-blockchain.github.io/testnet-global.config.json"
-while getopts c: flag
-do
-	case "${flag}" in
-		c) config=${OPTARG};;
-	esac
+while getopts ":c:v:h" flag; do
+    case "${flag}" in
+        c) config=${OPTARG};;
+        v) ton_node_version=${OPTARG};;
+        h) show_help_and_exit;;
+        *)
+            echo "Flag -${flag} is not recognized. Aborting"
+            exit 1 ;;
+    esac
 done
+
+echo " config 42: ${config}"
+echo "checkout to ${ton_node_version}"
 
 # Цвета
 COLOR='\033[95m'
@@ -73,7 +80,7 @@ elif [[ "$OSTYPE" =~ darwin.* ]]; then
 
 	echo "Please, write down your username, because brew package manager cannot be run under root user:"
 	read LOCAL_USERNAME
-	
+
 	su $LOCAL_USERNAME -c "brew update"
 	su $LOCAL_USERNAME -c "brew install openssl cmake llvm"
 elif [ "$OSTYPE" == "freebsd"* ]; then
@@ -106,9 +113,15 @@ echo -e "${COLOR}[3/6]${ENDC} Preparing for compilation"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
 git clone --recursive https://github.com/ton-blockchain/ton.git
-cd $SOURCES_DIR/ton
-git checkout 5380e6f
-cd ../
+
+echo "checkout to ${ton_node_version}"
+
+if [ "${ton_node_version}" != "master" ]; then
+  cd $SOURCES_DIR/ton
+  git checkout ${ton_node_version}
+  cd ../
+fi
+
 git config --global --add safe.directory $SOURCES_DIR/ton
 
 # Подготавливаем папки для компиляции

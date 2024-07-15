@@ -21,19 +21,24 @@ author="tonstakers"
 repo="mytonctrl-v2"
 branch="master"
 mode="validator"
+network="mainnet"
+ton_node_version="master"  # Default version
+
 
 show_help_and_exit() {
-  echo 'Supported argumets:'
+  echo 'Supported arguments:'
   echo ' -c  PATH         Provide custom config for toninstaller.sh'
   echo ' -t               Disable telemetry'
-  echo ' -i               Ignore minimum reqiurements'
+  echo ' -i               Ignore minimum requirements'
   echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
   echo ' -a               Set MyTonCtrl git repo author'
-	echo ' -r               Set MyTonCtrl git repo'
-	echo ' -b               Set MyTonCtrl git repo branch'
-	echo ' -m  MODE             Install MyTonCtrl with specified mode (validator or liteserver)'
-	echo ' -h               Show this help'
-    exit
+  echo ' -r               Set MyTonCtrl git repo'
+  echo ' -b               Set MyTonCtrl git repo branch'
+  echo ' -m  MODE         Install MyTonCtrl with specified mode (validator or liteserver)'
+  echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
+  echo ' -v  VERSION      Specify the ton node version (commit, branch, or tag)'
+  echo ' -h               Show this help'
+  exit
 }
 
 if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
@@ -41,33 +46,38 @@ if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
 fi
 
 # node install parameters
-# todo support parametr
-#config="https://ton-blockchain.github.io/global.config.json"
-config="https://ton-blockchain.github.io/testnet-global.config.json"
-
+config="https://ton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
 dump=false
+cpu_required=16
+mem_required=64000000  # 64GB in KB
 
-
-
-while getopts c:tida:r:b:m: flag
-do
-	case "${flag}" in
-		c) config=${OPTARG};;
-		t) telemetry=false;;
-		i) ignore=true;;
-		d) dump=true;;
-		a) author=${OPTARG};;
-		r) repo=${OPTARG};;
-		b) branch=${OPTARG};;
-    m) mode=${OPTARG};;
-		h) show_help_and_exit;;
-		*)
+while getopts ":c:tida:r:b:m:n:v:h" flag; do
+    case "${flag}" in
+        c) config=${OPTARG};;
+        t) telemetry=false;;
+        i) ignore=true;;
+        d) dump=true;;
+        a) author=${OPTARG};;
+        r) repo=${OPTARG};;
+        b) branch=${OPTARG};;
+        m) mode=${OPTARG};;
+        n) network=${OPTARG};;
+        v) ton_node_version=${OPTARG};;
+        h) show_help_and_exit;;
+        *)
             echo "Flag -${flag} is not recognized. Aborting"
             exit 1 ;;
-	esac
+    esac
 done
+
+# Set config based on network argument
+if [ "${network}" = "testnet" ]; then
+    config="https://ton-blockchain.github.io/testnet-global.config.json"
+    cpu_required=8
+    mem_required=16000000  # 16GB in KB
+fi
 
 # check machine configuration
 echo -e "${COLOR}[1/5]${ENDC} Checking system requirements"
@@ -76,8 +86,8 @@ cpus=$(lscpu | grep "CPU(s)" | head -n 1 | awk '{print $2}')
 memory=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
 
 echo "This machine has ${cpus} CPUs and ${memory}KB of Memory"
-if [ "$ignore" = false ] && ([ "${cpus}" -lt 16 ] || [ "${memory}" -lt 64000000 ]); then
-	echo "Insufficient resources. Requires a minimum of 16 processors and 64Gb RAM."
+if [ "$ignore" = false ] && ([ "${cpus}" -lt "${cpu_required}" ] || [ "${memory}" -lt "${mem_required}"]); then
+	echo "Insufficient resources. Requires a minimum of "${cpu_required}"  processors and  "${mem_required}" RAM."
 	exit 1
 fi
 
@@ -99,10 +109,8 @@ file3=${BIN_DIR}/ton/validator-engine-console/validator-engine-console
 
 if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
 	echo "TON does not exists, building"
-#	wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
-  wget https://raw.githubusercontent.com/tonstakers/mytonctrl-v2/master/scripts/ton_installer.sh -O /tmp/ton_installer.sh
-# todo set vas scrip patch
-	bash /tmp/ton_installer.sh -c ${config}
+	wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
+	bash /tmp/ton_installer.sh -c ${config} -v ${ton_node_version}
 fi
 
 # Cloning mytonctrl
@@ -138,6 +146,11 @@ version_path="${version_dir}/VERSION"
 mkdir -p ${version_dir}
 echo ${migrate_version} > ${version_path}
 chown ${user}:${user} ${version_dir} ${version_path}
+
+# create symbolic link if branch not eq mytonctrl
+if [ "${repo}" != "mytonctrl" ]; then
+    ln -sf ${SOURCES_DIR}/${repo} ${SOURCES_DIR}/mytonctrl
+fi
 
 echo -e "${COLOR}[5/5]${ENDC} Mytonctrl installation completed"
 exit 0
