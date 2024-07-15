@@ -51,8 +51,7 @@ def set_collator_config(args):
         return
     location = args[0]
     config = get_config(location)
-    local.db['collator_config'] = location
-    local.save()
+    ton.set_collator_config(location)
     added, msg = add_collator_config_to_vc(local, ton, config)
     if not added:
         print(f'Failed to add collator config to validator console: {msg}')
@@ -63,8 +62,7 @@ def set_collator_config(args):
 
 def update_collator_config(args):
     from mytonctrl import local, ton
-    default = 'https://raw.githubusercontent.com/ton-blockchain/ton-blockchain.github.io/main/default_collator_options.json'
-    location = local.db.get('collator_config', default)
+    location = ton.get_collator_config()
     config = get_config(location)
     added, msg = add_collator_config_to_vc(local, ton, config)
     if not added:

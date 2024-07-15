@@ -3661,6 +3661,14 @@ class MyTonCore():
 		del local.db['custom_overlays'][name]
 		local.save()
 
+	def set_collator_config(self, location: str):
+		local.db['collator_config'] = location
+		local.save()
+
+	def get_collator_config(self):
+		default = 'https://raw.githubusercontent.com/ton-blockchain/ton-blockchain.github.io/main/default_collator_options.json'
+		return local.db.get('collator_config', default)
+
 	def GetNetworkName(self):
 		mainnetValidatorsElectedFor = 65536
 		mainnetZerostateRootHash = "x55B13F6D0E1D0C34C9C2160F6F918E92D82BF9DDCF8DE2E4C94A3FDF39D15446"
