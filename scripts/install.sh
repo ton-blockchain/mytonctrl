@@ -32,7 +32,7 @@ show_help_and_exit() {
 	echo ' -r               Set MyTonCtrl git repo'
 	echo ' -b               Set MyTonCtrl git repo branch'
 	echo ' -m  MODE         Install MyTonCtrl with specified mode (validator or liteserver)'
-	echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
+  echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
 	echo ' -h               Show this help'
     exit
 }
@@ -59,8 +59,8 @@ do
 		a) author=${OPTARG};;
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
-    m) mode=${OPTARG};;
-    n) network=${OPTARG};;
+		m) mode=${OPTARG};;
+		n) network=${OPTARG};;
 		h) show_help_and_exit;;
 		*)
             echo "Flag -${flag} is not recognized. Aborting"
