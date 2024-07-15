@@ -31,7 +31,8 @@ show_help_and_exit() {
   echo ' -a               Set MyTonCtrl git repo author'
 	echo ' -r               Set MyTonCtrl git repo'
 	echo ' -b               Set MyTonCtrl git repo branch'
-	echo ' -m  MODE             Install MyTonCtrl with specified mode (validator or liteserver)'
+	echo ' -m  MODE         Install MyTonCtrl with specified mode (validator or liteserver)'
+	echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
 	echo ' -h               Show this help'
     exit
 }
@@ -41,15 +42,12 @@ if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
 fi
 
 # node install parameters
-# todo support parametr
-#config="https://ton-blockchain.github.io/global.config.json"
-config="https://ton-blockchain.github.io/testnet-global.config.json"
-
+config="https://ton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
 dump=false
-
-
+cpu_required=16
+mem_required=64000000  # 64GB in KB
 
 while getopts c:tida:r:b:m: flag
 do
@@ -62,12 +60,20 @@ do
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
     m) mode=${OPTARG};;
+    n) network=${OPTARG};;
 		h) show_help_and_exit;;
 		*)
             echo "Flag -${flag} is not recognized. Aborting"
             exit 1 ;;
 	esac
 done
+
+# Set config based on network argument
+if [ "${network}" = "testnet" ]; then
+    config="https://ton-blockchain.github.io/testnet-global.config.json"
+    cpu_required=8
+    mem_required=16000000  # 16GB in KB
+fi
 
 # check machine configuration
 echo -e "${COLOR}[1/5]${ENDC} Checking system requirements"
@@ -76,8 +82,8 @@ cpus=$(lscpu | grep "CPU(s)" | head -n 1 | awk '{print $2}')
 memory=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
 
 echo "This machine has ${cpus} CPUs and ${memory}KB of Memory"
-if [ "$ignore" = false ] && ([ "${cpus}" -lt 16 ] || [ "${memory}" -lt 64000000 ]); then
-	echo "Insufficient resources. Requires a minimum of 16 processors and 64Gb RAM."
+if [ "$ignore" = false ] && ([ "${cpus}" -lt "${cpu_required}" ] || [ "${memory}" -lt "${mem_required}"]); then
+	echo "Insufficient resources. Requires a minimum of "${cpu_required}"  processors and  "${mem_required}" RAM."
 	exit 1
 fi
 
