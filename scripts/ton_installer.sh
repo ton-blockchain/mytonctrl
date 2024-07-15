@@ -9,7 +9,9 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Get arguments
-config=https://ton-blockchain.github.io/global.config.json
+# todo set vars
+#config=https://ton-blockchain.github.io/global.config.json
+config="https://ton-blockchain.github.io/testnet-global.config.json"
 while getopts c: flag
 do
 	case "${flag}" in
@@ -104,6 +106,9 @@ echo -e "${COLOR}[3/6]${ENDC} Preparing for compilation"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
 git clone --recursive https://github.com/ton-blockchain/ton.git
+cd $SOURCES_DIR/ton
+git checkout 5380e6f
+cd ../
 git config --global --add safe.directory $SOURCES_DIR/ton
 
 # Подготавливаем папки для компиляции

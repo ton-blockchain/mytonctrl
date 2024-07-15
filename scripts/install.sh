@@ -12,8 +12,13 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
-author="ton-blockchain"
-repo="mytonctrl"
+#author="ton-blockchain"
+#repo="mytonctrl"
+#branch="master"
+#mode="validator"
+
+author="tonstakers"
+repo="mytonctrl-v2"
 branch="master"
 mode="validator"
 
@@ -36,7 +41,10 @@ if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
 fi
 
 # node install parameters
-config="https://ton-blockchain.github.io/global.config.json"
+# todo support parametr
+#config="https://ton-blockchain.github.io/global.config.json"
+config="https://ton-blockchain.github.io/testnet-global.config.json"
+
 telemetry=true
 ignore=false
 dump=false
@@ -91,7 +99,9 @@ file3=${BIN_DIR}/ton/validator-engine-console/validator-engine-console
 
 if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
 	echo "TON does not exists, building"
-	wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
+#	wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
+  wget https://raw.githubusercontent.com/tonstakers/mytonctrl-v2/master/scripts/ton_installer.sh -O /tmp/ton_installer.sh
+# todo set vas scrip patch
 	bash /tmp/ton_installer.sh -c ${config}
 fi
 
