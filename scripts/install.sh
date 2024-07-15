@@ -21,20 +21,21 @@ author="tonstakers"
 repo="mytonctrl-v2"
 branch="master"
 mode="validator"
+network="mainnet"
 
 show_help_and_exit() {
-  echo 'Supported argumets:'
+  echo 'Supported arguments:'
   echo ' -c  PATH         Provide custom config for toninstaller.sh'
   echo ' -t               Disable telemetry'
-  echo ' -i               Ignore minimum reqiurements'
+  echo ' -i               Ignore minimum requirements'
   echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
   echo ' -a               Set MyTonCtrl git repo author'
-	echo ' -r               Set MyTonCtrl git repo'
-	echo ' -b               Set MyTonCtrl git repo branch'
-	echo ' -m  MODE         Install MyTonCtrl with specified mode (validator or liteserver)'
+  echo ' -r               Set MyTonCtrl git repo'
+  echo ' -b               Set MyTonCtrl git repo branch'
+  echo ' -m  MODE         Install MyTonCtrl with specified mode (validator or liteserver)'
   echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
-	echo ' -h               Show this help'
-    exit
+  echo ' -h               Show this help'
+  exit
 }
 
 if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
@@ -49,23 +50,22 @@ dump=false
 cpu_required=16
 mem_required=64000000  # 64GB in KB
 
-while getopts c:tida:r:b:m: flag
-do
-	case "${flag}" in
-		c) config=${OPTARG};;
-		t) telemetry=false;;
-		i) ignore=true;;
-		d) dump=true;;
-		a) author=${OPTARG};;
-		r) repo=${OPTARG};;
-		b) branch=${OPTARG};;
-		m) mode=${OPTARG};;
-		n) network=${OPTARG};;
-		h) show_help_and_exit;;
-		*)
+while getopts ":c:tida:r:b:m:n:h" flag; do
+    case "${flag}" in
+        c) config=${OPTARG};;
+        t) telemetry=false;;
+        i) ignore=true;;
+        d) dump=true;;
+        a) author=${OPTARG};;
+        r) repo=${OPTARG};;
+        b) branch=${OPTARG};;
+        m) mode=${OPTARG};;
+        n) network=${OPTARG};;
+        h) show_help_and_exit;;
+        *)
             echo "Flag -${flag} is not recognized. Aborting"
             exit 1 ;;
-	esac
+    esac
 done
 
 # Set config based on network argument
