@@ -3667,7 +3667,10 @@ class MyTonCore():
 
 	def get_collator_config(self):
 		default = 'https://raw.githubusercontent.com/ton-blockchain/ton-blockchain.github.io/main/default_collator_options.json'
-		return local.db.get('collator_config', default)
+		location = local.db.get('collator_config', default)
+		if location is None:
+			location = default
+		return location
 
 	def GetNetworkName(self):
 		mainnetValidatorsElectedFor = 65536
