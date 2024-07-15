@@ -143,5 +143,10 @@ mkdir -p ${version_dir}
 echo ${migrate_version} > ${version_path}
 chown ${user}:${user} ${version_dir} ${version_path}
 
+# create symbolic link if branch not eq mytonctrl
+if [ "${repo}" != "mytonctrl" ]; then
+    ln -sf ${SOURCES_DIR}/${repo} ${SOURCES_DIR}/mytonctrl
+fi
+
 echo -e "${COLOR}[5/5]${ENDC} Mytonctrl installation completed"
 exit 0

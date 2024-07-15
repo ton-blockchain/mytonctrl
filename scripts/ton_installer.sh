@@ -13,9 +13,6 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Get arguments
-# todo set vars
-#config=https://ton-blockchain.github.io/global.config.json
-config="https://ton-blockchain.github.io/testnet-global.config.json"
 while getopts c: flag
 do
 	case "${flag}" in
