@@ -105,9 +105,7 @@ file3=${BIN_DIR}/ton/validator-engine-console/validator-engine-console
 
 if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
 	echo "TON does not exists, building"
-#	wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
-  wget https://raw.githubusercontent.com/tonstakers/mytonctrl-v2/master/scripts/ton_installer.sh -O /tmp/ton_installer.sh
-# todo set vas scrip patch
+	wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
 	bash /tmp/ton_installer.sh -c ${config}
 fi
 

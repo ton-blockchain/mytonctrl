@@ -2,6 +2,10 @@
 #!/bin/bash
 set -e
 
+#todo remove - debug only
+# fork tonstackers
+
+
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
 	echo "Please run script as root"
