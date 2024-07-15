@@ -22,6 +22,8 @@ repo="mytonctrl-v2"
 branch="master"
 mode="validator"
 network="mainnet"
+ton_node_version="master"  # Default version
+
 
 show_help_and_exit() {
   echo 'Supported arguments:'
@@ -34,6 +36,7 @@ show_help_and_exit() {
   echo ' -b               Set MyTonCtrl git repo branch'
   echo ' -m  MODE         Install MyTonCtrl with specified mode (validator or liteserver)'
   echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
+  echo ' -v  VERSION      Specify the ton node version (commit, branch, or tag)'
   echo ' -h               Show this help'
   exit
 }
@@ -50,7 +53,7 @@ dump=false
 cpu_required=16
 mem_required=64000000  # 64GB in KB
 
-while getopts ":c:tida:r:b:m:n:h" flag; do
+while getopts ":c:tida:r:b:m:n:v:h" flag; do
     case "${flag}" in
         c) config=${OPTARG};;
         t) telemetry=false;;
@@ -61,6 +64,7 @@ while getopts ":c:tida:r:b:m:n:h" flag; do
         b) branch=${OPTARG};;
         m) mode=${OPTARG};;
         n) network=${OPTARG};;
+        v) ton_node_version=${OPTARG};;
         h) show_help_and_exit;;
         *)
             echo "Flag -${flag} is not recognized. Aborting"
@@ -106,7 +110,7 @@ file3=${BIN_DIR}/ton/validator-engine-console/validator-engine-console
 if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
 	echo "TON does not exists, building"
 	wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
-	bash /tmp/ton_installer.sh -c ${config}
+	bash /tmp/ton_installer.sh -c ${config} -v ${ton_node_version}
 fi
 
 # Cloning mytonctrl
