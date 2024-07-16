@@ -2,10 +2,6 @@
 #!/bin/bash
 set -e
 
-#todo remove - debug only
-# fork tonstackers
-
-
 # Проверить sudo
 if [ "$(id -u)" != "0" ]; then
 	echo "Please run script as root"
@@ -23,7 +19,7 @@ while getopts ":c:v:h" flag; do
     esac
 done
 
-echo " config 42: ${config}"
+echo "config: ${config}"
 echo "checkout to ${ton_node_version}"
 
 # Цвета

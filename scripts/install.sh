@@ -12,13 +12,8 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
-#author="ton-blockchain"
-#repo="mytonctrl"
-#branch="master"
-#mode="validator"
-
-author="tonstakers"
-repo="mytonctrl-v2"
+author="ton-blockchain"
+repo="mytonctrl"
 branch="master"
 mode="validator"
 network="mainnet"
