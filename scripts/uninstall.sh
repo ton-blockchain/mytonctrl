@@ -41,7 +41,6 @@ if $full; then
 fi
 
 rm -rf /usr/src/mytonctrl
-rm -rf /usr/src/mytonctrl-v2 #todo remove
 rm -rf /usr/src/mtc-jsonrpc
 rm -rf /usr/src/pytonv3
 rm -rf /tmp/myton*
