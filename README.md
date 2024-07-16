@@ -1,9 +1,6 @@
 ![GitHub stars](https://img.shields.io/github/stars/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub forks](https://img.shields.io/github/forks/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub issues](https://img.shields.io/github/issues/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub pull requests](https://img.shields.io/github/issues-pr/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub last commit](https://img.shields.io/github/last-commit/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub license](https://img.shields.io/github/license/ton-blockchain/mytonctrl?style=flat-square&logo=github)
 
-<!-- omit from toc --> 
-# Tonstakers
-This fork focuses on supporting the second version of the mytonctrl utility, as well as testing installation script changes, which will later be submitted upstream.
-
+<!-- omit from toc -->
 # MyTonCtrl
 [Данный текст доступен на русском языке.](README.Ru.md)
 
