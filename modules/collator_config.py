@@ -3,7 +3,6 @@ import requests
 
 from mypylib.mypylib import color_print
 from modules.module import MtcModule
-from mytoncore.utils import hex2base64
 
 
 class CollatorConfigModule(MtcModule):
@@ -77,7 +76,7 @@ class CollatorConfigModule(MtcModule):
         color_print("get_collator_config - {green}OK{endc}")
 
     def update_collator_config(self, args):
-        location = self.ton.get_collator_config()
+        location = self.ton.get_collator_config_location()
         config = self.get_config(location)
         added, msg = self.add_collator_config_to_vc(config)
         if not added:
