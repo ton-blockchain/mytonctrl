@@ -3986,6 +3986,16 @@ class MyTonCore():
 		del self.local.db['custom_overlays'][name]
 		self.local.save()
 
+	def set_collator_config(self, location: str):
+		self.local.db['collator_config'] = location
+		self.local.save()
+
+	def get_collator_config_location(self):
+		default = 'https://raw.githubusercontent.com/ton-blockchain/ton-blockchain.github.io/main/default_collator_options.json'
+		location = self.local.db.get('collator_config', default)
+		if location is None:
+			location = default
+		return location
 
 	def GetNetworkName(self):
 		data = self.local.read_db(self.liteClient.configPath)
