@@ -4,7 +4,7 @@
 from mypylib.mypylib import *
 from mypyconsole.mypyconsole import *
 from custom_overlays import add_custom_overlay, list_custom_overlays, delete_custom_overlay
-from collator_config import set_collator_config, update_collator_config
+from collator_config import set_collator_config, update_collator_config, get_collator_config
 
 from mytoncore import *
 import sys, getopt, os
@@ -35,6 +35,7 @@ def Init(argv):
 
 	console.AddItem("set_collator_config", set_collator_config, local.translate("set_collator_config_cmd"))
 	console.AddItem("update_collator_config", update_collator_config, local.translate("update_collator_config_cmd"))
+	console.AddItem("get_collator_config", get_collator_config, local.translate("get_collator_config_cmd"))
 
 	console.AddItem("nw", CreatNewWallet, local.translate("nw_cmd"))
 	console.AddItem("aw", ActivateWallet, local.translate("aw_cmd"))

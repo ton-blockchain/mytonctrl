@@ -60,6 +60,20 @@ def set_collator_config(args):
     color_print("set_collator_config - {green}OK{endc}")
 
 
+def get_collator_config(args):
+    from mytonctrl import local, ton
+    path = ton.tempDir + f'/current_collator_config.json'
+    output = ton.validatorConsole.Run(f'getcollatoroptionsjson {path}')
+    if 'saved config to' not in output:
+        print(f'Failed to get collator config: {output}')
+        color_print("get_collator_config - {red}ERROR{endc}")
+        return
+    with open(path, 'r') as f:
+        config = json.load(f)
+    print(json.dumps(config, indent=4))
+    color_print("get_collator_config - {green}OK{endc}")
+
+
 def update_collator_config(args):
     from mytonctrl import local, ton
     location = ton.get_collator_config()
