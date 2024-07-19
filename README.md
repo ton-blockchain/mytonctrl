@@ -90,6 +90,8 @@ Mytonctrl's documentation can be found at https://docs.ton.org/participate/run-n
 There are two installation modes: `liteserver` and `validator`. They both **compile** and install `TON` components and run the node/validator. Use `liteserver` mode if you want to use your node as Liteserver only.
 Use `validator` mode if you want to participate in the validator elections (you still can use that node as Liteserver).
 
+Learn more about node types: https://docs.ton.org/participate/nodes/node-types
+
 ## Installation for Ubuntu
 1. Download and execute the `install.sh` script in the desired installation mode. During installation the script prompts you for the superuser password several times.
 	```sh
