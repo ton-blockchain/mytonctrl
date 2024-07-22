@@ -2,12 +2,12 @@
 
 <!-- omit from toc --> 
 # MyTonCtrl
-[Данный текст доступен на русском языке.](README.Ru.md)
 
 <!-- omit from toc --> 
 ## Contents
 
 - [What is MyTonCtrl?](#what-is-myttonctrl)
+- [MyTonCtrl Documentation](#mytonctrl-documentation)
 - [Functionality](#functionality)
 	- [List of tested operating systems](#list-of-tested-operating-systems)
 - [Installation](#installation)
@@ -15,7 +15,6 @@
 	- [Installation modes](#installation-modes)
 	- [Installation for Ubuntu](#installation-for-ubuntu)
 	- [Installation for Debian](#installation-for-debian)
-- [MyTonCtrl Documentation](#mytonctrl-documentation)
 - [Telemetry](#telemetry)
 - [MyTonCtrl installer mode](#mytonctrl-installer-mode)
 	- [Web admin panel](#web-admin-panel)
@@ -24,9 +23,13 @@
 
 
 # What is MyTonCtrl?
-MyTonCtrl is a console application that serves as a convenient wrapper for `fift`, `lite-client`, and `validator-engine-console`. It has been specifically developed to streamline wallet, domain, and validator management tasks on the Linux operating system.
+MyTonCtrl is a console application that serves as a convenient wrapper for `fift`, `lite-client`, and `validator-engine-console`. It has been specifically developed for node (validator) management tasks on the Linux operating system.
 
 ![MyTonCtrl Status](screens/mytonctrl-status.png)
+
+# MyTonCtrl Documentation
+
+Mytonctrl's documentation can be found at https://docs.ton.org/participate/run-nodes/mytonctrl.
 
 # Functionality
 - [x] Show TON network status
@@ -84,7 +87,10 @@ MyTonCtrl is a console application that serves as a convenient wrapper for `fift
 - `mytoninstaller.py`: configures the validator and `mytonctrl`; generates validator connection keys.
 
 ## Installation modes
-There are two installation modes: `lite` and`full`. They both **compile** and install `TON` components. However the `lite` version does not configure or run the node/validator.
+There are two installation modes: `liteserver` and `validator`. They both **compile** and install `TON` components and run the node/validator. Use `liteserver` mode if you want to use your node as Liteserver only.
+Use `validator` mode if you want to participate in the validator elections (you still can use that node as Liteserver).
+
+Learn more about node types: https://docs.ton.org/participate/nodes/node-types
 
 ## Installation for Ubuntu
 1. Download and execute the `install.sh` script in the desired installation mode. During installation the script prompts you for the superuser password several times.
@@ -110,17 +116,6 @@ There are two installation modes: `lite` and`full`. They both **compile** and in
 	```sh
 	mytonctrl
 	```
-
-# MyTonCtrl Documentation
-
-This repository contains the following technical documents for MyTonCtrl, categorized by language. Simply click the links below to navigate to the document you're interested in.
-
-|   | FAQ | Import Wallets | Ubuntu Manual | Nominator Pool |
-|:-:|:---:|:-------------:|:-------------:|:--------------:|
-| **English (EN)** | [Link](./docs/en/FAQ.md) | [Link](./docs/en/import-wallets.md) | [Link](./docs/en/manual-ubuntu.md) | [Link](./docs/en/nominator-pool.md) |
-| **Russian (RU)** | [Link](./docs/ru/FAQ.md) | [Link](./docs/ru/import-wallets.md) | [Link](./docs/ru/manual-ubuntu.md) | [Link](./docs/ru/nominator-pool.md) |
-| **Traditional Chinese** | [Link](./docs/zh_TW/FAQ.md) | [Link](./docs/zh_TW/import-wallets.md) | [Link](./docs/zh_TW/manual-ubuntu.md) | [Link](./docs/zh_TW/nominator-pool.md) |
-
 
 # Telemetry
 By default, `mytonctrl` sends validator statistics to the https://toncenter.com server.
