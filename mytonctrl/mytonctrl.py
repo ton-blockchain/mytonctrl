@@ -128,6 +128,10 @@ def Init(local, ton, console, argv):
 	module = CustomOverlayModule(ton, local)
 	module.add_console_commands(console)
 
+	from modules.collator_config import CollatorConfigModule
+	module = CollatorConfigModule(ton, local)
+	module.add_console_commands(console)
+
 	if ton.using_validator():
 		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
