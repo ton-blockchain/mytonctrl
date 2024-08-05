@@ -388,7 +388,7 @@ def Upgrade(ton, args):
 		try:
 			from mytoninstaller.mytoninstaller import set_node_argument, get_node_args
 			node_args = get_node_args()
-			if node_args['--state-ttl'] == '604800':
+			if node_args.get('--state-ttl') == '604800':
 				set_node_argument(ton.local, ["--state-ttl", "-d"])
 		except Exception as e:
 			color_print(f"{{red}}Failed to set node argument: {e} {{endc}}")
