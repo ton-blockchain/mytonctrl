@@ -1866,15 +1866,18 @@ class MyTonCore():
 		if not isinstance(account, Account):
 			account = self.GetAccount(account)
 		if account.balance < coins:
-			raise Exception(f"Wallet {account.addrB64} balance is less than requested coins. Balance: {account.balance}, requested amount: {coins} (need {coins - account.balance} more)")
+			raise Exception(f"Account {account.addrB64} balance is less than requested coins. Balance: {account.balance}, requested amount: {coins} (need {coins - account.balance} more)")
 		# end if
 	# end define
 
-	def check_account_status(self, account):
+	def check_account_active(self, account):
 		if not isinstance(account, Account):
+			address = account
 			account = self.GetAccount(account)
+		else:
+			address = account.addrB64
 		if account.status != "active":
-			raise Exception(f"Wallet {account.addrB64} account is uninitialized")
+			raise Exception(f"Account {address} account is uninitialized")
 		# end if
 	# end define
 
@@ -1899,7 +1902,7 @@ class MyTonCore():
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
 		self.check_account_balance(account, coins + 0.1)
-		self.check_account_status(account)
+		self.check_account_active(account)
 
 		# Bounceable checking
 		destAccount = self.GetAccount(dest)
