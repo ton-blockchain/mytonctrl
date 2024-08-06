@@ -419,6 +419,16 @@
 		"ru": "{green}Доступно обновление MyTonCtrl. {red}Пожалуйста, обновите его с помощью команды `update`.{endc}",
 		"zh_TW": "{green}MyTonCtrl 有可用更新. {red}請使用 `update` 命令進行更新.{endc}"
 	},
+	"update_mtc2_warning": {
+		"en": "{red}This version is outdated. Please update to the second version: `update mytonctrl2`{endc}",
+		"ru": "{red}Данная версия устарела. Пожалуйста обновитесь на вторую версию: `update mytonctrl2`{endc}",
+		"zh_TW": "{red}這個版本已經過時了。請更新至第二版本: `update mytonctrl2`{endc}"
+	},
+	"disk_usage_warning": {
+		"en": "{red} Disk is almost full, clean the TON database immediately: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}",
+		"ru": "{red} Диск почти заполнен, немедленно очистите базу данных TON: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}",
+		"zh_TW": "{red} 磁盤幾乎滿了，立即清理 TON 數據庫: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}"
+	},
 	"ton_update_available": {
 		"en": "{green}TON update available. {red}Please update it with `upgrade` command.{endc}",
 		"ru": "{green}Доступно обновление TON. {red}Пожалуйста, обновите его с помощью команды `upgrade`.{endc}",
