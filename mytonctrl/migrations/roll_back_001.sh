@@ -2,7 +2,7 @@ pip3 uninstall -y mytonctrl
 
 cd /usr/src
 rm -rf mytonctrl
-git clone --recursive https://github.com/ton-blockchain/mytonctrl
+git clone --recursive -b mytonctrl1 https://github.com/ton-blockchain/mytonctrl
 
 echo "Updating /usr/bin/mytonctrl"
 echo "/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@" > /usr/bin/mytonctrl
