@@ -128,6 +128,10 @@ def Init(local, ton, console, argv):
 	module = CustomOverlayModule(ton, local)
 	module.add_console_commands(console)
 
+	from modules.collator_config import CollatorConfigModule
+	module = CollatorConfigModule(ton, local)
+	module.add_console_commands(console)
+
 	if ton.using_validator():
 		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
@@ -384,7 +388,7 @@ def Upgrade(ton, args):
 		try:
 			from mytoninstaller.mytoninstaller import set_node_argument, get_node_args
 			node_args = get_node_args()
-			if node_args['--state-ttl'] == '604800':
+			if node_args.get('--state-ttl') == '604800':
 				set_node_argument(ton.local, ["--state-ttl", "-d"])
 		except Exception as e:
 			color_print(f"{{red}}Failed to set node argument: {e} {{endc}}")

@@ -1180,9 +1180,7 @@ class MyTonCore():
 
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
-		if account.balance < coins + 0.1:
-			raise Exception("Wallet balance is less than requested coins")
-		#end if
+		self.check_account_balance(account, coins + 0.1)
 
 		# Bounceable checking
 		destAccount = self.GetAccount(dest)
@@ -1864,6 +1862,25 @@ class MyTonCore():
 		return subwallet
 	#end define
 
+	def check_account_balance(self, account, coins):
+		if not isinstance(account, Account):
+			account = self.GetAccount(account)
+		if account.balance < coins:
+			raise Exception(f"Account {account.addrB64} balance is less than requested coins. Balance: {account.balance}, requested amount: {coins} (need {coins - account.balance} more)")
+		# end if
+	# end define
+
+	def check_account_active(self, account):
+		if not isinstance(account, Account):
+			address = account
+			account = self.GetAccount(account)
+		else:
+			address = account.addrB64
+		if account.status != "active":
+			raise Exception(f"Account {address} account is uninitialized")
+		# end if
+	# end define
+
 	def MoveCoins(self, wallet, dest, coins, **kwargs):
 		self.local.add_log("start MoveCoins function", "debug")
 		flags = kwargs.get("flags", list())
@@ -1884,11 +1901,8 @@ class MyTonCore():
 
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
-		if account.balance < coins + 0.1:
-			raise Exception("Wallet balance is less than requested coins")
-		if account.status != "active":
-			raise Exception("Wallet account is uninitialized")
-		#end if
+		self.check_account_balance(account, coins + 0.1)
+		self.check_account_active(account)
 
 		# Bounceable checking
 		destAccount = self.GetAccount(dest)
@@ -3986,6 +4000,16 @@ class MyTonCore():
 		del self.local.db['custom_overlays'][name]
 		self.local.save()
 
+	def set_collator_config(self, location: str):
+		self.local.db['collator_config'] = location
+		self.local.save()
+
+	def get_collator_config_location(self):
+		default = 'https://raw.githubusercontent.com/ton-blockchain/ton-blockchain.github.io/main/default_collator_options.json'
+		location = self.local.db.get('collator_config', default)
+		if location is None:
+			location = default
+		return location
 
 	def GetNetworkName(self):
 		data = self.local.read_db(self.liteClient.configPath)

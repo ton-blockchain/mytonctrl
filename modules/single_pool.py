@@ -51,6 +51,7 @@ class SingleNominatorModule(PoolModule):
         self.local.add_log("start activate_single_pool function", "debug")
         boc_mode = "--with-init"
         validator_wallet = self.ton.GetValidatorWallet()
+        self.ton.check_account_active(validator_wallet.addrB64)
         result_file_path = self.ton.SignBocWithWallet(validator_wallet, pool.bocFilePath, pool.addrB64_init, 1, boc_mode=boc_mode)
         self.ton.SendFile(result_file_path, validator_wallet)
 
