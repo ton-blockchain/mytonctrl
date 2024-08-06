@@ -344,7 +344,7 @@ def check_branch_exists(author, repo, branch):
 
 def Update(local, args):
 	repo = "mytonctrl"
-	author, repo, branch = check_git(args, repo, "update", default_branch='mytonctrl2')
+	author, repo, branch = check_git(args, repo, "update")
 
 	# Run script
 	update_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/update.sh')
