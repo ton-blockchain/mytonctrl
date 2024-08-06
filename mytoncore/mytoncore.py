@@ -1180,9 +1180,7 @@ class MyTonCore():
 
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
-		if account.balance < coins + 0.1:
-			raise Exception("Wallet balance is less than requested coins")
-		#end if
+		self.check_account_balance(account, coins + 0.1)
 
 		# Bounceable checking
 		destAccount = self.GetAccount(dest)
@@ -1864,6 +1862,22 @@ class MyTonCore():
 		return subwallet
 	#end define
 
+	def check_account_balance(self, account, coins):
+		if not isinstance(account, Account):
+			account = self.GetAccount(account)
+		if account.balance < coins:
+			raise Exception(f"Wallet {account.addrB64} balance is less than requested coins. Balance: {account.balance}, requested amount: {coins} (need {coins - account.balance} more)")
+		# end if
+	# end define
+
+	def check_account_status(self, account):
+		if not isinstance(account, Account):
+			account = self.GetAccount(account)
+		if account.status != "active":
+			raise Exception(f"Wallet {account.addrB64} account is uninitialized")
+		# end if
+	# end define
+
 	def MoveCoins(self, wallet, dest, coins, **kwargs):
 		self.local.add_log("start MoveCoins function", "debug")
 		flags = kwargs.get("flags", list())
@@ -1884,11 +1898,8 @@ class MyTonCore():
 
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
-		if account.balance < coins + 0.1:
-			raise Exception("Wallet balance is less than requested coins")
-		if account.status != "active":
-			raise Exception("Wallet account is uninitialized")
-		#end if
+		self.check_account_balance(account, coins + 0.1)
+		self.check_account_status(account)
 
 		# Bounceable checking
 		destAccount = self.GetAccount(dest)
