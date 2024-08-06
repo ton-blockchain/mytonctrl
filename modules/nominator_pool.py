@@ -62,6 +62,8 @@ class NominatorPoolModule(PoolModule):
         elif account.status == "active":
             self.local.add_log("do_activate_pool warning: account status is active", "warning")
         else:
+            validator_wallet = self.ton.GetValidatorWallet()
+            self.ton.check_account_active(validator_wallet.addrB64)
             self.ton.SendFile(pool.bocFilePath, pool, timeout=False, remove=False)
     #end define
 

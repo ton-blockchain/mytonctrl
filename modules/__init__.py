@@ -34,6 +34,7 @@ SETTINGS = {
     'stake': Setting('validator', None, 'Stake amount'),
     'stakePercent': Setting('validator', 99, 'Stake percent if `stake` is null'),
     'isSlashing': Setting('validator', None, 'Create complaints to validators'),
+    'validatorWalletName': Setting('validator', 'wallet_001', 'Validator\'s wallet name'),
     'maxFactor': Setting('validator', None, 'Param send to Elector. if null will be taken from 17 config param'),
     'participateBeforeEnd': Setting('validator', None, 'Amount of seconds before start of round to participate'),
     'liquid_pool_addr': Setting('liquid-staking', None, 'Liquid staking pool address'),
