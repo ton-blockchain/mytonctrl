@@ -1,0 +1,18 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <msg-full-boc> <send-mode>" cr cr
+  ."Creates a request to send a message through single-nominator-poll." cr
+  ."<msg-full-boc> - BoC full msg file path." cr cr
+  ."Saves the result msg body into `send-raw-msg.boc`." cr 1 halt
+} : usage
+$# 2 = {  } { usage } cond
+
+$1 file>B B>boc =: msg
+$2 (number) 1 <> abort"not an integer: check your send-mode" =: mode
+
+<b 0x7702 32 u, 1 64 u, mode 8 u, msg ref, b> 2 boc+>B
+."Message body is " dup B>base64 type cr cr
+."HEX: " dup Bx. cr cr
+
+"send-raw-msg.boc" tuck B>file ."Saved to " type cr

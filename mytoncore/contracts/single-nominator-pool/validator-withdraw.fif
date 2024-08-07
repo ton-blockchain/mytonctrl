@@ -1,0 +1,18 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <amount> [<savefile>]" cr
+  ."" cr
+  ."" cr 1 halt
+} : usage
+
+$# dup 1 < swap 2 > or ' usage if
+$1 $>GR =: amount
+def? $2 { @' $2 } { "validator-withdraw-query.boc" } cond constant output_fname
+now constant query_id
+."query_id for stake recovery message is set to " query_id . ."amount=" amount .GR cr
+
+<b 5 32 u, query_id 64 u, amount Gram, b>
+cr ."Message body is " dup <s csr. cr
+
+2 boc+>B output_fname tuck B>file ."Saved to file " type cr

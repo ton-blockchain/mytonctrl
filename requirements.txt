@@ -1,0 +1,6 @@
+crc16
+requests
+psutil
+fastcrc
+jsonpickle
+pynacl

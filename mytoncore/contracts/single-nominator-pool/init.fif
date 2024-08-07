@@ -1,0 +1,40 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <code-boc> <owner-addr> <validator-addr> <file-base>" cr
+  ."Creates a state-init to deploy a single-nominator-pool contract." cr cr
+
+  ."<code-boc> is a filename of the compiled contract code BoC bytes or HEX." cr
+  ."Saves the contract address in `<file-base>.addr`." cr
+  ."Saves the init boc into `<file-base>-init.boc`." cr 1 halt
+} : usage
+$# 4 = { cr } { usage } cond
+
+$1 =: filename
+$2 parse-smc-addr drop 2=: owner-addr
+$3 parse-smc-addr drop 2=: validator-addr
+$4 =: file-base
+
+filename file>B dup
+8 B| drop B>$ "b5ee9c72" $= { B>$ x>B? drop } if
+B>boc =: new-code-boc
+
+-1 =: wc // masterchain
+1 Gram* =: ton-amount
+
+<b owner-addr Addr,
+   validator-addr Addr, b> // data
+<b b{00110} s, new-code-boc ref, swap ref, b> dup =: init-boc
+2 boc+>B
+dup ."StateInit: " B>base64 type cr cr
+dup ."HEX: " Bx. cr
+file-base +"-query.boc" tuck B>file
+."(Saved single nominator pool init into " type .")" cr cr
+
+init-boc hashu wc swap 2dup 2=: dest-addr
+."New pool address = " 2dup .addr cr
+
+2dup file-base +".addr" save-address-verbose cr
+
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr cr

@@ -1,0 +1,222 @@
+;; https://github.com/orbs-network/single-nominator/blob/main/contracts/single-nominator.fc
+;; this contract is very similar to https://github.com/ton-blockchain/nominator-pool but much simpler since it only supports a single nominator
+;; frankly speaking, we tried using nominator-pool but it's so complicated that we couldn't be sure there were no bugs hiding around
+;; this contract is very simple and easy to review, it is laser focused on protecting your stake and nothing else!
+
+;; =============== consts =============================
+
+const BOUNCEABLE = 0x18;
+const ADDRESS_SIZE = 256;
+const MIN_TON_FOR_STORAGE = 1000000000; ;; 10% from nominator-pool since we have a single cell
+const MIN_TON_FOR_SEND_MSG = 1200000000;
+
+;; owner ops
+const OP::WITHDRAW = 0x1000;
+const OP::CHANGE_VALIDATOR_ADDRESS = 0x1001;
+const OP::SEND_RAW_MSG = 0x7702;
+const OP::UPGRADE = 0x9903;
+
+;; elector ops
+const OP::NEW_STAKE = 0x4e73744b;
+const OP::RECOVER_STAKE = 0x47657424;
+
+;; modes
+const MODE::SEND_MODE_REMAINING_AMOUNT = 64;
+
+;; errors
+const ERROR::WRONG_NOMINATOR_WC = 0x2000;
+const ERROR::WRONG_QUERY_ID = 0x2001;
+const ERROR::WRONG_SET_CODE = 0x2002;
+const ERROR::WRONG_VALIDATOR_WC = 0x2003;
+const ERROR::INSUFFICIENT_BALANCE = 0x2004;
+const ERROR::INSUFFICIENT_ELECTOR_FEE = 0x2005;
+
+;; =============== storage =============================
+
+;; storage#_ owner_address:MsgAddressInt validator_address:MsgAddressInt = Storage
+
+(slice, slice) load_data() inline {
+	slice ds = get_data().begin_parse();
+
+	slice owner_address = ds~load_msg_addr();
+	slice validator_address = ds~load_msg_addr();
+
+	ds.end_parse();
+
+	return (owner_address, validator_address);
+}
+
+() save_data(slice owner_address, slice validator_address) impure inline {
+	set_data(begin_cell()
+		.store_slice(owner_address)
+		.store_slice(validator_address)
+		.end_cell());
+}
+
+;; =============== messages =============================
+
+;; defined below
+() send_msg(slice to_address, int amount, cell payload, int flags, int send_mode) impure inline_ref;
+slice make_address(int wc, int addr) inline_ref;
+slice elector_address() inline_ref;
+int check_new_stake_msg(slice cs) impure inline_ref;
+
+;; main entry point for receiving messages
+;; my_balance contains balance after adding msg_value
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+	var (owner_address, validator_address) = load_data();
+
+	if (in_msg_body.slice_empty?()) {
+		return ();
+	}
+
+	slice cs = in_msg_full.begin_parse();
+	int flags = cs~load_uint(4); ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
+	if (flags & 1) {
+		;; ignore all bounced messages
+		return ();
+	}
+	slice sender = cs~load_msg_addr();
+
+	int op = in_msg_body~load_uint(32);
+	int query_id = 0; ;; filled below
+
+	;; if just a message with comment "w" - means withdraw
+	if ( (op == 0) & (equal_slice_bits(in_msg_body, "w")) & (in_msg_body.slice_refs() == 0) ) {
+		op = OP::WITHDRAW;
+		;; in few lines, amount to withdraw is loaded from in_msg_body,
+		;; so we set it to the maximum avaliable balance
+		in_msg_body = begin_cell().store_coins(my_balance - msg_value - MIN_TON_FOR_STORAGE).end_cell().begin_parse();
+	} else {
+		query_id = in_msg_body~load_uint(64);
+	}
+
+	;; owner role - cold wallet (private key that is not connected to the internet) that owns the funds used for staking and acts as the single nominator
+	if (equal_slice_bits(sender, owner_address)) {
+
+		;; allow owner to withdraw funds - take the money home and stop validating with it
+		if (op == OP::WITHDRAW) {
+			int amount = in_msg_body~load_coins();
+			amount = min(amount, my_balance - msg_value - MIN_TON_FOR_STORAGE);
+			throw_unless(ERROR::INSUFFICIENT_BALANCE, amount > 0);
+			send_msg(owner_address, amount, null(), BOUNCEABLE, MODE::SEND_MODE_REMAINING_AMOUNT); ;; owner pays gas fees
+		}
+
+		;; mainly used when the validator was compromised to prevent validator from entering new election cycles
+		if (op == OP::CHANGE_VALIDATOR_ADDRESS) {
+			slice new_validator_address = in_msg_body~load_msg_addr();
+			save_data(owner_address, new_validator_address);
+		}
+
+		;; emergency safeguard to allow owner to send arbitrary messages as the nominator contract
+		if (op == OP::SEND_RAW_MSG) {
+			int mode = in_msg_body~load_uint(8);
+			cell msg = in_msg_body~load_ref();
+			send_raw_message(msg, mode);
+		}
+
+		;; second emergency safeguard to allow owner to replace nominator logic - you should never need to use this
+		if (op == OP::UPGRADE) {
+			cell code = in_msg_body~load_ref();
+			throw_if(ERROR::WRONG_SET_CODE, cell_null?(code));
+			set_code(code);
+		}
+	}
+
+	;; validator role - the wallet whose private key is on the validator node (can sign blocks but can't steal the funds used for stake)
+	if (equal_slice_bits(sender, validator_address)) {
+
+		;; send stake to the elector for the next validation cycle (sent every period ~18 hours)
+		if (op == OP::NEW_STAKE) {
+			(int sender_wc, _) = parse_std_addr(sender);
+			(int my_wc, _) = parse_std_addr(my_address());
+			throw_unless(ERROR::WRONG_VALIDATOR_WC, sender_wc == -1); ;; for voting purpose
+			throw_unless(ERROR::WRONG_NOMINATOR_WC, my_wc == -1); ;; must be deployed on masterchain
+			throw_unless(ERROR::WRONG_QUERY_ID, query_id); ;; query_id must be greater then 0 to receive confirmation message from elector
+			throw_unless(ERROR::INSUFFICIENT_ELECTOR_FEE, msg_value >= MIN_TON_FOR_SEND_MSG); ;; must be greater then new_stake sending to elector fee
+			int stake_amount = in_msg_body~load_coins();
+			slice msg = in_msg_body;
+			check_new_stake_msg(in_msg_body);
+			throw_unless(ERROR::INSUFFICIENT_BALANCE, stake_amount <= my_balance - msg_value - MIN_TON_FOR_STORAGE);
+
+			send_msg(elector_address(), stake_amount, begin_cell().store_uint(OP::NEW_STAKE, 32).store_uint(query_id, 64).store_slice(msg).end_cell(), BOUNCEABLE, MODE::SEND_MODE_REMAINING_AMOUNT); ;; bounceable, validator pays gas fees
+		}
+
+		;; recover stake from elector of previous validation cycle (sent every period ~18 hours)
+		if (op == OP::RECOVER_STAKE) {
+			cell payload = begin_cell().store_uint(OP::RECOVER_STAKE, 32).store_uint(query_id, 64).end_cell();
+			send_msg(elector_address(), 0, payload, BOUNCEABLE, MODE::SEND_MODE_REMAINING_AMOUNT); ;; bounceable, validator pays gas fees
+		}
+	}
+}
+
+;; taken from nominator-pool: https://github.com/ton-blockchain/nominator-pool/blob/2f35c36b5ad662f10fd7b01ef780c3f1949c399d/func/pool.fc#L217
+() send_msg(slice to_address, int amount, cell payload, int flags, int send_mode) impure inline_ref {
+	int has_payload = ~ cell_null?(payload);
+
+	builder msg = begin_cell()
+		.store_uint(flags, 6)
+		.store_slice(to_address)
+		.store_coins(amount)
+		.store_uint(has_payload ? 1 : 0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+
+	if (has_payload) {
+		msg = msg.store_ref(payload);
+	}
+
+	send_raw_message(msg.end_cell(), send_mode);
+}
+
+;; taken from nominator-pool: https://github.com/ton-blockchain/nominator-pool/blob/2f35c36b5ad662f10fd7b01ef780c3f1949c399d/func/pool.fc#L68
+slice make_address(int wc, int addr) inline_ref {
+	return begin_cell()
+		.store_uint(4, 3).store_int(wc, 8).store_uint(addr, ADDRESS_SIZE).end_cell().begin_parse();
+}
+
+;; taken from nominator-pool: https://github.com/ton-blockchain/nominator-pool/blob/2f35c36b5ad662f10fd7b01ef780c3f1949c399d/func/pool.fc#L78
+slice elector_address() inline_ref {
+	int elector = config_param(1).begin_parse().preload_uint(ADDRESS_SIZE);
+	return make_address(-1, elector);
+}
+
+;; taken from nominator-pool: https://github.com/ton-blockchain/nominator-pool/blob/2f35c36b5ad662f10fd7b01ef780c3f1949c399d/func/pool.fc#L139
+;; check the validity of the new_stake message
+;; https://github.com/ton-blockchain/ton/blob/b38d227a469666d83ac535ad2eea80cb49d911b8/crypto/smartcont/elector-code.fc#L208
+int check_new_stake_msg(slice cs) impure inline_ref {
+	var validator_pubkey = cs~load_uint(256);
+	var stake_at = cs~load_uint(32);
+	var max_factor = cs~load_uint(32);
+	var adnl_addr = cs~load_uint(256);
+	var signature = cs~load_ref().begin_parse().preload_bits(512);
+	cs.end_parse();
+	return stake_at; ;; supposed start of next validation round (utime_since)
+}
+
+;; =============== getters =============================
+
+(slice, slice) get_roles() method_id {
+	var (owner_address, validator_address) = load_data();
+	return (owner_address, validator_address);
+}
+
+;; nominator-pool interface with mytonctrl: https://github.com/ton-blockchain/nominator-pool/blob/2f35c36b5ad662f10fd7b01ef780c3f1949c399d/func/pool.fc#L198
+;; since we are relying on the existing interface between mytonctrl and nominator-pool, we return values that instruct mytonctrl
+;; to recover stake on every cycle, although mytonctrl samples every 10 minutes we assume its current behavior that new_stake
+;; and recover_stake are only sent once per cycle and don't waste gas
+(int, int, int, int, (int, int, int, int, int), cell, cell, int, int, int, int, int, cell) get_pool_data() method_id {
+	return (
+		2, ;; state - funds staked at elector and should be recovered by mytonctrl
+		1, ;; nominators_count - owner is the single nominator
+		0, ;; stake_amount_sent - unused, mytonctrl does not rely on this param
+		0, ;; validator_amount - unused, since gas is always paid by validator there is no concept of validator_amount
+		(0, 0, 0, 0, 0), ;; pool config - unused, since not inviting third party nominators
+		null(), ;; nominators - unused, mytonctrl does not rely on this param
+		null(), ;; withdraw_requests - unused, not needed since owner controls the validator
+		0, ;; stake_at - unused, mytonctrl does not rely on this param
+		0, ;; saved_validator_set_hash - unused, required for maintaining validator_amount that we don't need
+		2, ;; validator_set_changes_count - funds staked at elector and should be recovered by mytonctrl
+		0, ;; validator_set_change_time - back in the past so mytonctrl will always attempt to recover stake
+		0, ;; stake_held_for - back in the past so mytonctrl will always attempt to recover stake
+		null() ;; config_proposal_votings - unused, not needed since owner controls the validator
+	);
+}

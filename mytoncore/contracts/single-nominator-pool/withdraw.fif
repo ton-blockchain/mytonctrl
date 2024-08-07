@@ -1,0 +1,16 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <withdraw-amount>" cr
+  ."Creates a message body to withdraw from a single-nominator pool." cr 1 halt
+} : usage
+$# 1 = { } { usage } cond
+
+$1 $>GR =: amount
+
+<b 0x1000 32 u, 1 64 u, amount Gram, b> =: body_boc
+body_boc <s csr.
+body_boc 2 boc+>B
+"withdraw.boc" tuck B>file
+."(Saved witdhraw query to file to file " type .")" cr

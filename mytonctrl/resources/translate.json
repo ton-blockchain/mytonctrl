@@ -1,0 +1,488 @@
+{
+	"update_cmd": {
+		"en": "Pull mytonctrl update",
+		"ru": "Подтянуть обновление mytonctrl",
+		"zh_TW": "拉取 mytonctrl 更新"
+	},
+	"upgrade_cmd": {
+		"en": "Pull up the source code and recompile the TON components",
+		"ru": "Подтянуть исходный код и перекомпилировать компоненты TON",
+		"zh_TW": "拉取源碼並重新編譯 TON 組件"
+	},
+	"status_cmd": {
+		"en": "Show TON status",
+		"ru": "Показать статус TON",
+		"zh_TW": "顯示 TON 狀態"
+	},
+	"status_modes_cmd": {
+		"en": "Show MTC modes",
+		"ru": "Показать режимы MTC",
+		"zh_TW": "顯示 MTC 模式"
+	},
+	"settings_status_cmd": {
+		"en": "Show all available settings with their description and values",
+		"ru": "Показать все доступные настройки с их описанием и значениями",
+		"zh_TW": "顯示所有可用設定及其描述和值"
+	},
+	"about_cmd": {
+		"en": "Mode description",
+		"ru": "Описание режима",
+		"zh_TW": "模式描述"
+	},
+	"enable_mode_cmd": {
+		"en": "Enable mode",
+		"ru": "Включить режим",
+		"zh_TW": "啟用模式"
+	},
+	"disable_mode_cmd": {
+		"en": "Disable mode",
+		"ru": "Выключить режим",
+		"zh_TW": "禁用模式"
+	},
+	"rollback_cmd" : {
+		"en": "Rollback to mytonctrl 1.0",
+		"ru": "Откатиться к mytonctrl 1.0",
+		"zh_TW": "回滾到 mytonctrl 1.0"
+	},
+	"seqno_cmd": {
+		"en": "Get seqno wallet",
+		"ru": "Получить seqno кошелька",
+		"zh_TW": "取得 seqno 錢包"
+	},
+	"getconfig_cmd": {
+		"en": "Get config",
+		"ru": "Получить конфигурацию",
+		"zh_TW": "取得設定"
+	},
+	"nw_cmd": {
+		"en": "Create a new local wallet",
+		"ru": "Создать новый локальный кошелек",
+		"zh_TW": "創建新的本地錢包"
+	},
+	"aw_cmd": {
+		"en": "Activate local wallet",
+		"ru": "Активировать локальный кошелек",
+		"zh_TW": "啟動本地錢包"
+	},
+	"wl_cmd": {
+		"en": "Show wallet list",
+		"ru": "Показать локальные кошельки",
+		"zh_TW": "顯示錢包列表"
+	},
+	"iw_cmd": {
+		"en": "Import wallet",
+		"ru": "Импортировать кошелек",
+		"zh_TW": "匯入錢包"
+	},
+	"swv_cmd": {
+		"en": "Set wallet version",
+		"ru": "Установить версию кошелька",
+		"zh_TW": "設定錢包版本"
+	},
+	"ex_cmd": {
+		"en": "Export wallet",
+		"ru": "Экспортировать кошелек",
+		"zh_TW": "匯出錢包"
+	},
+	"swa_cmd": {
+		"en": "Save wallet address to file",
+		"ru": "Сохранить адрес кошелька в файл",
+		"zh_TW": "將錢包地址儲存到檔案"
+	},
+	"dw_cmd": {
+		"en": "Delete local wallet",
+		"ru": "Удалить локальный кошелек",
+		"zh_TW": "刪除本地錢包"
+	},
+	"vas_cmd": {
+		"en": "View account status",
+		"ru": "Показать статус аккаунта",
+		"zh_TW": "查看帳戶狀態"
+	},
+	"vah_cmd": {
+		"en": "View account history",
+		"ru": "Показать историю аккаунта",
+		"zh_TW": "查看帳戶歷史"
+	},
+	"mg_cmd": {
+		"en": "Move coins to account",
+		"ru": "Перевод монет на кошелек",
+		"zh_TW": "將幣轉移到帳戶"
+	},
+	"mgtp_cmd": {
+		"en": "Move coins through proxy",
+		"ru": "Перевод монет через прокси",
+		"zh_TW": "透過代理轉移幣"
+	},
+	"nb_cmd": {
+		"en": "Create new bookmark",
+		"ru": "Добавить аккаунт в закладки",
+		"zh_TW": "建立新的書籤"
+	},
+	"bl_cmd": {
+		"en": "Show bookmark list",
+		"ru": "Показать закладки",
+		"zh_TW": "顯示書籤列表"
+	},
+	"db_cmd": {
+		"en": "Delete bookmark",
+		"ru": "Удалить закладку",
+		"zh_TW": "刪除書籤"
+	},
+	"nd_cmd": {
+		"en": "New domain",
+		"ru": "Арендовать новый домен",
+		"zh_TW": "新建域名"
+	},
+	"dl_cmd": {
+		"en": "Show domain list",
+		"ru": "Показать арендованные домены",
+		"zh_TW": "顯示域名列表"
+	},
+	"vds_cmd": {
+		"en": "View domain status",
+		"ru": "Показать статус домена",
+		"zh_TW": "查看域名狀態"
+	},
+	"dd_cmd": {
+		"en": "Delete domain",
+		"ru": "Удалить домен",
+		"zh_TW": "刪除域名"
+	},
+	"ol_cmd": {
+		"en": "Show offers list",
+		"ru": "Показать действующие предложения",
+		"zh_TW": "顯示優惠列表"
+	},
+	"vo_cmd": {
+		"en": "Vote for offer",
+		"ru": "Голосовать за предложение",
+		"zh_TW": "投票支持優惠"
+	},
+	"od_cmd": {
+		"en": "Show offer diff",
+		"ru": "Показать разницу предложений",
+		"zh_TW": "顯示優惠差異"
+	},
+	"cl_cmd": {
+		"en": "Show complaints list",
+		"ru": "Показать действующие жалобы",
+		"zh_TW": "顯示投訴列表"
+	},
+	"vc_cmd": {
+		"en": "Vote for complaint",
+		"ru": "Голосовать за жалобу",
+		"zh_TW": "投票支持投訴"
+	},
+	"el_cmd": {
+		"en": "Show election entries list",
+		"ru": "Показать действующие выборы",
+		"zh_TW": "顯示選舉入口列表"
+	},
+	"ve_cmd": {
+		"en": "Vote election entry",
+		"ru": "Голосовать в выборах",
+		"zh_TW": "投票選舉入口"
+	},
+	"vl_cmd": {
+		"en": "Show active validators",
+		"ru": "Показать действующие валидаторы",
+		"zh_TW": "顯示活躍的驗證者"
+	},
+	"get_cmd": {
+		"en": "Get settings",
+		"ru": "Посмотреть настройки",
+		"zh_TW": "獲取設定"
+	},
+	"set_cmd": {
+		"en": "Set settings",
+		"ru": "Задать настройки",
+		"zh_TW": "設定設定"
+	},
+	"hr_cmd": {
+		"en": "Get mining hashrate",
+		"ru": "Получить хешрейт сервера",
+		"zh_TW": "獲取挖礦哈希率"
+	},
+	"mo_cmd": {
+		"en": "Enable mining",
+		"ru": "Включить майнинг",
+		"zh_TW": "啟用挖礦"
+	},
+	"moff_cmd": {
+		"en": "Disable mining",
+		"ru": "Выключить майнинг",
+		"zh_TW": "禁用挖礦"
+	},
+	"installer_cmd": {
+		"en": "Run the installer of TON modules",
+		"ru": "Запустить установщик модулей TON",
+		"zh_TW": "執行 TON 模組的安裝程序"
+	},
+	"ton_status_head": {
+		"en": "{cyan}===[ TON network status ]==={endc}",
+		"ru": "{cyan}===[ Статус сети TON ]==={endc}",
+		"zh_TW": "{cyan}===[ TON 網路狀態 ]==={endc}"
+	},
+	"ton_status_network_name": {
+		"en": "Network name: {0}",
+		"ru": "Название сети: {0}",
+		"zh_TW": "網路名字: {0}"
+	},
+	"ton_status_tps": {
+		"en": "Transactions per second (TPS): {0}, {1}, {2}",
+		"ru": "Транзакций в секунду (TPS): {0}, {1}, {2}",
+		"zh_TW": "每秒交易數 (TPS): {0}, {1}, {2}"
+	},
+	"ton_status_validators": {
+		"en": "Number of validators: {0}({1})",
+		"ru": "Количество валидаторов: {0}({1})",
+		"zh_TW": "驗證者數量: {0}({1})"
+	},
+	"ton_status_shards": {
+		"en": "Number of shardchains: {0}",
+		"ru": "Количесвто шардчейнов: {0}",
+		"zh_TW": "分片鏈數量: {0}"
+	},
+	"ton_status_offers": {
+		"en": "Number of offers: {0}({1})",
+		"ru": "Действующие предложения: {0}({1})",
+		"zh_TW": "優惠數量: {0}({1})"
+	},
+	"ton_status_complaints": {
+		"en": "Number of complaints: {0}({1})",
+		"ru": "Действующие жалобы: {0}({1})",
+		"zh_TW": "投訴數量: {0}({1})"
+	},
+	"ton_status_election": {
+		"en": "Election status: {0}",
+		"ru": "Статус выборов: {0}",
+		"zh_TW": "選舉狀態: {0}"
+	},
+	"local_status_head": {
+		"en": "{cyan}===[ Local validator status ]==={endc}",
+		"ru": "{cyan}===[ Статус локального валидатора ]==={endc}",
+		"zh_TW": "{cyan}===[ 本地驗證者狀態 ]==={endc}"
+	},
+	"local_status_validator_index": {
+		"en": "Validator index: {0}",
+		"ru": "Индекс валидатора: {0}",
+		"zh_TW": "驗證者索引: {0}"
+	},
+	"local_status_validator_efficiency": {
+		"en": "Validator efficiency: {0}",
+		"ru": "Эффективность валидатора: {0}",
+		"zh_TW": "驗證者效率: {0}"
+	},
+	"local_status_validator_efficiency_ver2": {
+		"en": "Validator efficiency, ver.2: {0}",
+		"ru": "Эффективность валидатора, вер.2: {0}",
+		"zh_TW": "驗證器效率，版本2： {0}"
+	},
+	"local_status_adnl_addr": {
+		"en": "ADNL address of local validator: {0}",
+		"ru": "ADNL адрес локального валидатора: {0}",
+		"zh_TW": "本地驗證者的 ADNL 地址: {0}"
+	},
+	"local_status_fullnode_adnl": {
+		"en": "Public ADNL address of node: {0}",
+		"ru": "Публичный ADNL адрес ноды: {0}",
+		"zh_TW": "節點的公共 ADNL 地址: {0}"
+	},
+	"local_status_wallet_addr": {
+		"en": "Local validator wallet address: {0}",
+		"ru": "Адрес кошелька локального валидатора: {0}",
+		"zh_TW": "本地驗證者錢包地址: {0}"
+	},
+	"local_status_wallet_balance": {
+		"en": "Local validator wallet balance: {0}",
+		"ru": "Баланс кошелька локального валидатора: {0}",
+		"zh_TW": "本地驗證者錢包餘額: {0}"
+	},
+	"local_status_cpu_load": {
+		"en": "Load average[{0}]: {1}, {2}, {3}",
+		"ru": "Средняя нагрузка[{0}]: {1}, {2}, {3}",
+		"zh_TW": "平均負載[{0}]: {1}, {2}, {3}"
+	},
+	"local_status_memory": {
+		"en": "Memory load: {0}, {1}",
+		"ru": "Загрузка памяти: {0}, {1}",
+		"zh_TW": "記憶體負載: {0}, {1}"
+	},
+	"local_status_net_load": {
+		"en": "Network load average (Mbit/s): {0}, {1}, {2}",
+		"ru": "Средняя нагрузка сети (Mbit/s): {0}, {1}, {2}",
+		"zh_TW": "網絡平均負載 (Mbit/s): {0}, {1}, {2}"
+	},
+	"local_status_disks_load": {
+		"en": "Disks load average (MB/s): {0}",
+		"ru": "Средняя нагрузка дисков (MB/s): {0}",
+		"zh_TW": "磁碟平均負載 (MB/s): {0}"
+	},
+	"local_status_mytoncore_status": {
+		"en": "Mytoncore status: {0}, {1}",
+		"ru": "Статус ядра mytoncore: {0}, {1}",
+		"zh_TW": "Mytoncore 狀態: {0}, {1}"
+	},
+	"local_status_validator_status": {
+		"en": "Local validator status: {0}, {1}",
+		"ru": "Статус локального валидатора: {0}, {1}",
+		"zh_TW": "本地驗證者狀態: {0}, {1}"
+	},
+	"local_status_validator_out_of_sync": {
+		"en": "Local validator out of sync: {0}",
+		"ru": "Рассинхронизация локального валидатора: {0}",
+		"zh_TW": "本地驗證者不同步: {0}"
+	},
+	"local_status_validator_out_of_ser": {
+		"en": "Local validator last state serialization: {0}",
+		"ru": "Серализация стейта локального валидатора была: {0}",
+		"zh_TW": "本地驗證者最後一次狀態序列化: {0}"
+	},
+	"local_status_db": {
+		"en": "Local validator database size: {0}, {1}",
+		"ru": "Размер БД локального валидатора: {0}, {1}",
+		"zh_TW": "本地驗證者數據庫大小: {0}, {1}"
+	},
+	"local_status_version_mtc": {
+		"en": "Version mytonctrl: {0} ({1})",
+		"ru": "Версия mytonctrl: {0} ({1})",
+		"zh_TW": "mytonctrl 版本: {0} ({1})"
+	},
+	"local_status_version_validator": {
+		"en": "Version validator: {0} ({1})",
+		"ru": "Версия валидатора: {0} ({1})",
+		"zh_TW": "驗證者版本: {0} ({1})"
+	},
+	"ton_config_head": {
+		"en": "{cyan}===[ TON network configuration ]==={endc}",
+		"ru": "{cyan}===[ Конфигурация сети TON ]==={endc}",
+		"zh_TW": "{cyan}===[ TON 網絡配置 ]==={endc}"
+	},
+	"ton_config_configurator_addr": {
+		"en": "Configurator address: {0}",
+		"ru": "Адрес конфигуратора: {0}",
+		"zh_TW": "配置器地址: {0}"
+	},
+	"ton_config_elector_addr": {
+		"en": "Elector address: {0}",
+		"ru": "Адрес электора: {0}",
+		"zh_TW": "選舉人地址: {0}"
+	},
+	"ton_config_elections": {
+		"en": "Validation period: {0}, Duration of elections: {1}-{2}, Hold period: {3}",
+		"ru": "Период валидации: {0}, Длительность выборов: {1}-{2}, Период удержания ставки: {3}",
+		"zh_TW": "驗證期間: {0}, 選舉期間: {1}-{2}, 持有期間: {3}"
+	},
+	"ton_config_stake": {
+		"en": "Minimum stake: {0}, Maximum stake: {1}",
+		"ru": "Минимальная ставка: {0}, Максимальная ставка: {1}",
+		"zh_TW": "最小賭注: {0}, 最大賭注: {1}"
+	},
+	"times_head": {
+		"en": "{cyan}===[ TON timestamps ]==={endc}",
+		"ru": "{cyan}===[ Временные метки TON ]==={endc}",
+		"zh_TW": "{cyan}===[ TON 時間戳 ]==={endc}"
+	},
+	"times_root_workchain_enabled_time": {
+		"en": "TON network was launched: {0}",
+		"ru": "TON сеть была запущена: {0}",
+		"zh_TW": "TON 網絡啟動時間: {0}"
+	},
+	"times_start_validation_time": {
+		"en": "Start of the validation cycle: {0}",
+		"ru": "Начало цикла валидации: {0}",
+		"zh_TW": "驗證週期開始: {0}"
+	},
+	"times_end_validation_time": {
+		"en": "End of the validation cycle: {0}",
+		"ru": "Конец цикла валидации: {0}",
+		"zh_TW": "驗證週期結束: {0}"
+	},
+	"times_start_election_time": {
+		"en": "Start of elections: {0}",
+		"ru": "Начало выборов: {0}",
+		"zh_TW": "選舉開始: {0}"
+	},
+	"times_end_election_time": {
+		"en": "End of elections: {0}",
+		"ru": "Конец выборов: {0}",
+		"zh_TW": "選舉結束: {0}"
+	},
+	"times_start_next_election_time": {
+		"en": "Beginning of the next elections: {0}",
+		"ru": "Начало следующих выборов: {0}",
+		"zh_TW": "下一次選舉開始: {0}"
+	},
+	"mytonctrl_update_available": {
+		"en": "{green}MyTonCtrl update available. {red}Please update it with `update` command.{endc}",
+		"ru": "{green}Доступно обновление MyTonCtrl. {red}Пожалуйста, обновите его с помощью команды `update`.{endc}",
+		"zh_TW": "{green}MyTonCtrl 有可用更新. {red}請使用 `update` 命令進行更新.{endc}"
+	},
+	"update_mtc2_warning": {
+		"en": "{red}This version is outdated. Please update to the second version: `update mytonctrl2`{endc}",
+		"ru": "{red}Данная версия устарела. Пожалуйста обновитесь на вторую версию: `update mytonctrl2`{endc}",
+		"zh_TW": "{red}這個版本已經過時了。請更新至第二版本: `update mytonctrl2`{endc}"
+	},
+	"disk_usage_warning": {
+		"en": "{red} Disk is almost full, clean the TON database immediately: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}",
+		"ru": "{red} Диск почти заполнен, немедленно очистите базу данных TON: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}",
+		"zh_TW": "{red} 磁盤幾乎滿了，立即清理 TON 數據庫: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}"
+	},
+	"ton_update_available": {
+		"en": "{green}TON update available. {red}Please update it with `upgrade` command.{endc}",
+		"ru": "{green}Доступно обновление TON. {red}Пожалуйста, обновите его с помощью команды `upgrade`.{endc}",
+		"zh_TW": "{green}TON 有可用更新. {red}請使用 `upgrade` 命令進行更新.{endc}"
+	},
+	"disk_usage_warning": {
+		"en": "{red} Disk is almost full, clean the TON database immediately: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}",
+		"ru": "{red} Диск почти заполнен, немедленно очистите базу данных TON: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}",
+		"zh_TW": "{red} 磁盤幾乎滿了，立即清理 TON 數據庫: https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming {endc}"
+	},
+	"sync_warning": {
+		"en": "{red} Node is out of sync. The displayed status is incomplete. {endc}",
+		"ru": "{red} Нода не синхронизирована с сетью. Отображаемый статус не полный. {endc}",
+		"zh_TW": "{red} 节点不与网络同步。顯示的狀態不完整。 {endc}"
+	},
+	"validator_balance_warning": {
+		"en": "{red} Validator wallet balance is low. {endc}",
+		"ru": "{red} Баланс кошелька валидатора низкий. {endc}",
+		"zh_TW": "{red} 驗證者錢包餘額不足。 {endc}"
+	},
+	"vps_warning": {
+		"en": "{red} Validator is running on a VPS. Use a dedicated server for better performance. {endc}",
+		"ru": "{red} Валидатор работает на VPS. Используйте выделенный сервер (дедик) для лучшей производительности. {endc}",
+		"zh_TW": "{red} 驗證者在 VPS 上運行。使用專用服務器以獲得更好的性能。 {endc}"
+	},
+	"vport_error": {
+		"en": "{red}Error - UDP port of the validator is not accessible from the outside.{endc}",
+		"ru": "{red}Ошибка - UDP порт валидатора недоступен извне.{endc}",
+		"zh_TW": "{red}錯誤 - 驗證器的 UDP 端口無法從外部訪問.{endc}"
+	},
+	"000a": {
+		"en": "001",
+		"ru": "002",
+		"zh_TW": "003"
+	},
+	"000b": {
+		"en": "001",
+		"ru": "002",
+		"zh_TW": "003"
+	},
+	"000c": {
+		"en": "001",
+		"ru": "002",
+		"zh_TW": "003"
+	},
+	"000d": {
+		"en": "001",
+		"ru": "002",
+		"zh_TW": "003"
+	},
+	"000e": {
+		"en": "001",
+		"ru": "002",
+		"zh_TW": "003"
+	}
+
+}

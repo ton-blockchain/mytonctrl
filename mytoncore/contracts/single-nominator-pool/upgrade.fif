@@ -1,0 +1,18 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <new-code-file>" cr cr
+  ."Creates a message body to update the nominator's code." cr
+  ."Takes <new-code-file> - BoC file path as argument." cr cr
+  ."Saves the result into `upgrade.boc`." cr 1 halt
+} : usage
+$# 1 = {  } { usage } cond
+
+$1 file>B dup
+8 B| drop B>$ "b5ee9c72" $= { B>$ x>B? drop } if
+B>boc =: new-code-boc
+
+<b 0x9903 32 u, 1 64 u, new-code-boc ref, b> 2 boc+>B
+."Message body is " dup B>base64 type cr
+
+"upgrade.boc" tuck B>file ."Saved to " type cr
