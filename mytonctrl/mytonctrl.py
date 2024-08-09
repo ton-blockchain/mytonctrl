@@ -245,6 +245,7 @@ def check_installer_user(local):
 
 def PreUp(local: MyPyClass, ton: MyTonCore):
 	CheckMytonctrlUpdate(local)
+	print_warning(local, "{red}You are on `mytonctrl2` branch. MyTonCtrl2.0 has been merged to `master`, use command `update master`{endc}")
 	check_installer_user(local)
 	check_vport(local, ton)
 	ton.check_adnl()
