@@ -8,6 +8,7 @@ from modules.single_pool import SingleNominatorModule
 from modules.validator import ValidatorModule
 from modules.controller import ControllerModule
 from modules.liteserver import LiteserverModule
+from modules.ton_storage_provider import TonStorageProviderModule
 
 
 MODES = {
@@ -15,7 +16,8 @@ MODES = {
     'nominator-pool': NominatorPoolModule,
     'single-nominator': SingleNominatorModule,
     'liquid-staking': ControllerModule,
-    'liteserver': LiteserverModule
+    'liteserver': LiteserverModule,
+    'provider': TonStorageProviderModule,
 }
 
 

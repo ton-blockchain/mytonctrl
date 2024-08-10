@@ -42,7 +42,7 @@ from mytoncore.functions import (
 )
 from mytoncore.telemetry import is_host_virtual
 from mytonctrl.migrate import run_migrations
-from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config
+from mytonctrl.utils import GetColorInt, GetColorStatus, GetItemFromList, timestamp2utcdatetime, fix_git_config
 
 import sys, getopt, os
 
@@ -70,7 +70,7 @@ def Init(local, ton, console, argv):
 	console.AddItem("update", inject_globals(Update), local.translate("update_cmd"))
 	console.AddItem("upgrade", inject_globals(Upgrade), local.translate("upgrade_cmd"))
 	console.AddItem("installer", inject_globals(Installer), local.translate("installer_cmd"))
-	console.AddItem("status", inject_globals(PrintStatus), local.translate("status_cmd"))
+	console.AddItem("status", inject_globals(print_status), local.translate("status_cmd"))
 	console.AddItem("status_modes", inject_globals(mode_status), local.translate("status_modes_cmd"))
 	console.AddItem("status_settings", inject_globals(settings_status), local.translate("settings_status_cmd"))
 	console.AddItem("enable_mode", inject_globals(enable_mode), local.translate("enable_mode_cmd"))
@@ -132,6 +132,10 @@ def Init(local, ton, console, argv):
 	module = CollatorConfigModule(ton, local)
 	module.add_console_commands(console)
 
+	from modules.ton_storage_provider import TonStorageProviderModule
+	module = TonStorageProviderModule(ton, local)
+	module.add_console_commands(console)
+
 	if ton.using_validator():
 		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
@@ -159,7 +163,6 @@ def Init(local, ton, console, argv):
 
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
-	console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -189,23 +192,6 @@ def Init(local, ton, console, argv):
 	local.db.config.logLevel = "debug" if console.debug else "info"
 	local.db.config.isLocaldbSaving = False
 	local.run()
-#end define
-
-
-def activate_ton_storage_provider(local, ton, args):
-	wallet_name = "provider_wallet_001"
-	wallet = ton.GetLocalWallet(wallet_name)
-	account = ton.GetAccount(wallet.addrB64)
-	if account.status == "active":
-		color_print("activate_ton_storage_provider - {green}Already activated{endc}")
-		#return
-	ton.ActivateWallet(wallet)
-	destination = "0:7777777777777777777777777777777777777777777777777777777777777777"
-	ton_storage = ton.GetSettings("ton_storage")
-	comment = f"tsp-{ton_storage.provider.pubkey}"
-	flags = ["-n", "-C", comment]
-	ton.MoveCoins(wallet, destination, 0.01, flags=flags)
-	color_print("activate_ton_storage_provider - {green}OK{endc}")
 #end define
 
 
@@ -538,8 +524,16 @@ def settings_status(ton, args):
 	print_table(table)
 #end define
 
+def print_status(local, ton, args):
+	if ton.get_mode_value("provider") == True:
+		from modules.ton_storage_provider import TonStorageProviderModule
+		ton_storage_provider_module = TonStorageProviderModule(ton, local)
+		ton_storage_provider_module.print_status()
+	if ton.using_validator() or ton.using_liteserver():
+		print_node_status(local, ton, args)
+#end define
 
-def PrintStatus(local, ton, args):
+def print_node_status(local, ton, args):
 	opt = None
 	if len(args) == 1:
 		opt = args[0]
@@ -779,30 +773,6 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	print(mtcVersion_text)
 	print(validatorVersion_text)
 	print()
-#end define
-
-def GetColorInt(data, border, logic, ending=None):
-	if data is None:
-		result = "n/a"
-	elif logic == "more":
-		if data >= border:
-			result = bcolors.green_text(data, ending)
-		else:
-			result = bcolors.red_text(data, ending)
-	elif logic == "less":
-		if data <= border:
-			result = bcolors.green_text(data, ending)
-		else:
-			result = bcolors.red_text(data, ending)
-	return result
-#end define
-
-def GetColorStatus(input):
-	if input == True:
-		result = bcolors.green_text("working")
-	else:
-		result = bcolors.red_text("not working")
-	return result
 #end define
 
 def PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17):

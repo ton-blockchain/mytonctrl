@@ -1,19 +1,44 @@
 import subprocess
 import time
+from mypylib.mypylib import bcolors
 
+
+def GetColorInt(data, border, logic, ending=None):
+    if data is None:
+        result = "n/a"
+    elif logic == "more":
+        if data >= border:
+            result = bcolors.green_text(data, ending)
+        else:
+            result = bcolors.red_text(data, ending)
+    elif logic == "less":
+        if data <= border:
+            result = bcolors.green_text(data, ending)
+        else:
+            result = bcolors.red_text(data, ending)
+    return result
+#end define
+
+def GetColorStatus(input):
+    if input == True:
+        result = bcolors.green_text("working")
+    else:
+        result = bcolors.red_text("not working")
+    return result
+#end define
 
 def timestamp2utcdatetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
     datetime = time.gmtime(timestamp)
     result = time.strftime(format, datetime) + ' UTC'
     return result
-
+#end define
 
 def GetItemFromList(data, index):
     try:
         return data[index]
     except:
         pass
-
+#end define
 
 def fix_git_config(git_path: str):
     args = ["git", "status"]

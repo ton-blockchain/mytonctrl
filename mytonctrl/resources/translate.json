@@ -336,7 +336,7 @@
 	},
 	"local_status_validator_out_of_ser": {
 		"en": "Local validator last state serialization: {0}",
-		"ru": "Серализация стейта локального валидатора была: {0}",
+		"ru": "Сериализация стейта локального валидатора была: {0}",
 		"zh_TW": "本地驗證者最後一次狀態序列化: {0}"
 	},
 	"local_status_db": {
@@ -459,30 +459,40 @@
 		"ru": "{red}Ошибка - UDP порт валидатора недоступен извне.{endc}",
 		"zh_TW": "{red}錯誤 - 驗證器的 UDP 端口無法從外部訪問.{endc}"
 	},
-	"000a": {
-		"en": "001",
-		"ru": "002",
-		"zh_TW": "003"
+	"ton_storage_provider_status_head": {
+		"en": "{cyan}===[ Local ton storage provider status ]==={endc}",
+		"ru": "{cyan}===[ Статус локального провайдера ton storage ]==={endc}",
+		"zh_TW": "{cyan}===[ 本地噸儲存提供者狀態 ]==={endc}"
 	},
-	"000b": {
-		"en": "001",
-		"ru": "002",
-		"zh_TW": "003"
+	"provider_wallet_addr": {
+		"en": "Local provider wallet address: {0}",
+		"ru": "Адрес кошелька локального провайдера: {0}",
+		"zh_TW": "本地提供者錢包地址: {0}"
 	},
-	"000c": {
-		"en": "001",
-		"ru": "002",
-		"zh_TW": "003"
+	"provider_pubkey": {
+		"en": "Local provider public key: {0}",
+		"ru": "Публичный ключ локального провайдера: {0}",
+		"zh_TW": "本地提供者公鑰: {0}"
 	},
-	"000d": {
-		"en": "001",
-		"ru": "002",
-		"zh_TW": "003"
+	"provider_wallet_balance": {
+		"en": "Local provider wallet balance: {0}",
+		"ru": "Баланс кошелька локального провайдера: {0}",
+		"zh_TW": "本地提供者錢包餘額: {0}"
 	},
-	"000e": {
-		"en": "001",
-		"ru": "002",
-		"zh_TW": "003"
+	"provider_bags_number": {
+		"en": "Number of bags stored: {0}",
+		"ru": "Количество хранимых контейнеров: {0}",
+		"zh_TW": "儲存容器數量: {0}"
+	},
+	"provider_space": {
+		"en": "Used provider space (Mb): {0} / {1} [{2}]",
+		"ru": "Использованное место провайдера (Mb): {0} / {1} [{2}]",
+		"zh_TW": "使用的提供者空間 (Mb): {0} / {1} [{2}]"
+	},
+	"drive_space": {
+		"en": "Used disk space (Gb): {0} / {1} [{2}]",
+		"ru": "Использованное место на диске (Gb): {0} / {1} [{2}]",
+		"zh_TW": "已用磁碟空間 (Gb): {0} / {1} [{2}]"
 	}
 
 }
