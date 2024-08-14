@@ -19,7 +19,6 @@ from mytoncore.fift import Fift
 from mytoncore.models import (
     Wallet,
     Account,
-    Domain,
     Block,
     Trans,
     Message,
@@ -388,48 +387,6 @@ class MyTonCore():
 				result = buff.decode("utf-8")
 			except: pass
 		return result
-	#end define
-
-	def GetDomainAddr(self, domainName):
-		cmd = "dnsresolve {domainName} -1".format(domainName=domainName)
-		result = self.liteClient.Run(cmd)
-		if "not found" in result:
-			raise Exception("GetDomainAddr error: domain \"{domainName}\" not found".format(domainName=domainName))
-		resolver = parse(result, "next resolver", '\n')
-		buff = resolver.replace(' ', '')
-		buffList = buff.split('=')
-		fullHexAddr = buffList[0]
-		addr = buffList[1]
-		return addr
-	#end define
-
-	def GetDomainEndTime(self, domainName):
-		self.local.add_log("start GetDomainEndTime function", "debug")
-		buff = domainName.split('.')
-		subdomain = buff.pop(0)
-		dnsDomain = ".".join(buff)
-		dnsAddr = self.GetDomainAddr(dnsDomain)
-
-		cmd = "runmethodfull {addr} getexpiration \"{subdomain}\"".format(addr=dnsAddr, subdomain=subdomain)
-		result = self.liteClient.Run(cmd)
-		result = parse(result, "result:", '\n')
-		result = parse(result, "[", "]")
-		result = result.replace(' ', '')
-		result = int(result)
-		return result
-	#end define
-
-	def GetDomainAdnlAddr(self, domainName):
-		self.local.add_log("start GetDomainAdnlAddr function", "debug")
-		cmd = "dnsresolve {domainName} 1".format(domainName=domainName)
-		result = self.liteClient.Run(cmd)
-		lines = result.split('\n')
-		for line in lines:
-			if "adnl address" in line:
-				adnlAddr = parse(line, "=", "\n")
-				adnlAddr = adnlAddr.replace(' ', '')
-				adnlAddr = adnlAddr
-				return adnlAddr
 	#end define
 
 	def GetLocalWallet(self, walletName, version=None, subwallet=None):
@@ -2898,76 +2855,6 @@ class MyTonCore():
 		return None
 	#end define
 
-	def GetDomainFromAuction(self, walletName, addr):
-		wallet = self.GetLocalWallet(walletName)
-		bocPath = self.local.buffer.my_temp_dir + "get_dns_data.boc"
-		bocData = bytes.fromhex("b5ee9c7241010101000e0000182fcb26a20000000000000000f36cae4d")
-		with open(bocPath, 'wb') as file:
-			file.write(bocData)
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, addr, 0.1)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def NewDomain(self, domain):
-		self.local.add_log("start NewDomain function", "debug")
-		domainName = domain["name"]
-		buff = domainName.split('.')
-		subdomain = buff.pop(0)
-		dnsDomain = ".".join(buff)
-		dnsAddr = self.GetDomainAddr(dnsDomain)
-		wallet = self.GetLocalWallet(domain["walletName"])
-		expireInSec = 700000 # fix me
-		catId = 1 # fix me
-
-		# Check if domain is busy
-		domainEndTime = self.GetDomainEndTime(domainName)
-		if domainEndTime > 0:
-			raise Exception("NewDomain error: domain is busy")
-		#end if
-
-		fileName = self.tempDir + "dns-msg-body.boc"
-		args = ["auto-dns.fif", dnsAddr, "add", subdomain, expireInSec, "owner", wallet.addrB64, "cat", catId, "adnl", domain["adnlAddr"], "-o", fileName]
-		result = self.fift.Run(args)
-		resultFilePath = parse(result, "Saved to file ", ')')
-		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, dnsAddr, 1.7)
-		self.SendFile(resultFilePath, wallet)
-		self.AddDomain(domain)
-	#end define
-
-	def AddDomain(self, domain):
-		if "domains" not in self.local.db:
-			self.local.db["domains"] = list()
-		#end if
-		self.local.db["domains"].append(domain)
-		self.local.save()
-	#end define
-
-	def GetDomains(self):
-		domains = self.local.db.get("domains", list())
-		for domain in domains:
-			domainName = domain.get("name")
-			domain["endTime"] = self.GetDomainEndTime(domainName)
-		return domains
-	#end define
-
-	def GetDomain(self, domainName):
-		domain = dict()
-		domain["name"] = domainName
-		domain["adnlAddr"] = self.GetDomainAdnlAddr(domainName)
-		domain["endTime"] = self.GetDomainEndTime(domainName)
-		return domain
-	#end define
-
-	def DeleteDomain(self, domainName):
-		domains = self.local.db.get("domains")
-		for domain in domains:
-			if (domainName == domain.get("name")):
-				domains.remove(domain)
-				self.local.save()
-				return
-		raise Exception("DeleteDomain error: Domain not found")
-	#end define
-
 	def GetAutoTransferRules(self):
 		autoTransferRules = self.local.db.get("autoTransferRules")
 		if autoTransferRules is None:
@@ -3030,13 +2917,6 @@ class MyTonCore():
 				data = "empty"
 			else:
 				data = account.balance
-		elif type == "domain":
-			domainName = bookmark.get("addr")
-			endTime = self.GetDomainEndTime(domainName)
-			if endTime == 0:
-				data = "free"
-			else:
-				data = timestamp2datetime(endTime, "%d.%m.%Y")
 		else:
 			data = "null"
 		bookmark["data"] = data

@@ -41,15 +41,6 @@ class Account:
 #end class
 
 
-class Domain(dict):
-	def __init__(self):
-		self["name"] = None
-		self["adnlAddr"] = None
-		self["walletName"] = None
-	#end define
-#end class
-
-
 class Block():
 	def __init__(self, str=None):
 		self.workchain = None

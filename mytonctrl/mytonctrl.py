@@ -101,16 +101,6 @@ def Init(local, ton, console, argv):
 	console.AddItem("bl", inject_globals(PrintBookmarksList), local.translate("bl_cmd"))
 	console.AddItem("db", inject_globals(DeleteBookmark), local.translate("db_cmd"))
 
-	# console.AddItem("nr", inject_globals(CreatNewAutoTransferRule), local.translate("nr_cmd")) # "Добавить правило автопереводов в расписание / Create new auto transfer rule"
-	# console.AddItem("rl", inject_globals(PrintAutoTransferRulesList), local.translate("rl_cmd")) # "Показать правила автопереводов / Show auto transfer rule list"
-	# console.AddItem("dr", inject_globals(DeleteAutoTransferRule), local.translate("dr_cmd")) # "Удалить правило автопереводов из расписания / Delete auto transfer rule"
-
-	# console.AddItem("nd", inject_globals(NewDomain), local.translate("nd_cmd"))
-	# console.AddItem("dl", inject_globals(PrintDomainsList), local.translate("dl_cmd"))
-	# console.AddItem("vds", inject_globals(ViewDomainStatus), local.translate("vds_cmd"))
-	# console.AddItem("dd", inject_globals(DeleteDomain), local.translate("dd_cmd"))
-	# console.AddItem("gdfa", inject_globals(GetDomainFromAuction), local.translate("gdfa_cmd"))
-
 	console.AddItem("ol", inject_globals(PrintOffersList), local.translate("ol_cmd"))
 	console.AddItem("od", inject_globals(OfferDiff), local.translate("od_cmd"))
 
@@ -315,7 +305,7 @@ def check_git(input_args, default_repo, text, default_branch='master'):
 	need_branch = data.get("branch")
 
 	# Check if remote repo is different from default
-	if ((need_author is None and local_author != default_author) or 
+	if ((need_author is None and local_author != default_author) or
 		(need_repo is None and local_repo != default_repo)):
 		remote_url = f"https://github.com/{local_author}/{local_repo}/tree/{need_branch if need_branch else local_branch}"
 		raise Exception(f"{text} error: You are on {remote_url} remote url, to update to the tip use `{text} {remote_url}` command")
@@ -575,7 +565,7 @@ def PrintStatus(local, ton, args):
 		config34 = ton.GetConfig34()
 		config36 = ton.GetConfig36()
 		totalValidators = config34["totalValidators"]
-		
+
 		if opt != "fast":
 			onlineValidators = ton.GetOnlineValidators()
 			validator_efficiency = ton.GetValidatorEfficiency()
@@ -586,26 +576,26 @@ def PrintStatus(local, ton, args):
 		if oldStartWorkTime is None:
 			oldStartWorkTime = config34.get("startWorkTime")
 		shardsNumber = ton.GetShardsNumber()
-		
+
 		config15 = ton.GetConfig15()
 		config17 = ton.GetConfig17()
 		fullConfigAddr = ton.GetFullConfigAddr()
 		fullElectorAddr = ton.GetFullElectorAddr()
 		startWorkTime = ton.GetActiveElectionId(fullElectorAddr)
 		validator_index = ton.GetValidatorIndex()
-		
+
 		offersNumber = ton.GetOffersNumber()
 		complaintsNumber = ton.GetComplaintsNumber()
-		
+
 		tpsAvg = ton.GetStatistics("tpsAvg", statistics)
-		
+
 		if validator_wallet is not None:
 			validator_account = ton.GetAccount(validator_wallet.addrB64)
 	#end if
 
 	if all_status:
 		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
-	PrintLocalStatus(local, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status, 
+	PrintLocalStatus(local, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
 		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl)
 	if all_status:
 		PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
@@ -741,7 +731,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
 	dbStatus_text = local.translate("local_status_db").format(dbSize_text, dbUsage_text)
-	
+
 	# Mytonctrl and validator git hash
 	mtcGitPath = "/usr/src/mytonctrl"
 	validatorGitPath = "/usr/src/ton"
@@ -769,7 +759,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	print(cpuLoad_text)
 	print(netLoad_text)
 	print(memoryLoad_text)
-	
+
 	print(disksLoad_text)
 	print(mytoncoreStatus_text)
 	print(validatorStatus_text)
@@ -1087,12 +1077,10 @@ def CreatNewBookmark(ton, args):
 		name = args[0]
 		addr = args[1]
 	except:
-		color_print("{red}Bad args. Usage:{endc} nb <bookmark-name> <account-addr | domain-name>")
+		color_print("{red}Bad args. Usage:{endc} nb <bookmark-name> <account-addr>")
 		return
 	if ton.IsAddr(addr):
 		type = "account"
-	else:
-		type = "domain"
 	#end if
 
 	bookmark = dict()
@@ -1109,7 +1097,7 @@ def PrintBookmarksList(ton, args):
 		print("No data")
 		return
 	table = list()
-	table += [["Name", "Type", "Address / Domain", "Balance / Exp. date"]]
+	table += [["Name", "Type", "Address", "Balance / Exp. date"]]
 	for item in data:
 		name = item.get("name")
 		type = item.get("type")
@@ -1129,36 +1117,6 @@ def DeleteBookmark(ton, args):
 	ton.DeleteBookmark(name, type)
 	color_print("DeleteBookmark - {green}OK{endc}")
 #end define
-
-# def CreatNewAutoTransferRule(args):
-# 	try:
-# 		name = args[0]
-# 		addr = args[1]
-# 	except:
-# 		color_print("{red}Bad args. Usage:{endc} nr <rule-name> <account-addr | domain-name>")
-# 		return
-# 	rule = dict()
-# 	rule["name"] = name
-# 	rule["addr"] = addr
-# 	ton.AddAutoTransferRule(rule)
-# 	color_print("CreatNewAutoTransferRule - {green}OK{endc}")
-# #end define
-
-# def PrintAutoTransferRulesList(args):
-# 	data = ton.GetRules()
-# 	if (data is None or len(data) == 0):
-# 		print("No data")
-# 		return
-# 	table = list()
-# 	table += [["Name", "fix me"]]
-# 	for item in data:
-# 		table += [[item.get("name"), item.get("fix me")]]
-# 	print_table(table)
-# #end define
-
-# def DeleteAutoTransferRule(args):
-# 	print("fix me")
-# #end define
 
 def PrintOffersList(ton, args):
 	data = ton.GetOffers()
@@ -1242,76 +1200,6 @@ def PrintComplaintsList(ton, args):
 				isPassed = bcolors.red_text("false")
 			table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
 		print_table(table)
-#end define
-
-def NewDomain(ton, args):
-	try:
-		domainName = args[0]
-		walletName = args[1]
-		adnlAddr = args[2]
-	except:
-		color_print("{red}Bad args. Usage:{endc} nd <domain-name> <wallet-name> <site-adnl-addr>")
-		return
-	domain = dict()
-	domain["name"] = domainName
-	domain["adnlAddr"] = adnlAddr
-	domain["walletName"] = walletName
-	ton.NewDomain(domain)
-	color_print("NewDomain - {green}OK{endc}")
-#end define
-
-def PrintDomainsList(ton, args):
-	data = ton.GetDomains()
-	if (data is None or len(data) == 0):
-		print("No data")
-		return
-	table = list()
-	table += [["Domain", "Wallet", "Expiration date", "ADNL address"]]
-	for item in data:
-		domainName = item.get("name")
-		walletName = item.get("walletName")
-		endTime = item.get("endTime")
-		endTime = timestamp2datetime(endTime, "%d.%m.%Y")
-		adnlAddr = item.get("adnlAddr")
-		table += [[domainName, walletName, endTime, adnlAddr]]
-	print_table(table)
-#end define
-
-def ViewDomainStatus(ton, args):
-	try:
-		domainName = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} vds <domain-name>")
-		return
-	domain = ton.GetDomain(domainName)
-	endTime = domain.get("endTime")
-	endTime = timestamp2datetime(endTime, "%d.%m.%Y")
-	adnlAddr = domain.get("adnlAddr")
-	table = list()
-	table += [["Domain", "Expiration date", "ADNL address"]]
-	table += [[domainName, endTime, adnlAddr]]
-	print_table(table)
-#end define
-
-def DeleteDomain(ton, args):
-	try:
-		domainName = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} dd <domain-name>")
-		return
-	ton.DeleteDomain(domainName)
-	color_print("DeleteDomain - {green}OK{endc}")
-#end define
-
-def GetDomainFromAuction(ton, args):
-	try:
-		walletName = args[0]
-		addr = args[1]
-	except:
-		color_print("{red}Bad args. Usage:{endc} gdfa <wallet-name> <addr>")
-		return
-	ton.GetDomainFromAuction(walletName, addr)
-	color_print("GetDomainFromAuction - {green}OK{endc}")
 #end define
 
 def PrintElectionEntriesList(ton, args):
