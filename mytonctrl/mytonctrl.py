@@ -42,7 +42,7 @@ from mytoncore.functions import (
 )
 from mytoncore.telemetry import is_host_virtual
 from mytonctrl.migrate import run_migrations
-from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config
+from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex
 
 import sys, getopt, os
 
@@ -334,8 +334,11 @@ def check_git(input_args, default_repo, text, default_branch='master'):
 #end define
 
 def check_branch_exists(author, repo, branch):
+	if is_hex(branch):
+		print('Hex name detected, skip branch existence check.')
+		return
 	url = f"https://github.com/{author}/{repo}.git"
-	args = ["git", "ls-remote", "--heads", url, branch]
+	args = ["git", "ls-remote", "--heads", "--tags", url, branch]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
 	output = process.stdout.decode("utf-8")
 	if branch not in output:

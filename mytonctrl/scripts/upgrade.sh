@@ -63,8 +63,8 @@ rm -rf ${srcdir}/${repo}
 
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git
-cd ${repo}
+git clone --recursive https://github.com/${author}/${repo}.git
+cd ${repo} && git checkout ${branch}
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
 export CCACHE_DISABLE=1
