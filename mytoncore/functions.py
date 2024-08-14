@@ -384,12 +384,6 @@ def Offers(local, ton):
                 ton.VoteOffer(offer_hash)
 # end define
 
-
-def Domains(local, ton):
-    pass
-# end define
-
-
 def Telemetry(local, ton):
     sendTelemetry = local.db.get("sendTelemetry")
     if sendTelemetry is not True:
@@ -565,7 +559,6 @@ def General(local):
     local.start_cycle(Complaints, sec=t, args=(local, ton, ))
     local.start_cycle(Slashing, sec=t, args=(local, ton, ))
 
-    local.start_cycle(Domains, sec=600, args=(local, ton, ))
     local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
     local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
     local.start_cycle(ScanLiteServers, sec=60, args=(local, ton,))
