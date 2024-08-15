@@ -129,7 +129,7 @@ def Init(local, ton, console, argv):
 
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
-	console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
+	# console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
