@@ -439,6 +439,31 @@
 		"ru": "{red}Ошибка - UDP порт валидатора недоступен извне.{endc}",
 		"zh_TW": "{red}錯誤 - 驗證器的 UDP 端口無法從外部訪問.{endc}"
 	},
+	"add_custom_overlay_cmd": {
+		"en": "Add custom overlay",
+		"ru": "Добавить пользовательский оверлей",
+		"zh_TW": "添加自定義覆蓋"
+	},
+	"list_custom_overlays_cmd": {
+		"en": "List participating custom overlays",
+		"ru": "Список участвуемых пользовательских оверлеев",
+		"zh_TW": "列出參與的自定義覆蓋"
+	},
+	"delete_custom_overlay_cmd": {
+		"en": "Delete custom overlay",
+		"ru": "Удалить пользовательский оверлей",
+		"zh_TW": "刪除自定義覆蓋"
+	},
+	"cleanup_cmd": {
+		"en": "Clean node old logs and temp files",
+		"ru": "Очистить старые логи и временные файлы ноды",
+		"zh_TW": "清理節點舊日誌和臨時文件"
+	},
+	"benchmark_cmd": {
+		"en": "Run benchmark",
+		"ru": "Запустить бенчмарк",
+		"zh_TW": "運行基準測試"
+	},
 	"000a": {
 		"en": "001",
 		"ru": "002",
