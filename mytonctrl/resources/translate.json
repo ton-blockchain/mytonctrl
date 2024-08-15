@@ -240,9 +240,9 @@
 		"zh_TW": "選舉狀態: {0}"
 	},
 	"local_status_head": {
-		"en": "{cyan}===[ Local validator status ]==={endc}",
-		"ru": "{cyan}===[ Статус локального валидатора ]==={endc}",
-		"zh_TW": "{cyan}===[ 本地驗證者狀態 ]==={endc}"
+		"en": "{cyan}===[ Node status ]==={endc}",
+		"ru": "{cyan}===[ Статус ноды ]==={endc}",
+		"zh_TW": "{cyan}===[ 节点狀態 ]==={endc}"
 	},
 	"local_status_validator_index": {
 		"en": "Validator index: {0}",
