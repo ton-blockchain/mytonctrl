@@ -726,7 +726,7 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	color_print(local.translate("local_status_head"))
 	if ton.using_validator():
 		print(validatorIndex_text)
-	print(validatorEfficiency_text)
+		print(validatorEfficiency_text)
 	print(adnlAddr_text)
 	print(fullnode_adnl_text)
 	if ton.using_validator():
