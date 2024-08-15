@@ -569,9 +569,9 @@ def PrintStatus(local, ton, args):
 
 	if all_status:
 		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
-	PrintLocalStatus(local, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
+	PrintLocalStatus(local, ton, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
 		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl)
-	if all_status:
+	if all_status and ton.using_validator():
 		PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
@@ -620,7 +620,7 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	print()
 #end define
 
-def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl):
+def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl):
 	if validatorWallet is None:
 		return
 	walletAddr = validatorWallet.addrB64
@@ -724,12 +724,14 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
 
 	color_print(local.translate("local_status_head"))
-	print(validatorIndex_text)
+	if ton.using_validator():
+		print(validatorIndex_text)
 	print(validatorEfficiency_text)
 	print(adnlAddr_text)
 	print(fullnode_adnl_text)
-	print(walletAddr_text)
-	print(walletBalance_text)
+	if ton.using_validator():
+		print(walletAddr_text)
+		print(walletBalance_text)
 	print(cpuLoad_text)
 	print(netLoad_text)
 	print(memoryLoad_text)
