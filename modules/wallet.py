@@ -131,7 +131,7 @@ class WalletModule(MtcModule):
         except:
             color_print("{red}Bad args. Usage:{endc} ew <wallet-name>")
             return
-        addr, key = self.ton.ExportWallet(name)
+        addr, key = self.do_export_wallet(name)
         print("Wallet name:", name)
         print("Address:", addr)
         print("Secret key:", key)
