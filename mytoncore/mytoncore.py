@@ -2840,6 +2840,19 @@ class MyTonCore():
 		return result
 	#end define
 
+	def get_destination_addr(self, destination):
+		if self.IsAddrB64(destination):
+			pass
+		elif self.IsAddrFull(destination):
+			destination = self.AddrFull2AddrB64(destination)
+		else:
+			wallets_name_list = self.GetWalletsNameList()
+			if destination in wallets_name_list:
+				wallet = self.GetLocalWallet(destination)
+				destination = wallet.addrB64
+		return destination
+	# end define
+
 	def AddrFull2AddrB64(self, addrFull, bounceable=True):
 		if addrFull is None or "None" in addrFull:
 			return
