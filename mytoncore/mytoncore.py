@@ -2730,20 +2730,6 @@ class MyTonCore():
 		return None
 	#end define
 
-	def GetAutoTransferRules(self):
-		autoTransferRules = self.local.db.get("autoTransferRules")
-		if autoTransferRules is None:
-			autoTransferRules = list()
-			self.local.db["autoTransferRules"] = autoTransferRules
-		return autoTransferRules
-	#end define
-
-	def AddAutoTransferRule(self, rule):
-		autoTransferRules = self.GetAutoTransferRules()
-		autoTransferRules.append(rule)
-		self.local.save()
-	#end define
-
 	def AddBookmark(self, bookmark):
 		if "bookmarks" not in self.local.db:
 			self.local.db["bookmarks"] = list()
@@ -2760,23 +2746,11 @@ class MyTonCore():
 		return bookmarks
 	#end define
 
-	def GetBookmarkAddr(self, type, name):
-		bookmarks = self.local.db.get("bookmarks", list())
-		for bookmark in bookmarks:
-			bookmarkType = bookmark.get("type")
-			bookmarkName = bookmark.get("name")
-			bookmarkAddr = bookmark.get("addr")
-			if (bookmarkType == type and bookmarkName == name):
-				return bookmarkAddr
-		raise Exception("GetBookmarkAddr error: Bookmark not found")
-	#end define
-
-	def DeleteBookmark(self, name, type):
+	def DeleteBookmark(self, name):
 		bookmarks = self.local.db.get("bookmarks")
 		for bookmark in bookmarks:
-			bookmarkType = bookmark.get("type")
-			bookmarkName = bookmark.get("name")
-			if (type == bookmarkType and name == bookmarkName):
+			bookmark_name = bookmark.get("name")
+			if name == bookmark_name:
 				bookmarks.remove(bookmark)
 				self.local.save()
 				return
@@ -2784,16 +2758,12 @@ class MyTonCore():
 	#end define
 
 	def WriteBookmarkData(self, bookmark):
-		type = bookmark.get("type")
-		if type == "account":
-			addr = bookmark.get("addr")
-			account = self.GetAccount(addr)
-			if account.status == "empty":
-				data = "empty"
-			else:
-				data = account.balance
+		addr = bookmark.get("addr")
+		account = self.GetAccount(addr)
+		if account.status == "empty":
+			data = "empty"
 		else:
-			data = "null"
+			data = account.balance
 		bookmark["data"] = data
 	#end define
 

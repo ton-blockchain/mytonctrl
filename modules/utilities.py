@@ -135,13 +135,12 @@ class UtilitiesModule(MtcModule):
         except:
             color_print("{red}Bad args. Usage:{endc} nb <bookmark-name> <account-addr>")
             return
-        if self.ton.IsAddr(addr):
-            type = "account"
+        if not self.ton.IsAddr(addr):
+            raise Exception("Incorrect address")
         # end if
 
         bookmark = dict()
         bookmark["name"] = name
-        bookmark["type"] = type
         bookmark["addr"] = addr
         self.ton.AddBookmark(bookmark)
         color_print("CreatNewBookmark - {green}OK{endc}")
@@ -153,24 +152,22 @@ class UtilitiesModule(MtcModule):
             print("No data")
             return
         table = list()
-        table += [["Name", "Type", "Address", "Balance / Exp. date"]]
+        table += [["Name", "Address", "Balance / Exp. date"]]
         for item in data:
             name = item.get("name")
-            type = item.get("type")
             addr = item.get("addr")
             bookmark_data = item.get("data")
-            table += [[name, type, addr, bookmark_data]]
+            table += [[name, addr, bookmark_data]]
         print_table(table)
     # end define
 
     def delete_bookmark(self, args):
         try:
             name = args[0]
-            type = args[1]
         except:
-            color_print("{red}Bad args. Usage:{endc} db <bookmark-name> <bookmark-type>")
+            color_print("{red}Bad args. Usage:{endc} db <bookmark-name>")
             return
-        self.ton.DeleteBookmark(name, type)
+        self.ton.DeleteBookmark(name)
         color_print("DeleteBookmark - {green}OK{endc}")
     # end define
 
