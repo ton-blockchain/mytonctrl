@@ -19,7 +19,7 @@ class UtilitiesModule(MtcModule):
         except:
             color_print("{red}Bad args. Usage:{endc} vas <account-addr>")
             return
-        addrB64 = self.get_destination_addr(addrB64)
+        addrB64 = self.ton.get_destination_addr(addrB64)
         account = self.ton.GetAccount(addrB64)
         version = self.ton.GetVersionFromCodeHash(account.codeHash)
         statusTable = list()
@@ -34,11 +34,10 @@ class UtilitiesModule(MtcModule):
         print_table(codeHashTable)
         print()
         print_table(historyTable)
-
     # end define
 
     def get_history_table(self, addr, limit):
-        addr = self.get_destination_addr(addr)
+        addr = self.ton.get_destination_addr(addr)
         account = self.ton.GetAccount(addr)
         history = self.ton.GetAccountHistory(account, limit)
         table = list()
@@ -71,61 +70,6 @@ class UtilitiesModule(MtcModule):
             return
         table = self.get_history_table(addr, limit)
         print_table(table)
-    # end define
-
-    def get_destination_addr(self, destination):
-        if self.ton.IsAddrB64(destination):
-            pass
-        elif self.ton.IsAddrFull(destination):
-            destination = self.ton.AddrFull2AddrB64(destination)
-        else:
-            wallets_name_list = self.ton.GetWalletsNameList()
-            if destination in wallets_name_list:
-                wallet = self.ton.GetLocalWallet(destination)
-                destination = wallet.addrB64
-        return destination
-    # end define
-
-    def move_coins(self, args):
-        try:
-            wallet_name = args[0]
-            destination = args[1]
-            amount = args[2]
-            flags = args[3:]
-        except:
-            color_print("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <amount>")
-            return
-        wallet = self.ton.GetLocalWallet(wallet_name)
-        destination = self.get_destination_addr(destination)
-        self.ton.MoveCoins(wallet, destination, amount, flags=flags)
-        color_print("MoveCoins - {green}OK{endc}")
-    # end define
-
-    def do_move_coins_through_proxy(self, wallet, dest, coins):
-        self.local.add_log("start MoveCoinsThroughProxy function", "debug")
-        wallet1 = self.ton.CreateWallet("proxy_wallet1", 0)
-        wallet2 = self.ton.CreateWallet("proxy_wallet2", 0)
-        self.ton.MoveCoins(wallet, wallet1.addrB64_init, coins)
-        self.ton.ActivateWallet(wallet1)
-        self.ton.MoveCoins(wallet1, wallet2.addrB64_init, "alld")
-        self.ton.ActivateWallet(wallet2)
-        self.ton.MoveCoins(wallet2, dest, "alld", flags=["-n"])
-        wallet1.Delete()
-        wallet2.Delete()
-    # end define
-
-    def move_coins_through_proxy(self, args):
-        try:
-            wallet_name = args[0]
-            destination = args[1]
-            amount = args[2]
-        except:
-            color_print("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <amount>")
-            return
-        wallet = self.ton.GetLocalWallet(wallet_name)
-        destination = self.get_destination_addr(destination)
-        self.do_move_coins_through_proxy(wallet, destination, amount)
-        color_print("MoveCoinsThroughProxy - {green}OK{endc}")
     # end define
 
     def create_new_bookmark(self, args):
@@ -393,8 +337,6 @@ class UtilitiesModule(MtcModule):
     def add_console_commands(self, console):
         console.AddItem("vas", self.view_account_status, self.local.translate("vas_cmd"))
         console.AddItem("vah", self.view_account_history, self.local.translate("vah_cmd"))
-        console.AddItem("mg", self.move_coins, self.local.translate("mg_cmd"))
-        console.AddItem("mgtp", self.move_coins_through_proxy, self.local.translate("mgtp_cmd"))
 
         console.AddItem("nb", self.create_new_bookmark, self.local.translate("nb_cmd"))
         console.AddItem("bl", self.print_bookmarks_list, self.local.translate("bl_cmd"))

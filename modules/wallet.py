@@ -131,7 +131,7 @@ class WalletModule(MtcModule):
         except:
             color_print("{red}Bad args. Usage:{endc} ew <wallet-name>")
             return
-        addr, key = self.ton.ExportWallet(name)
+        addr, key = self.do_export_wallet(name)
         print("Wallet name:", name)
         print("Address:", addr)
         print("Secret key:", key)
@@ -151,6 +151,48 @@ class WalletModule(MtcModule):
         color_print("DeleteWallet - {green}OK{endc}")
     # end define
 
+    def move_coins(self, args):
+        try:
+            wallet_name = args[0]
+            destination = args[1]
+            amount = args[2]
+            flags = args[3:]
+        except:
+            color_print("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <amount>")
+            return
+        wallet = self.ton.GetLocalWallet(wallet_name)
+        destination = self.ton.get_destination_addr(destination)
+        self.ton.MoveCoins(wallet, destination, amount, flags=flags)
+        color_print("MoveCoins - {green}OK{endc}")
+    # end define
+
+    def do_move_coins_through_proxy(self, wallet, dest, coins):
+        self.local.add_log("start MoveCoinsThroughProxy function", "debug")
+        wallet1 = self.ton.CreateWallet("proxy_wallet1", 0)
+        wallet2 = self.ton.CreateWallet("proxy_wallet2", 0)
+        self.ton.MoveCoins(wallet, wallet1.addrB64_init, coins)
+        self.ton.ActivateWallet(wallet1)
+        self.ton.MoveCoins(wallet1, wallet2.addrB64_init, "alld")
+        self.ton.ActivateWallet(wallet2)
+        self.ton.MoveCoins(wallet2, dest, "alld", flags=["-n"])
+        wallet1.Delete()
+        wallet2.Delete()
+    # end define
+
+    def move_coins_through_proxy(self, args):
+        try:
+            wallet_name = args[0]
+            destination = args[1]
+            amount = args[2]
+        except:
+            color_print("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <amount>")
+            return
+        wallet = self.ton.GetLocalWallet(wallet_name)
+        destination = self.ton.get_destination_addr(destination)
+        self.do_move_coins_through_proxy(wallet, destination, amount)
+        color_print("MoveCoinsThroughProxy - {green}OK{endc}")
+    # end define
+
     def add_console_commands(self, console):
         console.AddItem("nw", self.create_new_wallet, self.local.translate("nw_cmd"))
         console.AddItem("aw", self.activate_wallet, self.local.translate("aw_cmd"))
@@ -159,3 +201,5 @@ class WalletModule(MtcModule):
         console.AddItem("swv", self.set_wallet_version, self.local.translate("swv_cmd"))
         console.AddItem("ew", self.export_wallet, self.local.translate("ex_cmd"))
         console.AddItem("dw", self.delete_wallet, self.local.translate("dw_cmd"))
+        console.AddItem("mg", self.move_coins, self.local.translate("mg_cmd"))
+        console.AddItem("mgtp", self.move_coins_through_proxy, self.local.translate("mgtp_cmd"))
