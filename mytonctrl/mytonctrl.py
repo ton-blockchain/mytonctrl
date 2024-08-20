@@ -304,7 +304,7 @@ def check_git(input_args, default_repo, text, default_branch='master'):
 #end define
 
 def check_branch_exists(author, repo, branch):
-	if is_hex(branch):
+	if len(branch) >= 6 and is_hex(branch):
 		print('Hex name detected, skip branch existence check.')
 		return
 	url = f"https://github.com/{author}/{repo}.git"

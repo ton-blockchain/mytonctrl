@@ -37,8 +37,8 @@ pip3 uninstall -y mytonctrl
 
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git
-cd ${repo}
+git clone --recursive https://github.com/${author}/${repo}.git
+cd ${repo} && git checkout ${branch}
 pip3 install -U .
 
 systemctl daemon-reload
