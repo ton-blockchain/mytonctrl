@@ -247,7 +247,7 @@ def Installer(args):
 	# args = ["python3", "/usr/src/mytonctrl/mytoninstaller.py"]
 	cmd = ["python3", "-m", "mytoninstaller"]
 	if args:
-		cmd += ["-c", *args]
+		cmd += ["-c", " ".join(args)]
 	subprocess.run(cmd)
 #end define
 
