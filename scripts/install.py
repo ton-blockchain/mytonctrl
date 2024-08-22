@@ -76,7 +76,7 @@ def parse_args(answers: dict):
             validator_mode = 'liquid-staking'
         res += f' -m {validator_mode}'
     else:
-        res += f'-m {mode}'
+        res += f' -m {mode}'
 
     if dump:
         res += ' -d'
@@ -90,6 +90,7 @@ def main():
     answers = run_cli()
     command = parse_args(answers)
     # subprocess.run('bash scripts/install.sh ' + command, shell=True)
+    print('bash install.sh ' + command)
     subprocess.run('bash install.sh ' + command, shell=True)
 
 
