@@ -240,9 +240,9 @@
 		"zh_TW": "選舉狀態: {0}"
 	},
 	"local_status_head": {
-		"en": "{cyan}===[ Local validator status ]==={endc}",
-		"ru": "{cyan}===[ Статус локального валидатора ]==={endc}",
-		"zh_TW": "{cyan}===[ 本地驗證者狀態 ]==={endc}"
+		"en": "{cyan}===[ Node status ]==={endc}",
+		"ru": "{cyan}===[ Статус ноды ]==={endc}",
+		"zh_TW": "{cyan}===[ 节点狀態 ]==={endc}"
 	},
 	"local_status_validator_index": {
 		"en": "Validator index: {0}",
@@ -438,6 +438,31 @@
 		"en": "{red}Error - UDP port of the validator is not accessible from the outside.{endc}",
 		"ru": "{red}Ошибка - UDP порт валидатора недоступен извне.{endc}",
 		"zh_TW": "{red}錯誤 - 驗證器的 UDP 端口無法從外部訪問.{endc}"
+	},
+	"add_custom_overlay_cmd": {
+		"en": "Add custom overlay",
+		"ru": "Добавить пользовательский оверлей",
+		"zh_TW": "添加自定義覆蓋"
+	},
+	"list_custom_overlays_cmd": {
+		"en": "List participating custom overlays",
+		"ru": "Список участвуемых пользовательских оверлеев",
+		"zh_TW": "列出參與的自定義覆蓋"
+	},
+	"delete_custom_overlay_cmd": {
+		"en": "Delete custom overlay",
+		"ru": "Удалить пользовательский оверлей",
+		"zh_TW": "刪除自定義覆蓋"
+	},
+	"cleanup_cmd": {
+		"en": "Clean node old logs and temp files",
+		"ru": "Очистить старые логи и временные файлы ноды",
+		"zh_TW": "清理節點舊日誌和臨時文件"
+	},
+	"benchmark_cmd": {
+		"en": "Run benchmark",
+		"ru": "Запустить бенчмарк",
+		"zh_TW": "運行基準測試"
 	},
 	"000a": {
 		"en": "001",
