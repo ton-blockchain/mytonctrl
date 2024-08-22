@@ -77,8 +77,6 @@ if (( $# == 0 )); then  # no arguments
     exit
 fi
 
-exit
-
 # Set config based on network argument
 if [ "${network}" = "testnet" ]; then
     config="https://ton-blockchain.github.io/testnet-global.config.json"
