@@ -67,6 +67,17 @@ while getopts ":c:tida:r:b:m:n:v:h" flag; do
     esac
 done
 
+if (( $# == 0 )); then  # no arguments
+    echo "Running cli installer"
+    wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
+    pip3 install inquirer
+    python3 install.py
+#    python3 scripts/install.py
+    exit
+fi
+
+exit
+
 # Set config based on network argument
 if [ "${network}" = "testnet" ]; then
     config="https://ton-blockchain.github.io/testnet-global.config.json"
@@ -81,7 +92,7 @@ cpus=$(lscpu | grep "CPU(s)" | head -n 1 | awk '{print $2}')
 memory=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
 
 echo "This machine has ${cpus} CPUs and ${memory}KB of Memory"
-if [ "$ignore" = false ] && ([ "${cpus}" -lt "${cpu_required}" ] || [ "${memory}" -lt "${mem_required}"]); then
+if [ "$ignore" = false ] && ([ "${cpus}" -lt "${cpu_required}" ] || [ "${memory}" -lt "${mem_required}" ]); then
 	echo "Insufficient resources. Requires a minimum of "${cpu_required}"  processors and  "${mem_required}" RAM."
 	exit 1
 fi

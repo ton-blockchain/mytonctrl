@@ -55,8 +55,8 @@ def Event(local, event_name):
         ValidatorDownEvent(local)
     elif event_name == "enable_ton_storage_provider":
         enable_ton_storage_provider_event(local)
-    elif event_name == "enable_liteserver_mode":
-        enable_liteserver_mode(local)
+    elif event_name.startswith("enable_mode"):
+        enable_mode(local, event_name)
     local.exit()
 # end define
 
@@ -93,10 +93,12 @@ def enable_ton_storage_provider_event(local):
 #end define
 
 
-def enable_liteserver_mode(local):
+def enable_mode(local, event_name):
     ton = MyTonCore(local)
-    ton.disable_mode('validator')
-    ton.enable_mode('liteserver')
+    mode = event_name.split("_")[-1]
+    if mode == "liteserver":
+        ton.disable_mode('validator')
+    ton.enable_mode(mode)
 #end define
 
 
