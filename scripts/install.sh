@@ -67,6 +67,7 @@ while getopts ":c:tida:r:b:m:n:v:h" flag; do
     esac
 done
 
+
 if (( $# == 0 )); then  # no arguments
     echo "Running cli installer"
     wget https://raw.githubusercontent.com/yungwine/mytonctrl/cli/scripts/install.py

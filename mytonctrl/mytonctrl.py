@@ -80,34 +80,6 @@ def Init(local, ton, console, argv):
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
 	console.AddItem("rollback", inject_globals(rollback_to_mtc1), local.translate("rollback_cmd"))
 
-	console.AddItem("seqno", inject_globals(Seqno), local.translate("seqno_cmd"))
-	console.AddItem("getconfig", inject_globals(GetConfig), local.translate("getconfig_cmd"))
-	console.AddItem("get_pool_data", inject_globals(GetPoolData), local.translate("get_pool_data_cmd"))
-
-	console.AddItem("nw", inject_globals(CreatNewWallet), local.translate("nw_cmd"))
-	console.AddItem("aw", inject_globals(ActivateWallet), local.translate("aw_cmd"))
-	console.AddItem("wl", inject_globals(PrintWalletsList), local.translate("wl_cmd"))
-	console.AddItem("iw", inject_globals(ImportWallet), local.translate("iw_cmd"))
-	console.AddItem("swv", inject_globals(SetWalletVersion), local.translate("swv_cmd"))
-	console.AddItem("ew", inject_globals(ExportWallet), local.translate("ex_cmd"))
-	console.AddItem("dw", inject_globals(DeleteWallet), local.translate("dw_cmd"))
-
-	console.AddItem("vas", inject_globals(ViewAccountStatus), local.translate("vas_cmd"))
-	console.AddItem("vah", inject_globals(ViewAccountHistory), local.translate("vah_cmd"))
-	console.AddItem("mg", inject_globals(MoveCoins), local.translate("mg_cmd"))
-	console.AddItem("mgtp", inject_globals(MoveCoinsThroughProxy), local.translate("mgtp_cmd"))
-
-	console.AddItem("nb", inject_globals(CreatNewBookmark), local.translate("nb_cmd"))
-	console.AddItem("bl", inject_globals(PrintBookmarksList), local.translate("bl_cmd"))
-	console.AddItem("db", inject_globals(DeleteBookmark), local.translate("db_cmd"))
-
-	console.AddItem("ol", inject_globals(PrintOffersList), local.translate("ol_cmd"))
-	console.AddItem("od", inject_globals(OfferDiff), local.translate("od_cmd"))
-
-	console.AddItem("el", inject_globals(PrintElectionEntriesList), local.translate("el_cmd"))
-	console.AddItem("vl", inject_globals(PrintValidatorList), local.translate("vl_cmd"))
-	console.AddItem("cl", inject_globals(PrintComplaintsList), local.translate("cl_cmd"))
-
 	#console.AddItem("xrestart", inject_globals(Xrestart), local.translate("xrestart_cmd"))
 	#console.AddItem("xlist", inject_globals(Xlist), local.translate("xlist_cmd"))
 	#console.AddItem("gpk", inject_globals(GetPubKey), local.translate("gpk_cmd"))
@@ -118,13 +90,21 @@ def Init(local, ton, console, argv):
 	module = CustomOverlayModule(ton, local)
 	module.add_console_commands(console)
 
-	from modules.collator_config import CollatorConfigModule
-	module = CollatorConfigModule(ton, local)
-	module.add_console_commands(console)
-
 	if ton.using_validator():
 		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
+		module.add_console_commands(console)
+
+		from modules.collator_config import CollatorConfigModule
+		module = CollatorConfigModule(ton, local)
+		module.add_console_commands(console)
+
+		from modules.wallet import WalletModule
+		module = WalletModule(ton, local)
+		module.add_console_commands(console)
+
+		from modules.utilities import UtilitiesModule
+		module = UtilitiesModule(ton, local)
 		module.add_console_commands(console)
 
 		if ton.using_pool():  # add basic pool functions (pools_list, delete_pool, import_pool)
@@ -149,7 +129,7 @@ def Init(local, ton, console, argv):
 
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
-	console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
+	# console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -501,15 +481,6 @@ def CheckTonUpdate(local):
 		color_print(local.translate("ton_update_available"))
 #end define
 
-def PrintTest(local, args):
-	print(json.dumps(local.buffer, indent=2))
-#end define
-
-def sl(ton, args):
-	Slashing(ton.local, ton)
-#end define
-
-
 def mode_status(ton, args):
 	from modules import get_mode
 	modes = ton.get_modes()
@@ -598,9 +569,9 @@ def PrintStatus(local, ton, args):
 
 	if all_status:
 		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
-	PrintLocalStatus(local, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
+	PrintLocalStatus(local, ton, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
 		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl)
-	if all_status:
+	if all_status and ton.using_validator():
 		PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
@@ -649,7 +620,7 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	print()
 #end define
 
-def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl):
+def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl):
 	if validatorWallet is None:
 		return
 	walletAddr = validatorWallet.addrB64
@@ -753,12 +724,14 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
 
 	color_print(local.translate("local_status_head"))
-	print(validatorIndex_text)
-	print(validatorEfficiency_text)
+	if ton.using_validator():
+		print(validatorIndex_text)
+		print(validatorEfficiency_text)
 	print(adnlAddr_text)
 	print(fullnode_adnl_text)
-	print(walletAddr_text)
-	print(walletBalance_text)
+	if ton.using_validator():
+		print(walletAddr_text)
+		print(walletBalance_text)
 	print(cpuLoad_text)
 	print(netLoad_text)
 	print(memoryLoad_text)
@@ -875,408 +848,6 @@ def GetColorTime(datetime, timestamp):
 	return result
 #end define
 
-def Seqno(ton, args):
-	try:
-		walletName = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} seqno <wallet-name>")
-		return
-	wallet = ton.GetLocalWallet(walletName)
-	seqno = ton.GetSeqno(wallet)
-	print(walletName, "seqno:", seqno)
-#end define
-
-def CreatNewWallet(ton, args):
-	version = "v1"
-	try:
-		if len(args) == 0:
-			walletName = ton.GenerateWalletName()
-			workchain = 0
-		else:
-			workchain = int(args[0])
-			walletName = args[1]
-		if len(args) > 2:
-			version = args[2]
-		if len(args) == 4:
-			subwallet = int(args[3])
-		else:
-			subwallet = 698983191 + workchain # 0x29A9A317 + workchain
-	except:
-		color_print("{red}Bad args. Usage:{endc} nw <workchain-id> <wallet-name> [<version> <subwallet>]")
-		return
-	wallet = ton.CreateWallet(walletName, workchain, version, subwallet=subwallet)
-	table = list()
-	table += [["Name", "Workchain", "Address"]]
-	table += [[wallet.name, wallet.workchain, wallet.addrB64_init]]
-	print_table(table)
-#end define
-
-def ActivateWallet(local, ton, args):
-	try:
-		walletName = args[0]
-	except Exception as err:
-		walletName = "all"
-	if walletName == "all":
-		ton.WalletsCheck()
-	else:
-		wallet = ton.GetLocalWallet(walletName)
-		ton.ActivateWallet(wallet)
-	color_print("ActivateWallet - {green}OK{endc}")
-#end define
-
-def PrintWalletsList(ton, args):
-	table = list()
-	table += [["Name", "Status", "Balance", "Ver", "Wch", "Address"]]
-	data = ton.GetWallets()
-	if (data is None or len(data) == 0):
-		print("No data")
-		return
-	for wallet in data:
-		account = ton.GetAccount(wallet.addrB64)
-		if account.status != "active":
-			wallet.addrB64 = wallet.addrB64_init
-		table += [[wallet.name, account.status, account.balance, wallet.version, wallet.workchain, wallet.addrB64]]
-	print_table(table)
-#end define
-
-def ImportWallet(ton, args):
-	try:
-		addr = args[0]
-		key = args[1]
-	except:
-		color_print("{red}Bad args. Usage:{endc} iw <wallet-addr> <wallet-secret-key>")
-		return
-	name = ton.ImportWallet(addr, key)
-	print("Wallet name:", name)
-#end define
-
-def SetWalletVersion(ton, args):
-	try:
-		addr = args[0]
-		version = args[1]
-	except:
-		color_print("{red}Bad args. Usage:{endc} swv <wallet-addr> <wallet-version>")
-		return
-	ton.SetWalletVersion(addr, version)
-	color_print("SetWalletVersion - {green}OK{endc}")
-#end define
-
-def ExportWallet(ton, args):
-	try:
-		name = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} ew <wallet-name>")
-		return
-	addr, key = ton.ExportWallet(name)
-	print("Wallet name:", name)
-	print("Address:", addr)
-	print("Secret key:", key)
-#end define
-
-def DeleteWallet(ton, args):
-	try:
-		walletName = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} dw <wallet-name>")
-		return
-	if input("Are you sure you want to delete this wallet (yes/no): ") != "yes":
-		print("Cancel wallet deletion")
-		return
-	wallet = ton.GetLocalWallet(walletName)
-	wallet.Delete()
-	color_print("DeleteWallet - {green}OK{endc}")
-#end define
-
-def ViewAccountStatus(ton, args):
-	try:
-		addrB64 = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} vas <account-addr>")
-		return
-	addrB64 = ton.GetDestinationAddr(addrB64)
-	account = ton.GetAccount(addrB64)
-	version = ton.GetVersionFromCodeHash(account.codeHash)
-	statusTable = list()
-	statusTable += [["Address", "Status", "Balance", "Version"]]
-	statusTable += [[addrB64, account.status, account.balance, version]]
-	codeHashTable = list()
-	codeHashTable += [["Code hash"]]
-	codeHashTable += [[account.codeHash]]
-	historyTable = GetHistoryTable(ton, addrB64, 10)
-	print_table(statusTable)
-	print()
-	print_table(codeHashTable)
-	print()
-	print_table(historyTable)
-#end define
-
-def ViewAccountHistory(ton, args):
-	try:
-		addr = args[0]
-		limit = int(args[1])
-	except:
-		color_print("{red}Bad args. Usage:{endc} vah <account-addr> <limit>")
-		return
-	table = GetHistoryTable(ton, addr, limit)
-	print_table(table)
-#end define
-
-def GetHistoryTable(ton, addr, limit):
-	addr = ton.GetDestinationAddr(addr)
-	account = ton.GetAccount(addr)
-	history = ton.GetAccountHistory(account, limit)
-	table = list()
-	typeText = color_text("{red}{bold}{endc}")
-	table += [["Time", typeText, "Coins", "From/To"]]
-	for message in history:
-		if message.srcAddr is None:
-			continue
-		srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
-		destAddFull = f"{message.destWorkchain}:{message.destAddr}"
-		if srcAddrFull == account.addrFull:
-			type = color_text("{red}{bold}>>>{endc}")
-			fromto = destAddFull
-		else:
-			type = color_text("{blue}{bold}<<<{endc}")
-			fromto = srcAddrFull
-		fromto = ton.AddrFull2AddrB64(fromto)
-		#datetime = timestamp2datetime(message.time, "%Y.%m.%d %H:%M:%S")
-		datetime = timeago(message.time)
-		table += [[datetime, type, message.value, fromto]]
-	return table
-#end define
-
-def MoveCoins(ton, args):
-	try:
-		walletName = args[0]
-		destination = args[1]
-		amount = args[2]
-		flags = args[3:]
-	except:
-		color_print("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <amount>")
-		return
-	wallet = ton.GetLocalWallet(walletName)
-	destination = ton.GetDestinationAddr(destination)
-	ton.MoveCoins(wallet, destination, amount, flags=flags)
-	color_print("MoveCoins - {green}OK{endc}")
-#end define
-
-def MoveCoinsThroughProxy(ton, args):
-	try:
-		walletName = args[0]
-		destination = args[1]
-		amount = args[2]
-	except:
-		color_print("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <amount>")
-		return
-	wallet = ton.GetLocalWallet(walletName)
-	destination = ton.GetDestinationAddr(destination)
-	ton.MoveCoinsThroughProxy(wallet, destination, amount)
-	color_print("MoveCoinsThroughProxy - {green}OK{endc}")
-#end define
-
-def CreatNewBookmark(ton, args):
-	try:
-		name = args[0]
-		addr = args[1]
-	except:
-		color_print("{red}Bad args. Usage:{endc} nb <bookmark-name> <account-addr>")
-		return
-	if ton.IsAddr(addr):
-		type = "account"
-	#end if
-
-	bookmark = dict()
-	bookmark["name"] = name
-	bookmark["type"] = type
-	bookmark["addr"] = addr
-	ton.AddBookmark(bookmark)
-	color_print("CreatNewBookmark - {green}OK{endc}")
-#end define
-
-def PrintBookmarksList(ton, args):
-	data = ton.GetBookmarks()
-	if (data is None or len(data) == 0):
-		print("No data")
-		return
-	table = list()
-	table += [["Name", "Type", "Address", "Balance / Exp. date"]]
-	for item in data:
-		name = item.get("name")
-		type = item.get("type")
-		addr = item.get("addr")
-		bookmark_data = item.get("data")
-		table += [[name, type, addr, bookmark_data]]
-	print_table(table)
-#end define
-
-def DeleteBookmark(ton, args):
-	try:
-		name = args[0]
-		type = args[1]
-	except:
-		color_print("{red}Bad args. Usage:{endc} db <bookmark-name> <bookmark-type>")
-		return
-	ton.DeleteBookmark(name, type)
-	color_print("DeleteBookmark - {green}OK{endc}")
-#end define
-
-def PrintOffersList(ton, args):
-	data = ton.GetOffers()
-	if (data is None or len(data) == 0):
- 		print("No data")
- 		return
-	if "--json" in args:
-		text = json.dumps(data, indent=2)
-		print(text)
-	else:
-		table = list()
-		table += [["Hash", "Config", "Votes", "W/L", "Approved", "Is passed"]]
-		for item in data:
-			hash = item.get("hash")
-			votedValidators = len(item.get("votedValidators"))
-			wins = item.get("wins")
-			losses = item.get("losses")
-			wl = "{0}/{1}".format(wins, losses)
-			approvedPercent = item.get("approvedPercent")
-			approvedPercent_text = "{0}%".format(approvedPercent)
-			isPassed = item.get("isPassed")
-			if "hash" not in args:
-				hash = Reduct(hash)
-			if isPassed == True:
-				isPassed = bcolors.green_text("true")
-			if isPassed == False:
-				isPassed = bcolors.red_text("false")
-			table += [[hash, item.config.id, votedValidators, wl, approvedPercent_text, isPassed]]
-		print_table(table)
-#end define
-
-def OfferDiff(ton, args):
-	try:
-		offerHash = args[0]
-		offerHash = offerHash
-	except:
-		color_print("{red}Bad args. Usage:{endc} od <offer-hash>")
-		return
-	ton.GetOfferDiff(offerHash)
-#end define
-
-def GetConfig(ton, args):
-	try:
-		configId = args[0]
-		configId = int(configId)
-	except:
-		color_print("{red}Bad args. Usage:{endc} gc <config-id>")
-		return
-	data = ton.GetConfig(configId)
-	text = json.dumps(data, indent=2)
-	print(text)
-#end define
-
-def PrintComplaintsList(ton, args):
-	past = "past" in args
-	data = ton.GetComplaints(past=past)
-	if (data is None or len(data) == 0):
-		print("No data")
-		return
-	if "--json" in args:
-		text = json.dumps(data, indent=2)
-		print(text)
-	else:
-		table = list()
-		table += [["Election id", "ADNL", "Fine (part)", "Votes", "Approved", "Is passed"]]
-		for key, item in data.items():
-			electionId = item.get("electionId")
-			adnl = item.get("adnl")
-			suggestedFine = item.get("suggestedFine")
-			suggestedFinePart = item.get("suggestedFinePart")
-			Fine_text = "{0} ({1})".format(suggestedFine, suggestedFinePart)
-			votedValidators = len(item.get("votedValidators"))
-			approvedPercent = item.get("approvedPercent")
-			approvedPercent_text = "{0}%".format(approvedPercent)
-			isPassed = item.get("isPassed")
-			if "adnl" not in args:
-				adnl = Reduct(adnl)
-			if isPassed == True:
-				isPassed = bcolors.green_text("true")
-			if isPassed == False:
-				isPassed = bcolors.red_text("false")
-			table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
-		print_table(table)
-#end define
-
-def PrintElectionEntriesList(ton, args):
-	past = "past" in args
-	data = ton.GetElectionEntries(past=past)
-	if (data is None or len(data) == 0):
-		print("No data")
-		return
-	if "--json" in args:
-		text = json.dumps(data, indent=2)
-		print(text)
-	else:
-		table = list()
-		table += [["ADNL", "Pubkey", "Wallet", "Stake", "Max-factor"]]
-		for key, item in data.items():
-			adnl = item.get("adnlAddr")
-			pubkey = item.get("pubkey")
-			walletAddr = item.get("walletAddr")
-			stake = item.get("stake")
-			maxFactor = item.get("maxFactor")
-			if "adnl" not in args:
-				adnl = Reduct(adnl)
-			if "pubkey" not in args:
-				pubkey = Reduct(pubkey)
-			if "wallet" not in args:
-				walletAddr = Reduct(walletAddr)
-			table += [[adnl, pubkey, walletAddr, stake, maxFactor]]
-		print_table(table)
-#end define
-
-def PrintValidatorList(ton, args):
-	past = "past" in args
-	data = ton.GetValidatorsList(past=past)
-	if (data is None or len(data) == 0):
-		print("No data")
-		return
-	if "--json" in args:
-		text = json.dumps(data, indent=2)
-		print(text)
-	else:
-		table = list()
-		table += [["ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
-		for item in data:
-			adnl = item.get("adnlAddr")
-			pubkey = item.get("pubkey")
-			walletAddr = item.get("walletAddr")
-			efficiency = item.get("efficiency")
-			online = item.get("online")
-			if "adnl" not in args:
-				adnl = Reduct(adnl)
-			if "pubkey" not in args:
-				pubkey = Reduct(pubkey)
-			if "wallet" not in args:
-				walletAddr = Reduct(walletAddr)
-			if "offline" in args and online != False:
-				continue
-			if online == True:
-				online = bcolors.green_text("true")
-			if online == False:
-				online = bcolors.red_text("false")
-			table += [[adnl, pubkey, walletAddr, efficiency, online]]
-		print_table(table)
-#end define
-
-def Reduct(item):
-	item = str(item)
-	if item is None:
-		result = None
-	else:
-		end = len(item)
-		result = item[0:6] + "..." + item[end-6:end]
-	return result
-#end define
-
 def GetSettings(ton, args):
 	try:
 		name = args[0]
@@ -1376,21 +947,6 @@ def SignShardOverlayCert(ton, args):
 
 def ImportShardOverlayCert(ton, args):
 	ton.ImportShardOverlayCert()
-#end define
-
-def GetPoolData(ton, args):
-	try:
-		pool_name = args[0]
-	except:
-		color_print("{red}Bad args. Usage:{endc} get_pool_data <pool-name | pool-addr>")
-		return
-	if ton.IsAddr(pool_name):
-		pool_addr = pool_name
-	else:
-		pool = ton.GetLocalPool(pool_name)
-		pool_addr = pool.addrB64
-	pool_data = ton.GetPoolData(pool_addr)
-	print(json.dumps(pool_data, indent=4))
 #end define
 
 
