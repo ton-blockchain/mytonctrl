@@ -67,7 +67,13 @@ def parse_args(answers: dict):
     if archive_ttl:
         os.putenv('ARCHIVE_TTL', archive_ttl)  # set env variable
 
-    if validator_mode:
+    if validator_mode and validator_mode not in ('Skip', 'Validator wallet'):
+        if validator_mode == 'Nominator pool':
+            validator_mode = 'nominator-pool'
+        elif validator_mode == 'Single pool':
+            validator_mode = 'single-pool'
+        elif validator_mode == 'Liquid Staking':
+            validator_mode = 'liquid-staking'
         res += f' -m {validator_mode}'
     else:
         res += f'-m {mode}'
