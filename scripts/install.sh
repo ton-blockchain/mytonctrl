@@ -69,7 +69,7 @@ done
 
 if (( $# == 0 )); then  # no arguments
     echo "Running cli installer"
-    wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
+    wget https://raw.githubusercontent.com/yungwine/mytonctrl/cli/scripts/install.py
     pip3 install inquirer
     python3 install.py
 #    python3 scripts/install.py

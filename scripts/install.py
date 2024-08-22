@@ -90,7 +90,7 @@ def main():
     answers = run_cli()
     command = parse_args(answers)
     # subprocess.run('bash scripts/install.sh ' + command, shell=True)
-    subprocess.run('python3 install.sh ' + command, shell=True)
+    subprocess.run('bash install.sh ' + command, shell=True)
 
 
 if __name__ == '__main__':
