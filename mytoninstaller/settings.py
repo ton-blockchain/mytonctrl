@@ -86,28 +86,28 @@ def FirstNodeSettings(local):
 
 
 def DownloadDump(local):
-	dump = local.buffer.dump
-	if dump == False:
-		return
-	#end if
+    dump = local.buffer.dump
+    if dump == False:
+        return
+    #end if
 
-	local.add_log("start DownloadDump fuction", "debug")
-	url = "https://dump.ton.org"
-	dumpSize = requests.get(url + "/dumps/latest.tar.size.archive.txt").text
-	print("dumpSize:", dumpSize)
-	needSpace = int(dumpSize) * 3
-	diskSpace = psutil.disk_usage("/var")
-	if needSpace > diskSpace.free:
-		return
-	#end if
+    local.add_log("start DownloadDump function", "debug")
+    url = "https://dump.ton.org"
+    dumpSize = requests.get(url + "/dumps/latest.tar.size.archive.txt").text
+    print("dumpSize:", dumpSize)
+    needSpace = int(dumpSize) * 3
+    diskSpace = psutil.disk_usage("/var")
+    if needSpace > diskSpace.free:
+        return
+    #end if
 
-	# apt install
-	cmd = "apt install plzip pv curl -y"
-	os.system(cmd)
+    # apt install
+    cmd = "apt install plzip pv aria2 curl -y"
+    os.system(cmd)
 
-	# download dump
-	cmd = "curl -s {url}/dumps/latest.tar.lz | pv | plzip -d -n8 | tar -xC /var/ton-work/db".format(url=url)
-	os.system(cmd)
+    # download dump using aria2c with 8 connections
+    cmd = "aria2c -x 8 -s 8 -c {url}/dumps/latest.tar.lz -o - | pv | plzip -d -n8 | tar -xC /var/ton-work/db".format(url=url)
+    os.system(cmd)
 #end define
 
 
