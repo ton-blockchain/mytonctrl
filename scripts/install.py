@@ -91,7 +91,7 @@ def main():
     command = parse_args(answers)
     # subprocess.run('bash scripts/install.sh ' + command, shell=True)
     print('bash install.sh ' + command)
-    subprocess.run('bash install.sh ' + command, shell=True)
+    subprocess.run(['bash', 'install.sh'] + command.split())
 
 
 if __name__ == '__main__':

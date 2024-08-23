@@ -138,7 +138,7 @@ echo -e "${COLOR}[4/5]${ENDC} Running mytoninstaller"
 
 parent_name=$(ps -p $PPID -o comm=)
 user=$(whoami)
-if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ]; then
+if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ] || [ "$parent_name" = "python3" ]; then
     user=$(logname)
 fi
 echo "User: $user"
