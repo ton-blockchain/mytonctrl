@@ -84,7 +84,6 @@ def FirstNodeSettings(local):
 	StartValidator(local)
 #end define
 
-
 def DownloadDump(local):
     dump = local.buffer.dump
     if dump == False:
@@ -113,8 +112,13 @@ def DownloadDump(local):
     # process the downloaded file
     cmd = "pv {temp_file} | plzip -d -n8 | tar -xC /var/ton-work/db"
     os.system(cmd)
-#end define
 
+    # clean up the temporary file after processing
+    if os.path.exists(temp_file):
+        os.remove(temp_file)
+        local.add_log("Temporary file {temp_file} removed".format(temp_file=temp_file), "debug")
+    #end if
+#end define
 
 def FirstMytoncoreSettings(local):
 	local.add_log("start FirstMytoncoreSettings fuction", "debug")
