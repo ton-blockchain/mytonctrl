@@ -105,8 +105,13 @@ def DownloadDump(local):
     cmd = "apt install plzip pv aria2 curl -y"
     os.system(cmd)
 
-    # download dump using aria2c with 8 connections
-    cmd = "aria2c -x 8 -s 8 -c {url}/dumps/latest.tar.lz -o - | pv | plzip -d -n8 | tar -xC /var/ton-work/db".format(url=url)
+    # download dump using aria2c to a temporary file
+    temp_file = "/tmp/latest.tar.lz"
+    cmd = "aria2c -x 8 -s 8 -c {url}/dumps/latest.tar.lz -o {temp_file}".format(url=url, temp_file=temp_file)
+    os.system(cmd)
+
+    # process the downloaded file
+    cmd = "pv {temp_file} | plzip -d -n8 | tar -xC /var/ton-work/db"
     os.system(cmd)
 #end define
 
