@@ -2269,7 +2269,7 @@ class MyTonCore():
 	def get_slashing_timestamps(start: int, end: int):
 		st = start
 		result = []
-		dif = (end - start) / 4  # divide into 4 parts
+		dif = int((end - start) / 4)  # divide into 4 parts
 		for i in range(4):
 			result.append((start, start + dif))
 			start += dif
@@ -2472,11 +2472,10 @@ class MyTonCore():
 		return validators
 	#end define
 
-	def CheckValidators(self, start, end):
+	def CheckValidators(self, election_id, start, end):
 		self.local.add_log("start CheckValidators function", "debug")
-		electionId = start
-		complaints = self.GetComplaints(electionId)
-		valid_complaints = self.get_valid_complaints(complaints, electionId)
+		complaints = self.GetComplaints(election_id)
+		valid_complaints = self.get_valid_complaints(complaints, election_id)
 		voted_complaints = self.GetVotedComplaints(complaints)
 		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
@@ -2496,15 +2495,15 @@ class MyTonCore():
 			var1 = item.get("var1")
 			var2 = item.get("var2")
 			pubkey = item.get("pubkey")
-			pseudohash = pubkey + str(electionId)
+			pseudohash = pubkey + str(election_id)
 			if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create additional complaints for validator if somebody has already started do it
 				continue
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)
-			fileName = self.PrepareComplaint(electionId, fileName)
+			fileName = self.PrepareComplaint(election_id, fileName)
 			fileName = self.SignBocWithWallet(wallet, fileName, fullElectorAddr, 300)
 			self.SendFile(fileName, wallet)
-			self.local.add_log("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, electionId), "debug")
+			self.local.add_log("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, election_id), "debug")
 	#end define
 
 	def GetOffer(self, offerHash):

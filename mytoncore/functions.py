@@ -483,9 +483,10 @@ def Complaints(local, ton):
     election_id = config32.get("startWorkTime")
     complaints = ton.GetComplaints(election_id)  # get complaints from Elector
     valid_complaints = ton.get_valid_complaints(complaints, election_id)
-    for c in valid_complaints.values():
-        complaint_hash = c.get("hash")
-        ton.VoteComplaint(election_id, complaint_hash)
+    for validator_complaints in valid_complaints.values():
+        for c in validator_complaints:
+            complaint_hash = c.get("hash")
+            ton.VoteComplaint(election_id, complaint_hash)
 # end define
 
 
@@ -499,6 +500,7 @@ def Slashing(local, ton):
     slash_time = local.buffer.slash_time
     config32 = ton.GetConfig32()
     start = config32.get("startWorkTime")
+    election_id = start
     end = config32.get("endWorkTime")
     config15 = ton.GetConfig15()
     ts = get_timestamp()
@@ -508,7 +510,7 @@ def Slashing(local, ton):
     if slash_time != start:
         ts = ton.get_slashing_timestamps(start, end - 60)
         for s, e in ts:
-            ton.CheckValidators(s, e)
+            ton.CheckValidators(election_id, s, e)
             time.sleep(5)
         local.buffer.slash_time = start
 # end define
