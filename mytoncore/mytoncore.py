@@ -2265,15 +2265,31 @@ class MyTonCore():
 		return ok
 	#end define
 
+	@staticmethod
+	def get_slashing_timestamps(start: int, end: int):
+		st = start
+		result = []
+		dif = (end - start) / 4  # divide into 4 parts
+		for i in range(4):
+			result.append((start, start + dif))
+			start += dif
+		result.append((st, end))
+		return result
+
 	def get_valid_complaints(self, complaints: dict, election_id: int):
 		self.local.add_log("start get_valid_complaints function", "debug")
 		config32 = self.GetConfig32()
 		start = config32.get("startWorkTime")
 		assert start == election_id, 'provided election_id != election_id from config32'
 		end = config32.get("endWorkTime")
-		validators_load = self.GetValidatorsLoad(start, end - 60, saveCompFiles=True)
+		validators_load = []
+		ts = self.get_slashing_timestamps(start, end - 60)
+		for s, e in ts:
+			validators_load.append(self.GetValidatorsLoad(s, e, saveCompFiles=True))
 		voted_complaints = self.GetVotedComplaints(complaints)
-		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
+		voted_complaints_pseudohashes = {}  # {pseudohash: count}
+		for c in voted_complaints.values():
+			voted_complaints_pseudohashes[c['pseudohash']] = voted_complaints_pseudohashes.get(c['pseudohash'], 0) + 1
 		result = {}
 		for complaint in complaints.values():
 			if complaint['pseudohash'] in voted_complaints_pseudohashes or complaint['pseudohash'] in result:
@@ -2289,31 +2305,38 @@ class MyTonCore():
 								   f"start work time ({config32.get('startWorkTime')})", "info")
 				continue
 
-			exists = False
-			for item in validators_load.values():
-				if 'fileName' not in item:
-					continue
-				pubkey = item.get("pubkey")
-				if pubkey is None:
-					continue
-				pseudohash = pubkey + str(election_id)
-				if pseudohash == complaint['pseudohash']:
-					exists = True
-					break
+			count = 0
+			for vl in validators_load:
+				for item in vl.values():
+					if 'fileName' not in item:
+						continue
+					pubkey = item.get("pubkey")
+					if pubkey is None:
+						continue
+					pseudohash = pubkey + str(election_id)
+					if pseudohash == complaint['pseudohash']:
+						count += 1
+			if not count:
+				self.local.add_log(f"complaint declined {complaint['hash_hex']}: complaint info was not found, probably it's wrong", "info")
+				continue
 
-			if not exists:
-				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
+			if complaint['hash'] in voted_complaints:
+				self.local.add_log(f"complaint declined {complaint['hash_hex']}: already voted", "info")
+				continue
+
+			if len(result.get(pseudohash, [])) + voted_complaints_pseudohashes.get(pseudohash, 0) >= count:
+				self.local.add_log(f"complaint declined {complaint['hash_hex']}: "
+								   f"already voted for same validator enough times", "info")
 				continue
 
 			# check complaint fine value
 			if complaint['suggestedFine'] != 101:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3708
-				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine value is {complaint['suggestedFine']} ton", "info")
+				self.local.add_log(f"complaint declined {complaint['hash_hex']}: complaint fine value is {complaint['suggestedFine']} ton", "info")
 				continue
 			if complaint['suggestedFinePart'] != 0:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3709
-				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine part value is {complaint['suggestedFinePart']} ton", "info")
+				self.local.add_log(f"complaint declined {complaint['hash_hex']}: complaint fine part value is {complaint['suggestedFinePart']} ton", "info")
 				continue
-
-			result[complaint['pseudohash']] = complaint
+			result[complaint['pseudohash']] = result.get(complaint['pseudohash'], []) + [complaint]
 		return result
 
 	def GetOnlineValidators(self):
@@ -2454,6 +2477,8 @@ class MyTonCore():
 		electionId = start
 		complaints = self.GetComplaints(electionId)
 		valid_complaints = self.get_valid_complaints(complaints, electionId)
+		voted_complaints = self.GetVotedComplaints(complaints)
+		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
@@ -2472,7 +2497,7 @@ class MyTonCore():
 			var2 = item.get("var2")
 			pubkey = item.get("pubkey")
 			pseudohash = pubkey + str(electionId)
-			if pseudohash in valid_complaints:
+			if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create additional complaints for validator if somebody has already started do it
 				continue
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)

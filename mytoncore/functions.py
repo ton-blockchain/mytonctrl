@@ -506,8 +506,10 @@ def Slashing(local, ton):
         return
     local.add_log("slash_time {}, start {}, end {}".format(slash_time, start, end), "debug")
     if slash_time != start:
-        end -= 60
-        ton.CheckValidators(start, end)
+        ts = ton.get_slashing_timestamps(start, end - 60)
+        for s, e in ts:
+            ton.CheckValidators(s, e)
+            time.sleep(5)
         local.buffer.slash_time = start
 # end define
 
