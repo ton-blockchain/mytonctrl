@@ -2292,11 +2292,6 @@ class MyTonCore():
 			voted_complaints_pseudohashes[c['pseudohash']] = voted_complaints_pseudohashes.get(c['pseudohash'], 0) + 1
 		result = {}
 		for complaint in complaints.values():
-			if complaint['pseudohash'] in voted_complaints_pseudohashes or complaint['pseudohash'] in result:
-				self.local.add_log(f"skip checking complaint {complaint['hash_hex']}: "
-								   f"complaint with this pseudohash ({complaint['pseudohash']})"
-								   f" has already been voted", "debug")
-				continue
 			# check that complaint is valid
 
 			if complaint['electionId'] != start:
@@ -2320,7 +2315,7 @@ class MyTonCore():
 				self.local.add_log(f"complaint declined {complaint['hash_hex']}: complaint info was not found, probably it's wrong", "info")
 				continue
 
-			if complaint['hash'] in voted_complaints:
+			if complaint['hash_hex'] in voted_complaints:
 				self.local.add_log(f"complaint declined {complaint['hash_hex']}: already voted", "info")
 				continue
 
