@@ -2273,7 +2273,6 @@ class MyTonCore():
 		for i in range(4):
 			result.append((start, start + dif))
 			start += dif
-		result.append((st, end))
 		return result
 
 	def get_valid_complaints(self, complaints: dict, election_id: int):
@@ -2321,11 +2320,11 @@ class MyTonCore():
 
 			voted = len(result.get(pseudohash, [])) + voted_complaints_pseudohashes.get(pseudohash, 0)
 
-			self.local.add_log(f"complaint {pseudohash} voted {voted} out of {count} times")
+			self.local.add_log(f"complaint {pseudohash} voted {voted} out of {count} times", "debug")
 
 			if voted >= count:
 				self.local.add_log(f"complaint declined {complaint['hash_hex']}: "
-								   f"already voted for same validator enough times", "info")
+								   f"already voted for same validator enough times ({voted})", "info")
 				continue
 
 			# check complaint fine value
@@ -2485,8 +2484,8 @@ class MyTonCore():
 		if wallet is None:
 			raise Exception("Validator wallet not fond")
 		account = self.GetAccount(wallet.addrB64)
-		if account.balance < 300:
-			raise Exception("Validator wallet balance must be greater than 300")
+		if account.balance < 50:
+			raise Exception("Validator wallet balance must be greater than 50")
 		for key, item in data.items():
 			fileName = item.get("fileName")
 			if fileName is None:
@@ -2495,12 +2494,14 @@ class MyTonCore():
 			var2 = item.get("var2")
 			pubkey = item.get("pubkey")
 			pseudohash = pubkey + str(election_id)
-			if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create additional complaints for validator if somebody has already started do it
-				continue
+
+			# if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create additional complaints for validator if somebody has already started do it
+			# 	continue
+
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)
 			fileName = self.PrepareComplaint(election_id, fileName)
-			fileName = self.SignBocWithWallet(wallet, fileName, fullElectorAddr, 300)
+			fileName = self.SignBocWithWallet(wallet, fileName, fullElectorAddr, 50)
 			self.SendFile(fileName, wallet)
 			self.local.add_log("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, election_id), "debug")
 	#end define
