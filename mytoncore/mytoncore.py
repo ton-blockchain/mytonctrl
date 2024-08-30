@@ -2319,7 +2319,11 @@ class MyTonCore():
 				self.local.add_log(f"complaint declined {complaint['hash_hex']}: already voted", "info")
 				continue
 
-			if len(result.get(pseudohash, [])) + voted_complaints_pseudohashes.get(pseudohash, 0) >= count:
+			voted = len(result.get(pseudohash, [])) + voted_complaints_pseudohashes.get(pseudohash, 0)
+
+			self.local.add_log(f"complaint {pseudohash} voted {voted} out of {count} times")
+
+			if voted >= count:
 				self.local.add_log(f"complaint declined {complaint['hash_hex']}: "
 								   f"already voted for same validator enough times", "info")
 				continue
