@@ -511,7 +511,7 @@ def Slashing(local, ton):
         ts = ton.get_slashing_timestamps(start, end - 60)
         for s, e in ts:
             ton.CheckValidators(election_id, s, e)
-            time.sleep(5)
+            time.sleep(10)
         local.buffer.slash_time = start
 # end define
 
