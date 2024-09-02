@@ -66,6 +66,7 @@ def Init(local, ton, console, argv):
 	console.name = "MyTonCtrl"
 	console.startFunction = inject_globals(PreUp)
 	console.debug = ton.GetSettings("debug")
+	console.local = local
 
 	console.AddItem("update", inject_globals(Update), local.translate("update_cmd"))
 	console.AddItem("upgrade", inject_globals(Upgrade), local.translate("upgrade_cmd"))
