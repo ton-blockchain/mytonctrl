@@ -15,7 +15,6 @@ fi
 author="ton-blockchain"
 repo="mytonctrl"
 branch="master"
-mode="validator"
 network="mainnet"
 ton_node_version="master"  # Default version
 
@@ -68,12 +67,11 @@ while getopts ":c:tida:r:b:m:n:v:h" flag; do
 done
 
 
-if (( $# == 0 )); then  # no arguments
+if [ "${mode}" = "" ]; then  # no mode
     echo "Running cli installer"
-    wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.py
+    wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
     pip3 install inquirer
     python3 install.py
-#    python3 scripts/install.py
     exit
 fi
 
