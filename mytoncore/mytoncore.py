@@ -2334,6 +2334,7 @@ class MyTonCore():
 			if complaint['suggestedFinePart'] != 0:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3709
 				self.local.add_log(f"complaint declined {complaint['hash_hex']}: complaint fine part value is {complaint['suggestedFinePart']} ton", "info")
 				continue
+			self.local.add_log(f"complaint accepted {complaint['hash_hex']} ", "info")
 			result[complaint['pseudohash']] = result.get(complaint['pseudohash'], []) + [complaint]
 		return result
 
