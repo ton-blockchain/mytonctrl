@@ -10,7 +10,7 @@ def get_validator_service():
 def get_node_start_command():
     service = get_validator_service()
     for line in service.split('\n'):
-        if 'ExecStart' in line:
+        if line.startswith('ExecStart'):
             return line.split('=')[1].strip()
 #end define
 
