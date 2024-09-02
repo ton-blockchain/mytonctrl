@@ -38,10 +38,6 @@ def run_cli():
             "dump",
             message="Do you want to download blockchain's dump? "
                     "This reduces synchronization time but requires to download a large file",
-        ),
-        inquirer.Confirm(
-            "telemetry",
-            message="Are you agree with sending your node performance statistics?"
         )
     ]
 
@@ -57,7 +53,6 @@ def parse_args(answers: dict):
     archive_ttl = answers["archive-ttl"]
     validator_mode = answers["validator-mode"]
     dump = answers["dump"]
-    telemetry = answers["telemetry"]
 
     res = f' -n {network}'
 
@@ -80,8 +75,6 @@ def parse_args(answers: dict):
 
     if dump:
         res += ' -d'
-    if not telemetry:
-        res += ' -t'
 
     return res
 
