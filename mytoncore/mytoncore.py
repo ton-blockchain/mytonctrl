@@ -2581,7 +2581,7 @@ class MyTonCore():
 		return data
 	#end define
 
-	def GetValidatorsList(self, past=False):
+	def GetValidatorsList(self, past=False, fast=False):
 		# Get buffer
 		bname = "validatorsList" + str(past)
 		buff = self.GetFunctionBuffer(bname, timeout=60)
@@ -2591,9 +2591,11 @@ class MyTonCore():
 
 		timestamp = get_timestamp()
 		end = timestamp - 60
-		# start = end - 2000
 		config = self.GetConfig34()
-		start = config.get("startWorkTime")
+		if fast:
+			start = end - 1000
+		else:
+			start = config.get("startWorkTime")
 		if past:
 			config = self.GetConfig32()
 			start = config.get("startWorkTime")
@@ -3468,7 +3470,7 @@ class MyTonCore():
 
 	def GetValidatorsWalletsList(self):
 		result = list()
-		vl = self.GetValidatorsList()
+		vl = self.GetValidatorsList(fast=True)
 		for item in vl:
 			walletAddr = item["walletAddr"]
 			result.append(walletAddr)
