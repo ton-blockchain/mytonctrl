@@ -2506,7 +2506,7 @@ class MyTonCore():
 
 	def GetOnlineValidators(self):
 		onlineValidators = list()
-		validators = self.GetValidatorsList()
+		validators = self.GetValidatorsList(fast=True)
 		for validator in validators:
 			online = validator.get("online")
 			if online is True:

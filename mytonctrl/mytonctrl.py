@@ -580,7 +580,7 @@ def PrintStatus(local, ton, args):
 		
 		if opt != "fast":
 			onlineValidators = ton.GetOnlineValidators()
-			validator_efficiency = ton.GetValidatorEfficiency()
+			# validator_efficiency = ton.GetValidatorEfficiency()
 		if onlineValidators:
 			onlineValidators = len(onlineValidators)
 
