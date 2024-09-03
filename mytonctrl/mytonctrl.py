@@ -80,6 +80,8 @@ def Init(local, ton, console, argv):
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
 	console.AddItem("rollback", inject_globals(rollback_to_mtc1), local.translate("rollback_cmd"))
 
+	console.AddItem("check_ef", inject_globals(check_efficiency), local.translate("check_ef_cmd"))
+
 	console.AddItem("seqno", inject_globals(Seqno), local.translate("seqno_cmd"))
 	console.AddItem("getconfig", inject_globals(GetConfig), local.translate("getconfig_cmd"))
 	console.AddItem("get_pool_data", inject_globals(GetPoolData), local.translate("get_pool_data_cmd"))
@@ -761,7 +763,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 
 	color_print(local.translate("local_status_head"))
 	print(validatorIndex_text)
-	print(validatorEfficiency_text)
+	# print(validatorEfficiency_text)
 	print(adnlAddr_text)
 	print(fullnode_adnl_text)
 	print(walletAddr_text)
@@ -872,6 +874,43 @@ def PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkT
 	print(endElectionTime_text)
 	print(startNextElectionTime_text)
 #end define
+
+
+def find_myself(ton, validators: list) -> dict:
+	adnl_addr = ton.GetAdnlAddr()
+	for validator in validators:
+		if validator.get("adnlAddr") == adnl_addr:
+			return validator
+	return None
+
+
+def check_efficiency(local, ton, args):
+	local.add_log("start GetValidatorEfficiency function", "debug")
+	validators = ton.GetValidatorsList(past=True)
+	validator = find_myself(ton, validators)
+	config32 = ton.GetConfig32()
+	if validator:
+		efficiency = GetColorInt(validator["efficiency"], 90, logic="more", ending=" %")
+		expected = validator['masterBlocksExpected'] + validator['workBlocksExpected']
+		created = validator['masterBlocksCreated'] + validator['workBlocksCreated']
+		print('#'*30)
+		print(f"Previous round efficiency: {efficiency} ({created} blocks created / {expected} blocks expected) from {timestamp2utcdatetime(config32['startWorkTime'])} to {timestamp2utcdatetime(config32['endWorkTime'])}")
+		print('#'*30)
+	else:
+		print("Couldn't find this validator in the past round")
+	validators = ton.GetValidatorsList()
+	validator = find_myself(ton, validators)
+	config34 = ton.GetConfig34()
+	if validator:
+		efficiency = GetColorInt(validator["efficiency"], 90, logic="more", ending=" %")
+		expected = validator['masterBlocksExpected'] + validator['workBlocksExpected']
+		created = validator['masterBlocksCreated'] + validator['workBlocksCreated']
+		print('#'*30)
+		print(f"Current round efficiency: {efficiency} ({created} blocks created / {expected} blocks expected) from {timestamp2utcdatetime(config34['startWorkTime'])} to {timestamp2utcdatetime(int(get_timestamp()))}")
+		print('#'*30)
+	else:
+		print("Couldn't find this validator in the current round")
+# end define
 
 def GetColorTime(datetime, timestamp):
 	newTimestamp = get_timestamp()

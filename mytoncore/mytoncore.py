@@ -916,6 +916,7 @@ class MyTonCore():
 		config32 = dict()
 		result = self.liteClient.Run("getconfig 32")
 		config32["totalValidators"] = int(parse(result, "total:", ' '))
+		config32["mainValidators"] = int(parse(result, "main:", ' '))
 		config32["startWorkTime"] = int(parse(result, "utime_since:", ' '))
 		config32["endWorkTime"] = int(parse(result, "utime_until:", ' '))
 		lines = result.split('\n')
@@ -2320,6 +2321,19 @@ class MyTonCore():
 		return saveComplaints
 	#end define
 
+	def GetSaveVl(self):
+		timestamp = get_timestamp()
+		save_vl = self.local.db.get("saveValidatorsLoad")
+		if save_vl is None:
+			save_vl = dict()
+			self.local.db["saveValidatorsLoad"] = save_vl
+		for key, item in list(save_vl.items()):
+			diff_time = timestamp - int(key)
+			if diff_time > 172800:  # 48 hours
+				save_vl.pop(key)
+		return save_vl
+	#end define
+
 	def GetAdnlFromPubkey(self, inputPubkey):
 		config32 = self.GetConfig32()
 		validators = config32["validators"]
@@ -2544,7 +2558,7 @@ class MyTonCore():
 				else:
 					wr = workBlocksCreated / workBlocksExpected
 				r = (mr + wr) / 2
-				if vid >= config34["main"]:
+				if vid >= config34["mainValidators"]:
 					r = wr
 				efficiency = round(r * 100, 2)
 				if efficiency > 10:
@@ -2600,7 +2614,11 @@ class MyTonCore():
 			config = self.GetConfig32()
 			start = config.get("startWorkTime")
 			end = config.get("endWorkTime") - 60
+			save_vl = self.GetSaveVl()
+			if start in save_vl:
+				return save_vl[start]
 		#end if
+
 		validatorsLoad = self.GetValidatorsLoad(start, end)
 		validators = config["validators"]
 		electionId = config.get("startWorkTime")
@@ -2621,6 +2639,9 @@ class MyTonCore():
 
 		# Set buffer
 		self.SetFunctionBuffer(bname, validators)
+		if past:
+			save_vl = self.GetSaveVl()
+			save_vl[start] = validators
 		return validators
 	#end define
 
