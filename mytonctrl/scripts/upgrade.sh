@@ -48,23 +48,25 @@ else
 	systemctl daemon-reload
 fi
 
-# compile openssl_3
-rm -rf ${bindir}/openssl_3
-git clone https://github.com/openssl/openssl ${bindir}/openssl_3
-cd ${bindir}/openssl_3
-git checkout openssl-3.1.4
-./config
-make build_libs -j$(nproc)
-opensslPath=`pwd`
+if [ ! -d "${bindir}/openssl_3" ]; then
+  git clone https://github.com/openssl/openssl ${bindir}/openssl_3
+  cd ${bindir}/openssl_3
+  git checkout openssl-3.1.4
+  ./config
+  make build_libs -j$(nproc)
+  opensslPath=`pwd`
+else
+  opensslPath=${bindir}/openssl_3
+fi
 
 # Go to work dir
-cd ${srcdir}
-rm -rf ${srcdir}/${repo}
+cd ${srcdir}/${repo}
+ls -A1 | xargs rm -rf
 
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git
-cd ${repo}
+git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git .
+
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
 export CCACHE_DISABLE=1
