@@ -953,6 +953,7 @@ class MyTonCore():
 		config34 = dict()
 		result = self.liteClient.Run("getconfig 34")
 		config34["totalValidators"] = int(parse(result, "total:", ' '))
+		config34["mainValidators"] = int(parse(result, "main:", ' '))
 		config34["startWorkTime"] = int(parse(result, "utime_since:", ' '))
 		config34["endWorkTime"] = int(parse(result, "utime_until:", ' '))
 		config34["totalWeight"] = int(parse(result, "total_weight:", ' '))
@@ -2481,10 +2482,15 @@ class MyTonCore():
 				pseudohash = pubkey + str(election_id)
 				if pseudohash == complaint['pseudohash']:
 					exists = True
+					vid = item['id']
 					break
 
 			if not exists:
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
+				continue
+
+			if vid >= config32['mainValidators']:
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator", "info")
 				continue
 
 			# check complaint fine value
@@ -2517,7 +2523,6 @@ class MyTonCore():
 		if buff:
 			return buff
 		#end if
-		config34 = self.GetConfig34()
 		text = "start GetValidatorsLoad function ({}, {})".format(start, end)
 		self.local.add_log(text, "debug")
 		if saveCompFiles is True:
@@ -2558,8 +2563,6 @@ class MyTonCore():
 				else:
 					wr = workBlocksCreated / workBlocksExpected
 				r = (mr + wr) / 2
-				if vid >= config34["mainValidators"]:
-					r = wr
 				efficiency = round(r * 100, 2)
 				if efficiency > 10:
 					online = True
@@ -2633,6 +2636,11 @@ class MyTonCore():
 				validator["online"] = validatorsLoad[vid]["online"]
 				validator["blocks_created"] = validatorsLoad[vid]["masterBlocksCreated"] + validatorsLoad[vid]["workBlocksCreated"]
 				validator["blocks_expected"] = validatorsLoad[vid]["masterBlocksExpected"] + validatorsLoad[vid]["workBlocksExpected"]
+				validator["is_masterchain"] = False
+				if vid < config["mainValidators"]:
+					validator["is_masterchain"] = True
+				if not validator["is_masterchain"]:
+					validator["efficiency"] = round(validator["wr"] * 100, 2)
 			if saveElectionEntries and adnlAddr in saveElectionEntries:
 				validator["walletAddr"] = saveElectionEntries[adnlAddr]["walletAddr"]
 		#end for
@@ -2653,6 +2661,7 @@ class MyTonCore():
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
+		config = self.GetConfig32()
 
 		# Check wallet and balance
 		if wallet is None:
@@ -2669,6 +2678,8 @@ class MyTonCore():
 			pubkey = item.get("pubkey")
 			pseudohash = pubkey + str(electionId)
 			if pseudohash in valid_complaints:
+				continue
+			if item['id'] >= config['mainValidators']:  # do not create complaints for non-masterchain validators
 				continue
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)
