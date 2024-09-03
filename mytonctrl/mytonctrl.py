@@ -42,7 +42,7 @@ from mytoncore.functions import (
 )
 from mytoncore.telemetry import is_host_virtual
 from mytonctrl.migrate import run_migrations
-from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config
+from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, GetColorInt
 
 import sys, getopt, os
 
@@ -578,7 +578,7 @@ def PrintStatus(local, ton, args):
 		
 		if opt != "fast":
 			onlineValidators = ton.GetOnlineValidators()
-			validator_efficiency = ton.GetValidatorEfficiency()
+			# validator_efficiency = ton.GetValidatorEfficiency()
 		if onlineValidators:
 			onlineValidators = len(onlineValidators)
 
@@ -761,7 +761,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 
 	color_print(local.translate("local_status_head"))
 	print(validatorIndex_text)
-	print(validatorEfficiency_text)
+	# print(validatorEfficiency_text)
 	print(adnlAddr_text)
 	print(fullnode_adnl_text)
 	print(walletAddr_text)
@@ -779,22 +779,6 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	print(mtcVersion_text)
 	print(validatorVersion_text)
 	print()
-#end define
-
-def GetColorInt(data, border, logic, ending=None):
-	if data is None:
-		result = "n/a"
-	elif logic == "more":
-		if data >= border:
-			result = bcolors.green_text(data, ending)
-		else:
-			result = bcolors.red_text(data, ending)
-	elif logic == "less":
-		if data <= border:
-			result = bcolors.green_text(data, ending)
-		else:
-			result = bcolors.red_text(data, ending)
-	return result
 #end define
 
 def GetColorStatus(input):
@@ -872,6 +856,7 @@ def PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkT
 	print(endElectionTime_text)
 	print(startNextElectionTime_text)
 #end define
+
 
 def GetColorTime(datetime, timestamp):
 	newTimestamp = get_timestamp()
@@ -1344,7 +1329,8 @@ def PrintElectionEntriesList(ton, args):
 
 def PrintValidatorList(ton, args):
 	past = "past" in args
-	data = ton.GetValidatorsList(past=past)
+	fast = "fast" in args
+	data = ton.GetValidatorsList(past=past, fast=fast)
 	if (data is None or len(data) == 0):
 		print("No data")
 		return
@@ -1353,8 +1339,8 @@ def PrintValidatorList(ton, args):
 		print(text)
 	else:
 		table = list()
-		table += [["ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
-		for item in data:
+		table += [["id", "ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
+		for i, item in enumerate(data):
 			adnl = item.get("adnlAddr")
 			pubkey = item.get("pubkey")
 			walletAddr = item.get("walletAddr")
@@ -1372,7 +1358,7 @@ def PrintValidatorList(ton, args):
 				online = bcolors.green_text("true")
 			if online == False:
 				online = bcolors.red_text("false")
-			table += [[adnl, pubkey, walletAddr, efficiency, online]]
+			table += [[str(i), adnl, pubkey, walletAddr, efficiency, online]]
 		print_table(table)
 #end define
 
