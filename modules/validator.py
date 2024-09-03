@@ -1,7 +1,6 @@
 from mypylib.mypylib import color_print, get_timestamp
 from modules.module import MtcModule
-from mytonctrl.mytonctrl import GetColorInt
-from mytonctrl.utils import timestamp2utcdatetime
+from mytonctrl.utils import timestamp2utcdatetime, GetColorInt
 
 
 class ValidatorModule(MtcModule):

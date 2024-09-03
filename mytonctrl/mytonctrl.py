@@ -42,7 +42,7 @@ from mytoncore.functions import (
 )
 from mytoncore.telemetry import is_host_virtual
 from mytonctrl.migrate import run_migrations
-from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config
+from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, GetColorInt
 
 import sys, getopt, os
 
@@ -779,22 +779,6 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	print(mtcVersion_text)
 	print(validatorVersion_text)
 	print()
-#end define
-
-def GetColorInt(data, border, logic, ending=None):
-	if data is None:
-		result = "n/a"
-	elif logic == "more":
-		if data >= border:
-			result = bcolors.green_text(data, ending)
-		else:
-			result = bcolors.red_text(data, ending)
-	elif logic == "less":
-		if data <= border:
-			result = bcolors.green_text(data, ending)
-		else:
-			result = bcolors.red_text(data, ending)
-	return result
 #end define
 
 def GetColorStatus(input):
