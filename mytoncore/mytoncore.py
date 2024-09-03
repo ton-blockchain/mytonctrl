@@ -913,7 +913,7 @@ class MyTonCore():
 		#end if
 
 		self.local.add_log("start GetConfig32 function", "debug")
-		config32 = dict()
+		config32 = Dict()
 		result = self.liteClient.Run("getconfig 32")
 		config32["totalValidators"] = int(parse(result, "total:", ' '))
 		config32["mainValidators"] = int(parse(result, "main:", ' '))
@@ -929,7 +929,7 @@ class MyTonCore():
 					validatorWeight = int(parse(line, "weight:", ' '))
 				except ValueError:
 					validatorWeight = int(parse(line, "weight:", ')'))
-				buff = dict()
+				buff = Dict()
 				buff["adnlAddr"] = validatorAdnlAddr
 				buff["pubkey"] = pubkey
 				buff["weight"] = validatorWeight
@@ -950,7 +950,7 @@ class MyTonCore():
 		#end if
 
 		self.local.add_log("start GetConfig34 function", "debug")
-		config34 = dict()
+		config34 = Dict()
 		result = self.liteClient.Run("getconfig 34")
 		config34["totalValidators"] = int(parse(result, "total:", ' '))
 		config34["mainValidators"] = int(parse(result, "main:", ' '))
@@ -967,7 +967,7 @@ class MyTonCore():
 					validatorWeight = int(parse(line, "weight:", ' '))
 				except ValueError:
 					validatorWeight = int(parse(line, "weight:", ')'))
-				buff = dict()
+				buff = Dict()
 				buff["adnlAddr"] = validatorAdnlAddr
 				buff["pubkey"] = pubkey
 				buff["weight"] = validatorWeight
@@ -2618,8 +2618,9 @@ class MyTonCore():
 			start = config.get("startWorkTime")
 			end = config.get("endWorkTime") - 60
 			save_vl = self.GetSaveVl()
-			if start in save_vl:
-				return save_vl[start]
+			start_str = str(start)
+			if start_str in save_vl:
+				return save_vl[start_str]
 		#end if
 
 		validatorsLoad = self.GetValidatorsLoad(start, end)

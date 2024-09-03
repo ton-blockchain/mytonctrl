@@ -42,33 +42,39 @@ class ValidatorModule(MtcModule):
 
     def check_efficiency(self, args):
         self.local.add_log("start GetValidatorEfficiency function", "debug")
-        validators = self.ton.GetValidatorsList(past=True)
-        validator = self.find_myself(validators)
+        previous_validators = self.ton.GetValidatorsList(past=True)
+        validators = self.ton.GetValidatorsList()
+        validator = self.find_myself(previous_validators)
         config32 = self.ton.GetConfig32()
+        config34 = self.ton.GetConfig34()
+        color_print("{cyan}===[ Validator efficiency ]==={endc}")
         if validator:
-            efficiency = GetColorInt(validator["efficiency"], 90, logic="more", ending=" %")
-            expected = validator['blocks_expected']
-            created = validator['blocks_created']
-            print('#' * 30)
-            print(
-                f"Previous round efficiency: {efficiency} ({created} blocks created / {expected} blocks expected) from {timestamp2utcdatetime(config32['startWorkTime'])} to {timestamp2utcdatetime(config32['endWorkTime'])}")
-            print('#' * 30)
+            efficiency = 100 if validator.efficiency > 100 else validator.efficiency
+            color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
+            created = validator.blocks_created
+            expected = validator.blocks_expected
+            start_time = timestamp2utcdatetime(config32.startWorkTime)
+            end_time = timestamp2utcdatetime(config32.endWorkTime)
+            color_print(f"Previous round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {expected} blocks expected){{endc}}")
+            color_print(f"Previous round time: {{yellow}}from {start_time} to {end_time}{{endc}}")
         else:
             print("Couldn't find this validator in the past round")
-        validators = self.ton.GetValidatorsList()
         validator = self.find_myself(validators)
-        config34 = self.ton.GetConfig34()
         if validator:
-            efficiency = GetColorInt(validator["efficiency"], 90, logic="more", ending=" %")
-            expected = validator['blocks_expected']
-            created = validator['blocks_created']
-            print('#' * 30)
-            print(
-                f"Current round efficiency: {efficiency} ({created} blocks created / {expected} blocks expected) from {timestamp2utcdatetime(config34['startWorkTime'])} to {timestamp2utcdatetime(int(get_timestamp()))}")
-            print('#' * 30)
+            efficiency = 100 if validator.efficiency > 100 else validator.efficiency
+            color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
+            created = validator.blocks_created
+            expected = validator.blocks_expected
+            start_time = timestamp2utcdatetime(config34.startWorkTime)
+            end_time = timestamp2utcdatetime(int(get_timestamp()))
+            if validator.is_masterchain == False and efficiency < 90:
+                print("Your validator index is greater than 100.")
+                print("Efficiency before the validation round is complete may be inaccurate and not displayed.")
+            else:
+                color_print(f"Current round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {expected} blocks expected){{endc}}")
+                color_print(f"Current round time: {{green}}from {start_time} to {end_time}{{endc}}")
         else:
             print("Couldn't find this validator in the current round")
-
     # end define
 
     def add_console_commands(self, console):
