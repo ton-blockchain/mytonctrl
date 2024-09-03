@@ -2503,7 +2503,7 @@ class MyTonCore():
 		if buff:
 			return buff
 		#end if
-
+		config34 = self.GetConfig34()
 		text = "start GetValidatorsLoad function ({}, {})".format(start, end)
 		self.local.add_log(text, "debug")
 		if saveCompFiles is True:
@@ -2544,6 +2544,8 @@ class MyTonCore():
 				else:
 					wr = workBlocksCreated / workBlocksExpected
 				r = (mr + wr) / 2
+				if vid >= config34["main"]:
+					r = wr
 				efficiency = round(r * 100, 2)
 				if efficiency > 10:
 					online = True
@@ -2589,8 +2591,9 @@ class MyTonCore():
 
 		timestamp = get_timestamp()
 		end = timestamp - 60
-		start = end - 2000
+		# start = end - 2000
 		config = self.GetConfig34()
+		start = config.get("startWorkTime")
 		if past:
 			config = self.GetConfig32()
 			start = config.get("startWorkTime")
@@ -2608,6 +2611,8 @@ class MyTonCore():
 				validator["wr"] = validatorsLoad[vid]["wr"]
 				validator["efficiency"] = validatorsLoad[vid]["efficiency"]
 				validator["online"] = validatorsLoad[vid]["online"]
+				validator["blocks_created"] = validatorsLoad[vid]["masterBlocksCreated"] + validatorsLoad[vid]["workBlocksCreated"]
+				validator["blocks_expected"] = validatorsLoad[vid]["masterBlocksExpected"] + validatorsLoad[vid]["workBlocksExpected"]
 			if saveElectionEntries and adnlAddr in saveElectionEntries:
 				validator["walletAddr"] = saveElectionEntries[adnlAddr]["walletAddr"]
 		#end for
