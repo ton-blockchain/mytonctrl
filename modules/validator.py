@@ -75,7 +75,7 @@ class ValidatorModule(MtcModule):
                 end_time = timestamp2utcdatetime(int(get_timestamp()))
                 if not validator.is_masterchain and efficiency < 90:
                     print("Your validator index is greater than 100.")
-                    print("Efficiency until the validation round is complete may be inaccurate and not displayed.")
+                    print("Efficiency while the validation round is active may be inaccurate and not displayed.")
                 else:
                     color_print(f"Current round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {expected} blocks expected){{endc}}")
                     color_print(f"Current round time: {{green}}from {start_time} to {end_time}{{endc}}")
