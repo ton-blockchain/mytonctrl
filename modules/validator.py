@@ -49,30 +49,36 @@ class ValidatorModule(MtcModule):
         config34 = self.ton.GetConfig34()
         color_print("{cyan}===[ Validator efficiency ]==={endc}")
         if validator:
-            efficiency = 100 if validator.efficiency > 100 else validator.efficiency
-            color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
-            created = validator.blocks_created
-            expected = validator.blocks_expected
-            start_time = timestamp2utcdatetime(config32.startWorkTime)
-            end_time = timestamp2utcdatetime(config32.endWorkTime)
-            color_print(f"Previous round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {expected} blocks expected){{endc}}")
-            color_print(f"Previous round time: {{yellow}}from {start_time} to {end_time}{{endc}}")
+            if validator.get('efficiency') is None:
+                print('Failed to get efficiency for the past round')
+            else:
+                efficiency = 100 if validator.efficiency > 100 else validator.efficiency
+                color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
+                created = validator.blocks_created
+                expected = validator.blocks_expected
+                start_time = timestamp2utcdatetime(config32.startWorkTime)
+                end_time = timestamp2utcdatetime(config32.endWorkTime)
+                color_print(f"Previous round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {expected} blocks expected){{endc}}")
+                color_print(f"Previous round time: {{yellow}}from {start_time} to {end_time}{{endc}}")
         else:
             print("Couldn't find this validator in the past round")
         validator = self.find_myself(validators)
         if validator:
-            efficiency = 100 if validator.efficiency > 100 else validator.efficiency
-            color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
-            created = validator.blocks_created
-            expected = validator.blocks_expected
-            start_time = timestamp2utcdatetime(config34.startWorkTime)
-            end_time = timestamp2utcdatetime(int(get_timestamp()))
-            if validator.is_masterchain == False and efficiency < 90:
-                print("Your validator index is greater than 100.")
-                print("Efficiency before the validation round is complete may be inaccurate and not displayed.")
+            if validator.get('efficiency') is None:
+                print('Failed to get efficiency for the current round')
             else:
-                color_print(f"Current round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {expected} blocks expected){{endc}}")
-                color_print(f"Current round time: {{green}}from {start_time} to {end_time}{{endc}}")
+                efficiency = 100 if validator.efficiency > 100 else validator.efficiency
+                color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
+                created = validator.blocks_created
+                expected = validator.blocks_expected
+                start_time = timestamp2utcdatetime(config34.startWorkTime)
+                end_time = timestamp2utcdatetime(int(get_timestamp()))
+                if not validator.is_masterchain and efficiency < 90:
+                    print("Your validator index is greater than 100.")
+                    print("Efficiency until the validation round is complete may be inaccurate and not displayed.")
+                else:
+                    color_print(f"Current round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {expected} blocks expected){{endc}}")
+                    color_print(f"Current round time: {{green}}from {start_time} to {end_time}{{endc}}")
         else:
             print("Couldn't find this validator in the current round")
     # end define

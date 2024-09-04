@@ -2650,7 +2650,7 @@ class MyTonCore():
 		self.SetFunctionBuffer(bname, validators)
 		if past:
 			save_vl = self.GetSaveVl()
-			save_vl[start] = validators
+			save_vl[str(start)] = validators
 		return validators
 	#end define
 
