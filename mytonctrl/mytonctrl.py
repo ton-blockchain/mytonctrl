@@ -42,7 +42,7 @@ from mytoncore.functions import (
 )
 from mytoncore.telemetry import is_host_virtual
 from mytonctrl.migrate import run_migrations
-from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex
+from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt
 
 import sys, getopt, os
 
@@ -468,11 +468,29 @@ def check_vps(local, ton):
 			color_print(f"Virtualization detected: {data['product_name']}")
 #end define
 
+def check_tg_channel(local, ton):
+	if ton.using_validator() and ton.local.db.get("subscribe_tg_channel") is None:
+		print_warning(local, "subscribe_tg_channel_warning")
+#end difine
+
+def check_slashed(local, ton):
+	config32 = ton.GetConfig32()
+	save_complaints = ton.GetSaveComplaints()
+	complaints = save_complaints.get(str(config32['startWorkTime']))
+	if not complaints:
+		return
+	for c in complaints.values():
+		if c["adnl"] == ton.GetAdnlAddr() and c["isPassed"]:
+			print_warning(local, "slashed_warning")
+#end define
+
 def warnings(local, ton):
-	check_disk_usage(local, ton)
-	check_sync(local, ton)
-	check_validator_balance(local, ton)
-	check_vps(local, ton)
+	local.try_function(check_disk_usage, args=[local, ton])
+	local.try_function(check_sync, args=[local, ton])
+	local.try_function(check_validator_balance, args=[local, ton])
+	local.try_function(check_vps, args=[local, ton])
+	local.try_function(check_tg_channel, args=[local, ton])
+	local.try_function(check_slashed, args=[local, ton])
 #end define
 
 def CheckTonUpdate(local):
@@ -543,7 +561,7 @@ def PrintStatus(local, ton, args):
 
 		if opt != "fast":
 			onlineValidators = ton.GetOnlineValidators()
-			validator_efficiency = ton.GetValidatorEfficiency()
+			# validator_efficiency = ton.GetValidatorEfficiency()
 		if onlineValidators:
 			onlineValidators = len(onlineValidators)
 
@@ -727,7 +745,7 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	color_print(local.translate("local_status_head"))
 	if ton.using_validator():
 		print(validatorIndex_text)
-		print(validatorEfficiency_text)
+		# print(validatorEfficiency_text)
 	print(adnlAddr_text)
 	print(fullnode_adnl_text)
 	if ton.using_validator():
@@ -746,22 +764,6 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	print(mtcVersion_text)
 	print(validatorVersion_text)
 	print()
-#end define
-
-def GetColorInt(data, border, logic, ending=None):
-	if data is None:
-		result = "n/a"
-	elif logic == "more":
-		if data >= border:
-			result = bcolors.green_text(data, ending)
-		else:
-			result = bcolors.red_text(data, ending)
-	elif logic == "less":
-		if data <= border:
-			result = bcolors.green_text(data, ending)
-		else:
-			result = bcolors.red_text(data, ending)
-	return result
 #end define
 
 def GetColorStatus(input):
@@ -839,6 +841,7 @@ def PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkT
 	print(endElectionTime_text)
 	print(startNextElectionTime_text)
 #end define
+
 
 def GetColorTime(datetime, timestamp):
 	newTimestamp = get_timestamp()

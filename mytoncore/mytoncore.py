@@ -870,9 +870,10 @@ class MyTonCore():
 		#end if
 
 		self.local.add_log("start GetConfig32 function", "debug")
-		config32 = dict()
+		config32 = Dict()
 		result = self.liteClient.Run("getconfig 32")
 		config32["totalValidators"] = int(parse(result, "total:", ' '))
+		config32["mainValidators"] = int(parse(result, "main:", ' '))
 		config32["startWorkTime"] = int(parse(result, "utime_since:", ' '))
 		config32["endWorkTime"] = int(parse(result, "utime_until:", ' '))
 		lines = result.split('\n')
@@ -885,7 +886,7 @@ class MyTonCore():
 					validatorWeight = int(parse(line, "weight:", ' '))
 				except ValueError:
 					validatorWeight = int(parse(line, "weight:", ')'))
-				buff = dict()
+				buff = Dict()
 				buff["adnlAddr"] = validatorAdnlAddr
 				buff["pubkey"] = pubkey
 				buff["weight"] = validatorWeight
@@ -906,9 +907,10 @@ class MyTonCore():
 		#end if
 
 		self.local.add_log("start GetConfig34 function", "debug")
-		config34 = dict()
+		config34 = Dict()
 		result = self.liteClient.Run("getconfig 34")
 		config34["totalValidators"] = int(parse(result, "total:", ' '))
+		config34["mainValidators"] = int(parse(result, "main:", ' '))
 		config34["startWorkTime"] = int(parse(result, "utime_since:", ' '))
 		config34["endWorkTime"] = int(parse(result, "utime_until:", ' '))
 		config34["totalWeight"] = int(parse(result, "total_weight:", ' '))
@@ -922,7 +924,7 @@ class MyTonCore():
 					validatorWeight = int(parse(line, "weight:", ' '))
 				except ValueError:
 					validatorWeight = int(parse(line, "weight:", ')'))
-				buff = dict()
+				buff = Dict()
 				buff["adnlAddr"] = validatorAdnlAddr
 				buff["pubkey"] = pubkey
 				buff["weight"] = validatorWeight
@@ -2152,6 +2154,19 @@ class MyTonCore():
 		return saveComplaints
 	#end define
 
+	def GetSaveVl(self):
+		timestamp = get_timestamp()
+		save_vl = self.local.db.get("saveValidatorsLoad")
+		if save_vl is None:
+			save_vl = dict()
+			self.local.db["saveValidatorsLoad"] = save_vl
+		for key, item in list(save_vl.items()):
+			diff_time = timestamp - int(key)
+			if diff_time > 172800:  # 48 hours
+				save_vl.pop(key)
+		return save_vl
+	#end define
+
 	def GetAdnlFromPubkey(self, inputPubkey):
 		config32 = self.GetConfig32()
 		validators = config32["validators"]
@@ -2299,10 +2314,15 @@ class MyTonCore():
 				pseudohash = pubkey + str(election_id)
 				if pseudohash == complaint['pseudohash']:
 					exists = True
+					vid = item['id']
 					break
 
 			if not exists:
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
+				continue
+
+			if vid >= config32['mainValidators']:
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator", "info")
 				continue
 
 			# check complaint fine value
@@ -2318,7 +2338,7 @@ class MyTonCore():
 
 	def GetOnlineValidators(self):
 		onlineValidators = list()
-		validators = self.GetValidatorsList()
+		validators = self.GetValidatorsList(fast=True)
 		for validator in validators:
 			online = validator.get("online")
 			if online is True:
@@ -2335,7 +2355,6 @@ class MyTonCore():
 		if buff:
 			return buff
 		#end if
-
 		text = "start GetValidatorsLoad function ({}, {})".format(start, end)
 		self.local.add_log(text, "debug")
 		if saveCompFiles is True:
@@ -2411,7 +2430,7 @@ class MyTonCore():
 		return data
 	#end define
 
-	def GetValidatorsList(self, past=False):
+	def GetValidatorsList(self, past=False, fast=False):
 		# Get buffer
 		bname = "validatorsList" + str(past)
 		buff = self.GetFunctionBuffer(bname, timeout=60)
@@ -2421,13 +2440,21 @@ class MyTonCore():
 
 		timestamp = get_timestamp()
 		end = timestamp - 60
-		start = end - 2000
 		config = self.GetConfig34()
+		if fast:
+			start = end - 1000
+		else:
+			start = config.get("startWorkTime")
 		if past:
 			config = self.GetConfig32()
 			start = config.get("startWorkTime")
 			end = config.get("endWorkTime") - 60
+			save_vl = self.GetSaveVl()
+			start_str = str(start)
+			if start_str in save_vl:
+				return save_vl[start_str]
 		#end if
+
 		validatorsLoad = self.GetValidatorsLoad(start, end)
 		validators = config["validators"]
 		electionId = config.get("startWorkTime")
@@ -2440,12 +2467,22 @@ class MyTonCore():
 				validator["wr"] = validatorsLoad[vid]["wr"]
 				validator["efficiency"] = validatorsLoad[vid]["efficiency"]
 				validator["online"] = validatorsLoad[vid]["online"]
+				validator["blocks_created"] = validatorsLoad[vid]["masterBlocksCreated"] + validatorsLoad[vid]["workBlocksCreated"]
+				validator["blocks_expected"] = validatorsLoad[vid]["masterBlocksExpected"] + validatorsLoad[vid]["workBlocksExpected"]
+				validator["is_masterchain"] = False
+				if vid < config["mainValidators"]:
+					validator["is_masterchain"] = True
+				if not validator["is_masterchain"]:
+					validator["efficiency"] = round(validator["wr"] * 100, 2)
 			if saveElectionEntries and adnlAddr in saveElectionEntries:
 				validator["walletAddr"] = saveElectionEntries[adnlAddr]["walletAddr"]
 		#end for
 
 		# Set buffer
 		self.SetFunctionBuffer(bname, validators)
+		if past:
+			save_vl = self.GetSaveVl()
+			save_vl[str(start)] = validators
 		return validators
 	#end define
 
@@ -2457,6 +2494,7 @@ class MyTonCore():
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
+		config = self.GetConfig32()
 
 		# Check wallet and balance
 		if wallet is None:
@@ -2473,6 +2511,8 @@ class MyTonCore():
 			pubkey = item.get("pubkey")
 			pseudohash = pubkey + str(electionId)
 			if pseudohash in valid_complaints:
+				continue
+			if item['id'] >= config['mainValidators']:  # do not create complaints for non-masterchain validators
 				continue
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)
@@ -3188,7 +3228,7 @@ class MyTonCore():
 
 	def GetValidatorsWalletsList(self):
 		result = list()
-		vl = self.GetValidatorsList()
+		vl = self.GetValidatorsList(fast=True)
 		for item in vl:
 			walletAddr = item["walletAddr"]
 			result.append(walletAddr)
