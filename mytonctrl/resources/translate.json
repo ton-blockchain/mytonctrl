@@ -199,6 +199,11 @@
 		"ru": "Запустить установщик модулей TON",
 		"zh_TW": "執行 TON 模組的安裝程序"
 	},
+	"check_ef_cmd": {
+		"en": "Check the efficiency of the validator",
+		"ru": "Проверить эффективность валидатора",
+		"zh_TW": "檢查驗證者的效率"
+	},
 	"ton_status_head": {
 		"en": "{cyan}===[ TON network status ]==={endc}",
 		"ru": "{cyan}===[ Статус сети TON ]==={endc}",

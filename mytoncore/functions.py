@@ -515,6 +515,7 @@ def Slashing(local, ton):
 def save_past_events(local, ton):
     local.try_function(ton.GetElectionEntries)
     local.try_function(ton.GetComplaints)
+    local.try_function(ton.GetValidatorsList, args=[True])  # cache past vl
 
 
 def ScanLiteServers(local, ton):
