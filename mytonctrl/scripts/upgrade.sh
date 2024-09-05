@@ -66,7 +66,7 @@ ls -A1 | xargs rm -rf
 # Update code
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
 git clone --recursive https://github.com/${author}/${repo}.git .
-cd ${repo} && git checkout ${branch}
+git checkout ${branch}
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
 export CCACHE_DISABLE=1
