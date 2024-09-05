@@ -472,12 +472,24 @@ def check_tg_channel(local, ton):
 		print_warning(local, "subscribe_tg_channel_warning")
 #end difine
 
+def check_slashed(local, ton):
+	config32 = ton.GetConfig32()
+	save_complaints = ton.GetSaveComplaints()
+	complaints = save_complaints.get(str(config32['startWorkTime']))
+	if not complaints:
+		return
+	for c in complaints.values():
+		if c["adnl"] == ton.GetAdnlAddr() and c["isPassed"]:
+			print_warning(local, "slashed_warning")
+#end define
+
 def warnings(local, ton):
-	check_disk_usage(local, ton)
-	check_sync(local, ton)
-	check_validator_balance(local, ton)
-	check_vps(local, ton)
-	check_tg_channel(local, ton)
+	local.try_function(check_disk_usage, args=[local, ton])
+	local.try_function(check_sync, args=[local, ton])
+	local.try_function(check_validator_balance, args=[local, ton])
+	local.try_function(check_vps, args=[local, ton])
+	local.try_function(check_tg_channel, args=[local, ton])
+	local.try_function(check_slashed, args=[local, ton])
 #end define
 
 def CheckTonUpdate(local):
