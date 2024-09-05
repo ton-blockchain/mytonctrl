@@ -467,11 +467,17 @@ def check_vps(local, ton):
 			color_print(f"Virtualization detected: {data['product_name']}")
 #end define
 
+def check_tg_channel(local, ton):
+	if ton.using_validator() and ton.local.db.get("subscribe_tg_channel") is None:
+		print_warning(local, "subscribe_tg_channel_warning")
+#end difine
+
 def warnings(local, ton):
 	check_disk_usage(local, ton)
 	check_sync(local, ton)
 	check_validator_balance(local, ton)
 	check_vps(local, ton)
+	check_tg_channel(local, ton)
 #end define
 
 def CheckTonUpdate(local):
