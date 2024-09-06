@@ -2491,6 +2491,8 @@ class MyTonCore():
 		electionId = start
 		complaints = self.GetComplaints(electionId)
 		valid_complaints = self.get_valid_complaints(complaints, electionId)
+		voted_complaints = self.GetVotedComplaints(complaints)
+		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
@@ -2510,7 +2512,7 @@ class MyTonCore():
 			var2 = item.get("var2")
 			pubkey = item.get("pubkey")
 			pseudohash = pubkey + str(electionId)
-			if pseudohash in valid_complaints:
+			if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create complaints that already created or voted by ourself
 				continue
 			if item['id'] >= config['mainValidators']:  # do not create complaints for non-masterchain validators
 				continue
