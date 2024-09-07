@@ -15,7 +15,6 @@ fi
 author="ton-blockchain"
 repo="mytonctrl"
 branch="master"
-mode="validator"
 network="mainnet"
 ton_node_version="master"  # Default version
 
@@ -67,6 +66,15 @@ while getopts ":c:tida:r:b:m:n:v:h" flag; do
     esac
 done
 
+
+if [ "${mode}" = "" ]; then  # no mode
+    echo "Running cli installer"
+    wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
+    pip3 install inquirer
+    python3 install.py
+    exit
+fi
+
 # Set config based on network argument
 if [ "${network}" = "testnet" ]; then
     config="https://ton-blockchain.github.io/testnet-global.config.json"
@@ -81,7 +89,7 @@ cpus=$(lscpu | grep "CPU(s)" | head -n 1 | awk '{print $2}')
 memory=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
 
 echo "This machine has ${cpus} CPUs and ${memory}KB of Memory"
-if [ "$ignore" = false ] && ([ "${cpus}" -lt "${cpu_required}" ] || [ "${memory}" -lt "${mem_required}"]); then
+if [ "$ignore" = false ] && ([ "${cpus}" -lt "${cpu_required}" ] || [ "${memory}" -lt "${mem_required}" ]); then
 	echo "Insufficient resources. Requires a minimum of "${cpu_required}"  processors and  "${mem_required}" RAM."
 	exit 1
 fi
@@ -128,7 +136,7 @@ echo -e "${COLOR}[4/5]${ENDC} Running mytoninstaller"
 
 parent_name=$(ps -p $PPID -o comm=)
 user=$(whoami)
-if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ]; then
+if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ] || [ "$parent_name" = "python3" ]; then
     user=$(logname)
 fi
 echo "User: $user"
