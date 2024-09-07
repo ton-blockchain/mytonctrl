@@ -302,7 +302,8 @@ class UtilitiesModule(MtcModule):
 
     def print_validator_list(self, args):
         past = "past" in args
-        data = self.ton.GetValidatorsList(past=past)
+        fast = "fast" in args
+        data = self.ton.GetValidatorsList(past=past, fast=fast)
         if data is None or len(data) == 0:
             print("No data")
             return
@@ -311,8 +312,8 @@ class UtilitiesModule(MtcModule):
             print(text)
         else:
             table = list()
-            table += [["ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
-            for item in data:
+            table += [["id", "ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
+            for i, item in enumerate(data):
                 adnl = item.get("adnlAddr")
                 pubkey = item.get("pubkey")
                 walletAddr = item.get("walletAddr")
@@ -330,7 +331,7 @@ class UtilitiesModule(MtcModule):
                     online = bcolors.green_text("true")
                 if not online:
                     online = bcolors.red_text("false")
-                table += [[adnl, pubkey, walletAddr, efficiency, online]]
+                table += [[str(i), adnl, pubkey, walletAddr, efficiency, online]]
             print_table(table)
     # end define
 
