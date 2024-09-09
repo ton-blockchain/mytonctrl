@@ -17,6 +17,14 @@ def GetItemFromList(data, index):
         pass
 
 
+def is_hex(s):
+    try:
+        int(s, 16)
+        return True
+    except ValueError:
+        return False
+
+
 def fix_git_config(git_path: str):
     args = ["git", "status"]
     try:

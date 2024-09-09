@@ -1,6 +1,6 @@
 ![GitHub stars](https://img.shields.io/github/stars/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub forks](https://img.shields.io/github/forks/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub issues](https://img.shields.io/github/issues/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub pull requests](https://img.shields.io/github/issues-pr/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub last commit](https://img.shields.io/github/last-commit/ton-blockchain/mytonctrl?style=flat-square&logo=github) ![GitHub license](https://img.shields.io/github/license/ton-blockchain/mytonctrl?style=flat-square&logo=github)
 
-<!-- omit from toc --> 
+<!-- omit from toc -->
 # MyTonCtrl
 
 <!-- omit from toc --> 
@@ -58,12 +58,6 @@ Mytonctrl's documentation can be found at https://docs.ton.org/participate/run-n
 	- [x] Show offers
 	- [x] Vote for the proposal
 	- [x] Automatic voting for previously voted proposals
-- [x] Domain management
-	- [x] Rent a new domain
-	- [x] Show rented domains
-	- [x] Show domain status
-	- [x] Delete domain
-	- [ ] Automatic domain renewal
 - [x] Controlling the validator
 	- [x] Participate in the election of a validator
 	- [x] Return bet + reward

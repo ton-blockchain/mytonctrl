@@ -259,7 +259,7 @@ def General(local, console):
 		Refresh(local)
 	if "-c" in sys.argv:
 		cx = sys.argv.index("-c")
-		args = sys.argv[cx+1:]
+		args = sys.argv[cx+1].split()
 		Command(local, args, console)
 	if "-e" in sys.argv:
 		ex = sys.argv.index("-e")

@@ -34,7 +34,11 @@ def FirstNodeSettings(local):
 	validatorAppPath = local.buffer.validator_app_path
 	globalConfigPath = local.buffer.global_config_path
 	vconfig_path = local.buffer.vconfig_path
-	archive_ttl = 2592000 if local.buffer.mode == 'liteserver' else 86400
+
+	if os.getenv('ARCHIVE_TTL'):
+		archive_ttl = int(os.getenv('ARCHIVE_TTL'))
+	else:
+		archive_ttl = 2592000 if local.buffer.mode == 'liteserver' else 86400
 
 	# Проверить конфигурацию
 	if os.path.isfile(vconfig_path):
@@ -892,8 +896,8 @@ def CreateSymlinks(local):
 
 def EnableMode(local):
 	args = ["python3", "-m", "mytoncore", "-e"]
-	if local.buffer.mode == 'liteserver':
-		args.append("enable_liteserver_mode")
+	if local.buffer.mode:
+		args.append("enable_mode_" + local.buffer.mode)
 	else:
 		return
 	args = ["su", "-l", local.buffer.user, "-c", ' '.join(args)]

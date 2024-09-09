@@ -19,7 +19,6 @@ from mytoncore.fift import Fift
 from mytoncore.models import (
     Wallet,
     Account,
-    Domain,
     Block,
     Trans,
     Message,
@@ -388,48 +387,6 @@ class MyTonCore():
 				result = buff.decode("utf-8")
 			except: pass
 		return result
-	#end define
-
-	def GetDomainAddr(self, domainName):
-		cmd = "dnsresolve {domainName} -1".format(domainName=domainName)
-		result = self.liteClient.Run(cmd)
-		if "not found" in result:
-			raise Exception("GetDomainAddr error: domain \"{domainName}\" not found".format(domainName=domainName))
-		resolver = parse(result, "next resolver", '\n')
-		buff = resolver.replace(' ', '')
-		buffList = buff.split('=')
-		fullHexAddr = buffList[0]
-		addr = buffList[1]
-		return addr
-	#end define
-
-	def GetDomainEndTime(self, domainName):
-		self.local.add_log("start GetDomainEndTime function", "debug")
-		buff = domainName.split('.')
-		subdomain = buff.pop(0)
-		dnsDomain = ".".join(buff)
-		dnsAddr = self.GetDomainAddr(dnsDomain)
-
-		cmd = "runmethodfull {addr} getexpiration \"{subdomain}\"".format(addr=dnsAddr, subdomain=subdomain)
-		result = self.liteClient.Run(cmd)
-		result = parse(result, "result:", '\n')
-		result = parse(result, "[", "]")
-		result = result.replace(' ', '')
-		result = int(result)
-		return result
-	#end define
-
-	def GetDomainAdnlAddr(self, domainName):
-		self.local.add_log("start GetDomainAdnlAddr function", "debug")
-		cmd = "dnsresolve {domainName} 1".format(domainName=domainName)
-		result = self.liteClient.Run(cmd)
-		lines = result.split('\n')
-		for line in lines:
-			if "adnl address" in line:
-				adnlAddr = parse(line, "=", "\n")
-				adnlAddr = adnlAddr.replace(' ', '')
-				adnlAddr = adnlAddr
-				return adnlAddr
 	#end define
 
 	def GetLocalWallet(self, walletName, version=None, subwallet=None):
@@ -1705,18 +1662,6 @@ class MyTonCore():
 			self.SendFile(wallet.bocFilePath, wallet, remove=False)
 	#end define
 
-	def ImportWallet(self, addr_b64, key):
-		addr_bytes = self.addr_b64_to_bytes(addr_b64)
-		pk_bytes = base64.b64decode(key)
-		wallet_name = self.GenerateWalletName()
-		wallet_path = self.walletsDir + wallet_name
-		with open(wallet_path + ".addr", 'wb') as file:
-			file.write(addr_bytes)
-		with open(wallet_path + ".pk", 'wb') as file:
-			file.write(pk_bytes)
-		return wallet_name
-	#end define
-
 	def import_wallet_with_version(self, key, version, **kwargs):
 		wallet_name = kwargs.get("wallet_name")
 		workchain = kwargs.get("workchain", 0)
@@ -1768,14 +1713,6 @@ class MyTonCore():
 		return result
 	#end define
 
-	def ExportWallet(self, walletName):
-		wallet = self.GetLocalWallet(walletName)
-		with open(wallet.privFilePath, 'rb') as file:
-			data = file.read()
-		key = base64.b64encode(data).decode("utf-8")
-		return wallet.addrB64, key
-	#end define
-
 	def GetWalletsNameList(self):
 		self.local.add_log("start GetWalletsNameList function", "debug")
 		walletsNameList = list()
@@ -1787,16 +1724,6 @@ class MyTonCore():
 					walletsNameList.append(fileName)
 		walletsNameList.sort()
 		return walletsNameList
-	#end define
-
-	def GetWallets(self):
-		self.local.add_log("start GetWallets function", "debug")
-		wallets = list()
-		walletsNameList = self.GetWalletsNameList()
-		for walletName in walletsNameList:
-			wallet = self.GetLocalWallet(walletName)
-			wallets.append(wallet)
-		return wallets
 	#end define
 
 	def GenerateWalletName(self):
@@ -1819,16 +1746,6 @@ class MyTonCore():
 			index_str = str(index).rjust(3, '0')
 			walletName = walletPrefix + index_str
 		return walletName
-	#end define
-
-	def WalletsCheck(self):
-		self.local.add_log("start WalletsCheck function", "debug")
-		wallets = self.GetWallets()
-		for wallet in wallets:
-			if os.path.isfile(wallet.bocFilePath):
-				account = self.GetAccount(wallet.addrB64)
-				if account.balance > 0:
-					self.SendFile(wallet.bocFilePath, wallet)
 	#end define
 
 	def GetValidatorConfig(self):
@@ -1937,18 +1854,7 @@ class MyTonCore():
 		self.SendFile(savedFilePath, wallet, timeout=timeout)
 	#end define
 
-	def MoveCoinsThroughProxy(self, wallet, dest, coins):
-		self.local.add_log("start MoveCoinsThroughProxy function", "debug")
-		wallet1 = self.CreateWallet("proxy_wallet1", 0)
-		wallet2 = self.CreateWallet("proxy_wallet2", 0)
-		self.MoveCoins(wallet, wallet1.addrB64_init, coins)
-		self.ActivateWallet(wallet1)
-		self.MoveCoins(wallet1, wallet2.addrB64_init, "alld")
-		self.ActivateWallet(wallet2)
-		self.MoveCoins(wallet2, dest, "alld", flags=["-n"])
-		wallet1.Delete()
-		wallet2.Delete()
-	#end define
+
 
 	def MoveCoinsFromHW(self, wallet, destList, **kwargs):
 		self.local.add_log("start MoveCoinsFromHW function", "debug")
@@ -2138,80 +2044,6 @@ class MyTonCore():
 			offers.append(item)
 		#end for
 		return offers
-	#end define
-
-	def GetOfferDiff(self, offerHash):
-		self.local.add_log("start GetOfferDiff function", "debug")
-		offer = self.GetOffer(offerHash)
-		configId = offer["config"]["id"]
-		configValue = offer["config"]["value"]
-
-		if '{' in configValue or '}' in configValue:
-			start = configValue.find('{') + 1
-			end = configValue.find('}')
-			configValue = configValue[start:end]
-		#end if
-
-		args = [self.liteClient.appPath, "--global-config", self.liteClient.configPath, "--verbosity", "0"]
-		process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		time.sleep(1)
-
-		fullConfigAddr = self.GetFullConfigAddr()
-		cmd = "runmethodfull {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
-		process.stdin.write(cmd.encode() + b'\n')
-		process.stdin.flush()
-		time.sleep(1)
-
-		cmd = "dumpcellas ConfigParam{configId} {configValue}".format(configId=configId, configValue=configValue)
-		process.stdin.write(cmd.encode() + b'\n')
-		process.stdin.flush()
-		time.sleep(1)
-
-		process.terminate()
-		text = process.stdout.read().decode()
-
-		lines = text.split('\n')
-		b = len(lines)
-		for i in range(b):
-			line = lines[i]
-			if "dumping cells as values of TLB type" in line:
-				a = i + 2
-				break
-		#end for
-
-		for i in range(a, b):
-			line = lines[i]
-			if '(' in line:
-				start = i
-				break
-		#end for
-
-		for i in range(a, b):
-			line = lines[i]
-			if '>' in line:
-				end = i
-				break
-		#end for
-
-		buff = lines[start:end]
-		text = "".join(buff)
-		newData = self.Tlb2Json(text)
-		newFileName = self.tempDir + "data1diff"
-		file = open(newFileName, 'wt')
-		newText = json.dumps(newData, indent=2)
-		file.write(newText)
-		file.close()
-
-		oldData = self.GetConfig(configId)
-		oldFileName = self.tempDir + "data2diff"
-		file = open(oldFileName, 'wt')
-		oldText = json.dumps(oldData, indent=2)
-		file.write(oldText)
-		file.close()
-
-		print(oldText)
-		args = ["diff", "--color", oldFileName, newFileName]
-		subprocess.run(args)
 	#end define
 
 	def GetComplaints(self, electionId=None, past=False):
@@ -2659,6 +2491,8 @@ class MyTonCore():
 		electionId = start
 		complaints = self.GetComplaints(electionId)
 		valid_complaints = self.get_valid_complaints(complaints, electionId)
+		voted_complaints = self.GetVotedComplaints(complaints)
+		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
@@ -2678,7 +2512,7 @@ class MyTonCore():
 			var2 = item.get("var2")
 			pubkey = item.get("pubkey")
 			pseudohash = pubkey + str(electionId)
-			if pseudohash in valid_complaints:
+			if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create complaints that already created or voted by ourself
 				continue
 			if item['id'] >= config['mainValidators']:  # do not create complaints for non-masterchain validators
 				continue
@@ -2938,90 +2772,6 @@ class MyTonCore():
 		return None
 	#end define
 
-	def GetDomainFromAuction(self, walletName, addr):
-		wallet = self.GetLocalWallet(walletName)
-		bocPath = self.local.buffer.my_temp_dir + "get_dns_data.boc"
-		bocData = bytes.fromhex("b5ee9c7241010101000e0000182fcb26a20000000000000000f36cae4d")
-		with open(bocPath, 'wb') as file:
-			file.write(bocData)
-		resultFilePath = self.SignBocWithWallet(wallet, bocPath, addr, 0.1)
-		self.SendFile(resultFilePath, wallet)
-	#end define
-
-	def NewDomain(self, domain):
-		self.local.add_log("start NewDomain function", "debug")
-		domainName = domain["name"]
-		buff = domainName.split('.')
-		subdomain = buff.pop(0)
-		dnsDomain = ".".join(buff)
-		dnsAddr = self.GetDomainAddr(dnsDomain)
-		wallet = self.GetLocalWallet(domain["walletName"])
-		expireInSec = 700000 # fix me
-		catId = 1 # fix me
-
-		# Check if domain is busy
-		domainEndTime = self.GetDomainEndTime(domainName)
-		if domainEndTime > 0:
-			raise Exception("NewDomain error: domain is busy")
-		#end if
-
-		fileName = self.tempDir + "dns-msg-body.boc"
-		args = ["auto-dns.fif", dnsAddr, "add", subdomain, expireInSec, "owner", wallet.addrB64, "cat", catId, "adnl", domain["adnlAddr"], "-o", fileName]
-		result = self.fift.Run(args)
-		resultFilePath = parse(result, "Saved to file ", ')')
-		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, dnsAddr, 1.7)
-		self.SendFile(resultFilePath, wallet)
-		self.AddDomain(domain)
-	#end define
-
-	def AddDomain(self, domain):
-		if "domains" not in self.local.db:
-			self.local.db["domains"] = list()
-		#end if
-		self.local.db["domains"].append(domain)
-		self.local.save()
-	#end define
-
-	def GetDomains(self):
-		domains = self.local.db.get("domains", list())
-		for domain in domains:
-			domainName = domain.get("name")
-			domain["endTime"] = self.GetDomainEndTime(domainName)
-		return domains
-	#end define
-
-	def GetDomain(self, domainName):
-		domain = dict()
-		domain["name"] = domainName
-		domain["adnlAddr"] = self.GetDomainAdnlAddr(domainName)
-		domain["endTime"] = self.GetDomainEndTime(domainName)
-		return domain
-	#end define
-
-	def DeleteDomain(self, domainName):
-		domains = self.local.db.get("domains")
-		for domain in domains:
-			if (domainName == domain.get("name")):
-				domains.remove(domain)
-				self.local.save()
-				return
-		raise Exception("DeleteDomain error: Domain not found")
-	#end define
-
-	def GetAutoTransferRules(self):
-		autoTransferRules = self.local.db.get("autoTransferRules")
-		if autoTransferRules is None:
-			autoTransferRules = list()
-			self.local.db["autoTransferRules"] = autoTransferRules
-		return autoTransferRules
-	#end define
-
-	def AddAutoTransferRule(self, rule):
-		autoTransferRules = self.GetAutoTransferRules()
-		autoTransferRules.append(rule)
-		self.local.save()
-	#end define
-
 	def AddBookmark(self, bookmark):
 		if "bookmarks" not in self.local.db:
 			self.local.db["bookmarks"] = list()
@@ -3038,23 +2788,11 @@ class MyTonCore():
 		return bookmarks
 	#end define
 
-	def GetBookmarkAddr(self, type, name):
-		bookmarks = self.local.db.get("bookmarks", list())
-		for bookmark in bookmarks:
-			bookmarkType = bookmark.get("type")
-			bookmarkName = bookmark.get("name")
-			bookmarkAddr = bookmark.get("addr")
-			if (bookmarkType == type and bookmarkName == name):
-				return bookmarkAddr
-		raise Exception("GetBookmarkAddr error: Bookmark not found")
-	#end define
-
-	def DeleteBookmark(self, name, type):
+	def DeleteBookmark(self, name):
 		bookmarks = self.local.db.get("bookmarks")
 		for bookmark in bookmarks:
-			bookmarkType = bookmark.get("type")
-			bookmarkName = bookmark.get("name")
-			if (type == bookmarkType and name == bookmarkName):
+			bookmark_name = bookmark.get("name")
+			if name == bookmark_name:
 				bookmarks.remove(bookmark)
 				self.local.save()
 				return
@@ -3062,23 +2800,12 @@ class MyTonCore():
 	#end define
 
 	def WriteBookmarkData(self, bookmark):
-		type = bookmark.get("type")
-		if type == "account":
-			addr = bookmark.get("addr")
-			account = self.GetAccount(addr)
-			if account.status == "empty":
-				data = "empty"
-			else:
-				data = account.balance
-		elif type == "domain":
-			domainName = bookmark.get("addr")
-			endTime = self.GetDomainEndTime(domainName)
-			if endTime == 0:
-				data = "free"
-			else:
-				data = timestamp2datetime(endTime, "%d.%m.%Y")
+		addr = bookmark.get("addr")
+		account = self.GetAccount(addr)
+		if account.status == "empty":
+			data = "empty"
 		else:
-			data = "null"
+			data = account.balance
 		bookmark["data"] = data
 	#end define
 
@@ -3125,18 +2852,18 @@ class MyTonCore():
 		return result
 	#end define
 
-	def GetDestinationAddr(self, destination):
+	def get_destination_addr(self, destination):
 		if self.IsAddrB64(destination):
 			pass
 		elif self.IsAddrFull(destination):
 			destination = self.AddrFull2AddrB64(destination)
 		else:
-			walletsNameList = self.GetWalletsNameList()
-			if destination in walletsNameList:
+			wallets_name_list = self.GetWalletsNameList()
+			if destination in wallets_name_list:
 				wallet = self.GetLocalWallet(destination)
 				destination = wallet.addrB64
 		return destination
-	#end define
+	# end define
 
 	def AddrFull2AddrB64(self, addrFull, bounceable=True):
 		if addrFull is None or "None" in addrFull:

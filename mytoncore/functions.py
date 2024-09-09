@@ -55,8 +55,8 @@ def Event(local, event_name):
         ValidatorDownEvent(local)
     elif event_name == "enable_ton_storage_provider":
         enable_ton_storage_provider_event(local)
-    elif event_name == "enable_liteserver_mode":
-        enable_liteserver_mode(local)
+    elif event_name.startswith("enable_mode"):
+        enable_mode(local, event_name)
     local.exit()
 # end define
 
@@ -93,10 +93,12 @@ def enable_ton_storage_provider_event(local):
 #end define
 
 
-def enable_liteserver_mode(local):
+def enable_mode(local, event_name):
     ton = MyTonCore(local)
-    ton.disable_mode('validator')
-    ton.enable_mode('liteserver')
+    mode = event_name.split("_")[-1]
+    if mode == "liteserver":
+        ton.disable_mode('validator')
+    ton.enable_mode(mode)
 #end define
 
 
@@ -384,12 +386,6 @@ def Offers(local, ton):
                 ton.VoteOffer(offer_hash)
 # end define
 
-
-def Domains(local, ton):
-    pass
-# end define
-
-
 def Telemetry(local, ton):
     sendTelemetry = local.db.get("sendTelemetry")
     if sendTelemetry is not True:
@@ -566,7 +562,6 @@ def General(local):
     local.start_cycle(Complaints, sec=t, args=(local, ton, ))
     local.start_cycle(Slashing, sec=t, args=(local, ton, ))
 
-    local.start_cycle(Domains, sec=600, args=(local, ton, ))
     local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
     local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
     local.start_cycle(ScanLiteServers, sec=60, args=(local, ton,))
