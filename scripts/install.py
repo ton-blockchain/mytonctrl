@@ -66,7 +66,7 @@ def parse_args(answers: dict):
         if validator_mode == 'Nominator pool':
             validator_mode = 'nominator-pool'
         elif validator_mode == 'Single pool':
-            validator_mode = 'single-pool'
+            validator_mode = 'single-nominator'
         elif validator_mode == 'Liquid Staking':
             validator_mode = 'liquid-staking'
         res += f' -m {validator_mode}'
