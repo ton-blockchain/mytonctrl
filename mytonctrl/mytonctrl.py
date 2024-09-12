@@ -922,12 +922,8 @@ def create_backup(local, ton, args):
 		color_print("{red}Bad args. Usage:{endc} create_backup [path_to_archive] [-y]")
 		return
 	if '-y' not in args:
-		try:
-			res = input(f'Node and Mytoncore services will be stopped for few seconds while backup is created, Proceed [y/n]?')
-			if res.lower() != 'y':
-				print('aborted.')
-				return
-		except KeyboardInterrupt:
+		res = input(f'Node and Mytoncore services will be stopped for few seconds while backup is created, Proceed [y/n]?')
+		if res.lower() != 'y':
 			print('aborted.')
 			return
 	else:
@@ -948,12 +944,8 @@ def restore_backup(local, ton, args):
 		color_print("{red}Bad args. Usage:{endc} restore_backup <path_to_archive> [-y]")
 		return
 	if '-y' not in args:
-		try:
-			res = input(f'This action will overwrite existing configuration with contents of backup archive, please make sure that donor node is not in operation prior to this action. Proceed [y/n]')
-			if res.lower() != 'y':
-				print('aborted.')
-				return
-		except KeyboardInterrupt:
+		res = input(f'This action will overwrite existing configuration with contents of backup archive, please make sure that donor node is not in operation prior to this action. Proceed [y/n]')
+		if res.lower() != 'y':
 			print('aborted.')
 			return
 	else:
