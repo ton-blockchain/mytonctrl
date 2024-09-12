@@ -81,6 +81,7 @@ def Init(local, ton, console, argv):
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
 	console.AddItem("rollback", inject_globals(rollback_to_mtc1), local.translate("rollback_cmd"))
 	console.AddItem("create_backup", inject_globals(create_backup), local.translate("create_backup_cmd"))
+	console.AddItem("restore_backup", inject_globals(restore_backup), local.translate("restore_backup_cmd"))
 
 	#console.AddItem("xrestart", inject_globals(Xrestart), local.translate("xrestart_cmd"))
 	#console.AddItem("xlist", inject_globals(Xlist), local.translate("xlist_cmd"))
@@ -921,8 +922,12 @@ def create_backup(local, ton, args):
 		color_print("{red}Bad args. Usage:{endc} create_backup [path_to_archive] [-y]")
 		return
 	if '-y' not in args:
-		res = input(f'Node and Mytoncore services will be stopped for few seconds while backup is created, Proceed [y/n]?')
-		if res.lower() != 'y':
+		try:
+			res = input(f'Node and Mytoncore services will be stopped for few seconds while backup is created, Proceed [y/n]?')
+			if res.lower() != 'y':
+				print('aborted.')
+				return
+		except KeyboardInterrupt:
 			print('aborted.')
 			return
 	else:
@@ -935,6 +940,7 @@ def create_backup(local, ton, args):
 		color_print("create_backup - {green}OK{endc}")
 	else:
 		color_print("create_backup - {red}Error{endc}")
+#end define
 
 
 def restore_backup(local, ton, args):
@@ -942,8 +948,12 @@ def restore_backup(local, ton, args):
 		color_print("{red}Bad args. Usage:{endc} restore_backup <path_to_archive> [-y]")
 		return
 	if '-y' not in args:
-		res = input(f'This action will overwrite existing configuration with contents of backup archive, please make sure that donor node is not in operation prior to this action. Proceed [y/n]')
-		if res.lower() != 'y':
+		try:
+			res = input(f'This action will overwrite existing configuration with contents of backup archive, please make sure that donor node is not in operation prior to this action. Proceed [y/n]')
+			if res.lower() != 'y':
+				print('aborted.')
+				return
+		except KeyboardInterrupt:
 			print('aborted.')
 			return
 	else:
@@ -958,6 +968,7 @@ def restore_backup(local, ton, args):
 		local.exit()
 	else:
 		color_print("restore_backup - {red}Error{endc}")
+#end define
 
 
 def Xrestart(inputArgs):
