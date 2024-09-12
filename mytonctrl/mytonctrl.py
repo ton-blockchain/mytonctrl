@@ -931,7 +931,7 @@ def create_backup(local, ton, args):
 	command_args = ["-m", ton.local.buffer.my_work_dir]
 	if len(args) == 1:
 		command_args += ["-d", args[0]]
-	backup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/backup.sh')
+	backup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/create_backup.sh')
 	if run_as_root(["bash", backup_script_path] + command_args) == 0:
 		color_print("create_backup - {green}OK{endc}")
 	else:
