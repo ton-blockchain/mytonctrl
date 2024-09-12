@@ -1,4 +1,4 @@
-dest="backup_$(hostname)_$(date +%s).tar.gz"
+dest="mytonctrl_backup_$(hostname)_$(date +%s).tar.gz"
 mtc_dir="$HOME/.local/share/mytoncore"
 # Get arguments
 while getopts d:m: flag

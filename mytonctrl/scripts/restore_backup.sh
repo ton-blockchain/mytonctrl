@@ -34,7 +34,7 @@ cp -rfT ${tmp_dir}/mytoncore $mtc_dir
 
 echo -e "${COLOR}[2/3]${ENDC} Extracted files from archive"
 
-rm /var/ton-work/db/dht-*
+rm -r /var/ton-work/db/dht-*
 
 systemctl start validator
 systemctl start mytoncore

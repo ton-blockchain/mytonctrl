@@ -955,7 +955,7 @@ def restore_backup(local, ton, args):
 	command_args = ["-m", ton.local.buffer.my_work_dir]
 	command_args += ["-n", args[0]]
 	restore_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/restore_backup.sh')
-	if run_as_root(["bash", restore_script_path]) == 0:
+	if run_as_root(["bash", restore_script_path] + command_args) == 0:
 		color_print("restore_backup - {green}OK{endc}")
 		local.exit()
 	else:
