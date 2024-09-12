@@ -38,7 +38,7 @@ systemctl start mytoncore
 
 echo -e "${COLOR}[3/4]${ENDC} Started validator and mytoncore"
 
-sudo tar -zcvf ${dest} -C ${tmp_dir} .
+sudo tar -zcf ${dest} -C ${tmp_dir} .
 
 echo -e "${COLOR}[4/4]${ENDC} Backup successfully created in ${dest}!"
 echo -e "If you wish to use archive package to migrate node to different machine please make sure to stop validator and mytoncore on donor (this) host prior to migration."
