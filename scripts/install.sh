@@ -20,19 +20,20 @@ ton_node_version="master"  # Default version
 
 
 show_help_and_exit() {
-  echo 'Supported arguments:'
-  echo ' -c  PATH         Provide custom config for toninstaller.sh'
-  echo ' -t               Disable telemetry'
-  echo ' -i               Ignore minimum requirements'
-  echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
-  echo ' -a               Set MyTonCtrl git repo author'
-  echo ' -r               Set MyTonCtrl git repo'
-  echo ' -b               Set MyTonCtrl git repo branch'
-  echo ' -m  MODE         Install MyTonCtrl with specified mode (validator or liteserver)'
-  echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
-  echo ' -v  VERSION      Specify the ton node version (commit, branch, or tag)'
-  echo ' -h               Show this help'
-  exit
+    echo 'Supported arguments:'
+    echo ' -c  PATH         Provide custom config for toninstaller.sh'
+    echo ' -t               Disable telemetry'
+    echo ' -i               Ignore minimum requirements'
+    echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
+    echo ' -a               Set MyTonCtrl git repo author'
+    echo ' -r               Set MyTonCtrl git repo'
+    echo ' -b               Set MyTonCtrl git repo branch'
+    echo ' -m  MODE         Install MyTonCtrl with specified mode (validator or liteserver)'
+    echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
+    echo ' -v  VERSION      Specify the ton node version (commit, branch, or tag)'
+    echo ' -u  USER         Specify the user to be used for MyTonCtrl installation'
+    echo ' -h               Show this help'
+    exit
 }
 
 if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
@@ -47,7 +48,7 @@ dump=false
 cpu_required=16
 mem_required=64000000  # 64GB in KB
 
-while getopts ":c:tida:r:b:m:n:v:h" flag; do
+while getopts ":c:tida:r:b:m:n:v:u:h" flag; do
     case "${flag}" in
         c) config=${OPTARG};;
         t) telemetry=false;;
@@ -59,10 +60,11 @@ while getopts ":c:tida:r:b:m:n:v:h" flag; do
         m) mode=${OPTARG};;
         n) network=${OPTARG};;
         v) ton_node_version=${OPTARG};;
+        u) user=${OPTARG};;
         h) show_help_and_exit;;
         *)
             echo "Flag -${flag} is not recognized. Aborting"
-            exit 1 ;;
+        exit 1 ;;
     esac
 done
 
@@ -90,8 +92,8 @@ memory=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
 
 echo "This machine has ${cpus} CPUs and ${memory}KB of Memory"
 if [ "$ignore" = false ] && ([ "${cpus}" -lt "${cpu_required}" ] || [ "${memory}" -lt "${mem_required}" ]); then
-	echo "Insufficient resources. Requires a minimum of "${cpu_required}"  processors and  "${mem_required}" RAM."
-	exit 1
+    echo "Insufficient resources. Requires a minimum of "${cpu_required}"  processors and  "${mem_required}" RAM."
+    exit 1
 fi
 
 echo -e "${COLOR}[2/5]${ENDC} Checking for required TON components"
@@ -100,9 +102,9 @@ BIN_DIR=/usr/bin
 
 # create dirs for OSX
 if [[ "$OSTYPE" =~ darwin.* ]]; then
-	SOURCES_DIR=/usr/local/src
-	BIN_DIR=/usr/local/bin
-	mkdir -p ${SOURCES_DIR}
+    SOURCES_DIR=/usr/local/src
+    BIN_DIR=/usr/local/bin
+    mkdir -p ${SOURCES_DIR}
 fi
 
 # check TON components
@@ -111,9 +113,9 @@ file2=${BIN_DIR}/ton/lite-client/lite-client
 file3=${BIN_DIR}/ton/validator-engine-console/validator-engine-console
 
 if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
-	echo "TON does not exists, building"
-	wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
-	bash /tmp/ton_installer.sh -c ${config} -v ${ton_node_version}
+    echo "TON does not exists, building"
+    wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
+    bash /tmp/ton_installer.sh -c ${config} -v ${ton_node_version}
 fi
 
 # Cloning mytonctrl
@@ -134,10 +136,12 @@ pip3 install -U .  # TODO: make installation from git directly
 echo -e "${COLOR}[4/5]${ENDC} Running mytoninstaller"
 # DEBUG
 
-parent_name=$(ps -p $PPID -o comm=)
-user=$(whoami)
-if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ] || [ "$parent_name" = "python3" ]; then
-    user=$(logname)
+if [ "${user}" = "" ]; then  # no user
+    parent_name=$(ps -p $PPID -o comm=)
+    user=$(whoami)
+    if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ] || [ "$parent_name" = "python3" ]; then
+        user=$(logname)
+    fi
 fi
 echo "User: $user"
 python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode}
