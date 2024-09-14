@@ -88,32 +88,41 @@ def FirstNodeSettings(local):
 	StartValidator(local)
 #end define
 
-
 def DownloadDump(local):
-	dump = local.buffer.dump
-	if dump == False:
-		return
-	#end if
+    dump = local.buffer.dump
+    if dump == False:
+        return
+    #end if
 
-	local.add_log("start DownloadDump fuction", "debug")
-	url = "https://dump.ton.org"
-	dumpSize = requests.get(url + "/dumps/latest.tar.size.archive.txt").text
-	print("dumpSize:", dumpSize)
-	needSpace = int(dumpSize) * 3
-	diskSpace = psutil.disk_usage("/var")
-	if needSpace > diskSpace.free:
-		return
-	#end if
+    local.add_log("start DownloadDump function", "debug")
+    url = "https://dump.ton.org"
+    dumpSize = requests.get(url + "/dumps/latest.tar.size.archive.txt").text
+    print("dumpSize:", dumpSize)
+    needSpace = int(dumpSize) * 3
+    diskSpace = psutil.disk_usage("/var")
+    if needSpace > diskSpace.free:
+        return
+    #end if
 
-	# apt install
-	cmd = "apt install plzip pv curl -y"
-	os.system(cmd)
+    # apt install
+    cmd = "apt install plzip pv aria2 curl -y"
+    os.system(cmd)
 
-	# download dump
-	cmd = "curl -s {url}/dumps/latest.tar.lz | pv | plzip -d -n8 | tar -xC /var/ton-work/db".format(url=url)
-	os.system(cmd)
+    # download dump using aria2c to a temporary file
+    temp_file = "/tmp/latest.tar.lz"
+    cmd = "aria2c -x 8 -s 8 -c {url}/dumps/latest.tar.lz -o {temp_file}".format(url=url, temp_file=temp_file)
+    os.system(cmd)
+
+    # process the downloaded file
+    cmd = "pv {temp_file} | plzip -d -n8 | tar -xC /var/ton-work/db"
+    os.system(cmd)
+
+    # clean up the temporary file after processing
+    if os.path.exists(temp_file):
+        os.remove(temp_file)
+        local.add_log("Temporary file {temp_file} removed".format(temp_file=temp_file), "debug")
+    #end if
 #end define
-
 
 def FirstMytoncoreSettings(local):
 	local.add_log("start FirstMytoncoreSettings fuction", "debug")
