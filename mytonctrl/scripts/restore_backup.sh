@@ -32,6 +32,8 @@ cp -rf ${tmp_dir}/keyring /var/ton-work/db/
 cp -rf ${tmp_dir}/keys /var/ton-work
 cp -rfT ${tmp_dir}/mytoncore $mtc_dir
 
+chown -R validator:validator /var/ton-work/db/keyring
+
 echo -e "${COLOR}[2/3]${ENDC} Extracted files from archive"
 
 rm -r /var/ton-work/db/dht-*
