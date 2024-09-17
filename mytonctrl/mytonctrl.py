@@ -29,7 +29,7 @@ from mypylib.mypylib import (
 	color_text,
 	bcolors,
 	Dict,
-	MyPyClass
+	MyPyClass, ip2int
 )
 
 from mypyconsole.mypyconsole import MyPyConsole
@@ -45,6 +45,8 @@ from mytonctrl.migrate import run_migrations
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt
 
 import sys, getopt, os
+
+from mytoninstaller.config import get_own_ip
 
 
 def Init(local, ton, console, argv):
@@ -952,8 +954,9 @@ def restore_backup(local, ton, args):
 		args.pop(args.index('-y'))
 	print('Before proceeding, mtc will create a backup of current configuration.')
 	create_backup(local, ton, ['-y'])
-	command_args = ["-m", ton.local.buffer.my_work_dir]
-	command_args += ["-n", args[0]]
+	ip = str(ip2int(get_own_ip()))
+	command_args = ["-m", ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
+
 	restore_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/restore_backup.sh')
 	if run_as_root(["bash", restore_script_path] + command_args) == 0:
 		color_print("restore_backup - {green}OK{endc}")
