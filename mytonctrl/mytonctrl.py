@@ -221,7 +221,6 @@ def PreUp(local: MyPyClass, ton: MyTonCore):
 	CheckMytonctrlUpdate(local)
 	check_installer_user(local)
 	check_vport(local, ton)
-	ton.check_adnl()
 	warnings(local, ton)
 	# CheckTonUpdate()
 #end define
@@ -494,7 +493,7 @@ def check_adnl(local, ton):
 	if not check_adnl:
 		return
 	hosts = ['45.129.96.53', '5.154.181.153', '2.56.126.137', '91.194.11.68', '45.12.134.214', '138.124.184.27', '103.106.3.171']
-	hosts = random.choices(hosts, k=3)
+	hosts = random.sample(hosts, k=3)
 	data = ton.get_local_adnl_data()
 	error = ''
 	ok = True
@@ -504,7 +503,7 @@ def check_adnl(local, ton):
 			response = requests.post(url, json=data, timeout=5).json()
 		except Exception as e:
 			ok = False
-			error = f'Failed to check ADNL connection to local node: {type(e)}: {e}'
+			error = f'{{red}}Failed to check ADNL connection to local node: {type(e)}: {e}{{endc}}'
 			continue
 		result = response.get("ok")
 		if result:
@@ -512,7 +511,7 @@ def check_adnl(local, ton):
 			break
 		if not result:
 			ok = False
-			error = f'Failed to check ADNL connection to local node: {response.get("message")}'
+			error = f'{{red}}Failed to check ADNL connection to local node: {response.get("message")}{{endc}}'
 	if not ok:
 		print_warning(local, error)
 #end define
@@ -520,6 +519,7 @@ def check_adnl(local, ton):
 def warnings(local, ton):
 	local.try_function(check_disk_usage, args=[local, ton])
 	local.try_function(check_sync, args=[local, ton])
+	local.try_function(check_adnl, args=[local, ton])
 	local.try_function(check_validator_balance, args=[local, ton])
 	local.try_function(check_vps, args=[local, ton])
 	local.try_function(check_tg_channel, args=[local, ton])
