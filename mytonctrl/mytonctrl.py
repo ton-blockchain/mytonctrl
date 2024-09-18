@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-
 import base64
+import random
 import subprocess
 import json
 import psutil
@@ -9,6 +10,8 @@ import pkg_resources
 import socket
 
 from functools import partial
+
+import requests
 
 from mypylib.mypylib import (
 	int2ip,
@@ -482,6 +485,36 @@ def check_slashed(local, ton):
 	for c in complaints.values():
 		if c["adnl"] == ton.GetAdnlAddr() and c["isPassed"]:
 			print_warning(local, "slashed_warning")
+#end define
+
+def check_adnl(local, ton):
+	telemetry = ton.local.db.get("sendTelemetry", False)
+	check_adnl = ton.local.db.get("checkAdnl", telemetry)
+	local.add_log('Checking ADNL connection to local node', 'info')
+	if not check_adnl:
+		return
+	hosts = ['45.129.96.53', '5.154.181.153', '2.56.126.137', '91.194.11.68', '45.12.134.214', '138.124.184.27', '103.106.3.171']
+	hosts = random.choices(hosts, k=3)
+	data = ton.get_local_adnl_data()
+	error = ''
+	ok = True
+	for host in hosts:
+		url = f'http://{host}/adnl_check'
+		try:
+			response = requests.post(url, json=data, timeout=5).json()
+		except Exception as e:
+			ok = False
+			error = f'Failed to check ADNL connection to local node: {type(e)}: {e}'
+			continue
+		result = response.get("ok")
+		if result:
+			ok = True
+			break
+		if not result:
+			ok = False
+			error = f'Failed to check ADNL connection to local node: {response.get("message")}'
+	if not ok:
+		print_warning(local, error)
 #end define
 
 def warnings(local, ton):
