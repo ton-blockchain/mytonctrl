@@ -24,7 +24,7 @@ from mytoninstaller.settings import (
 	EnableLiteServer,
 	EnableDhtServer,
 	EnableJsonRpc,
-	EnableTonHttpApi,
+	enable_ton_http_api,
 	DangerousRecoveryValidatorConfigFile,
 	CreateSymlinks,
 	enable_ls_proxy,
@@ -223,7 +223,7 @@ def Event(local, name):
 	if name == "enableJR":
 		EnableJsonRpc(local)
 	if name == "enableTHA":
-		EnableTonHttpApi(local)
+		enable_ton_http_api(local)
 	if name == "enableLSP":
 		enable_ls_proxy(local)
 	if name == "enableTSP":

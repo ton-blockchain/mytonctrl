@@ -3052,6 +3052,9 @@ class MyTonCore():
 			if self.using_liteserver():
 				raise Exception(f'Cannot enable validator mode while liteserver mode is enabled. '
 								f'Use `disable_mode liteserver` first.')
+		if name == 'liquid-staking':
+			from mytoninstaller.settings import enable_ton_http_api
+			enable_ton_http_api(self.local)
 
 	def enable_mode(self, name):
 		if name not in MODES:
@@ -3604,7 +3607,7 @@ class MyTonCore():
 		print(f"CalculateLoanAmount data: {data}")
 
 		url = "http://127.0.0.1:8801/runGetMethod"
-		res = requests.post(url, json=data)
+		res = requests.post(url, json=data, timeout=3)
 		res_data = res.json()
 		if res_data.get("ok") is False:
 			error = res_data.get("error")
