@@ -1,5 +1,6 @@
 dest="mytonctrl_backup_$(hostname)_$(date +%s).tar.gz"
 mtc_dir="$HOME/.local/share/mytoncore"
+user=$(logname)
 # Get arguments
 while getopts d:m: flag
 do
@@ -38,7 +39,9 @@ systemctl start mytoncore
 
 echo -e "${COLOR}[3/4]${ENDC} Started validator and mytoncore"
 
-sudo tar -zcf ${dest} -C ${tmp_dir} .
+tar -zcf $dest -C $tmp_dir .
+
+chown $user:$user $dest
 
 echo -e "${COLOR}[4/4]${ENDC} Backup successfully created in ${dest}!"
 echo -e "If you wish to use archive package to migrate node to different machine please make sure to stop validator and mytoncore on donor (this) host prior to migration."

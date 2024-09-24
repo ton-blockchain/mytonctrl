@@ -29,6 +29,7 @@ rm -rf $tmp_dir
 mkdir $tmp_dir
 tar -xvzf $name -C $tmp_dir
 
+rm -rf /var/ton-work/db/keyring
 cp -f ${tmp_dir}/config.json /var/ton-work/db/
 cp -rf ${tmp_dir}/keyring /var/ton-work/db/
 cp -rf ${tmp_dir}/keys /var/ton-work
