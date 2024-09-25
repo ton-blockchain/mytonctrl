@@ -2350,7 +2350,7 @@ class MyTonCore():
 
 	def GetValidatorsLoad(self, start, end, saveCompFiles=False) -> dict:
 		# Get buffer
-		bname = f"validatorsLoad{start}{end}"
+		bname = f"validatorsLoad{start}{end}{saveCompFiles}"
 		buff = self.GetFunctionBuffer(bname, timeout=60)
 		if buff:
 			return buff
