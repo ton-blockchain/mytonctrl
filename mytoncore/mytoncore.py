@@ -3275,9 +3275,8 @@ class MyTonCore():
 	#end define
 
 	def HandlePendingWithdraw(self, pendingWithdraws, poolAddr):
-		amount = pendingWithdraws.get(poolAddr)
+		amount = pendingWithdraws.pop(poolAddr)
 		self.WithdrawFromPoolProcess(poolAddr, amount)
-		pendingWithdraws.pop(poolAddr)
 	#end define
 
 	def GetPendingWithdraws(self):
