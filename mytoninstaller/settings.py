@@ -460,12 +460,10 @@ def EnableJsonRpc(local):
 	color_print(text)
 #end define
 
-def EnableTonHttpApi(local):
-	local.add_log("start EnablePytonv3 function", "debug")
-	user = local.buffer.user
-
-	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'tonhttpapiinstaller.sh')
-	exit_code = run_as_root(["bash", ton_http_api_installer_path, "-u", user])
+def enable_ton_http_api(local):
+	local.add_log("start EnableTonHttpApi function", "debug")
+	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'ton_http_api_installer.sh')
+	exit_code = run_as_root(["bash", ton_http_api_installer_path])
 	if exit_code == 0:
 		text = "EnableTonHttpApi - {green}OK{endc}"
 	else:
