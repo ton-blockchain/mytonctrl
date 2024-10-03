@@ -105,9 +105,13 @@ Alert text:
         self.inited = True
 
     def set_alert_sent(self, alert_name: str):
+        if 'alerts' not in self.ton.local.db:
+            self.ton.local.db['alerts'] = {}
         self.ton.local.db['alerts'][alert_name] = int(time.time())
 
     def get_alert_sent(self, alert_name: str):
+        if 'alerts' not in self.ton.local.db:
+            return 0
         return self.ton.local.db['alerts'].get(alert_name, 0)
 
     def check_db_usage(self):
