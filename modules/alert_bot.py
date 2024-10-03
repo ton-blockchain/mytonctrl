@@ -6,7 +6,8 @@ from mytoncore import get_hostname
 from mytonctrl.utils import timestamp2utcdatetime
 
 
-class Alert(dataclasses.dataclass):
+@dataclasses.dataclass
+class Alert:
     severity: str
     text: str
     timeout: int
