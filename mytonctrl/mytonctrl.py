@@ -483,11 +483,22 @@ def check_slashed(local, ton):
 	config32 = ton.GetConfig32()
 	save_complaints = ton.GetSaveComplaints()
 	complaints = save_complaints.get(str(config32['startWorkTime']))
+	from modules.validator import ValidatorModule
+	module = ValidatorModule(ton, local)
+	vl = ton.GetValidatorsList(past=True)
+	me = module.find_myself(vl)
+	if not me:  # we were not a validator in the previous round
+		return
 	if not complaints:
 		return
 	for c in complaints.values():
-		if c["adnl"] == ton.GetAdnlAddr() and c["isPassed"]:
-			print_warning(local, "slashed_warning")
+		if c["adnl"] == me["adnlAddr"] and c["isPassed"]:
+			if me.get("stake"):
+				fine = f"""{round(c['suggestedFine'] + me["stake"] * (c['suggestedFinePart'] / (1<<32)))} TON"""
+			else:  # unknown stake amount so just print percents
+				fine = f"""{round(c['suggestedFine'])} TON + {(c['suggestedFinePart'] / (1<<32)) * 100} % of stake"""
+			warning = local.translate("slashed_warning").format(fine)
+			print_warning(local, warning)
 #end define
 
 def check_adnl(local, ton):
