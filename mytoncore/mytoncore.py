@@ -1226,8 +1226,13 @@ class MyTonCore():
 		steps = timeout // timesleep
 		for i in range(steps):
 			time.sleep(timesleep)
-			seqno = self.GetSeqno(wallet)
+			try:
+				seqno = self.GetSeqno(wallet)
+			except:
+				self.local.add_log("WaitTransaction error: Can't get seqno", "warning")
+				continue
 			if seqno != wallet.oldseqno:
+				self.local.add_log("WaitTransaction success", "info")
 				return
 		raise Exception("WaitTransaction error: time out")
 	#end define
@@ -3277,9 +3282,8 @@ class MyTonCore():
 	#end define
 
 	def HandlePendingWithdraw(self, pendingWithdraws, poolAddr):
-		amount = pendingWithdraws.get(poolAddr)
+		amount = pendingWithdraws.pop(poolAddr)
 		self.WithdrawFromPoolProcess(poolAddr, amount)
-		pendingWithdraws.pop(poolAddr)
 	#end define
 
 	def GetPendingWithdraws(self):
