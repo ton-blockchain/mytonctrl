@@ -61,8 +61,11 @@ class ValidatorModule(MtcModule):
             else:
                 efficiency = 100 if validator.efficiency > 100 else validator.efficiency
                 color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
-                created = validator.blocks_created
-                expected = validator.blocks_expected
+                created = validator.master_blocks_created
+                expected = validator.master_blocks_expected
+                if created is None:  # there is no updated prev round info in cache
+                    created = validator.blocks_created
+                    expected = validator.blocks_expected
                 color_print(f"Previous round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {round(expected, 1)} blocks expected){{endc}}")
         else:
             print("Couldn't find this validator in the previous round")
@@ -81,8 +84,8 @@ class ValidatorModule(MtcModule):
             else:
                 efficiency = 100 if validator.efficiency > 100 else validator.efficiency
                 color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
-                created = validator.blocks_created
-                expected = validator.blocks_expected
+                created = validator.master_blocks_created
+                expected = validator.master_blocks_expected
                 color_print(f"Current round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {round(expected, 1)} blocks expected){{endc}}")
         else:
             print("Couldn't find this validator in the current round")
