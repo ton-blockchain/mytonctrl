@@ -50,7 +50,12 @@ ALERTS = {
         "critical",
         "Node is out of sync on {sync} sec.",
         0
-    )
+    ),
+    "service_down": Alert(
+        "critical",
+        "validator.service is down.",
+        0
+    ),
 }
 
 
@@ -129,7 +134,7 @@ Alert text:
 
     def check_efficiency(self):
         from modules.validator import ValidatorModule
-        validator = ValidatorModule(self.ton, self.local).find_myself(self.ton.GetValidatorsList())
+        validator = ValidatorModule(self.ton, self.local).find_myself(self.ton.GetValidatorsList(fast=True))
         if validator is None or validator.is_masterchain is False or validator.efficiency is None:
             return
         config34 = self.ton.GetConfig34()
@@ -138,9 +143,14 @@ Alert text:
         if validator.efficiency < 90:
             self.send_alert("low_efficiency", efficiency=validator.efficiency)
 
+    def check_validator_working(self):
+        validator_status = self.ton.GetValidatorStatus()
+        if not validator_status.is_working:
+            self.send_alert("service_down")
+
     def check_sync(self):
         validator_status = self.ton.GetValidatorStatus()
-        if not validator_status.is_working or validator_status.out_of_sync >= 20:
+        if validator_status.is_working and validator_status.out_of_sync >= 20:
             self.send_alert("out_of_sync", sync=validator_status.out_of_sync)
 
     def check_status(self):
@@ -150,6 +160,8 @@ Alert text:
         self.local.try_function(self.check_db_usage)
         self.local.try_function(self.check_validator_wallet_balance)
         self.local.try_function(self.check_efficiency)  # todo: alert if validator is going to be slashed
+        self.local.try_function(self.check_validator_working)
+        self.local.try_function(self.check_validator_working)
         self.local.try_function(self.check_sync)
 
     def add_console_commands(self, console):
