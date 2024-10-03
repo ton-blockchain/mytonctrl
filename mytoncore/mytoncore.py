@@ -2405,7 +2405,10 @@ class MyTonCore():
 					wr = 0
 				else:
 					wr = workBlocksCreated / workBlocksExpected
-				r = (mr + wr) / 2
+				if masterBlocksExpected > 0:  # show only masterchain efficiency for masterchain validator
+					r = mr
+				else:
+					r = (mr + wr) / 2
 				efficiency = round(r * 100, 2)
 				if efficiency > 10:
 					online = True
@@ -2478,6 +2481,8 @@ class MyTonCore():
 				validator["wr"] = validatorsLoad[vid]["wr"]
 				validator["efficiency"] = validatorsLoad[vid]["efficiency"]
 				validator["online"] = validatorsLoad[vid]["online"]
+				validator["master_blocks_created"] = validatorsLoad[vid]["masterBlocksCreated"]
+				validator["master_blocks_expected"] = validatorsLoad[vid]["masterBlocksExpected"]
 				validator["blocks_created"] = validatorsLoad[vid]["masterBlocksCreated"] + validatorsLoad[vid]["workBlocksCreated"]
 				validator["blocks_expected"] = validatorsLoad[vid]["masterBlocksExpected"] + validatorsLoad[vid]["workBlocksExpected"]
 				validator["is_masterchain"] = False
