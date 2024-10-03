@@ -161,7 +161,6 @@ Alert text:
         self.local.try_function(self.check_validator_wallet_balance)
         self.local.try_function(self.check_efficiency)  # todo: alert if validator is going to be slashed
         self.local.try_function(self.check_validator_working)
-        self.local.try_function(self.check_validator_working)
         self.local.try_function(self.check_sync)
 
     def add_console_commands(self, console):
