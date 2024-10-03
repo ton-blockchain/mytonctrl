@@ -9,10 +9,10 @@ import json
 import pkg_resources
 
 from mypylib.mypylib import (
-	add2systemd, 
-	get_dir_from_path, 
-	run_as_root, 
-	color_print, 
+	add2systemd,
+	get_dir_from_path,
+	run_as_root,
+	color_print,
 	ip2int,
 	Dict
 )
@@ -110,17 +110,17 @@ def DownloadDump(local):
 
     # download dump using aria2c to a temporary file
     temp_file = "/tmp/latest.tar.lz"
-    cmd = "aria2c -x 8 -s 8 -c {url}/dumps/latest.tar.lz -o {temp_file}".format(url=url, temp_file=temp_file)
+    cmd = f"aria2c -x 8 -s 8 -c {url}/dumps/latest.tar.lz -d / -o {temp_file}"
     os.system(cmd)
 
     # process the downloaded file
-    cmd = "pv {temp_file} | plzip -d -n8 | tar -xC /var/ton-work/db"
+    cmd = f"pv {temp_file} | plzip -d -n8 | tar -xC /var/ton-work/db"
     os.system(cmd)
 
     # clean up the temporary file after processing
     if os.path.exists(temp_file):
         os.remove(temp_file)
-        local.add_log("Temporary file {temp_file} removed".format(temp_file=temp_file), "debug")
+        local.add_log(f"Temporary file {temp_file} removed", "debug")
     #end if
 #end define
 
