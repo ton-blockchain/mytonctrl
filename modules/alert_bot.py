@@ -18,7 +18,7 @@ HOUR = 3600
 
 ALERTS = {
     "low_wallet_balance": Alert(
-        "medium",
+        "low",
         "Validator wallet {wallet} balance is low: {balance} TON.",
         18*HOUR
     ),
@@ -43,7 +43,7 @@ ALERTS = {
     ),
     "zero_block_created": Alert(
         "critical",
-        "No blocks created for the last 6 hours.",
+        "Validator has not created any blocks in the last 6 hours.",
         6*HOUR
     ),
     "out_of_sync": Alert(
@@ -55,6 +55,11 @@ ALERTS = {
         "critical",
         "validator.service is down.",
         0
+    ),
+    "adnl_connection_failed": Alert(
+        "high",
+        "ADNL connection to node failed",
+        3*HOUR
     ),
 }
 
@@ -85,7 +90,7 @@ class AlertBotModule(MtcModule):
         if alert is None:
             raise Exception(f"Alert {alert_name} not found")
         text = f'''
-<b>MyTonCtrl Alert {alert_name}</b>
+❗️ <b>MyTonCtrl Alert {alert_name}</b> ❗️
 
 Hostname: <code>{self.hostname}</code>
 Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
