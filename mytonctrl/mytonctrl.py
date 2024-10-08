@@ -480,14 +480,15 @@ def check_tg_channel(local, ton):
 #end difine
 
 def check_slashed(local, ton):
-	config32 = ton.GetConfig32()
-	save_complaints = ton.GetSaveComplaints()
-	complaints = save_complaints.get(str(config32['startWorkTime']))
-	if not complaints:
+	validator_status = ton.GetValidatorStatus()
+	if not ton.using_validator() or not validator_status.is_working or validator_status.out_of_sync >= 20:
 		return
-	for c in complaints.values():
-		if c["adnl"] == ton.GetAdnlAddr() and c["isPassed"]:
-			print_warning(local, "slashed_warning")
+	from modules import ValidatorModule
+	validator_module = ValidatorModule(ton, local)
+	c = validator_module.get_my_complaint()
+	if c:
+		warning = local.translate("slashed_warning").format(int(c['suggestedFine']))
+		print_warning(local, warning)
 #end define
 
 def check_adnl(local, ton):
