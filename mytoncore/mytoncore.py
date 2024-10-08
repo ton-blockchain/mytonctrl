@@ -2310,7 +2310,6 @@ class MyTonCore():
 				continue
 
 			exists = False
-			vload = None
 			for item in validators_load.values():
 				if 'fileName' not in item:
 					continue
@@ -2320,14 +2319,14 @@ class MyTonCore():
 				pseudohash = pubkey + str(election_id)
 				if pseudohash == complaint['pseudohash']:
 					exists = True
-					vload = item
+					vid = item['id']
 					break
 
 			if not exists:
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
 				continue
 
-			if vload["id"] >= config32['mainValidators']:
+			if vid >= config32['mainValidators']:
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator", "info")
 				continue
 
@@ -2336,13 +2335,8 @@ class MyTonCore():
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine value is {complaint['suggestedFine']} ton", "info")
 				continue
 			if complaint['suggestedFinePart'] != 0:  # https://github.com/ton-blockchain/ton/blob/5847897b3758bc9ea85af38e7be8fc867e4c133a/lite-client/lite-client.cpp#L3709
-				if vload["id"] < config32['mainValidators'] and vload["masterBlocksCreated"] + vload["workBlocksCreated"] == 0:  # masterchain validator that created 0 blocks
-					if complaint['suggestedFinePart'] != 42949672:  # (1LL << 32) / 100
-						self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine part value is {complaint['suggestedFinePart']} ton", "info")
-						continue
-				else:
-					self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine part value is {complaint['suggestedFinePart']} ton", "info")
-					continue
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint fine part value is {complaint['suggestedFinePart']} ton", "info")
+				continue
 
 			result[complaint['pseudohash']] = complaint
 		return result
@@ -2492,7 +2486,6 @@ class MyTonCore():
 					validator["efficiency"] = round(validator["wr"] * 100, 2)
 			if saveElectionEntries and adnlAddr in saveElectionEntries:
 				validator["walletAddr"] = saveElectionEntries[adnlAddr]["walletAddr"]
-				validator["stake"] = saveElectionEntries[adnlAddr].get("stake")
 		#end for
 
 		# Set buffer
