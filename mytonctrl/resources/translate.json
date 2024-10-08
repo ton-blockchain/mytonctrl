@@ -445,9 +445,9 @@
 		"zh_TW": "{red}錯誤 - 驗證器的 UDP 端口無法從外部訪問.{endc}"
 	},
 	"slashed_warning": {
-		"en": "{red}You were fined by {0} for low efficiency in the previous round.{endc}",
-		"ru": "{red}Вы были оштрафованы на {0} за низкую эффективность в предыдущем раунде.{endc}",
-		"zh_TW": "{red}您因上一輪效率低而被罰款 {0}。{endc}"
+		"en": "{red}You were fined by 101 TON for low efficiency in the previous round.{endc}",
+		"ru": "{red}Вы были оштрафованы на 101 TON за низкую эффективность в предыдущем раунде.{endc}",
+		"zh_TW": "{red}您因上一輪效率低而被罰款 101 TON。{endc}"
 	},
 	"add_custom_overlay_cmd": {
 		"en": "Add custom overlay",
