@@ -2444,7 +2444,7 @@ class MyTonCore():
 		return data
 	#end define
 
-	def GetValidatorsList(self, past=False, fast=False):
+	def GetValidatorsList(self, past=False, fast=False, start=None, end=None):
 		# Get buffer
 		bname = "validatorsList" + str(past)
 		buff = self.GetFunctionBuffer(bname, timeout=60)
@@ -2452,13 +2452,15 @@ class MyTonCore():
 			return buff
 		#end if
 
-		timestamp = get_timestamp()
-		end = timestamp - 60
 		config = self.GetConfig34()
-		if fast:
-			start = end - 1000
-		else:
-			start = config.get("startWorkTime")
+		if start is None:
+			if fast:
+				start = end - 1000
+			else:
+				start = config.get("startWorkTime")
+		if end is None:
+			timestamp = get_timestamp()
+			end = timestamp - 60
 		if past:
 			config = self.GetConfig32()
 			start = config.get("startWorkTime")

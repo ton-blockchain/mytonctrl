@@ -41,11 +41,6 @@ ALERTS = {
         """Validator efficiency is low: {efficiency}%.""",
         12*HOUR
     ),
-    "zero_block_created": Alert(
-        "critical",
-        "Validator has not created any blocks in the last 6 hours.",
-        6*HOUR
-    ),
     "out_of_sync": Alert(
         "critical",
         "Node is out of sync on {sync} sec.",
@@ -61,6 +56,11 @@ ALERTS = {
         "ADNL connection to node failed",
         3*HOUR
     ),
+    "zero_block_created": Alert(
+        "critical",
+        "Validator has not created any blocks in the last 6 hours.",
+        6 * HOUR
+    ),
 }
 
 
@@ -71,6 +71,7 @@ class AlertBotModule(MtcModule):
 
     def __init__(self, ton, local, *args, **kwargs):
         super().__init__(ton, local, *args, **kwargs)
+        self.validator_module = None
         self.inited = False
         self.hostname = None
         self.bot = None
@@ -109,6 +110,8 @@ Alert text:
             return
         if self.token is None or self.chat_id is None:
             raise Exception("BotToken or ChatId is not set")
+        from modules.validator import ValidatorModule
+        self.validator_module = ValidatorModule(self.ton, self.local)
         import telebot
         self.bot = telebot.TeleBot(self.token, parse_mode="HTML")
         self.hostname = get_hostname()
@@ -132,14 +135,17 @@ Alert text:
             self.send_alert("db_usage_80")
 
     def check_validator_wallet_balance(self):
+        if not self.ton.using_validator():
+            return
         validator_wallet = self.ton.GetValidatorWallet()
         validator_account = self.ton.GetAccount(validator_wallet.addrB64)
         if validator_account.balance < 50:
             self.send_alert("low_wallet_balance", wallet=validator_wallet.addrB64, balance=validator_account.balance)
 
     def check_efficiency(self):
-        from modules.validator import ValidatorModule
-        validator = ValidatorModule(self.ton, self.local).find_myself(self.ton.GetValidatorsList(fast=True))
+        if not self.ton.using_validator():
+            return
+        validator = self.validator_module.find_myself(self.ton.GetValidatorsList(fast=True))
         if validator is None or validator.is_masterchain is False or validator.efficiency is None:
             return
         config34 = self.ton.GetConfig34()
@@ -158,6 +164,15 @@ Alert text:
         if validator_status.is_working and validator_status.out_of_sync >= 20:
             self.send_alert("out_of_sync", sync=validator_status.out_of_sync)
 
+    def check_zero_blocks_created(self):
+        if not self.ton.using_validator():
+            return
+        validators = self.ton.GetValidatorsList(start=-6*HOUR, end=-60)
+        validator = self.validator_module.find_myself(validators)
+        if validator is None or validator.blocks_created > 0:
+            return
+        self.send_alert("zero_block_created")
+
     def check_status(self):
         if not self.inited:
             self.init()
@@ -166,6 +181,7 @@ Alert text:
         self.local.try_function(self.check_validator_wallet_balance)
         self.local.try_function(self.check_efficiency)  # todo: alert if validator is going to be slashed
         self.local.try_function(self.check_validator_working)
+        self.local.try_function(self.check_zero_blocks_created)
         self.local.try_function(self.check_sync)
 
     def add_console_commands(self, console):
