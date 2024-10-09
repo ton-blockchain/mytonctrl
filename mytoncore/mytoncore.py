@@ -3049,9 +3049,6 @@ class MyTonCore():
 		if name == 'liquid-staking':
 			from mytoninstaller.settings import enable_ton_http_api
 			enable_ton_http_api(self.local)
-		if name == 'alert-bot':
-			args = ["pip", "install", "pytelegrambotapi==4.23.0"]
-			subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
 
 	def enable_mode(self, name):
 		if name not in MODES:

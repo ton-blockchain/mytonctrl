@@ -1,5 +1,6 @@
 import dataclasses
 import time
+import requests
 
 from modules.module import MtcModule
 from mytoncore import get_hostname
@@ -64,7 +65,7 @@ ALERTS = {
     "validator_slashed": Alert(
         "high",
         "Validator has been slashed in previous round for {amount} TON",
-        0
+        10*HOUR
     ),
 }
 
@@ -79,15 +80,20 @@ class AlertBotModule(MtcModule):
         self.validator_module = None
         self.inited = False
         self.hostname = None
-        self.bot = None
         self.token = self.ton.local.db.get("BotToken")
         self.chat_id = self.ton.local.db.get("ChatId")
 
     def send_message(self, text: str):
-        if self.bot is not None:
-            self.bot.send_message(self.chat_id, text)
-        else:
-            raise Exception("send_message error: bot is not initialized")
+        if self.token is None:
+            raise Exception("send_message error: token is not initialized")
+        request_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+        data = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML'}
+        response = requests.post(request_url, data=data, timeout=3)
+        if response.status_code != 200:
+            raise Exception(f"send_message error: {response.text}")
+        response = response.json()
+        if not response['ok']:
+            raise Exception(f"send_message error: {response}")
 
     def send_alert(self, alert_name: str, *args, **kwargs):
         last_sent = self.get_alert_sent(alert_name)
@@ -117,8 +123,6 @@ Alert text:
             raise Exception("BotToken or ChatId is not set")
         from modules.validator import ValidatorModule
         self.validator_module = ValidatorModule(self.ton, self.local)
-        import telebot
-        self.bot = telebot.TeleBot(self.token, parse_mode="HTML")
         self.hostname = get_hostname()
         self.inited = True
 
