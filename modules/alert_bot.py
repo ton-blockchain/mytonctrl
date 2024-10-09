@@ -190,6 +190,9 @@ Alert text:
         ts = get_timestamp()
         period = VALIDATION_PERIOD // 3  # 6h for mainnet, 40m for testnet
         start, end = ts - period, ts - 60
+        config34 = self.ton.GetConfig34()
+        if start < config34.startWorkTime:  # round started recently
+            return
         validators = self.ton.GetValidatorsList(start=start, end=end)
         validator = self.validator_module.find_myself(validators)
         if validator is None or validator.blocks_created > 0:
