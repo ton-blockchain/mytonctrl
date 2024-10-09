@@ -2447,14 +2447,14 @@ class MyTonCore():
 		#end if
 
 		config = self.GetConfig34()
+		if end is None:
+			timestamp = get_timestamp()
+			end = timestamp - 60
 		if start is None:
 			if fast:
 				start = end - 1000
 			else:
 				start = config.get("startWorkTime")
-		if end is None:
-			timestamp = get_timestamp()
-			end = timestamp - 60
 		if past:
 			config = self.GetConfig32()
 			start = config.get("startWorkTime")
