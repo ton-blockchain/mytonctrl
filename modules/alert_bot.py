@@ -3,6 +3,7 @@ import time
 import requests
 
 from modules.module import MtcModule
+from mypylib.mypylib import get_timestamp
 from mytoncore import get_hostname
 from mytonctrl.utils import timestamp2utcdatetime
 
@@ -15,6 +16,8 @@ class Alert:
 
 
 HOUR = 3600
+VALIDATION_PERIOD = 65536
+FREEZE_PERIOD = 32768
 
 
 ALERTS = {
@@ -40,7 +43,7 @@ ALERTS = {
     "low_efficiency": Alert(
         "high",
         """Validator efficiency is low: {efficiency}%.""",
-        12*HOUR
+        VALIDATION_PERIOD // 3
     ),
     "out_of_sync": Alert(
         "critical",
@@ -59,13 +62,13 @@ ALERTS = {
     ),
     "zero_block_created": Alert(
         "critical",
-        "Validator has not created any blocks in the last 6 hours.",
-        6 * HOUR
+        "Validator has not created any blocks in the last {hours} hours.",
+        VALIDATION_PERIOD // 3
     ),
     "validator_slashed": Alert(
         "high",
         "Validator has been slashed in previous round for {amount} TON",
-        10*HOUR
+        FREEZE_PERIOD
     ),
 }
 
@@ -116,6 +119,13 @@ Alert text:
             self.send_message(text)
             self.set_alert_sent(alert_name)
 
+    def set_global_vars(self):
+        # set global vars for correct alerts timeouts for current network
+        config15 = self.ton.GetConfig15()
+        global VALIDATION_PERIOD, FREEZE_PERIOD
+        VALIDATION_PERIOD = config15["validatorsElectedFor"]
+        FREEZE_PERIOD = config15["stakeHeldFor"]
+
     def init(self):
         if not self.ton.get_mode_value('alert-bot'):
             return
@@ -124,6 +134,7 @@ Alert text:
         from modules.validator import ValidatorModule
         self.validator_module = ValidatorModule(self.ton, self.local)
         self.hostname = get_hostname()
+        self.set_global_vars()
         self.inited = True
 
     def set_alert_sent(self, alert_name: str):
@@ -148,7 +159,7 @@ Alert text:
             return
         validator_wallet = self.ton.GetValidatorWallet()
         validator_account = self.ton.GetAccount(validator_wallet.addrB64)
-        if validator_account.balance < 50:
+        if validator_account.balance < 10:
             self.send_alert("low_wallet_balance", wallet=validator_wallet.addrB64, balance=validator_account.balance)
 
     def check_efficiency(self):
@@ -176,11 +187,14 @@ Alert text:
     def check_zero_blocks_created(self):
         if not self.ton.using_validator():
             return
-        validators = self.ton.GetValidatorsList(start=-6*HOUR, end=-60)
+        ts = get_timestamp()
+        period = VALIDATION_PERIOD // 3  # 6h for mainnet, 40m for testnet
+        start, end = ts - period, ts - 60
+        validators = self.ton.GetValidatorsList(start=start, end=end)
         validator = self.validator_module.find_myself(validators)
         if validator is None or validator.blocks_created > 0:
             return
-        self.send_alert("zero_block_created")
+        self.send_alert("zero_block_created", hours=period // 3600)
 
     def check_slashed(self):
         if not self.ton.using_validator():
