@@ -2440,7 +2440,7 @@ class MyTonCore():
 
 	def GetValidatorsList(self, past=False, fast=False, start=None, end=None):
 		# Get buffer
-		bname = "validatorsList" + str(past)
+		bname = "validatorsList" + str(past) + str(start) + str(end)
 		buff = self.GetFunctionBuffer(bname, timeout=60)
 		if buff:
 			return buff
