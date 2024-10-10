@@ -110,7 +110,6 @@ class AlertBotModule(MtcModule):
 Hostname: <code>{self.hostname}</code>
 Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
 Severity: <code>{alert.severity}</code>
-Next alert of this type not earlier than: <code>{max(alert.timeout, 1000)} sec</code>
 
 Alert text:
 <blockquote> {alert.text.format(*args, **kwargs)} </blockquote>
