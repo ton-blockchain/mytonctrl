@@ -196,7 +196,7 @@ Alert text:
         validator = self.validator_module.find_myself(validators)
         if validator is None or validator.blocks_created > 0:
             return
-        self.send_alert("zero_block_created", hours=period // 3600)
+        self.send_alert("zero_block_created", hours=round(period // 3600, 1))
 
     def check_slashed(self):
         if not self.ton.using_validator():
