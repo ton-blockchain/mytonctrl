@@ -492,31 +492,9 @@ def check_slashed(local, ton):
 #end define
 
 def check_adnl(local, ton):
-	telemetry = ton.local.db.get("sendTelemetry", False)
-	check_adnl = ton.local.db.get("checkAdnl", telemetry)
-	local.add_log('Checking ADNL connection to local node', 'info')
-	if not check_adnl:
-		return
-	hosts = ['45.129.96.53', '5.154.181.153', '2.56.126.137', '91.194.11.68', '45.12.134.214', '138.124.184.27', '103.106.3.171']
-	hosts = random.sample(hosts, k=3)
-	data = ton.get_local_adnl_data()
-	error = ''
-	ok = True
-	for host in hosts:
-		url = f'http://{host}/adnl_check'
-		try:
-			response = requests.post(url, json=data, timeout=5).json()
-		except Exception as e:
-			ok = False
-			error = f'{{red}}Failed to check ADNL connection to local node: {type(e)}: {e}{{endc}}'
-			continue
-		result = response.get("ok")
-		if result:
-			ok = True
-			break
-		if not result:
-			ok = False
-			error = f'{{red}}Failed to check ADNL connection to local node: {response.get("message")}{{endc}}'
+	from modules.utilities import UtilitiesModule
+	utils_module = UtilitiesModule(ton, local)
+	ok, error = utils_module.check_adnl_connection()
 	if not ok:
 		print_warning(local, error)
 #end define

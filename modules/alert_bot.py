@@ -205,6 +205,13 @@ Alert text:
         if c is not None:
             self.send_alert("validator_slashed", amount=int(c['suggestedFine']))
 
+    def check_adnl_connection_failed(self):
+        from modules.utilities import UtilitiesModule
+        utils_module = UtilitiesModule(self.ton, self.local)
+        ok, error = utils_module.check_adnl_connection()
+        if not ok:
+            self.send_alert("adnl_connection_failed")
+
     def check_status(self):
         if not self.inited:
             self.init()
@@ -216,6 +223,7 @@ Alert text:
         self.local.try_function(self.check_zero_blocks_created)
         self.local.try_function(self.check_sync)
         self.local.try_function(self.check_slashed)
+        self.local.try_function(self.check_adnl_connection_failed)
 
     def add_console_commands(self, console):
         ...
