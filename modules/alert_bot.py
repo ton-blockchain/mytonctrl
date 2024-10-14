@@ -3,7 +3,7 @@ import time
 import requests
 
 from modules.module import MtcModule
-from mypylib.mypylib import get_timestamp
+from mypylib.mypylib import get_timestamp, print_table, color_print
 from mytoncore import get_hostname
 from mytonctrl.utils import timestamp2utcdatetime
 
@@ -99,6 +99,8 @@ class AlertBotModule(MtcModule):
             raise Exception(f"send_message error: {response}")
 
     def send_alert(self, alert_name: str, *args, **kwargs):
+        if not self.alert_is_enabled(alert_name):
+            return
         last_sent = self.get_alert_sent(alert_name)
         time_ = timestamp2utcdatetime(int(time.time()))
         alert = ALERTS.get(alert_name)
@@ -136,15 +138,50 @@ Alert text:
         self.set_global_vars()
         self.inited = True
 
-    def set_alert_sent(self, alert_name: str):
+    def get_alert_from_db(self, alert_name: str):
         if 'alerts' not in self.ton.local.db:
             self.ton.local.db['alerts'] = {}
-        self.ton.local.db['alerts'][alert_name] = int(time.time())
+        if alert_name not in self.ton.local.db['alerts']:
+            self.ton.local.db['alerts'][alert_name] = {'sent': 0, 'enabled': True}
+        return self.ton.local.db['alerts'][alert_name]
+
+    def set_alert_sent(self, alert_name: str):
+        alert = self.get_alert_from_db(alert_name)
+        alert['sent'] = int(time.time())
 
     def get_alert_sent(self, alert_name: str):
-        if 'alerts' not in self.ton.local.db:
-            return 0
-        return self.ton.local.db['alerts'].get(alert_name, 0)
+        alert = self.get_alert_from_db(alert_name)
+        return alert.get('sent', 0)
+
+    def alert_is_enabled(self, alert_name: str):
+        alert = self.get_alert_from_db(alert_name)
+        return alert.get('enabled', True)  # default is True
+
+    def set_alert_enabled(self, alert_name: str, enabled: bool):
+        alert = self.get_alert_from_db(alert_name)
+        alert['enabled'] = enabled
+        self.ton.local.save()
+
+    def enable_alert(self, args):
+        if len(args) != 1:
+            raise Exception("Usage: enable_alert <alert_name>")
+        alert_name = args[0]
+        self.set_alert_enabled(alert_name, True)
+        color_print("enable_alert - {green}OK{endc}")
+
+    def disable_alert(self, args):
+        if len(args) != 1:
+            raise Exception("Usage: disable_alert <alert_name>")
+        alert_name = args[0]
+        self.set_alert_enabled(alert_name, False)
+        color_print("disable_alert - {green}OK{endc}")
+
+    def print_alerts(self, args):
+        table = [['Name', 'Enabled', 'Last sent']]
+        for alert_name in ALERTS:
+            alert = self.get_alert_from_db(alert_name)
+            table.append([alert_name, alert['enabled'], alert['sent']])
+        print_table(table)
 
     def check_db_usage(self):
         usage = self.ton.GetDbUsage()
@@ -226,4 +263,6 @@ Alert text:
         self.local.try_function(self.check_adnl_connection_failed)
 
     def add_console_commands(self, console):
-        ...
+        console.AddItem("enable_alert", self.enable_alert, self.local.translate("enable_alert_cmd"))
+        console.AddItem("disable_alert", self.disable_alert, self.local.translate("disable_alert_cmd"))
+        console.AddItem("list_alerts", self.print_alerts, self.local.translate("list_alerts_cmd"))

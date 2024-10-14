@@ -135,6 +135,11 @@ def Init(local, ton, console, argv):
 			module = ControllerModule(ton, local)
 			module.add_console_commands(console)
 
+	if ton.using_alert_bot():
+		from modules.alert_bot import AlertBotModule
+		module = AlertBotModule(ton, local)
+		module.add_console_commands(console)
+
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
 	# console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))

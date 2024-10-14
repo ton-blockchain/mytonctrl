@@ -464,6 +464,21 @@
 		"ru": "Удалить пользовательский оверлей",
 		"zh_TW": "刪除自定義覆蓋"
 	},
+	"enable_alert_cmd": {
+		"en": "Enable specific Telegram Bot alert",
+		"ru": "Включить определенное оповещение через Telegram Bot",
+		"zh_TW": "啟用特定的 Telegram Bot 警報"
+	},
+	"disable_alert_cmd": {
+		"en": "Disable specific Telegram Bot alert",
+		"ru": "Отключить определенное оповещение через Telegram Bot",
+		"zh_TW": "禁用特定的 Telegram Bot 警報"
+	},
+	"list_alerts_cmd": {
+		"en": "List all available Telegram Bot alerts",
+		"ru": "Список всех доступных оповещений через Telegram Bot",
+		"zh_TW": "列出所有可用的 Telegram Bot 警報"
+	},
 	"cleanup_cmd": {
 		"en": "Clean node old logs and temp files",
 		"ru": "Очистить старые логи и временные файлы ноды",

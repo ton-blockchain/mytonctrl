@@ -3089,6 +3089,9 @@ class MyTonCore():
 	def using_liteserver(self):
 		return self.get_mode_value('liteserver')
 
+	def using_alert_bot(self):
+		return self.get_mode_value('alert-bot')
+
 	def Tlb2Json(self, text):
 		# Заменить скобки
 		start = 0
