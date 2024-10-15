@@ -1624,7 +1624,7 @@ class MyTonCore():
 		if os.path.isfile(wallet_path + ".pk") and "v3" not in version:
 			self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
 		else:
-			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
 				wallet_path=wallet_path, subwallet=subwallet)
 			result = self.fift.Run(fift_args)
 			if "Creating new" not in result:
@@ -1681,7 +1681,7 @@ class MyTonCore():
 		wallet_path = self.walletsDir + wallet_name
 		with open(wallet_path + ".pk", 'wb') as file:
 			file.write(pk_bytes)
-		fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+		fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
 			wallet_path=wallet_path, subwallet=subwallet)
 		result = self.fift.Run(fift_args)
 		if "Creating new" not in result:
@@ -2310,6 +2310,7 @@ class MyTonCore():
 				continue
 
 			exists = False
+			vload = None
 			for item in validators_load.values():
 				if 'fileName' not in item:
 					continue
@@ -2319,15 +2320,16 @@ class MyTonCore():
 				pseudohash = pubkey + str(election_id)
 				if pseudohash == complaint['pseudohash']:
 					exists = True
-					vid = item['id']
+					vload = item
 					break
 
 			if not exists:
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
 				continue
 
-			if vid >= config32['mainValidators']:
-				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator", "info")
+			if (vload["id"] >= config32['mainValidators'] and
+				vload["masterBlocksCreated"] + vload["workBlocksCreated"] > 0):
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator that created more than zero blocks", "info")
 				continue
 
 			# check complaint fine value
@@ -2524,7 +2526,7 @@ class MyTonCore():
 			pseudohash = pubkey + str(electionId)
 			if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create complaints that already created or voted by ourself
 				continue
-			if item['id'] >= config['mainValidators']:  # do not create complaints for non-masterchain validators
+			if item['id'] >= config['mainValidators'] and item["masterBlocksCreated"] + item["workBlocksCreated"] > 0:  # create complaints for non-masterchain validators only if they created 0 blocks
 				continue
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)
