@@ -50,6 +50,7 @@ from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_conf
 import sys, getopt, os
 
 from mytoninstaller.config import get_own_ip
+from mytoninstaller.utils import enable_tha
 
 
 def Init(local, ton, console, argv):
@@ -327,7 +328,7 @@ def check_branch_exists(author, repo, branch):
 		raise Exception(f"Branch {branch} not found in {url}")
 #end define
 
-def Update(local, args):
+def Update(local, ton, args):
 	repo = "mytonctrl"
 	author, repo, branch = check_git(args, repo, "update")
 
@@ -335,6 +336,8 @@ def Update(local, args):
 	update_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/update.sh')
 	runArgs = ["bash", update_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
+	if ton.using_validator():
+		enable_tha(local)
 	if exitCode == 0:
 		text = "Update - {green}OK{endc}"
 	else:
@@ -343,7 +346,7 @@ def Update(local, args):
 	local.exit()
 #end define
 
-def Upgrade(ton, args):
+def Upgrade(local, ton, args):
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
 
@@ -370,13 +373,7 @@ def Upgrade(ton, args):
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
 	if ton.using_validator():
-		try:
-			from mytoninstaller.mytoninstaller import set_node_argument, get_node_args
-			node_args = get_node_args()
-			if node_args.get('--state-ttl') == '604800':
-				set_node_argument(ton.local, ["--state-ttl", "-d"])
-		except Exception as e:
-			color_print(f"{{red}}Failed to set node argument: {e} {{endc}}")
+		enable_tha(local)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
