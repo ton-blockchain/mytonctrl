@@ -365,6 +365,21 @@ class UtilitiesModule(MtcModule):
                 error = f'{{red}}Failed to check ADNL connection to local node: {response.get("message")}{{endc}}'
         return ok, error
 
+    def get_pool_data(self, args):
+        try:
+            pool_name = args[0]
+        except:
+            color_print("{red}Bad args. Usage:{endc} get_pool_data <pool-name | pool-addr>")
+            return
+        if self.ton.IsAddr(pool_name):
+            pool_addr = pool_name
+        else:
+            pool = self.ton.GetLocalPool(pool_name)
+            pool_addr = pool.addrB64
+        pool_data = self.ton.GetPoolData(pool_addr)
+        print(json.dumps(pool_data, indent=4))
+    # end define
+
     def add_console_commands(self, console):
         console.AddItem("vas", self.view_account_status, self.local.translate("vas_cmd"))
         console.AddItem("vah", self.view_account_history, self.local.translate("vah_cmd"))
@@ -380,3 +395,4 @@ class UtilitiesModule(MtcModule):
         console.AddItem("vl", self.print_validator_list, self.local.translate("vl_cmd"))
         console.AddItem("cl", self.print_complaints_list, self.local.translate("cl_cmd"))
 
+        console.AddItem("get_pool_data", self.get_pool_data, self.local.translate("get_pool_data_cmd"))
