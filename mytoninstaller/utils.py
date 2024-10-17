@@ -56,10 +56,10 @@ def get_ed25519_pubkey(privkey):
 
 def tha_exists():
 	try:
-		resp = requests.get('http://127.0.0.1:8801/getMasterchainInfo', timeout=3)
+		resp = requests.get('http://127.0.0.1:8801/healthcheck', timeout=3)
 	except:
 		return False
-	if resp.status_code == 200:
+	if resp.status_code == 200 and resp.text == '"OK"':
 		return True
 	return False
 
