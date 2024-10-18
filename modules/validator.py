@@ -91,6 +91,17 @@ class ValidatorModule(MtcModule):
             print("Couldn't find this validator in the current round")
     # end define
 
+    def get_my_complaint(self):
+        config32 = self.ton.GetConfig32()
+        save_complaints = self.ton.GetSaveComplaints()
+        complaints = save_complaints.get(str(config32['startWorkTime']))
+        if not complaints:
+            return
+        for c in complaints.values():
+            if c["adnl"] == self.ton.GetAdnlAddr() and c["isPassed"]:
+                return c
+    # end define
+
     def add_console_commands(self, console):
         console.AddItem("vo", self.vote_offer, self.local.translate("vo_cmd"))
         console.AddItem("ve", self.vote_election_entry, self.local.translate("ve_cmd"))

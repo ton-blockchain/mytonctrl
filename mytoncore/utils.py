@@ -1,6 +1,7 @@
 import base64
 import json
 import re
+import subprocess
 
 
 def str2b64(s):
@@ -97,3 +98,6 @@ def parse_db_stats(path: str):
                 result[s[0]] = {k: float(v) for k, v in items}
     return result
 # end define
+
+def get_hostname():
+    return subprocess.run(["hostname", "-f"], stdout=subprocess.PIPE).stdout.decode().strip()

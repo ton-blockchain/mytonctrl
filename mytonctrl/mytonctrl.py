@@ -135,6 +135,11 @@ def Init(local, ton, console, argv):
 			module = ControllerModule(ton, local)
 			module.add_console_commands(console)
 
+	if ton.using_alert_bot():
+		from modules.alert_bot import AlertBotModule
+		module = AlertBotModule(ton, local)
+		module.add_console_commands(console)
+
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
 	# console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
@@ -480,42 +485,21 @@ def check_tg_channel(local, ton):
 #end difine
 
 def check_slashed(local, ton):
-	config32 = ton.GetConfig32()
-	save_complaints = ton.GetSaveComplaints()
-	complaints = save_complaints.get(str(config32['startWorkTime']))
-	if not complaints:
+	validator_status = ton.GetValidatorStatus()
+	if not ton.using_validator() or not validator_status.is_working or validator_status.out_of_sync >= 20:
 		return
-	for c in complaints.values():
-		if c["adnl"] == ton.GetAdnlAddr() and c["isPassed"]:
-			print_warning(local, "slashed_warning")
+	from modules import ValidatorModule
+	validator_module = ValidatorModule(ton, local)
+	c = validator_module.get_my_complaint()
+	if c:
+		warning = local.translate("slashed_warning").format(int(c['suggestedFine']))
+		print_warning(local, warning)
 #end define
 
 def check_adnl(local, ton):
-	telemetry = ton.local.db.get("sendTelemetry", False)
-	check_adnl = ton.local.db.get("checkAdnl", telemetry)
-	local.add_log('Checking ADNL connection to local node', 'info')
-	if not check_adnl:
-		return
-	hosts = ['45.129.96.53', '5.154.181.153', '2.56.126.137', '91.194.11.68', '45.12.134.214', '138.124.184.27', '103.106.3.171']
-	hosts = random.sample(hosts, k=3)
-	data = ton.get_local_adnl_data()
-	error = ''
-	ok = True
-	for host in hosts:
-		url = f'http://{host}/adnl_check'
-		try:
-			response = requests.post(url, json=data, timeout=5).json()
-		except Exception as e:
-			ok = False
-			error = f'{{red}}Failed to check ADNL connection to local node: {type(e)}: {e}{{endc}}'
-			continue
-		result = response.get("ok")
-		if result:
-			ok = True
-			break
-		if not result:
-			ok = False
-			error = f'{{red}}Failed to check ADNL connection to local node: {response.get("message")}{{endc}}'
+	from modules.utilities import UtilitiesModule
+	utils_module = UtilitiesModule(ton, local)
+	ok, error = utils_module.check_adnl_connection()
 	if not ok:
 		print_warning(local, error)
 #end define
