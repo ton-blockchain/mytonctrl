@@ -8,6 +8,7 @@ from modules.single_pool import SingleNominatorModule
 from modules.validator import ValidatorModule
 from modules.controller import ControllerModule
 from modules.liteserver import LiteserverModule
+from modules.alert_bot import AlertBotModule
 
 
 MODES = {
@@ -15,7 +16,8 @@ MODES = {
     'nominator-pool': NominatorPoolModule,
     'single-nominator': SingleNominatorModule,
     'liquid-staking': ControllerModule,
-    'liteserver': LiteserverModule
+    'liteserver': LiteserverModule,
+    'alert-bot': AlertBotModule
 }
 
 
@@ -55,6 +57,8 @@ SETTINGS = {
     'defaultCustomOverlaysUrl': Setting(None, 'https://ton-blockchain.github.io/fallback_custom_overlays.json', 'Default custom overlays config url'),
     'debug': Setting(None, False, 'Debug mtc console mode. Prints Traceback on errors'),
     'subscribe_tg_channel': Setting('validator', False, 'Disables warning about subscribing to the `TON STATUS` channel'),
+    'BotToken': Setting('alert-bot', None, 'Alerting Telegram bot token'),
+    'ChatId': Setting('alert-bot', None, 'Alerting Telegram chat id')
 }
 
 
