@@ -233,6 +233,7 @@ def PreUp(local: MyPyClass, ton: MyTonCore):
 	check_vport(local, ton)
 	warnings(local, ton)
 	check_btc_teleport(local, ton)
+	check_tha(local, ton)
 	# CheckTonUpdate()
 #end define
 
@@ -329,7 +330,7 @@ def check_branch_exists(author, repo, branch):
 		raise Exception(f"Branch {branch} not found in {url}")
 #end define
 
-def Update(local, ton, args):
+def Update(local, args):
 	repo = "mytonctrl"
 	author, repo, branch = check_git(args, repo, "update")
 
@@ -337,8 +338,6 @@ def Update(local, ton, args):
 	update_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/update.sh')
 	runArgs = ["bash", update_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
-	if ton.using_validator():
-		enable_tha(local)
 	if exitCode == 0:
 		text = "Update - {green}OK{endc}"
 	else:
@@ -347,7 +346,7 @@ def Update(local, ton, args):
 	local.exit()
 #end define
 
-def Upgrade(local, ton, args):
+def Upgrade(ton, args):
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
 
@@ -373,8 +372,6 @@ def Upgrade(local, ton, args):
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
-	if ton.using_validator():
-		enable_tha(local)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
@@ -518,6 +515,12 @@ def check_btc_teleport(local, ton):
 	from modules.btc_teleport import BtcTeleportModule
 	module = BtcTeleportModule(ton, local)
 	local.try_function(module.init)
+
+
+def check_tha(local, ton):
+	if ton.using_validator():
+		enable_tha(local)
+
 
 def CheckTonUpdate(local):
 	git_path = "/usr/src/ton"
