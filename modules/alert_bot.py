@@ -207,11 +207,14 @@ Alert text:
         if not self.ton.using_validator():
             return
         validator = self.validator_module.find_myself(self.ton.GetValidatorsList())
-        if validator is None or validator.is_masterchain is False or validator.efficiency is None:
+        if validator is None or validator.efficiency is None:
             return
         config34 = self.ton.GetConfig34()
         if (time.time() - config34.startWorkTime) / (config34.endWorkTime - config34.startWorkTime) < 0.8:
             return  # less than 80% of round passed
+        if validator.is_masterchain is False:
+            if validator.efficiency != 0:
+                return
         if validator.efficiency < 90:
             self.send_alert("low_efficiency", efficiency=validator.efficiency)
 

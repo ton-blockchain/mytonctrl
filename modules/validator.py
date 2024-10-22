@@ -54,10 +54,10 @@ class ValidatorModule(MtcModule):
         end_time = timestamp2utcdatetime(config32.endWorkTime)
         color_print(f"Previous round time: {{yellow}}from {start_time} to {end_time}{{endc}}")
         if validator:
-            if validator.is_masterchain == False:
-                print(f"Validator index is greater than {config32['mainValidators']} in the previous round - no efficiency data.")
-            elif validator.get('efficiency') is None:
+            if validator.get('efficiency') is None:
                 print('Failed to get efficiency for the previous round')
+            elif validator.is_masterchain is False and validator.get('efficiency') != 0:
+                print(f"Validator index is greater than {config32['mainValidators']} in the previous round - no efficiency data.")
             else:
                 efficiency = 100 if validator.efficiency > 100 else validator.efficiency
                 color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
@@ -74,7 +74,7 @@ class ValidatorModule(MtcModule):
         end_time = timestamp2utcdatetime(int(get_timestamp()))
         color_print(f"Current round time: {{green}}from {start_time} to {end_time}{{endc}}")
         if validator:
-            if validator.is_masterchain == False:
+            if validator.is_masterchain is False and validator.efficiency != 0:
                 print(f"Validator index is greater than {config34['mainValidators']} in the current round - no efficiency data.")
             elif (time.time() - config34.startWorkTime) / (config34.endWorkTime - config34.startWorkTime) < 0.8:
                 print("The validation round has started recently, there is not enough data yet. "
