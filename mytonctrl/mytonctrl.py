@@ -232,6 +232,7 @@ def PreUp(local: MyPyClass, ton: MyTonCore):
 	check_installer_user(local)
 	check_vport(local, ton)
 	warnings(local, ton)
+	check_btc_teleport(local, ton)
 	# CheckTonUpdate()
 #end define
 
@@ -510,6 +511,13 @@ def warnings(local, ton):
 	local.try_function(check_tg_channel, args=[local, ton])
 	local.try_function(check_slashed, args=[local, ton])
 #end define
+
+def check_btc_teleport(local, ton):
+	if not ton.using_validator():
+		return
+	from modules.btc_teleport import BtcTeleportModule
+	module = BtcTeleportModule(ton, local)
+	local.try_function(module.init)
 
 def CheckTonUpdate(local):
 	git_path = "/usr/src/ton"
