@@ -527,6 +527,9 @@ def mode_status(ton, args):
 	table = [["Name", "Status", "Description"]]
 	for mode_name in modes:
 		mode = get_mode(mode_name)
+		if mode is None:
+			color_print(f"{{red}}Mode {mode_name} not found{{endc}}")
+			continue
 		status = color_text('{green}enabled{endc}' if modes[mode_name] else '{red}disabled{endc}')
 		table.append([mode_name, status, mode.description])
 	print_table(table)
