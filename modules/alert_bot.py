@@ -206,7 +206,7 @@ Alert text:
     def check_efficiency(self):
         if not self.ton.using_validator():
             return
-        validator = self.validator_module.find_myself(self.ton.GetValidatorsList(fast=True))
+        validator = self.validator_module.find_myself(self.ton.GetValidatorsList())
         if validator is None or validator.is_masterchain is False or validator.efficiency is None:
             return
         config34 = self.ton.GetConfig34()
