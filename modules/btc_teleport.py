@@ -37,7 +37,7 @@ VALIDATOR_ENGINE_CONSOLE_PATH={self.ton.validatorConsole.appPath}
     @staticmethod
     def install_sources():
         script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/btc_teleport.sh')
-        subprocess.run("bash", script_path)
+        subprocess.run(["bash", script_path])
 
     def add_daemon(self):
         add2systemd(name="btc_teleport", user=os.getlogin(), start="bun start", workdir=self.src_dir)
