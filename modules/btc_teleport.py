@@ -1,20 +1,18 @@
 import os
-import subprocess
 
 import pkg_resources
 
 from modules.module import MtcModule
-from mypylib.mypylib import add2systemd
-from mytoninstaller.utils import start_service
+from mypylib.mypylib import run_as_root
 
 
 class BtcTeleportModule(MtcModule):
 
     def __init__(self, ton, local, *args, **kwargs):
         super().__init__(ton, local, *args, **kwargs)
-        self.keystore_path = os.path.abspath(self.ton.local.buffer.my_work_dir + '../btc_teleport/keystore/')
-        os.makedirs(self.keystore_path, exist_ok=True)
-        self.src_dir = '/usr/src/ton-teleport-btc-oracle/'
+        self.workdir = os.path.abspath(self.ton.local.buffer.my_work_dir + '../btc_teleport/')
+        self.keystore_path = self.workdir + '/keystore/'
+        self.src_dir = self.workdir + '/src/'
 
     def create_env_file(self):
         env_path = self.src_dir + '.env'
@@ -34,19 +32,17 @@ VALIDATOR_ENGINE_CONSOLE_PATH={self.ton.validatorConsole.appPath}
         with open(env_path, 'w') as f:
             f.write(text)
 
-    @staticmethod
-    def install_sources():
+    def install(self):
         script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/btc_teleport.sh')
-        subprocess.run(["bash", script_path])
+        run_as_root(["bash", script_path, "-s", self.src_dir])
 
-    def add_daemon(self):
-        add2systemd(name="btc_teleport", user=os.getlogin(), start="bun start", workdir=self.src_dir)
-        start_service(self.local, "btc_teleport")
-
-    def init(self):
-        self.install_sources()
+    def init(self, reinstall=False):
+        if os.path.exists(self.src_dir) and not reinstall:
+            return
+        os.makedirs(self.keystore_path, exist_ok=True)
+        os.makedirs(self.src_dir, exist_ok=True)
+        self.install()
         self.create_env_file()
-        self.add_daemon()
 
     def add_console_commands(self, console):
         pass
