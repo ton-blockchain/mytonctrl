@@ -85,6 +85,7 @@ class AlertBotModule(MtcModule):
         self.hostname = None
         self.token = self.ton.local.db.get("BotToken")
         self.chat_id = self.ton.local.db.get("ChatId")
+        self.last_db_check = None
 
     def send_message(self, text: str):
         if self.token is None:
@@ -189,6 +190,9 @@ Alert text:
         self.send_message('Test alert')
 
     def check_db_usage(self):
+        if time.time() - self.last_db_check < 600:
+            return
+        self.last_db_check = time.time()
         usage = self.ton.GetDbUsage()
         if usage > 95:
             self.send_alert("db_usage_95")
@@ -258,6 +262,8 @@ Alert text:
             self.send_alert("adnl_connection_failed")
 
     def check_status(self):
+        if not self.ton.using_alert_bot():
+            return
         if not self.inited:
             self.init()
 
