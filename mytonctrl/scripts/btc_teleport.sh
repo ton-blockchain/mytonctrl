@@ -15,7 +15,7 @@ REPO_URL=https://github.com/RSquad/${REPO}.git
 if ! command -v unzip >/dev/null 2>&1
 then
   echo "installing unzip"
-  apt-get install -y unzip
+  sudo apt-get install -y unzip
 fi
 
 if ! command -v rustc >/dev/null 2>&1
@@ -40,4 +40,6 @@ cd $REPO || exit 1
 bun install
 bun run build:frost
 
-python3 -c "import mypylib; mypylib.add2systemd(name='btc_teleport', user=os.getlogin(), start='bun start', workdir=${SRC_DIR})"
+bun_executable=$(which bun)
+
+sudo python3 -c "import subprocess; import os; from mypylib.mypylib import add2systemd; add2systemd(name='btc_teleport', user=os.getlogin(), start='${bun_executable} start', workdir='${SRC_DIR}/${REPO}'); subprocess.run(['systemctl', 'daemon-reload']); subprocess.run(['systemctl', 'restart', 'btc_teleport'])"
