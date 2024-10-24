@@ -569,9 +569,8 @@ def General(local):
     from modules.custom_overlays import CustomOverlayModule
     local.start_cycle(CustomOverlayModule(ton, local).custom_overlays, sec=60, args=())
 
-    if ton.get_mode_value('alert-bot'):
-        from modules.alert_bot import AlertBotModule
-        local.start_cycle(AlertBotModule(ton, local).check_status, sec=1000, args=())
+    from modules.alert_bot import AlertBotModule
+    local.start_cycle(AlertBotModule(ton, local).check_status, sec=60, args=())
 
     thr_sleep()
 # end define
