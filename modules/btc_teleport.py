@@ -34,9 +34,20 @@ VALIDATOR_ENGINE_CONSOLE_PATH={self.ton.validatorConsole.appPath}
         with open(env_path, 'w') as f:
             f.write(text)
 
+    @staticmethod
+    def install_unzip():
+        if subprocess.run(['command', '-v', 'unzip']).returncode != 0:
+            run_as_root(['apt-get', 'install', 'unzip'])
+
+    def add_daemon(self):
+        bun_executable = subprocess.run(['command', '-v', 'bun'], stdout=subprocess.PIPE).stdout.decode().strip()
+        cmd = f"import subprocess; import os; from mypylib.mypylib import add2systemd; add2systemd(name='btc_teleport', user=os.getlogin(), start='{bun_executable} start', workdir='{self.src_dir}'); subprocess.run(['systemctl', 'daemon-reload']); subprocess.run(['systemctl', 'restart', 'btc_teleport'])"
+        run_as_root(['python3', '-c', cmd])
+
     def install(self):
         script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/btc_teleport.sh')
         subprocess.run(["bash", script_path, "-s", self.workdir, "-r", self.repo_name])
+        self.add_daemon()
 
     def init(self, reinstall=False):
         if os.path.exists(self.src_dir) and not reinstall:
