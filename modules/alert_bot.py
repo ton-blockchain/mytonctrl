@@ -89,6 +89,8 @@ class AlertBotModule(MtcModule):
     def send_message(self, text: str):
         if self.token is None:
             raise Exception("send_message error: token is not initialized")
+        if self.chat_id is None:
+            raise Exception("send_message error: chat_id is not initialized")
         request_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         data = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML'}
         response = requests.post(request_url, data=data, timeout=3)
@@ -183,6 +185,9 @@ Alert text:
             table.append([alert_name, alert['enabled'], alert['sent']])
         print_table(table)
 
+    def test_alert(self, args):
+        self.send_message('Test alert')
+
     def check_db_usage(self):
         usage = self.ton.GetDbUsage()
         if usage > 95:
@@ -266,3 +271,4 @@ Alert text:
         console.AddItem("enable_alert", self.enable_alert, self.local.translate("enable_alert_cmd"))
         console.AddItem("disable_alert", self.disable_alert, self.local.translate("disable_alert_cmd"))
         console.AddItem("list_alerts", self.print_alerts, self.local.translate("list_alerts_cmd"))
+        console.AddItem("test_alert", self.test_alert, self.local.translate("test_alert_cmd"))

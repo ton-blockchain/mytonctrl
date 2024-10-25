@@ -462,6 +462,9 @@ def EnableJsonRpc(local):
 
 def enable_ton_http_api(local):
 	local.add_log("start EnableTonHttpApi function", "debug")
+	if not os.path.exists('/usr/bin/ton/local.config.json'):
+		from mytoninstaller.mytoninstaller import CreateLocalConfigFile
+		CreateLocalConfigFile(local, [])
 	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'ton_http_api_installer.sh')
 	exit_code = run_as_root(["bash", ton_http_api_installer_path])
 	if exit_code == 0:

@@ -479,6 +479,11 @@
 		"ru": "Список всех доступных оповещений через Telegram Bot",
 		"zh_TW": "列出所有可用的 Telegram Bot 警報"
 	},
+	"test_alert_cmd": {
+		"en": "Send test alert via Telegram Bot",
+		"ru": "Отправить тестовое оповещение через Telegram Bot",
+		"zh_TW": "通過 Telegram Bot 發送測試警報"
+	},
 	"cleanup_cmd": {
 		"en": "Clean node old logs and temp files",
 		"ru": "Очистить старые логи и временные файлы ноды",
