@@ -83,9 +83,9 @@ class AlertBotModule(MtcModule):
         self.validator_module = None
         self.inited = False
         self.hostname = None
-        self.token = self.ton.local.db.get("BotToken")
-        self.chat_id = self.ton.local.db.get("ChatId")
-        self.last_db_check = None
+        self.token = None
+        self.chat_id = None
+        self.last_db_check = 0
 
     def send_message(self, text: str):
         if self.token is None:
@@ -133,6 +133,8 @@ Alert text:
     def init(self):
         if not self.ton.get_mode_value('alert-bot'):
             return
+        self.token = self.ton.local.db.get("BotToken")
+        self.chat_id = self.ton.local.db.get("ChatId")
         if self.token is None or self.chat_id is None:
             raise Exception("BotToken or ChatId is not set")
         from modules.validator import ValidatorModule
