@@ -9,10 +9,10 @@ import json
 import pkg_resources
 
 from mypylib.mypylib import (
-	add2systemd, 
-	get_dir_from_path, 
-	run_as_root, 
-	color_print, 
+	add2systemd,
+	get_dir_from_path,
+	run_as_root,
+	color_print,
 	ip2int,
 	Dict
 )
@@ -88,32 +88,41 @@ def FirstNodeSettings(local):
 	StartValidator(local)
 #end define
 
-
 def DownloadDump(local):
-	dump = local.buffer.dump
-	if dump == False:
-		return
-	#end if
+    dump = local.buffer.dump
+    if dump == False:
+        return
+    #end if
 
-	local.add_log("start DownloadDump fuction", "debug")
-	url = "https://dump.ton.org"
-	dumpSize = requests.get(url + "/dumps/latest.tar.size.archive.txt").text
-	print("dumpSize:", dumpSize)
-	needSpace = int(dumpSize) * 3
-	diskSpace = psutil.disk_usage("/var")
-	if needSpace > diskSpace.free:
-		return
-	#end if
+    local.add_log("start DownloadDump function", "debug")
+    url = "https://dump.ton.org"
+    dumpSize = requests.get(url + "/dumps/latest.tar.size.archive.txt").text
+    print("dumpSize:", dumpSize)
+    needSpace = int(dumpSize) * 3
+    diskSpace = psutil.disk_usage("/var")
+    if needSpace > diskSpace.free:
+        return
+    #end if
 
-	# apt install
-	cmd = "apt install plzip pv curl -y"
-	os.system(cmd)
+    # apt install
+    cmd = "apt install plzip pv aria2 curl -y"
+    os.system(cmd)
 
-	# download dump
-	cmd = "curl -s {url}/dumps/latest.tar.lz | pv | plzip -d -n8 | tar -xC /var/ton-work/db".format(url=url)
-	os.system(cmd)
+    # download dump using aria2c to a temporary file
+    temp_file = "/tmp/latest.tar.lz"
+    cmd = f"aria2c -x 8 -s 8 -c {url}/dumps/latest.tar.lz -d / -o {temp_file}"
+    os.system(cmd)
+
+    # process the downloaded file
+    cmd = f"pv {temp_file} | plzip -d -n8 | tar -xC /var/ton-work/db"
+    os.system(cmd)
+
+    # clean up the temporary file after processing
+    if os.path.exists(temp_file):
+        os.remove(temp_file)
+        local.add_log(f"Temporary file {temp_file} removed", "debug")
+    #end if
 #end define
-
 
 def FirstMytoncoreSettings(local):
 	local.add_log("start FirstMytoncoreSettings fuction", "debug")
@@ -451,12 +460,10 @@ def EnableJsonRpc(local):
 	color_print(text)
 #end define
 
-def EnableTonHttpApi(local):
-	local.add_log("start EnablePytonv3 function", "debug")
-	user = local.buffer.user
-
-	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'tonhttpapiinstaller.sh')
-	exit_code = run_as_root(["bash", ton_http_api_installer_path, "-u", user])
+def enable_ton_http_api(local):
+	local.add_log("start EnableTonHttpApi function", "debug")
+	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'ton_http_api_installer.sh')
+	exit_code = run_as_root(["bash", ton_http_api_installer_path])
 	if exit_code == 0:
 		text = "EnableTonHttpApi - {green}OK{endc}"
 	else:

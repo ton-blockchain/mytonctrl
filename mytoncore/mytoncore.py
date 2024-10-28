@@ -1226,8 +1226,13 @@ class MyTonCore():
 		steps = timeout // timesleep
 		for i in range(steps):
 			time.sleep(timesleep)
-			seqno = self.GetSeqno(wallet)
+			try:
+				seqno = self.GetSeqno(wallet)
+			except:
+				self.local.add_log("WaitTransaction error: Can't get seqno", "warning")
+				continue
 			if seqno != wallet.oldseqno:
+				self.local.add_log("WaitTransaction success", "info")
 				return
 		raise Exception("WaitTransaction error: time out")
 	#end define
@@ -1619,7 +1624,7 @@ class MyTonCore():
 		if os.path.isfile(wallet_path + ".pk") and "v3" not in version:
 			self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
 		else:
-			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
 				wallet_path=wallet_path, subwallet=subwallet)
 			result = self.fift.Run(fift_args)
 			if "Creating new" not in result:
@@ -1676,7 +1681,7 @@ class MyTonCore():
 		wallet_path = self.walletsDir + wallet_name
 		with open(wallet_path + ".pk", 'wb') as file:
 			file.write(pk_bytes)
-		fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, 
+		fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
 			wallet_path=wallet_path, subwallet=subwallet)
 		result = self.fift.Run(fift_args)
 		if "Creating new" not in result:
@@ -2305,6 +2310,7 @@ class MyTonCore():
 				continue
 
 			exists = False
+			vload = None
 			for item in validators_load.values():
 				if 'fileName' not in item:
 					continue
@@ -2314,15 +2320,16 @@ class MyTonCore():
 				pseudohash = pubkey + str(election_id)
 				if pseudohash == complaint['pseudohash']:
 					exists = True
-					vid = item['id']
+					vload = item
 					break
 
 			if not exists:
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
 				continue
 
-			if vid >= config32['mainValidators']:
-				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator", "info")
+			if (vload["id"] >= config32['mainValidators'] and
+				vload["masterBlocksCreated"] + vload["workBlocksCreated"] > 0):
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator that created more than zero blocks", "info")
 				continue
 
 			# check complaint fine value
@@ -2350,7 +2357,7 @@ class MyTonCore():
 
 	def GetValidatorsLoad(self, start, end, saveCompFiles=False) -> dict:
 		# Get buffer
-		bname = f"validatorsLoad{start}{end}"
+		bname = f"validatorsLoad{start}{end}{saveCompFiles}"
 		buff = self.GetFunctionBuffer(bname, timeout=60)
 		if buff:
 			return buff
@@ -2394,7 +2401,10 @@ class MyTonCore():
 					wr = 0
 				else:
 					wr = workBlocksCreated / workBlocksExpected
-				r = (mr + wr) / 2
+				if masterBlocksExpected > 0:  # show only masterchain efficiency for masterchain validator
+					r = mr
+				else:
+					r = (mr + wr) / 2
 				efficiency = round(r * 100, 2)
 				if efficiency > 10:
 					online = True
@@ -2430,21 +2440,23 @@ class MyTonCore():
 		return data
 	#end define
 
-	def GetValidatorsList(self, past=False, fast=False):
+	def GetValidatorsList(self, past=False, fast=False, start=None, end=None):
 		# Get buffer
-		bname = "validatorsList" + str(past)
+		bname = "validatorsList" + str(past) + str(start) + str(end)
 		buff = self.GetFunctionBuffer(bname, timeout=60)
 		if buff:
 			return buff
 		#end if
 
-		timestamp = get_timestamp()
-		end = timestamp - 60
 		config = self.GetConfig34()
-		if fast:
-			start = end - 1000
-		else:
-			start = config.get("startWorkTime")
+		if end is None:
+			timestamp = get_timestamp()
+			end = timestamp - 60
+		if start is None:
+			if fast:
+				start = end - 1000
+			else:
+				start = config.get("startWorkTime")
 		if past:
 			config = self.GetConfig32()
 			start = config.get("startWorkTime")
@@ -2467,6 +2479,8 @@ class MyTonCore():
 				validator["wr"] = validatorsLoad[vid]["wr"]
 				validator["efficiency"] = validatorsLoad[vid]["efficiency"]
 				validator["online"] = validatorsLoad[vid]["online"]
+				validator["master_blocks_created"] = validatorsLoad[vid]["masterBlocksCreated"]
+				validator["master_blocks_expected"] = validatorsLoad[vid]["masterBlocksExpected"]
 				validator["blocks_created"] = validatorsLoad[vid]["masterBlocksCreated"] + validatorsLoad[vid]["workBlocksCreated"]
 				validator["blocks_expected"] = validatorsLoad[vid]["masterBlocksExpected"] + validatorsLoad[vid]["workBlocksExpected"]
 				validator["is_masterchain"] = False
@@ -2514,7 +2528,7 @@ class MyTonCore():
 			pseudohash = pubkey + str(electionId)
 			if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create complaints that already created or voted by ourself
 				continue
-			if item['id'] >= config['mainValidators']:  # do not create complaints for non-masterchain validators
+			if item['id'] >= config['mainValidators'] and item["masterBlocksCreated"] + item["workBlocksCreated"] > 0:  # create complaints for non-masterchain validators only if they created 0 blocks
 				continue
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)
@@ -2597,24 +2611,6 @@ class MyTonCore():
 				filePath = os.path.join(directory, file)
 				totalSize += os.path.getsize(filePath)
 		result = round(totalSize / 10**9, 2)
-		return result
-	#end define
-
-	def check_adnl(self):
-		telemetry = self.local.db.get("sendTelemetry", False)
-		check_adnl = self.local.db.get("checkAdnl", telemetry)
-		if not check_adnl:
-			return
-		url = 'http://45.129.96.53/adnl_check'
-		try:
-			data = self.get_local_adnl_data()
-			response = requests.post(url, json=data, timeout=5).json()
-		except Exception as e:
-			self.local.add_log(f'Failed to check adnl connection: {type(e)}: {e}', 'error')
-			return False
-		result = response.get("ok")
-		if not result:
-			self.local.add_log(f'Failed to check adnl connection to local node: {response.get("message")}', 'error')
 		return result
 	#end define
 
@@ -3052,6 +3048,9 @@ class MyTonCore():
 			if self.using_liteserver():
 				raise Exception(f'Cannot enable validator mode while liteserver mode is enabled. '
 								f'Use `disable_mode liteserver` first.')
+		if name == 'liquid-staking':
+			from mytoninstaller.settings import enable_ton_http_api
+			enable_ton_http_api(self.local)
 
 	def enable_mode(self, name):
 		if name not in MODES:
@@ -3091,6 +3090,9 @@ class MyTonCore():
 
 	def using_liteserver(self):
 		return self.get_mode_value('liteserver')
+
+	def using_alert_bot(self):
+		return self.get_mode_value('alert-bot')
 
 	def Tlb2Json(self, text):
 		# Заменить скобки
@@ -3288,9 +3290,8 @@ class MyTonCore():
 	#end define
 
 	def HandlePendingWithdraw(self, pendingWithdraws, poolAddr):
-		amount = pendingWithdraws.get(poolAddr)
+		amount = pendingWithdraws.pop(poolAddr)
 		self.WithdrawFromPoolProcess(poolAddr, amount)
-		pendingWithdraws.pop(poolAddr)
 	#end define
 
 	def GetPendingWithdraws(self):
@@ -3604,7 +3605,7 @@ class MyTonCore():
 		print(f"CalculateLoanAmount data: {data}")
 
 		url = "http://127.0.0.1:8801/runGetMethod"
-		res = requests.post(url, json=data)
+		res = requests.post(url, json=data, timeout=3)
 		res_data = res.json()
 		if res_data.get("ok") is False:
 			error = res_data.get("error")

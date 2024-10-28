@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-
 import base64
+import random
 import subprocess
 import json
 import psutil
@@ -9,6 +10,8 @@ import pkg_resources
 import socket
 
 from functools import partial
+
+import requests
 
 from mypylib.mypylib import (
 	int2ip,
@@ -29,7 +32,7 @@ from mypylib.mypylib import (
 	color_text,
 	bcolors,
 	Dict,
-	MyPyClass
+	MyPyClass, ip2int
 )
 
 from mypyconsole.mypyconsole import MyPyConsole
@@ -45,6 +48,8 @@ from mytonctrl.migrate import run_migrations
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt
 
 import sys, getopt, os
+
+from mytoninstaller.config import get_own_ip
 
 
 def Init(local, ton, console, argv):
@@ -80,6 +85,8 @@ def Init(local, ton, console, argv):
 	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
 	console.AddItem("rollback", inject_globals(rollback_to_mtc1), local.translate("rollback_cmd"))
+	console.AddItem("create_backup", inject_globals(create_backup), local.translate("create_backup_cmd"))
+	console.AddItem("restore_backup", inject_globals(restore_backup), local.translate("restore_backup_cmd"))
 
 	#console.AddItem("xrestart", inject_globals(Xrestart), local.translate("xrestart_cmd"))
 	#console.AddItem("xlist", inject_globals(Xlist), local.translate("xlist_cmd"))
@@ -127,6 +134,11 @@ def Init(local, ton, console, argv):
 			from modules.controller import ControllerModule
 			module = ControllerModule(ton, local)
 			module.add_console_commands(console)
+
+	if ton.using_alert_bot():
+		from modules.alert_bot import AlertBotModule
+		module = AlertBotModule(ton, local)
+		module.add_console_commands(console)
 
 	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
@@ -218,7 +230,6 @@ def PreUp(local: MyPyClass, ton: MyTonCore):
 	CheckMytonctrlUpdate(local)
 	check_installer_user(local)
 	check_vport(local, ton)
-	ton.check_adnl()
 	warnings(local, ton)
 	# CheckTonUpdate()
 #end define
@@ -474,19 +485,29 @@ def check_tg_channel(local, ton):
 #end difine
 
 def check_slashed(local, ton):
-	config32 = ton.GetConfig32()
-	save_complaints = ton.GetSaveComplaints()
-	complaints = save_complaints.get(str(config32['startWorkTime']))
-	if not complaints:
+	validator_status = ton.GetValidatorStatus()
+	if not ton.using_validator() or not validator_status.is_working or validator_status.out_of_sync >= 20:
 		return
-	for c in complaints.values():
-		if c["adnl"] == ton.GetAdnlAddr() and c["isPassed"]:
-			print_warning(local, "slashed_warning")
+	from modules import ValidatorModule
+	validator_module = ValidatorModule(ton, local)
+	c = validator_module.get_my_complaint()
+	if c:
+		warning = local.translate("slashed_warning").format(int(c['suggestedFine']))
+		print_warning(local, warning)
+#end define
+
+def check_adnl(local, ton):
+	from modules.utilities import UtilitiesModule
+	utils_module = UtilitiesModule(ton, local)
+	ok, error = utils_module.check_adnl_connection()
+	if not ok:
+		print_warning(local, error)
 #end define
 
 def warnings(local, ton):
 	local.try_function(check_disk_usage, args=[local, ton])
 	local.try_function(check_sync, args=[local, ton])
+	local.try_function(check_adnl, args=[local, ton])
 	local.try_function(check_validator_balance, args=[local, ton])
 	local.try_function(check_vps, args=[local, ton])
 	local.try_function(check_tg_channel, args=[local, ton])
@@ -506,6 +527,9 @@ def mode_status(ton, args):
 	table = [["Name", "Status", "Description"]]
 	for mode_name in modes:
 		mode = get_mode(mode_name)
+		if mode is None:
+			color_print(f"{{red}}Mode {mode_name} not found{{endc}}")
+			continue
 		status = color_text('{green}enabled{endc}' if modes[mode_name] else '{red}disabled{endc}')
 		table.append([mode_name, status, mode.description])
 	print_table(table)
@@ -913,6 +937,54 @@ def disable_mode(local, ton, args):
 	color_print("disable_mode - {green}OK{endc}")
 	local.exit()
 #end define
+
+
+def create_backup(local, ton, args):
+	if len(args) > 2:
+		color_print("{red}Bad args. Usage:{endc} create_backup [path_to_archive] [-y]")
+		return
+	if '-y' not in args:
+		res = input(f'Node and Mytoncore services will be stopped for few seconds while backup is created, Proceed [y/n]?')
+		if res.lower() != 'y':
+			print('aborted.')
+			return
+	else:
+		args.pop(args.index('-y'))
+	command_args = ["-m", ton.local.buffer.my_work_dir]
+	if len(args) == 1:
+		command_args += ["-d", args[0]]
+	backup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/create_backup.sh')
+	if run_as_root(["bash", backup_script_path] + command_args) == 0:
+		color_print("create_backup - {green}OK{endc}")
+	else:
+		color_print("create_backup - {red}Error{endc}")
+#end define
+
+
+def restore_backup(local, ton, args):
+	if len(args) == 0 or len(args) > 2:
+		color_print("{red}Bad args. Usage:{endc} restore_backup <path_to_archive> [-y]")
+		return
+	if '-y' not in args:
+		res = input(f'This action will overwrite existing configuration with contents of backup archive, please make sure that donor node is not in operation prior to this action. Proceed [y/n]')
+		if res.lower() != 'y':
+			print('aborted.')
+			return
+	else:
+		args.pop(args.index('-y'))
+	print('Before proceeding, mtc will create a backup of current configuration.')
+	create_backup(local, ton, ['-y'])
+	ip = str(ip2int(get_own_ip()))
+	command_args = ["-m", ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
+
+	restore_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/restore_backup.sh')
+	if run_as_root(["bash", restore_script_path] + command_args) == 0:
+		color_print("restore_backup - {green}OK{endc}")
+		local.exit()
+	else:
+		color_print("restore_backup - {red}Error{endc}")
+#end define
+
 
 def Xrestart(inputArgs):
 	if len(inputArgs) < 2:
