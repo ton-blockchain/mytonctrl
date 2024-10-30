@@ -313,13 +313,14 @@ class UtilitiesModule(MtcModule):
             print(text)
         else:
             table = list()
-            table += [["id", "ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
+            table += [["id", "ADNL", "Pubkey", "Wallet", "Stake", "Efficiency", "Online"]]
             for i, item in enumerate(data):
                 adnl = item.get("adnlAddr")
                 pubkey = item.get("pubkey")
                 walletAddr = item.get("walletAddr")
                 efficiency = item.get("efficiency")
                 online = item.get("online")
+                stake = item.get("stake")
                 if "adnl" not in args:
                     adnl = self.reduct(adnl)
                 if "pubkey" not in args:
@@ -332,7 +333,7 @@ class UtilitiesModule(MtcModule):
                     online = bcolors.green_text("true")
                 if not online:
                     online = bcolors.red_text("false")
-                table += [[str(i), adnl, pubkey, walletAddr, efficiency, online]]
+                table += [[str(i), adnl, pubkey, walletAddr, stake, efficiency, online]]
             print_table(table)
     # end define
 
