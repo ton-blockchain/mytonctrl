@@ -187,6 +187,8 @@ Alert text:
         print_table(table)
 
     def test_alert(self, args):
+        if not self.inited:
+            self.init()
         self.send_message('Test alert')
 
     def check_db_usage(self):
