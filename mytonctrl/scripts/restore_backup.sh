@@ -29,6 +29,15 @@ rm -rf $tmp_dir
 mkdir $tmp_dir
 tar -xvzf $name -C $tmp_dir
 
+if [ ! -d ${tmp_dir}/db ]; then
+    echo "Error: db/ directory not found in archive. Aborting"
+
+    systemctl start validator
+    systemctl start mytoncore
+
+    exit 1
+fi
+
 rm -rf /var/ton-work/db/keyring
 cp -rf ${tmp_dir}/db /var/ton-work
 cp -rf ${tmp_dir}/keys /var/ton-work
