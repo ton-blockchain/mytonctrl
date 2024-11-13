@@ -30,12 +30,11 @@ mkdir $tmp_dir
 tar -xvzf $name -C $tmp_dir
 
 if [ ! -d ${tmp_dir}/db ]; then
-    echo "Error: db/ directory not found in archive. Aborting"
+    echo "Old version of backup detected"
+    mkdir ${tmp_dir}/db
+    mv ${tmp_dir}/config.json ${tmp_dir}/db
+    mv ${tmp_dir}/keyring ${tmp_dir}/db
 
-    systemctl start validator
-    systemctl start mytoncore
-
-    exit 1
 fi
 
 rm -rf /var/ton-work/db/keyring
