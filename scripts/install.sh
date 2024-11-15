@@ -72,7 +72,7 @@ done
 if [ "${mode}" = "" ]; then  # no mode
     echo "Running cli installer"
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
-    pip3 install inquirer
+    pip3 install inquirer==3.4.0
     python3 install.py
     exit
 fi

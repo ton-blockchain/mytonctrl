@@ -28,7 +28,7 @@ ENDC='\033[0m'
 
 # Установка компонентов python3
 echo -e "${COLOR}[1/4]${ENDC} Installing required packages"
-pip3 install Werkzeug json-rpc cloudscraper pyotp
+pip3 install Werkzeug json-rpc cloudscraper pyotp jsonpickle  # todo: set versions
 
 # Клонирование репозиториев с github.com
 echo -e "${COLOR}[2/4]${ENDC} Cloning github repository"
