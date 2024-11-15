@@ -944,7 +944,7 @@ def create_backup(local, ton, args):
 		color_print("{red}Bad args. Usage:{endc} create_backup [path_to_archive] [-y]")
 		return
 	if '-y' not in args:
-		res = input(f'Node and Mytoncore services will be stopped for few seconds while backup is created, Proceed [y/n]?')
+		res = input(f'Mytoncore service will be stopped for few seconds while backup is created, Proceed [y/n]?')
 		if res.lower() != 'y':
 			print('aborted.')
 			return
