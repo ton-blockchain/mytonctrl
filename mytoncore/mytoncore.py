@@ -115,6 +115,7 @@ class MyTonCore():
 				self.local.add_log("Restoring the configuration file", "info")
 				args = ["cp", backup_path, mconfig_path]
 				subprocess.run(args)
+				self.dbFile = mconfig_path
 				self.Refresh()
 		elif os.path.isfile(backup_path) == False:
 			self.local.add_log("Create backup config file", "info")
