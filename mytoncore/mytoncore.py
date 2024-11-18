@@ -2491,6 +2491,7 @@ class MyTonCore():
 			if saveElectionEntries and adnlAddr in saveElectionEntries:
 				validator["walletAddr"] = saveElectionEntries[adnlAddr]["walletAddr"]
 				validator["stake"] = saveElectionEntries[adnlAddr].get("stake")
+				validator["stake"] = int(validator["stake"]) if validator["stake"] else None
 		#end for
 
 		# Set buffer
