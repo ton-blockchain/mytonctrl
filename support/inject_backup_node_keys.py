@@ -23,7 +23,7 @@ name = args.n
 vc_address = args.a
 
 if not name or not vc_address:
-    print("Usage: setup_cleared_backup.py -n <backup_name> -a <vc_address>")
+    print("Usage: inject_backup_node_keys.py -n <backup_name> -a <vc_address>")
     exit(1)
 
 

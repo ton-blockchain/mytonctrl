@@ -45,4 +45,4 @@ rm -rf ${tmp_dir}/db/old_keyring
 tar -zcf $dest -C $tmp_dir .
 chown $user:$user $dest
 
-echo -e "Cleared backup successfully created in ${dest}!"
+echo -e "Node keys backup successfully created in ${dest}!"
