@@ -783,7 +783,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	print(mytoncoreStatus_text)
 	print(validatorStatus_text)
 	print(validator_out_of_sync_text)
-	print(validator_out_of_ser_text)
+	if not ton.using_validator():  # don't need this for validators since they do not serialize states
+		print(validator_out_of_ser_text)
 	print(dbStatus_text)
 	print(mtcVersion_text)
 	print(validatorVersion_text)
