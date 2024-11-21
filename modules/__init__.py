@@ -58,7 +58,9 @@ SETTINGS = {
     'debug': Setting(None, False, 'Debug mtc console mode. Prints Traceback on errors'),
     'subscribe_tg_channel': Setting('validator', False, 'Disables warning about subscribing to the `TON STATUS` channel'),
     'BotToken': Setting('alert-bot', None, 'Alerting Telegram bot token'),
-    'ChatId': Setting('alert-bot', None, 'Alerting Telegram chat id')
+    'ChatId': Setting('alert-bot', None, 'Alerting Telegram chat id'),
+    'auto_backup': Setting('validator', True, 'Make backup of validator every election'),
+    'auto_backup_path': Setting('validator', '/tmp/mytoncore/backups/', 'Path to store backups'),
 }
 
 

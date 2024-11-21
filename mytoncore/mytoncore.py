@@ -1455,6 +1455,7 @@ class MyTonCore():
 		self.local.add_log("ElectionEntry completed. Start work time: " + str(startWorkTime))
 
 		self.clear_tmp()
+		self.make_backup(startWorkTime)
 
 	#end define
 
@@ -1470,6 +1471,18 @@ class MyTonCore():
 				os.remove(os.path.join(dir, f))
 
 		self.local.add_log(f"Removed {count} old files from tmp dir for {int(time.time() - start)} seconds", "info")
+
+	def make_backup(self, election_id: str):
+		if not self.local.db.get("auto_backup"):
+			return
+		from mytonctrl.mytonctrl import create_backup
+		args = []
+		name = f"/mytonctrl_backup_elid{election_id}.zip"
+		if self.local.db.get("auto_backup_path"):
+			args.append(self.local.db.get("auto_backup_path") + name)
+		else:
+			args.append(self.tempDir + "/backups" + name)
+		create_backup(self.local, self, args + ['-y'])
 
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
 		self.local.add_log("start GetValidatorKeyByTime function", "debug")
