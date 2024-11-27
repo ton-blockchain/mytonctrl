@@ -140,7 +140,6 @@ def Init(local, ton, console, argv):
 		module = AlertBotModule(ton, local)
 		module.add_console_commands(console)
 
-	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
 	# console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
 
@@ -401,12 +400,6 @@ def rollback_to_mtc1(local, ton,  args):
 	run_args = ["bash", rollback_script_path]
 	run_as_root(run_args)
 	local.exit()
-#end define
-
-def cleanup_validator_db(ton, args):
-	cleanup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/cleanup.sh')
-	run_args = ["bash", cleanup_script_path]
-	exit_code = run_as_root(run_args)
 #end define
 
 def run_benchmark(ton, args):
