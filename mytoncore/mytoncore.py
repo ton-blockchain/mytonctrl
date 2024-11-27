@@ -1459,18 +1459,19 @@ class MyTonCore():
 
 	#end define
 
-	def clear_tmp(self):
+	def clear_dir(self, dir_name):
 		start = time.time()
 		count = 0
 		week_ago = 60 * 60 * 24 * 7
-		dir = self.tempDir
-		for f in os.listdir(dir):
-			ts = os.path.getmtime(os.path.join(dir, f))
+		for f in os.listdir(dir_name):
+			ts = os.path.getmtime(os.path.join(dir_name, f))
 			if ts < time.time() - week_ago:
 				count += 1
-				os.remove(os.path.join(dir, f))
+				os.remove(os.path.join(dir_name, f))
+		self.local.add_log(f"Removed {count} old files from {dir_name} directory for {int(time.time() - start)} seconds", "info")
 
-		self.local.add_log(f"Removed {count} old files from tmp dir for {int(time.time() - start)} seconds", "info")
+	def clear_tmp(self):
+		self.clear_dir(self.tempDir)
 
 	def make_backup(self, election_id: str):
 		if not self.local.db.get("auto_backup"):
@@ -1478,10 +1479,12 @@ class MyTonCore():
 		from mytonctrl.mytonctrl import create_backup
 		args = []
 		name = f"/mytonctrl_backup_elid{election_id}.zip"
+		backups_dir = self.tempDir + "/auto_backups"
 		if self.local.db.get("auto_backup_path"):
-			args.append(self.local.db.get("auto_backup_path") + name)
-		else:
-			args.append(self.tempDir + "/backups" + name)
+			backups_dir = self.local.db.get("auto_backup_path")
+		os.makedirs(self.tempDir + "/auto_backups", exist_ok=True)
+		args.append(backups_dir + name)
+		self.clear_dir(backups_dir)
 		create_backup(self.local, self, args + ['-y'])
 
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
