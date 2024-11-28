@@ -15,21 +15,42 @@ def get_node_start_command():
 #end define
 
 
+"""
 def get_node_args(command: str = None):
     if command is None:
         command = get_node_start_command()
-    result = {}
+    result = []
     key = ''
     for c in command.split(' ')[1:]:
         if c.startswith('--') or c.startswith('-'):
             if key:
-                result[key] = ''
+                result.append([key, ''])
             key = c
         elif key:
-            result[key] = c
+            result.append([key, c])
             key = ''
     if key:
-        result[key] = ''
+        result.append([key, ''])
+    return result
+#end define
+"""
+
+
+def get_node_args(command: str = None):
+    if command is None:
+        command = get_node_start_command()
+    result = {}  # {key: [value1, value2]}
+    key = ''
+    for c in command.split(' ')[1:]:
+        if c.startswith('--') or c.startswith('-'):
+            if key:
+                result[key] = result.get(key, []) + ['']
+            key = c
+        elif key:
+            result[key] = result.get(key, []) + [c]
+            key = ''
+    if key:
+        result[key] = result.get(key, []) + ['']
     return result
 #end define
 
