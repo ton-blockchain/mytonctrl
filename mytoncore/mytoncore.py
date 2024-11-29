@@ -1476,16 +1476,21 @@ class MyTonCore():
 	def make_backup(self, election_id: str):
 		if not self.local.db.get("auto_backup"):
 			return
-		from mytonctrl.mytonctrl import create_backup
+		from modules.backups import BackupModule
+		module = BackupModule(self, self.local)
 		args = []
 		name = f"/mytonctrl_backup_elid{election_id}.zip"
 		backups_dir = self.tempDir + "/auto_backups"
 		if self.local.db.get("auto_backup_path"):
 			backups_dir = self.local.db.get("auto_backup_path")
-		os.makedirs(self.tempDir + "/auto_backups", exist_ok=True)
+		os.makedirs(backups_dir, exist_ok=True)
 		args.append(backups_dir + name)
 		self.clear_dir(backups_dir)
-		create_backup(self.local, self, args + ['-y'])
+		exit_code = module.create_backup(args + ['-y'])
+		if exit_code != 0:
+			self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
+		else:
+			self.local.add_log(f"Backup created successfully", "info")
 
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
 		self.local.add_log("start GetValidatorKeyByTime function", "debug")
