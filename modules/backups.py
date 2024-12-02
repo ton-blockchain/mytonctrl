@@ -1,15 +1,34 @@
+import os
+import subprocess
+import time
+
 import pkg_resources
 
 from modules.module import MtcModule
-from mypylib.mypylib import color_print, ip2int, run_as_root
+from mypylib.mypylib import color_print, ip2int, run_as_root, parse
 from mytoninstaller.config import get_own_ip
 
 
 class BackupModule(MtcModule):
 
+    def create_keyring(self, dir_name):
+        keyring_dir = dir_name + '/keyring'
+        self.ton.validatorConsole.Run(f'exportallprivatekeys {keyring_dir}')
+
+    def create_tmp_ton_dir(self):
+        result = self.ton.validatorConsole.Run("getconfig")
+        text = parse(result, "---------", "--------")
+        dir_name = self.ton.tempDir + f'/ton_backup_{int(time.time() * 1000)}'
+        dir_name_db = dir_name + '/db'
+        os.makedirs(dir_name_db)
+        with open(dir_name_db + '/config.json', 'w') as f:
+            f.write(text)
+        self.create_keyring(dir_name_db)
+        return dir_name
+
     def create_backup(self, args):
         if len(args) > 2:
-            color_print("{red}Bad args. Usage:{endc} create_backup [path_to_archive] [-y]")
+            color_print("{red}Bad args. Usage:{endc} create_backup [filename] [-y]")
             return
         if '-y' not in args:
             res = input(f'Mytoncore service will be stopped for few seconds while backup is created, Proceed [y/n]?')
@@ -18,19 +37,23 @@ class BackupModule(MtcModule):
                 return
         else:
             args.pop(args.index('-y'))
-        command_args = ["-m", self.ton.local.buffer.my_work_dir]
+        dir_ = self.create_tmp_ton_dir()
+        command_args = ["-m", self.ton.local.buffer.my_work_dir, "-t", dir_]
         if len(args) == 1:
             command_args += ["-d", args[0]]
         backup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/create_backup.sh')
-        if run_as_root(["bash", backup_script_path] + command_args) == 0:
+        process = subprocess.run(["bash", backup_script_path] + command_args, timeout=5)
+
+        if process.returncode == 0:
             color_print("create_backup - {green}OK{endc}")
         else:
             color_print("create_backup - {red}Error{endc}")
+        return process.returncode
     # end define
 
     def restore_backup(self, args):
         if len(args) == 0 or len(args) > 2:
-            color_print("{red}Bad args. Usage:{endc} restore_backup <path_to_archive> [-y]")
+            color_print("{red}Bad args. Usage:{endc} restore_backup <filename> [-y]")
             return
         if '-y' not in args:
             res = input(
