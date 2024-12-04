@@ -1489,7 +1489,11 @@ class MyTonCore():
 		exit_code = module.create_backup(args)
 		if exit_code != 0:
 			self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
-		else:
+			# try one more time
+			exit_code = module.create_backup(args)
+			if exit_code != 0:
+				self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
+		if exit_code == 0:
 			self.local.add_log(f"Backup created successfully", "info")
 
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
