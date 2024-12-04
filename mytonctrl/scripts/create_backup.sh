@@ -20,12 +20,7 @@ done
 COLOR='\033[92m'
 ENDC='\033[0m'
 
-systemctl stop mytoncore
-
-echo -e "${COLOR}[1/4]${ENDC} Stopped mytoncore service"
-
-
-tmp_dir="/tmp/mytoncore/backup"
+tmp_dir="/tmp/mytoncore/backupv2"
 rm -rf $tmp_dir
 mkdir $tmp_dir
 mkdir $tmp_dir/db
@@ -36,16 +31,15 @@ cp -r $keys_dir ${tmp_dir}
 cp -r $mtc_dir $tmp_dir
 
 python3 -c "import json;f=open('${tmp_dir}/db/config.json');json.load(f);f.close()" || exit 1  # Check if config.json is copied correctly
+python3 -c "import json;f=open('${tmp_dir}/mytoncore/mytoncore.db');json.load(f);f.close()" || exit 2  # Check if mytoncore.db is copied correctly
 
-echo -e "${COLOR}[2/4]${ENDC} Copied files to ${tmp_dir}"
+echo -e "${COLOR}[1/3]${ENDC} Copied files to ${tmp_dir}"
 
-systemctl start mytoncore
-
-echo -e "${COLOR}[3/4]${ENDC} Started mytoncore service"
+echo -e "${COLOR}[2/3]${ENDC} Started mytoncore service"
 
 tar -zcf $dest -C $tmp_dir .
 
 chown $user:$user $dest
 
-echo -e "${COLOR}[4/4]${ENDC} Backup successfully created in ${dest}!"
+echo -e "${COLOR}[3/3]${ENDC} Backup successfully created in ${dest}!"
 echo -e "If you wish to use archive package to migrate node to different machine please make sure to stop validator and mytoncore on donor (this) host prior to migration."

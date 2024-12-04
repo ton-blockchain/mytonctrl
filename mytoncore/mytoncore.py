@@ -1486,7 +1486,7 @@ class MyTonCore():
 		os.makedirs(backups_dir, exist_ok=True)
 		args.append(backups_dir + name)
 		self.clear_dir(backups_dir)
-		exit_code = module.create_backup(args + ['-y'])
+		exit_code = module.create_backup(args)
 		if exit_code != 0:
 			self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
 		else:

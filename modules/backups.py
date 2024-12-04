@@ -27,16 +27,9 @@ class BackupModule(MtcModule):
         return dir_name
 
     def create_backup(self, args):
-        if len(args) > 2:
-            color_print("{red}Bad args. Usage:{endc} create_backup [filename] [-y]")
+        if len(args) > 1:
+            color_print("{red}Bad args. Usage:{endc} create_backup [filename]")
             return
-        if '-y' not in args:
-            res = input(f'Mytoncore service will be stopped for few seconds while backup is created, Proceed [y/n]?')
-            if res.lower() != 'y':
-                print('aborted.')
-                return
-        else:
-            args.pop(args.index('-y'))
         dir_ = self.create_tmp_ton_dir()
         command_args = ["-m", self.ton.local.buffer.my_work_dir, "-t", dir_]
         if len(args) == 1:
@@ -64,7 +57,7 @@ class BackupModule(MtcModule):
         else:
             args.pop(args.index('-y'))
         print('Before proceeding, mtc will create a backup of current configuration.')
-        self.create_backup(['-y'])
+        self.create_backup([])
         ip = str(ip2int(get_own_ip()))
         command_args = ["-m", self.ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
 
