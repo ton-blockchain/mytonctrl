@@ -209,6 +209,9 @@ Alert text:
     def check_validator_wallet_balance(self):
         if not self.ton.using_validator():
             return
+        validator_status = self.ton.GetValidatorStatus()
+        if not validator_status.is_working or validator_status.out_of_sync >= 20:
+            return
         validator_wallet = self.ton.GetValidatorWallet()
         validator_account = self.ton.GetAccount(validator_wallet.addrB64)
         if validator_account.balance < 10:
