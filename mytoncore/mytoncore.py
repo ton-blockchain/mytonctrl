@@ -1455,21 +1455,47 @@ class MyTonCore():
 		self.local.add_log("ElectionEntry completed. Start work time: " + str(startWorkTime))
 
 		self.clear_tmp()
+		self.make_backup(startWorkTime)
 
 	#end define
 
-	def clear_tmp(self):
+	def clear_dir(self, dir_name):
 		start = time.time()
 		count = 0
 		week_ago = 60 * 60 * 24 * 7
-		dir = self.tempDir
-		for f in os.listdir(dir):
-			ts = os.path.getmtime(os.path.join(dir, f))
+		for f in os.listdir(dir_name):
+			ts = os.path.getmtime(os.path.join(dir_name, f))
 			if ts < time.time() - week_ago:
 				count += 1
-				os.remove(os.path.join(dir, f))
+				if os.path.isfile(os.path.join(dir_name, f)):
+					os.remove(os.path.join(dir_name, f))
+		self.local.add_log(f"Removed {count} old files from {dir_name} directory for {int(time.time() - start)} seconds", "info")
 
-		self.local.add_log(f"Removed {count} old files from tmp dir for {int(time.time() - start)} seconds", "info")
+	def clear_tmp(self):
+		self.clear_dir(self.tempDir)
+
+	def make_backup(self, election_id: str):
+		if not self.local.db.get("auto_backup"):
+			return
+		from modules.backups import BackupModule
+		module = BackupModule(self, self.local)
+		args = []
+		name = f"/mytonctrl_backup_elid{election_id}.zip"
+		backups_dir = self.tempDir + "/auto_backups"
+		if self.local.db.get("auto_backup_path"):
+			backups_dir = self.local.db.get("auto_backup_path")
+		os.makedirs(backups_dir, exist_ok=True)
+		args.append(backups_dir + name)
+		self.clear_dir(backups_dir)
+		exit_code = module.create_backup(args)
+		if exit_code != 0:
+			self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
+			# try one more time
+			exit_code = module.create_backup(args)
+			if exit_code != 0:
+				self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
+		if exit_code == 0:
+			self.local.add_log(f"Backup created successfully", "info")
 
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
 		self.local.add_log("start GetValidatorKeyByTime function", "debug")
