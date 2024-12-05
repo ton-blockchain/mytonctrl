@@ -83,6 +83,7 @@ class AlertBotModule(MtcModule):
         self.validator_module = None
         self.inited = False
         self.hostname = None
+        self.ip = None
         self.token = None
         self.chat_id = None
         self.last_db_check = 0
@@ -113,6 +114,7 @@ class AlertBotModule(MtcModule):
 ❗️ <b>MyTonCtrl Alert {alert_name}</b> ❗️
 
 Hostname: <code>{self.hostname}</code>
+Node IP: <code>{self.ip}</code>
 Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
 Severity: <code>{alert.severity}</code>
 
@@ -140,6 +142,7 @@ Alert text:
         from modules.validator import ValidatorModule
         self.validator_module = ValidatorModule(self.ton, self.local)
         self.hostname = get_hostname()
+        self.ip = self.ton.get_validator_engine_ip()
         self.set_global_vars()
         self.inited = True
 
@@ -205,6 +208,9 @@ Alert text:
 
     def check_validator_wallet_balance(self):
         if not self.ton.using_validator():
+            return
+        validator_status = self.ton.GetValidatorStatus()
+        if not validator_status.is_working or validator_status.out_of_sync >= 20:
             return
         validator_wallet = self.ton.GetValidatorWallet()
         validator_account = self.ton.GetAccount(validator_wallet.addrB64)

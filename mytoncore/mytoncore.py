@@ -30,7 +30,7 @@ from mypylib.mypylib import (
 	get_timestamp,
 	timestamp2datetime,
 	dec2hex,
-	Dict
+	Dict, int2ip
 )
 
 
@@ -3792,6 +3792,13 @@ class MyTonCore():
 		else:
 			return "unknown"
 	#end define
+
+	def get_validator_engine_ip(self):
+		try:
+			config = self.GetValidatorConfig()
+			return int2ip(config['addrs'][0]['ip'])
+		except:
+			return None
 
 	def GetFunctionBuffer(self, name, timeout=10):
 		timestamp = get_timestamp()
