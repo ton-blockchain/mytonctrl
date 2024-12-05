@@ -33,13 +33,14 @@ cp -r $mtc_dir $tmp_dir
 python3 -c "import json;f=open('${tmp_dir}/db/config.json');json.load(f);f.close()" || exit 1  # Check if config.json is copied correctly
 python3 -c "import json;f=open('${tmp_dir}/mytoncore/mytoncore.db');json.load(f);f.close()" || exit 2  # Check if mytoncore.db is copied correctly
 
-echo -e "${COLOR}[1/3]${ENDC} Copied files to ${tmp_dir}"
-
-echo -e "${COLOR}[2/3]${ENDC} Started mytoncore service"
+echo -e "${COLOR}[1/2]${ENDC} Copied files to ${tmp_dir}"
 
 tar -zcf $dest -C $tmp_dir .
 
 chown $user:$user $dest
 
-echo -e "${COLOR}[3/3]${ENDC} Backup successfully created in ${dest}!"
+echo -e "${COLOR}[2/2]${ENDC} Backup successfully created in ${dest}!"
+
+rm -rf $tmp_dir
+
 echo -e "If you wish to use archive package to migrate node to different machine please make sure to stop validator and mytoncore on donor (this) host prior to migration."

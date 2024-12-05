@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import time
 
@@ -30,8 +31,8 @@ class BackupModule(MtcModule):
         if len(args) > 1:
             color_print("{red}Bad args. Usage:{endc} create_backup [filename]")
             return
-        dir_ = self.create_tmp_ton_dir()
-        command_args = ["-m", self.ton.local.buffer.my_work_dir, "-t", dir_]
+        tmp_dir = self.create_tmp_ton_dir()
+        command_args = ["-m", self.ton.local.buffer.my_work_dir, "-t", tmp_dir]
         if len(args) == 1:
             command_args += ["-d", args[0]]
         backup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/create_backup.sh')
@@ -41,6 +42,7 @@ class BackupModule(MtcModule):
             color_print("create_backup - {green}OK{endc}")
         else:
             color_print("create_backup - {red}Error{endc}")
+        shutil.rmtree(tmp_dir)
         return process.returncode
     # end define
 

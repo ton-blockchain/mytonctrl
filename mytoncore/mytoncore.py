@@ -1467,7 +1467,8 @@ class MyTonCore():
 			ts = os.path.getmtime(os.path.join(dir_name, f))
 			if ts < time.time() - week_ago:
 				count += 1
-				os.remove(os.path.join(dir_name, f))
+				if os.path.isfile(os.path.join(dir_name, f)):
+					os.remove(os.path.join(dir_name, f))
 		self.local.add_log(f"Removed {count} old files from {dir_name} directory for {int(time.time() - start)} seconds", "info")
 
 	def clear_tmp(self):
