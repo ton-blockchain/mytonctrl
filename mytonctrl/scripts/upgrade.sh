@@ -29,7 +29,7 @@ COLOR='\033[92m'
 ENDC='\033[0m'
 
 # Установить дополнительные зависимости
-apt-get install -y libsecp256k1-dev libsodium-dev ninja-build fio rocksdb-tools liblz4-dev libjemalloc-dev
+apt-get install -y libsecp256k1-dev libsodium-dev ninja-build fio rocksdb-tools liblz4-dev libjemalloc-dev automake libtool
 
 # bugfix if the files are in the wrong place
 wget "https://ton-blockchain.github.io/global.config.json" -O global.config.json
@@ -67,6 +67,10 @@ ls -A1 | xargs rm -rf
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
 git clone --recursive https://github.com/${author}/${repo}.git .
 git checkout ${branch}
+
+git submodule sync --recursive
+git submodule update
+
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
 export CCACHE_DISABLE=1

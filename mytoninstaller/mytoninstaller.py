@@ -194,7 +194,6 @@ def PrintLiteServerConfig(local, args):
 def CreateLocalConfigFile(local, args):
 	initBlock = GetInitBlock()
 	initBlock_b64 = dict2b64(initBlock)
-	user = local.buffer["user"]
 	args = ["python3", "-m", "mytoninstaller", "-u", local.buffer.user, "-e", "clc", "-i", initBlock_b64]
 	run_as_root(args)
 #end define
