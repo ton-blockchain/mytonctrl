@@ -83,6 +83,7 @@ class AlertBotModule(MtcModule):
         self.validator_module = None
         self.inited = False
         self.hostname = None
+        self.ip = None
         self.token = self.ton.local.db.get("BotToken")
         self.chat_id = self.ton.local.db.get("ChatId")
         self.last_db_check = None
@@ -113,6 +114,7 @@ class AlertBotModule(MtcModule):
 ❗️ <b>MyTonCtrl Alert {alert_name}</b> ❗️
 
 Hostname: <code>{self.hostname}</code>
+Node IP: <code>{self.ip}</code>
 Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
 Severity: <code>{alert.severity}</code>
 
@@ -138,6 +140,7 @@ Alert text:
         from modules.validator import ValidatorModule
         self.validator_module = ValidatorModule(self.ton, self.local)
         self.hostname = get_hostname()
+        self.ip = self.ton.get_validator_engine_ip()
         self.set_global_vars()
         self.inited = True
 
