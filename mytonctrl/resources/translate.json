@@ -484,11 +484,6 @@
 		"ru": "Отправить тестовое оповещение через Telegram Bot",
 		"zh_TW": "通過 Telegram Bot 發送測試警報"
 	},
-	"cleanup_cmd": {
-		"en": "Clean node old logs and temp files",
-		"ru": "Очистить старые логи и временные файлы ноды",
-		"zh_TW": "清理節點舊日誌和臨時文件"
-	},
 	"benchmark_cmd": {
 		"en": "Run benchmark",
 		"ru": "Запустить бенчмарк",
