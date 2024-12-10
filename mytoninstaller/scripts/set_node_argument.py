@@ -20,8 +20,11 @@ def set_node_arg(arg_name: str, arg_value: str = ''):
     if arg_value == '-d':
         args.pop(arg_name, None)
     else:
-        args[arg_name] = arg_value
-    new_command = command.split(' ')[0] + ' ' + ' '.join([f'{k} {v}' for k, v in args.items()])
+        if ' ' in arg_value:
+            args[arg_name] = arg_value.split()
+        else:
+            args[arg_name] = [arg_value]
+    new_command = command.split(' ')[0] + ' ' + ' '.join([f'{k} {v}' for k, vs in args.items() for v in vs])
     new_service = service.replace(command, new_command)
     with open('/etc/systemd/system/validator.service', 'w') as f:
         f.write(new_service)

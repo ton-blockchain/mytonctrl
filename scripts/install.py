@@ -38,6 +38,13 @@ def run_cli():
             "dump",
             message="Do you want to download blockchain's dump? "
                     "This reduces synchronization time but requires to download a large file",
+        ),
+        inquirer.Text(
+            "add-shard",
+            message="Set shards node will sync. Skip to sync all shards. "
+                    "Format: <workchain>:<shard>. Divide multiple shards with space. "
+                    "Example: `0:2000000000000000 0:6000000000000000`",
+            validate=lambda _, x: not x or all([":" in i for i in x.split()])
         )
     ]
 
@@ -51,6 +58,7 @@ def parse_args(answers: dict):
     network = answers["network"].lower()
     config = answers["config"]
     archive_ttl = answers["archive-ttl"]
+    add_shard = answers["add-shard"]
     validator_mode = answers["validator-mode"]
     dump = answers["dump"]
 
@@ -61,6 +69,8 @@ def parse_args(answers: dict):
 
     if archive_ttl:
         os.putenv('ARCHIVE_TTL', archive_ttl)  # set env variable
+    if add_shard:
+        os.putenv('ADD_SHARD', add_shard)
 
     if validator_mode and validator_mode not in ('Skip', 'Validator wallet'):
         if validator_mode == 'Nominator pool':
