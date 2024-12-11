@@ -59,7 +59,11 @@ class BackupModule(MtcModule):
         else:
             args.pop(args.index('-y'))
         print('Before proceeding, mtc will create a backup of current configuration.')
-        self.create_backup([])
+        try:
+            self.create_backup([])
+        except:
+            color_print("{red}Could not create backup{endc}")
+
         ip = str(ip2int(get_own_ip()))
         command_args = ["-m", self.ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
 
