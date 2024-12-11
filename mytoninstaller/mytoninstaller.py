@@ -30,7 +30,7 @@ from mytoninstaller.settings import (
 	enable_ls_proxy,
 	enable_ton_storage,
 	enable_ton_storage_provider,
-	EnableMode
+	EnableMode, ConfigureFromBackup
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
@@ -276,6 +276,16 @@ def General(local, console):
 		mx = sys.argv.index("-m")
 		mode = sys.argv[mx+1]
 		local.buffer.mode = mode
+	if "--only-mtc" in sys.argv:
+		ox = sys.argv.index("--only-mtc")
+		local.buffer.only_mtc = str2bool(sys.argv[ox+1])
+	if "--only-node" in sys.argv:
+		pass
+	if "--backup" in sys.argv:
+		bx = sys.argv.index("--backup")
+		backup = sys.argv[bx+1]
+		if backup != "none":
+			local.buffer.backup = backup
 	#end if
 
 	FirstMytoncoreSettings(local)
@@ -286,7 +296,14 @@ def General(local, console):
 	BackupMconfig(local)
 	CreateSymlinks(local)
 	EnableMode(local)
+	ConfigureFromBackup(local)
 #end define
+
+
+"""
+Node server: Mtc is being installed and configures node, creates backup but does not create mytoncore service.
+Mtc server: TON bins and Mtc are being installed, restores keys and mytoncore db from backup (in case validator on Node server was installed before), creates mytoncore service.
+"""
 
 
 ###

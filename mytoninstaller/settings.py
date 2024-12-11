@@ -22,6 +22,9 @@ from mytoncore.utils import hex2b64
 
 
 def FirstNodeSettings(local):
+	if local.buffer.only_mtc:
+		return
+
 	local.add_log("start FirstNodeSettings fuction", "debug")
 
 	# Создать переменные
@@ -300,6 +303,9 @@ def EnableValidatorConsole(local):
 #end define
 
 def EnableLiteServer(local):
+	if local.buffer.only_mtc:
+		return
+
 	local.add_log("start EnableLiteServer function", "debug")
 
 	# Create variables
@@ -912,3 +918,17 @@ def EnableMode(local):
 		return
 	args = ["su", "-l", local.buffer.user, "-c", ' '.join(args)]
 	subprocess.run(args)
+
+
+def ConfigureFromBackup(local):
+	from mytoncore import MyTonCore
+	from mypylib.mypylib import MyPyClass  # todo move to file header
+	from modules.backups import BackupModule
+	if not local.buffer.backup:
+		return
+	local.add_log("start ConfigureFromBackup function", "info")
+	backup_file = local.buffer.backup
+
+	ton = MyTonCore(MyPyClass('mytoncore.py'))
+	module = BackupModule(ton, local)
+	module.restore_backup([backup_file, '-y'])

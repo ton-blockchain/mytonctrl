@@ -45,10 +45,12 @@ config="https://ton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
 dump=false
+only_mtc=false
+backup=none
 cpu_required=16
 mem_required=64000000  # 64GB in KB
 
-while getopts ":c:tida:r:b:m:n:v:u:h" flag; do
+while getopts ":c:tidoa:r:b:m:n:v:u:p:h" flag; do
     case "${flag}" in
         c) config=${OPTARG};;
         t) telemetry=false;;
@@ -61,6 +63,8 @@ while getopts ":c:tida:r:b:m:n:v:u:h" flag; do
         n) network=${OPTARG};;
         v) ton_node_version=${OPTARG};;
         u) user=${OPTARG};;
+        o) only_mtc=true;;
+        p) backup=${OPTARG};;
         h) show_help_and_exit;;
         *)
             echo "Flag -${flag} is not recognized. Aborting"
@@ -144,7 +148,7 @@ if [ "${user}" = "" ]; then  # no user
     fi
 fi
 echo "User: $user"
-python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode}
+python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode} --only-mtc ${only_mtc} --backup ${backup}
 
 # set migrate version
 migrate_version=1
