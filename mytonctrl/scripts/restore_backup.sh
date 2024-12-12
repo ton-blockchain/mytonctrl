@@ -29,9 +29,16 @@ rm -rf $tmp_dir
 mkdir $tmp_dir
 tar -xvzf $name -C $tmp_dir
 
+if [ ! -d ${tmp_dir}/db ]; then
+    echo "Old version of backup detected"
+    mkdir ${tmp_dir}/db
+    mv ${tmp_dir}/config.json ${tmp_dir}/db
+    mv ${tmp_dir}/keyring ${tmp_dir}/db
+
+fi
+
 rm -rf /var/ton-work/db/keyring
-cp -f ${tmp_dir}/config.json /var/ton-work/db/
-cp -rf ${tmp_dir}/keyring /var/ton-work/db/
+cp -rf ${tmp_dir}/db /var/ton-work
 cp -rf ${tmp_dir}/keys /var/ton-work
 cp -rfT ${tmp_dir}/mytoncore $mtc_dir
 
