@@ -73,7 +73,13 @@ while getopts ":c:tidoa:r:b:m:n:v:u:p:h" flag; do
 done
 
 
-if [ "${mode}" = "" ]; then  # no mode
+if [ "$only_mtc" = true ] && [ "$backup" = "none" ]; then
+    echo "Backup file must be provided if only mtc installation"
+    exit 1
+fi
+
+
+if [ "${mode}" = "" ] && [ "$backup" = "none" ]; then  # no mode or backup was provided
     echo "Running cli installer"
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
     pip3 install inquirer==3.4.0
