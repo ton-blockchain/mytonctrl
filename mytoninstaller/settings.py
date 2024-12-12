@@ -926,9 +926,12 @@ def ConfigureFromBackup(local):
 	from modules.backups import BackupModule
 	if not local.buffer.backup:
 		return
+	mconfig_path = local.buffer.mconfig_path
+	mconfig_dir = get_dir_from_path(mconfig_path)
 	local.add_log("start ConfigureFromBackup function", "info")
 	backup_file = local.buffer.backup
 
 	ton = MyTonCore(MyPyClass('mytoncore.py'))
+	ton.local.buffer.my_work_dir = mconfig_dir
 	module = BackupModule(ton, local)
 	module.restore_backup([backup_file, '-y'])
