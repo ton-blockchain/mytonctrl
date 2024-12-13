@@ -14,7 +14,7 @@ from mypylib.mypylib import (
 	run_as_root,
 	color_print,
 	ip2int,
-	Dict
+	Dict, int2ip
 )
 from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, get_ed25519_pubkey
 from mytoninstaller.config import SetConfig, GetConfig, get_own_ip, backup_config
@@ -201,6 +201,8 @@ def FirstMytoncoreSettings(local):
 #end define
 
 def EnableValidatorConsole(local):
+	if local.buffer.only_mtc:
+		return
 	local.add_log("start EnableValidatorConsole function", "debug")
 
 	# Create variables
@@ -920,12 +922,25 @@ def EnableMode(local):
 	subprocess.run(args)
 
 
+def set_external_ip(local, ip):
+	mconfig_path = local.buffer.mconfig_path
+
+	mconfig = GetConfig(path=mconfig_path)
+
+	mconfig.liteClient.liteServer.ip = ip
+	mconfig.validatorConsole.addr = f'{ip}:{mconfig.validatorConsole.addr.split(":")[1]}'
+
+	# write mconfig
+	local.add_log("write mconfig", "debug")
+	SetConfig(path=mconfig_path, data=mconfig)
+
+
 def ConfigureFromBackup(local):
+	if not local.buffer.backup:
+		return
 	from mytoncore import MyTonCore
 	from mypylib.mypylib import MyPyClass  # todo move to file header
 	from modules.backups import BackupModule
-	if not local.buffer.backup:
-		return
 	mconfig_path = local.buffer.mconfig_path
 	mconfig_dir = get_dir_from_path(mconfig_path)
 	local.add_log("start ConfigureFromBackup function", "info")
@@ -935,3 +950,17 @@ def ConfigureFromBackup(local):
 	ton.local.buffer.my_work_dir = mconfig_dir
 	module = BackupModule(ton, local)
 	module.restore_backup([backup_file, '-y'])
+
+	if local.buffer.only_mtc:
+		local.add_log("Installing only mtc", "info")
+		vconfig_path = local.buffer.vconfig_path
+		vconfig = GetConfig(path=vconfig_path)
+		try:
+			node_ip = int2ip(vconfig['addrs'][0]['ip'])
+		except:
+			local.add_log("Can't get ip from validator", "error")
+			return
+		user = local.buffer.user
+		args = ["chown", '-R', user + ':' + user, local.buffer.keys_dir]
+		subprocess.run(args)
+		set_external_ip(local, node_ip)

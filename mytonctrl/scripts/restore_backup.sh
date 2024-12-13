@@ -48,9 +48,14 @@ echo -e "${COLOR}[2/4]${ENDC} Extracted files from archive"
 
 rm -r /var/ton-work/db/dht-*
 
-python3 -c "import json;path='/var/ton-work/db/config.json';f=open(path);d=json.load(f);f.close();d['addrs'][0]['ip']=int($ip);f=open(path, 'w');f.write(json.dumps(d, indent=4));f.close()"
+if [ $ip -ne 0 ]; then
+    echo "Replacing IP in node config"
+    python3 -c "import json;path='/var/ton-work/db/config.json';f=open(path);d=json.load(f);f.close();d['addrs'][0]['ip']=int($ip);f=open(path, 'w');f.write(json.dumps(d, indent=4));f.close()"
+else
+    echo "IP is not provided, skipping IP replacement"
+fi
 
-echo -e "${COLOR}[3/4]${ENDC} Deleted DHT files, replaced IP in node config"
+echo -e "${COLOR}[3/4]${ENDC} Deleted DHT files"
 
 systemctl start validator
 systemctl start mytoncore
