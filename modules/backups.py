@@ -46,6 +46,11 @@ class BackupModule(MtcModule):
         return process.returncode
     # end define
 
+    @staticmethod
+    def run_restore_backup(args):
+        restore_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/restore_backup.sh')
+        return run_as_root(["bash", restore_script_path] + args)
+
     def restore_backup(self, args):
         if len(args) == 0 or len(args) > 2:
             color_print("{red}Bad args. Usage:{endc} restore_backup <filename> [-y]")
@@ -67,8 +72,7 @@ class BackupModule(MtcModule):
         ip = str(ip2int(get_own_ip()))
         command_args = ["-m", self.ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
 
-        restore_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/restore_backup.sh')
-        if run_as_root(["bash", restore_script_path] + command_args) == 0:
+        if self.run_restore_backup(command_args) == 0:
             color_print("restore_backup - {green}OK{endc}")
             self.local.exit()
         else:

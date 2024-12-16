@@ -938,18 +938,14 @@ def set_external_ip(local, ip):
 def ConfigureFromBackup(local):
 	if not local.buffer.backup:
 		return
-	from mytoncore import MyTonCore
-	from mypylib.mypylib import MyPyClass  # todo move to file header
 	from modules.backups import BackupModule
 	mconfig_path = local.buffer.mconfig_path
 	mconfig_dir = get_dir_from_path(mconfig_path)
 	local.add_log("start ConfigureFromBackup function", "info")
 	backup_file = local.buffer.backup
 
-	ton = MyTonCore(MyPyClass('mytoncore.py'))
-	ton.local.buffer.my_work_dir = mconfig_dir
-	module = BackupModule(ton, local)
-	module.restore_backup([backup_file, '-y'])
+	os.makedirs(local.buffer.ton_work_dir, exist_ok=True)
+	BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file])
 
 	if local.buffer.only_mtc:
 		local.add_log("Installing only mtc", "info")
