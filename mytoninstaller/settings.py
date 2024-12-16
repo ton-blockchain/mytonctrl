@@ -960,3 +960,20 @@ def ConfigureFromBackup(local):
 		args = ["chown", '-R', user + ':' + user, local.buffer.keys_dir]
 		subprocess.run(args)
 		set_external_ip(local, node_ip)
+
+
+def ConfigureOnlyNode(local):
+	if not local.buffer.only_node:
+		return
+	from modules.backups import BackupModule
+	mconfig_path = local.buffer.mconfig_path
+	mconfig_dir = get_dir_from_path(mconfig_path)
+	local.add_log("start ConfigureOnlyNode function", "info")
+
+	process = BackupModule.run_create_backup(["-m", mconfig_dir, ])
+	if process.returncode != 0:
+		local.add_log("Backup creation failed", "error")
+		return
+	local.add_log("Backup successfully created. Use this file on the controller server with `--only-mtc` flag on installation.", "info")
+
+	stop_service(local, 'mytoncore')

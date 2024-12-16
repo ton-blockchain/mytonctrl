@@ -27,6 +27,11 @@ class BackupModule(MtcModule):
         self.create_keyring(dir_name_db)
         return dir_name
 
+    @staticmethod
+    def run_create_backup(args):
+        backup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/create_backup.sh')
+        return subprocess.run(["bash", backup_script_path] + args, timeout=5)
+
     def create_backup(self, args):
         if len(args) > 1:
             color_print("{red}Bad args. Usage:{endc} create_backup [filename]")
@@ -35,8 +40,7 @@ class BackupModule(MtcModule):
         command_args = ["-m", self.ton.local.buffer.my_work_dir, "-t", tmp_dir]
         if len(args) == 1:
             command_args += ["-d", args[0]]
-        backup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/create_backup.sh')
-        process = subprocess.run(["bash", backup_script_path] + command_args, timeout=5)
+        process = self.run_create_backup(command_args)
 
         if process.returncode == 0:
             color_print("create_backup - {green}OK{endc}")

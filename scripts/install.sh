@@ -32,6 +32,9 @@ show_help_and_exit() {
     echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
     echo ' -v  VERSION      Specify the ton node version (commit, branch, or tag)'
     echo ' -u  USER         Specify the user to be used for MyTonCtrl installation'
+    echo ' -p  PATH         Provide backup file for MyTonCtrl installation'
+    echo ' -o               Install only MyTonCtrl. Must be used with -p'
+    echo ' -l               Install only TON node'
     echo ' -h               Show this help'
     exit
 }
@@ -46,11 +49,12 @@ telemetry=true
 ignore=false
 dump=false
 only_mtc=false
+only_node=false
 backup=none
 cpu_required=16
 mem_required=64000000  # 64GB in KB
 
-while getopts ":c:tidoa:r:b:m:n:v:u:p:h" flag; do
+while getopts ":c:tidola:r:b:m:n:v:u:p:h" flag; do
     case "${flag}" in
         c) config=${OPTARG};;
         t) telemetry=false;;
@@ -64,6 +68,7 @@ while getopts ":c:tidoa:r:b:m:n:v:u:p:h" flag; do
         v) ton_node_version=${OPTARG};;
         u) user=${OPTARG};;
         o) only_mtc=true;;
+        l) only_node=true;;
         p) backup=${OPTARG};;
         h) show_help_and_exit;;
         *)
@@ -154,7 +159,7 @@ if [ "${user}" = "" ]; then  # no user
     fi
 fi
 echo "User: $user"
-python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode} --only-mtc ${only_mtc} --backup ${backup}
+python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode} --only-mtc ${only_mtc} --backup ${backup} --only-node ${only_node}
 
 # set migrate version
 migrate_version=1

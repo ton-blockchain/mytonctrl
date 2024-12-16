@@ -30,7 +30,7 @@ from mytoninstaller.settings import (
 	enable_ls_proxy,
 	enable_ton_storage,
 	enable_ton_storage_provider,
-	EnableMode, ConfigureFromBackup
+	EnableMode, ConfigureFromBackup, ConfigureOnlyNode
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
@@ -280,7 +280,8 @@ def General(local, console):
 		ox = sys.argv.index("--only-mtc")
 		local.buffer.only_mtc = str2bool(sys.argv[ox+1])
 	if "--only-node" in sys.argv:
-		pass
+		ox = sys.argv.index("--only-node")
+		local.buffer.only_node = str2bool(sys.argv[ox+1])
 	if "--backup" in sys.argv:
 		bx = sys.argv.index("--backup")
 		backup = sys.argv[bx+1]
@@ -297,6 +298,7 @@ def General(local, console):
 	CreateSymlinks(local)
 	EnableMode(local)
 	ConfigureFromBackup(local)
+	ConfigureOnlyNode(local)
 #end define
 
 
