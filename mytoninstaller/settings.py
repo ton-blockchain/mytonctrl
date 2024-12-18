@@ -976,4 +976,8 @@ def ConfigureOnlyNode(local):
 		return
 	local.add_log("Backup successfully created. Use this file on the controller server with `--only-mtc` flag on installation.", "info")
 
-	stop_service(local, 'mytoncore')
+	mconfig = GetConfig(path=mconfig_path)
+	mconfig.onlyNode = True
+	SetConfig(path=mconfig_path, data=mconfig)
+
+	start_service(local, 'mytoncore')
