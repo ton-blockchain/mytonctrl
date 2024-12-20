@@ -302,12 +302,6 @@ def General(local, console):
 #end define
 
 
-"""
-Node server: Mtc is being installed and configures node, creates backup but does not create mytoncore service.
-Mtc server: TON bins and Mtc are being installed, restores keys and mytoncore db from backup (in case validator on Node server was installed before), creates mytoncore service.
-"""
-
-
 ###
 ### Start of the program
 ###

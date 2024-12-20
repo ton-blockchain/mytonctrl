@@ -3819,12 +3819,15 @@ class MyTonCore():
 			return "unknown"
 	#end define
 
-	def get_validator_engine_ip(self):
+	def get_node_ip(self):
 		try:
 			config = self.GetValidatorConfig()
 			return int2ip(config['addrs'][0]['ip'])
 		except:
 			return None
+
+	def get_validator_engine_ip(self):
+		return self.validatorConsole.addr.split(':')[0]
 
 	def GetFunctionBuffer(self, name, timeout=10):
 		timestamp = get_timestamp()

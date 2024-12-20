@@ -142,7 +142,7 @@ Alert text:
         from modules.validator import ValidatorModule
         self.validator_module = ValidatorModule(self.ton, self.local)
         self.hostname = get_hostname()
-        self.ip = self.ton.get_validator_engine_ip()
+        self.ip = self.ton.get_node_ip()
         self.set_global_vars()
         self.inited = True
 
