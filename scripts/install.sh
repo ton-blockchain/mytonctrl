@@ -51,6 +51,7 @@ dump=false
 only_mtc=false
 only_node=false
 backup=none
+mode=none
 cpu_required=16
 mem_required=64000000  # 64GB in KB
 
@@ -84,7 +85,7 @@ if [ "$only_mtc" = true ] && [ "$backup" = "none" ]; then
 fi
 
 
-if [ "${mode}" = "" ] && [ "$backup" = "none" ]; then  # no mode or backup was provided
+if [ "${mode}" = "none" ] && [ "$backup" = "none" ]; then  # no mode or backup was provided
     echo "Running cli installer"
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
     pip3 install inquirer==3.4.0

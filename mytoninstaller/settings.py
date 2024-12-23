@@ -914,7 +914,7 @@ def CreateSymlinks(local):
 
 def EnableMode(local):
 	args = ["python3", "-m", "mytoncore", "-e"]
-	if local.buffer.mode:
+	if local.buffer.mode and local.buffer.mode != "none":
 		args.append("enable_mode_" + local.buffer.mode)
 	else:
 		return
