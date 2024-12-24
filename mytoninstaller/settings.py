@@ -945,9 +945,12 @@ def ConfigureFromBackup(local):
 	backup_file = local.buffer.backup
 
 	os.makedirs(local.buffer.ton_work_dir, exist_ok=True)
-	BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file])
+	if not local.buffer.only_mtc:
+		ip = str(ip2int(get_own_ip()))
+		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file, "-i", ip])
 
 	if local.buffer.only_mtc:
+		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file])
 		local.add_log("Installing only mtc", "info")
 		vconfig_path = local.buffer.vconfig_path
 		vconfig = GetConfig(path=vconfig_path)
