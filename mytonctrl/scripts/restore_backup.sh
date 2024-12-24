@@ -1,13 +1,15 @@
 name="backup.tar.gz"
 mtc_dir="$HOME/.local/share/mytoncore"
 ip=0
+user=$(logname)
 # Get arguments
-while getopts n:m:i: flag
+while getopts n:m:i:u: flag
 do
 	case "${flag}" in
 		n) name=${OPTARG};;
     m) mtc_dir=${OPTARG};;
     i) ip=${OPTARG};;
+    u) user=${OPTARG};;
     *)
         echo "Flag -${flag} is not recognized. Aborting"
         exit 1 ;;
@@ -38,9 +40,13 @@ if [ ! -d ${tmp_dir}/db ]; then
 fi
 
 rm -rf /var/ton-work/db/keyring
-cp -rf ${tmp_dir}/db /var/ton-work
-cp -rf ${tmp_dir}/keys /var/ton-work
-cp -rfT ${tmp_dir}/mytoncore $mtc_dir
+
+chown -R $user:$user ${tmp_dir}/mytoncore
+chown -R $user:$user ${tmp_dir}/keys
+
+cp -rfp ${tmp_dir}/db /var/ton-work
+cp -rfp ${tmp_dir}/keys /var/ton-work
+cp -rfpT ${tmp_dir}/mytoncore $mtc_dir
 
 chown -R validator:validator /var/ton-work/db/keyring
 

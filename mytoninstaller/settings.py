@@ -959,9 +959,6 @@ def ConfigureFromBackup(local):
 		except:
 			local.add_log("Can't get ip from validator", "error")
 			return
-		user = local.buffer.user
-		args = ["chown", '-R', user + ':' + user, local.buffer.keys_dir]
-		subprocess.run(args)
 		set_external_ip(local, node_ip)
 
 
