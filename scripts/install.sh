@@ -72,7 +72,7 @@ done
 if [ "${mode}" = "" ]; then  # no mode
     echo "Running cli installer"
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
-    pip3 install inquirer==3.4.0
+    pip3 install inquirer==3.4.0 --break-system-packages
     python3 install.py
     exit
 fi
@@ -106,6 +106,16 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
     BIN_DIR=/usr/local/bin
     mkdir -p ${SOURCES_DIR}
 fi
+
+
+if [ ! -f ~/.config/pip/pip.conf ]; then  # create pip config
+    mkdir -p ~/.config/pip
+cat > ~/.config/pip/pip.conf <<EOF
+[global]
+break-system-packages = true
+EOF
+fi
+
 
 # check TON components
 file1=${BIN_DIR}/ton/crypto/fift
