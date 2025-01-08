@@ -18,6 +18,7 @@ class Alert:
 HOUR = 3600
 VALIDATION_PERIOD = 65536
 FREEZE_PERIOD = 32768
+ELECTIONS_START_BEFORE = 8192
 
 
 ALERTS = {
@@ -70,6 +71,16 @@ ALERTS = {
         "Validator has been slashed in previous round for {amount} TON",
         FREEZE_PERIOD
     ),
+    "stake_not_accepted": Alert(
+        "high",
+        "Validator's stake has not been accepted",
+        ELECTIONS_START_BEFORE
+    ),
+    "stake_accepted": Alert(
+        "info",
+        "Validator's stake {stake} TON has been accepted",
+        ELECTIONS_START_BEFORE
+    )
 }
 
 
@@ -128,9 +139,10 @@ Alert text:
     def set_global_vars(self):
         # set global vars for correct alerts timeouts for current network
         config15 = self.ton.GetConfig15()
-        global VALIDATION_PERIOD, FREEZE_PERIOD
+        global VALIDATION_PERIOD, FREEZE_PERIOD, ELECTIONS_START_BEFORE
         VALIDATION_PERIOD = config15["validatorsElectedFor"]
         FREEZE_PERIOD = config15["stakeHeldFor"]
+        ELECTIONS_START_BEFORE = config15["electionsStartBefore"]
 
     def init(self):
         if not self.ton.get_mode_value('alert-bot'):
@@ -271,6 +283,32 @@ Alert text:
         if not ok:
             self.send_alert("adnl_connection_failed")
 
+    def get_myself_from_election(self):
+        config = self.ton.GetConfig36()
+        if not config["validators"]:
+            return
+        validator = self.validator_module.find_myself(config["validators"])
+        if validator is None:
+            return False
+        save_elections = self.ton.GetSaveElections()
+        elections = save_elections.get(str(config["startWorkTime"]))
+        if elections is None:
+            return validator
+        adnl = self.ton.GetAdnlAddr()
+        validator['stake'] = elections[adnl].get('stake')
+        return validator
+
+    def check_stake(self):
+        if not self.ton.using_validator():
+            return
+        res = self.get_myself_from_election()
+        if res is None:
+            return
+        if res is False:
+            self.send_alert("stake_not_accepted")
+            return
+        self.send_alert("stake_accepted", stake=res.get('stake'))
+
     def check_status(self):
         if not self.ton.using_alert_bot():
             return
@@ -285,6 +323,7 @@ Alert text:
         self.local.try_function(self.check_sync)
         self.local.try_function(self.check_slashed)
         self.local.try_function(self.check_adnl_connection_failed)
+        self.local.try_function(self.check_stake)
 
     def add_console_commands(self, console):
         console.AddItem("enable_alert", self.enable_alert, self.local.translate("enable_alert_cmd"))
