@@ -99,13 +99,13 @@ class AlertBotModule(MtcModule):
         self.chat_id = None
         self.last_db_check = 0
 
-    def send_message(self, text: str):
+    def send_message(self, text: str, silent: bool = False):
         if self.token is None:
             raise Exception("send_message error: token is not initialized")
         if self.chat_id is None:
             raise Exception("send_message error: chat_id is not initialized")
         request_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-        data = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML'}
+        data = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML', 'disable_notification': silent}
         response = requests.post(request_url, data=data, timeout=3)
         if response.status_code != 200:
             raise Exception(f"send_message error: {response.text}")
@@ -133,7 +133,7 @@ Alert text:
 <blockquote> {alert.text.format(*args, **kwargs)} </blockquote>
 '''
         if time.time() - last_sent > alert.timeout:
-            self.send_message(text)
+            self.send_message(text, alert.severity == "info")  # send info alerts without sound
             self.set_alert_sent(alert_name)
 
     def set_global_vars(self):
