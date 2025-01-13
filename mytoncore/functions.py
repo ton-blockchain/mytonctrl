@@ -572,6 +572,9 @@ def General(local):
     from modules.alert_bot import AlertBotModule
     local.start_cycle(AlertBotModule(ton, local).check_status, sec=60, args=())
 
+    from modules.prometheus import PrometheusModule
+    local.start_cycle(PrometheusModule(ton, local).push_metrics, sec=30, args=())
+
     thr_sleep()
 # end define
 

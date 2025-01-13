@@ -3123,6 +3123,9 @@ class MyTonCore():
 	def using_alert_bot(self):
 		return self.get_mode_value('alert-bot')
 
+	def using_prometheus(self):
+		return self.get_mode_value('prometheus')
+
 	def Tlb2Json(self, text):
 		# Заменить скобки
 		start = 0
