@@ -23,7 +23,9 @@ METRICS = {
     'out_of_ser': Metric('validator_out_of_serialization', 'Number of blocks last state serialization was ago', 'gauge'),
     'vc_up': Metric('validator_console_up', 'Is `validator-console` up', 'gauge'),
     'validator_id': Metric('validator_index', 'Validator index', 'gauge'),
-    'validator_stake': Metric('validator_stake', 'Validator stake', 'gauge'),
+    'stake': Metric('validator_stake', 'Validator stake', 'gauge'),
+    'celldb_gc_block': Metric('validator_celldb_gc_block', 'Celldb GC block latency', 'gauge'),
+    'celldb_gc_state': Metric('validator_celldb_gc_state', 'Celldb GC queue size', 'gauge'),
 }
 
 
@@ -43,6 +45,10 @@ class PrometheusModule(MtcModule):
             result.append(METRICS['shard_out_of_sync'].to_format(status.shardchain_out_of_sync))
         if status.masterchain_out_of_ser is not None:
             result.append(METRICS['out_of_ser'].to_format(status.masterchain_out_of_ser))
+        if status.masterchainblock is not None and status.gcmasterchainblock is not None:
+            result.append(METRICS['celldb_gc_block'].to_format(status.masterchainblock - status.gcmasterchainblock))
+        if status.gcmasterchainblock is not None and status.last_deleted_mc_state is not None:
+            result.append(METRICS['celldb_gc_state'].to_format(status.gcmasterchainblock - status.last_deleted_mc_state))
         result.append(METRICS['vc_up'].to_format(int(status.is_working)))
 
     def get_validator_validation_metrics(self, result: list):
@@ -55,7 +61,7 @@ class PrometheusModule(MtcModule):
             adnl = self.ton.GetAdnlAddr()
             stake = elections.get(adnl, {}).get('stake')
             if stake:
-                result.append(METRICS['validator_stake'].to_format(round(stake, 2)))
+                result.append(METRICS['stake'].to_format(round(stake, 2)))
 
     def push_metrics(self):
         if not self.ton.using_prometheus():

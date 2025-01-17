@@ -796,6 +796,7 @@ class MyTonCore():
 			status.masterchain_out_of_ser = status.masterchainblock - status.stateserializermasterchainseqno
 			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
 			status.out_of_ser = status.masterchain_out_of_ser
+			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
 		except Exception as ex:
 			self.local.add_log(f"GetValidatorStatus warning: {ex}", "warning")
 			status.is_working = False
