@@ -39,6 +39,7 @@ class PrometheusModule(MtcModule):
 
     def get_validator_status_metrics(self, result: list):
         status = self.ton.GetValidatorStatus()
+        is_working = status.is_working or (status.unixtime is not None)
         if status.masterchain_out_of_sync is not None:
             result.append(METRICS['master_out_of_sync'].to_format(status.masterchain_out_of_sync))
         if status.shardchain_out_of_sync is not None:
@@ -49,7 +50,7 @@ class PrometheusModule(MtcModule):
             result.append(METRICS['celldb_gc_block'].to_format(status.masterchainblock - status.gcmasterchainblock))
         if status.gcmasterchainblock is not None and status.last_deleted_mc_state is not None:
             result.append(METRICS['celldb_gc_state'].to_format(status.gcmasterchainblock - status.last_deleted_mc_state))
-        result.append(METRICS['vc_up'].to_format(int(status.is_working)))
+        result.append(METRICS['vc_up'].to_format(int(is_working)))
 
     def get_validator_validation_metrics(self, result: list):
         index = self.ton.GetValidatorIndex()
