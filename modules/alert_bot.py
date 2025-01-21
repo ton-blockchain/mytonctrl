@@ -80,7 +80,17 @@ ALERTS = {
         "info",
         "Validator's stake {stake} TON has been accepted",
         ELECTIONS_START_BEFORE
-    )
+    ),
+    "stake_returned": Alert(
+        "info",
+        "Validator's stake {stake} TON has been returned on address {address}. The reward amount is {reward} TON.",
+        0
+    ),
+    "stake_not_returned": Alert(
+        "high",
+        "Validator's stake has not been returned on address {address}.",
+        0
+    ),
 }
 
 
@@ -283,31 +293,52 @@ Alert text:
         if not ok:
             self.send_alert("adnl_connection_failed")
 
-    def get_myself_from_election(self):
-        config = self.ton.GetConfig36()
+    def get_myself_from_election(self, config: dict):
         if not config["validators"]:
+            return
+        adnl = self.ton.GetAdnlAddr()
+        save_elections = self.ton.GetSaveElections()
+        elections = save_elections.get(str(config["startWorkTime"]))
+        if elections is None:
+            return
+        if adnl not in elections:  # didn't participate in elections
             return
         validator = self.validator_module.find_myself(config["validators"])
         if validator is None:
             return False
-        save_elections = self.ton.GetSaveElections()
-        elections = save_elections.get(str(config["startWorkTime"]))
-        if elections is None:
-            return validator
-        adnl = self.ton.GetAdnlAddr()
         validator['stake'] = elections[adnl].get('stake')
+        validator['walletAddr'] = elections[adnl].get('walletAddr')
         return validator
 
-    def check_stake(self):
+    def check_stake_sent(self):
         if not self.ton.using_validator():
             return
-        res = self.get_myself_from_election()
+        config = self.ton.GetConfig36()
+        res = self.get_myself_from_election(config)
         if res is None:
             return
         if res is False:
             self.send_alert("stake_not_accepted")
             return
         self.send_alert("stake_accepted", stake=res.get('stake'))
+
+    def check_stake_returned(self):
+        if not self.ton.using_validator():
+            return
+        config = self.ton.GetConfig32()
+        if not (config['endWorkTime'] + FREEZE_PERIOD + 1200 <= time.time() < config['endWorkTime'] + FREEZE_PERIOD + 1260):  # check between 20th and 21st minutes after stakes have been unfrozen
+            return
+        res = self.get_myself_from_election(config)
+        if not res:
+            return
+        trs = self.ton.GetAccountHistory(self.ton.GetAccount(res["walletAddr"]), limit=10)
+
+        for tr in trs:
+            if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.srcAddr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
+                self.send_alert("stake_returned", stake=res.get('stake'), address=res["walletAddr"], reward=tr.value - res.get('stake', 0))
+                return
+        self.send_alert("stake_not_returned", address=res["walletAddr"])
+
 
     def check_status(self):
         if not self.ton.using_alert_bot():
@@ -323,7 +354,8 @@ Alert text:
         self.local.try_function(self.check_sync)
         self.local.try_function(self.check_slashed)
         self.local.try_function(self.check_adnl_connection_failed)
-        self.local.try_function(self.check_stake)
+        self.local.try_function(self.check_stake_sent)
+        self.local.try_function(self.check_stake_returned)
 
     def add_console_commands(self, console):
         console.AddItem("enable_alert", self.enable_alert, self.local.translate("enable_alert_cmd"))
