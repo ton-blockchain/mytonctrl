@@ -320,7 +320,7 @@ Alert text:
         if res is False:
             self.send_alert("stake_not_accepted")
             return
-        self.send_alert("stake_accepted", stake=res.get('stake'))
+        self.send_alert("stake_accepted", stake=round(res.get('stake'), 2))
 
     def check_stake_returned(self):
         if not self.ton.using_validator():
@@ -335,7 +335,7 @@ Alert text:
 
         for tr in trs:
             if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.srcAddr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
-                self.send_alert("stake_returned", stake=res.get('stake'), address=res["walletAddr"], reward=tr.value - res.get('stake', 0))
+                self.send_alert("stake_returned", stake=round(tr.value, 2), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
                 return
         self.send_alert("stake_not_returned", address=res["walletAddr"])
 
