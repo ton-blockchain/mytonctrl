@@ -84,12 +84,17 @@ ALERTS = {
     "stake_returned": Alert(
         "info",
         "Validator's stake {stake} TON has been returned on address {address}. The reward amount is {reward} TON.",
-        0
+        60
     ),
     "stake_not_returned": Alert(
         "high",
         "Validator's stake has not been returned on address {address}.",
-        0
+        60
+    ),
+    "voting": Alert(
+        "high",
+        "Found proposals with hashes `{hashes}` that have significant amount of votes, but current validator didn't vote for them. Please check @tonstatus for more details.",
+        VALIDATION_PERIOD
     ),
 }
 
@@ -339,6 +344,19 @@ Alert text:
                 return
         self.send_alert("stake_not_returned", address=res["walletAddr"])
 
+    def check_voting(self):
+        if not self.ton.using_validator():
+            return
+        validator_index = self.ton.GetValidatorIndex()
+        if validator_index == -1:
+            return
+        need_to_vote = []
+        offers = self.ton.GetOffers()
+        for offer in offers:
+            if not offer['isPassed'] and offer['approvedPercent'] >= 50 and validator_index not in offer['votedValidators']:
+               need_to_vote.append(offer['hash'])
+        if need_to_vote:
+            self.send_alert("voting", hashes=' '.join(need_to_vote))
 
     def check_status(self):
         if not self.ton.using_alert_bot():
@@ -356,6 +374,7 @@ Alert text:
         self.local.try_function(self.check_adnl_connection_failed)
         self.local.try_function(self.check_stake_sent)
         self.local.try_function(self.check_stake_returned)
+        self.local.try_function(self.check_voting)
 
     def add_console_commands(self, console):
         console.AddItem("enable_alert", self.enable_alert, self.local.translate("enable_alert_cmd"))
