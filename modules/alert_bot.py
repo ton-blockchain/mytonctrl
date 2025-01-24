@@ -21,82 +21,87 @@ FREEZE_PERIOD = 32768
 ELECTIONS_START_BEFORE = 8192
 
 
-ALERTS = {
-    "low_wallet_balance": Alert(
-        "low",
-        "Validator wallet {wallet} balance is low: {balance} TON.",
-        18*HOUR
-    ),
-    "db_usage_80": Alert(
-        "high",
-        """TON DB usage > 80%. Clean the TON database: 
-        https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
-        or (and) set node\'s archive ttl to lower value.""",
-        24*HOUR
-    ),
-    "db_usage_95": Alert(
-        "critical",
-        """TON DB usage > 95%. Disk is almost full, clean the TON database immediately: 
-        https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
-        or (and) set node\'s archive ttl to lower value.""",
-        6*HOUR
-    ),
-    "low_efficiency": Alert(
-        "high",
-        """Validator efficiency is low: {efficiency}%.""",
-        VALIDATION_PERIOD // 3
-    ),
-    "out_of_sync": Alert(
-        "critical",
-        "Node is out of sync on {sync} sec.",
-        300
-    ),
-    "service_down": Alert(
-        "critical",
-        "validator.service is down.",
-        300
-    ),
-    "adnl_connection_failed": Alert(
-        "high",
-        "ADNL connection to node failed",
-        3*HOUR
-    ),
-    "zero_block_created": Alert(
-        "critical",
-        "Validator has not created any blocks in the last {hours} hours.",
-        VALIDATION_PERIOD // 3
-    ),
-    "validator_slashed": Alert(
-        "high",
-        "Validator has been slashed in previous round for {amount} TON",
-        FREEZE_PERIOD
-    ),
-    "stake_not_accepted": Alert(
-        "high",
-        "Validator's stake has not been accepted",
-        ELECTIONS_START_BEFORE
-    ),
-    "stake_accepted": Alert(
-        "info",
-        "Validator's stake {stake} TON has been accepted",
-        ELECTIONS_START_BEFORE
-    ),
-    "stake_returned": Alert(
-        "info",
-        "Validator's stake {stake} TON has been returned on address {address}. The reward amount is {reward} TON.",
-        60
-    ),
-    "stake_not_returned": Alert(
-        "high",
-        "Validator's stake has not been returned on address {address}.",
-        60
-    ),
-    "voting": Alert(
-        "high",
-        "Found proposals with hashes `{hashes}` that have significant amount of votes, but current validator didn't vote for them. Please check @tonstatus for more details.",
-        VALIDATION_PERIOD
-    ),
-}
+ALERTS = {}
+
+
+def init_alerts():
+    global ALERTS
+    ALERTS = {
+        "low_wallet_balance": Alert(
+            "low",
+            "Validator wallet {wallet} balance is low: {balance} TON.",
+            18 * HOUR
+        ),
+        "db_usage_80": Alert(
+            "high",
+            """TON DB usage > 80%. Clean the TON database: 
+            https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
+            or (and) set node\'s archive ttl to lower value.""",
+            24 * HOUR
+        ),
+        "db_usage_95": Alert(
+            "critical",
+            """TON DB usage > 95%. Disk is almost full, clean the TON database immediately: 
+            https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
+            or (and) set node\'s archive ttl to lower value.""",
+            6 * HOUR
+        ),
+        "low_efficiency": Alert(
+            "high",
+            """Validator efficiency is low: {efficiency}%.""",
+            VALIDATION_PERIOD // 3
+        ),
+        "out_of_sync": Alert(
+            "critical",
+            "Node is out of sync on {sync} sec.",
+            300
+        ),
+        "service_down": Alert(
+            "critical",
+            "validator.service is down.",
+            300
+        ),
+        "adnl_connection_failed": Alert(
+            "high",
+            "ADNL connection to node failed",
+            3 * HOUR
+        ),
+        "zero_block_created": Alert(
+            "critical",
+            "Validator has not created any blocks in the last {hours} hours.",
+            VALIDATION_PERIOD // 3
+        ),
+        "validator_slashed": Alert(
+            "high",
+            "Validator has been slashed in previous round for {amount} TON",
+            FREEZE_PERIOD
+        ),
+        "stake_not_accepted": Alert(
+            "high",
+            "Validator's stake has not been accepted",
+            ELECTIONS_START_BEFORE
+        ),
+        "stake_accepted": Alert(
+            "info",
+            "Validator's stake {stake} TON has been accepted",
+            ELECTIONS_START_BEFORE
+        ),
+        "stake_returned": Alert(
+            "info",
+            "Validator's stake {stake} TON has been returned on address {address}. The reward amount is {reward} TON.",
+            60
+        ),
+        "stake_not_returned": Alert(
+            "high",
+            "Validator's stake has not been returned on address {address}.",
+            60
+        ),
+        "voting": Alert(
+            "high",
+            "Found proposals with hashes `{hashes}` that have significant amount of votes, but current validator didn't vote for them. Please check @tonstatus for more details.",
+            VALIDATION_PERIOD
+        ),
+    }
 
 
 class AlertBotModule(MtcModule):
@@ -171,6 +176,7 @@ Alert text:
         self.hostname = get_hostname()
         self.ip = self.ton.get_validator_engine_ip()
         self.set_global_vars()
+        init_alerts()
         self.inited = True
 
     def get_alert_from_db(self, alert_name: str):
@@ -354,7 +360,7 @@ Alert text:
         offers = self.ton.GetOffers()
         for offer in offers:
             if not offer['isPassed'] and offer['approvedPercent'] >= 50 and validator_index not in offer['votedValidators']:
-               need_to_vote.append(offer['hash'])
+                need_to_vote.append(offer['hash'])
         if need_to_vote:
             self.send_alert("voting", hashes=' '.join(need_to_vote))
 
