@@ -337,7 +337,7 @@ Alert text:
         if not self.ton.using_validator():
             return
         config = self.ton.GetConfig32()
-        if not (config['endWorkTime'] + FREEZE_PERIOD + 1800 <= time.time() < config['endWorkTime'] + FREEZE_PERIOD + 1801):  # check between 25th and 26th minutes after stakes have been unfrozen
+        if not (config['endWorkTime'] + FREEZE_PERIOD + 1800 <= time.time() < config['endWorkTime'] + FREEZE_PERIOD + 1860):  # check between 25th and 26th minutes after stakes have been unfrozen
             return
         res = self.get_myself_from_election(config)
         if not res:
