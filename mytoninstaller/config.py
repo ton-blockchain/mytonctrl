@@ -44,6 +44,8 @@ def backup_config(local, config_path):
 
 
 def BackupVconfig(local):
+	if local.buffer.only_mtc:
+		return
 	local.add_log("Backup validator config file 'config.json' to 'config.json.backup'", "debug")
 	vconfig_path = local.buffer.vconfig_path
 	backupPath = vconfig_path + ".backup"

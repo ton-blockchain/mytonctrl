@@ -61,6 +61,7 @@ SETTINGS = {
     'ChatId': Setting('alert-bot', None, 'Alerting Telegram chat id'),
     'auto_backup': Setting('validator', None, 'Make validator backup every election'),
     'auto_backup_path': Setting('validator', '/tmp/mytoncore/auto_backups/', 'Path to store auto-backups'),
+    'onlyNode': Setting(None, None, 'MyTonCtrl will work only for collecting validator telemetry (if `sendTelemetry` is True), without participating in Elections and etc.')
 }
 
 

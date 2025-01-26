@@ -118,8 +118,10 @@ if [ "${ton_node_version}" != "master" ]; then
   cd ../
 fi
 
+cd $SOURCES_DIR/ton
 git submodule sync --recursive
 git submodule update
+cd ../
 
 git config --global --add safe.directory $SOURCES_DIR/ton
 

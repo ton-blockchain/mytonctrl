@@ -14,7 +14,7 @@ from mypylib.mypylib import (
 	run_as_root,
 	color_print,
 	ip2int,
-	Dict
+	Dict, int2ip
 )
 from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, get_ed25519_pubkey
 from mytoninstaller.config import SetConfig, GetConfig, get_own_ip, backup_config
@@ -22,6 +22,9 @@ from mytoncore.utils import hex2b64
 
 
 def FirstNodeSettings(local):
+	if local.buffer.only_mtc:
+		return
+
 	local.add_log("start FirstNodeSettings fuction", "debug")
 
 	# Создать переменные
@@ -198,6 +201,8 @@ def FirstMytoncoreSettings(local):
 #end define
 
 def EnableValidatorConsole(local):
+	if local.buffer.only_mtc:
+		return
 	local.add_log("start EnableValidatorConsole function", "debug")
 
 	# Create variables
@@ -300,6 +305,9 @@ def EnableValidatorConsole(local):
 #end define
 
 def EnableLiteServer(local):
+	if local.buffer.only_mtc:
+		return
+
 	local.add_log("start EnableLiteServer function", "debug")
 
 	# Create variables
@@ -906,9 +914,70 @@ def CreateSymlinks(local):
 
 def EnableMode(local):
 	args = ["python3", "-m", "mytoncore", "-e"]
-	if local.buffer.mode:
+	if local.buffer.mode and local.buffer.mode != "none":
 		args.append("enable_mode_" + local.buffer.mode)
 	else:
 		return
 	args = ["su", "-l", local.buffer.user, "-c", ' '.join(args)]
 	subprocess.run(args)
+
+
+def set_external_ip(local, ip):
+	mconfig_path = local.buffer.mconfig_path
+
+	mconfig = GetConfig(path=mconfig_path)
+
+	mconfig.liteClient.liteServer.ip = ip
+	mconfig.validatorConsole.addr = f'{ip}:{mconfig.validatorConsole.addr.split(":")[1]}'
+
+	# write mconfig
+	local.add_log("write mconfig", "debug")
+	SetConfig(path=mconfig_path, data=mconfig)
+
+
+def ConfigureFromBackup(local):
+	if not local.buffer.backup:
+		return
+	from modules.backups import BackupModule
+	mconfig_path = local.buffer.mconfig_path
+	mconfig_dir = get_dir_from_path(mconfig_path)
+	local.add_log("start ConfigureFromBackup function", "info")
+	backup_file = local.buffer.backup
+
+	os.makedirs(local.buffer.ton_work_dir, exist_ok=True)
+	if not local.buffer.only_mtc:
+		ip = str(ip2int(get_own_ip()))
+		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file, "-i", ip])
+
+	if local.buffer.only_mtc:
+		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file])
+		local.add_log("Installing only mtc", "info")
+		vconfig_path = local.buffer.vconfig_path
+		vconfig = GetConfig(path=vconfig_path)
+		try:
+			node_ip = int2ip(vconfig['addrs'][0]['ip'])
+		except:
+			local.add_log("Can't get ip from validator", "error")
+			return
+		set_external_ip(local, node_ip)
+
+
+def ConfigureOnlyNode(local):
+	if not local.buffer.only_node:
+		return
+	from modules.backups import BackupModule
+	mconfig_path = local.buffer.mconfig_path
+	mconfig_dir = get_dir_from_path(mconfig_path)
+	local.add_log("start ConfigureOnlyNode function", "info")
+
+	process = BackupModule.run_create_backup(["-m", mconfig_dir, ])
+	if process.returncode != 0:
+		local.add_log("Backup creation failed", "error")
+		return
+	local.add_log("Backup successfully created. Use this file on the controller server with `--only-mtc` flag on installation.", "info")
+
+	mconfig = GetConfig(path=mconfig_path)
+	mconfig.onlyNode = True
+	SetConfig(path=mconfig_path, data=mconfig)
+
+	start_service(local, 'mytoncore')
