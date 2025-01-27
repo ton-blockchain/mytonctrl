@@ -551,8 +551,14 @@ def General(local):
     # scanner.Run()
 
     # Start threads
-    local.start_cycle(Elections, sec=600, args=(local, ton, ))
     local.start_cycle(Statistics, sec=10, args=(local, ))
+    local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
+    local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
+    if local.db.get("onlyNode"):  # mytoncore service works only for telemetry
+        thr_sleep()
+        return
+
+    local.start_cycle(Elections, sec=600, args=(local, ton, ))
     local.start_cycle(Offers, sec=600, args=(local, ton, ))
     local.start_cycle(save_past_events, sec=300, args=(local, ton, ))
 
@@ -562,8 +568,6 @@ def General(local):
     local.start_cycle(Complaints, sec=t, args=(local, ton, ))
     local.start_cycle(Slashing, sec=t, args=(local, ton, ))
 
-    local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
-    local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
     local.start_cycle(ScanLiteServers, sec=60, args=(local, ton,))
 
     from modules.custom_overlays import CustomOverlayModule
