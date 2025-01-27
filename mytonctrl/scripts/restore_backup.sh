@@ -16,6 +16,10 @@ do
 	esac
 done
 
+if [ ! -f "$name" ]; then
+    echo "Backup file not found, aborting."
+    exit 1
+fi
 
 COLOR='\033[92m'
 ENDC='\033[0m'
