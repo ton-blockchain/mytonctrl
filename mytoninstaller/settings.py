@@ -91,15 +91,25 @@ def FirstNodeSettings(local):
 	StartValidator(local)
 #end define
 
+def is_testnet(local):
+	testnet_zero_state_root_hash = "gj+B8wb/AmlPk1z1AhVI484rhrUpgSr2oSFIh56VoSg="
+	with open(local.buffer.global_config_path) as f:
+		config = json.load(f)
+	if config['validator']['zero_state']['root_hash'] == testnet_zero_state_root_hash:
+		return True
+	return False
+
 def DownloadDump(local):
     dump = local.buffer.dump
-    if dump == False:
+    if dump is False:
         return
     #end if
 
     local.add_log("start DownloadDump function", "debug")
-    url = "https://dump.ton.org"
-    dumpSize = requests.get(url + "/dumps/latest.tar.size.archive.txt").text
+    url = "https://dump.ton.org/dumps/latest"
+    if is_testnet(local):
+        url += '_testnet'
+    dumpSize = requests.get(url + ".tar.size.archive.txt").text
     print("dumpSize:", dumpSize)
     needSpace = int(dumpSize) * 3
     diskSpace = psutil.disk_usage("/var")
@@ -113,7 +123,7 @@ def DownloadDump(local):
 
     # download dump using aria2c to a temporary file
     temp_file = "/tmp/latest.tar.lz"
-    cmd = f"aria2c -x 8 -s 8 -c {url}/dumps/latest.tar.lz -d / -o {temp_file}"
+    cmd = f"aria2c -x 8 -s 8 -c {url}.tar.lz -d / -o {temp_file}"
     os.system(cmd)
 
     # process the downloaded file
