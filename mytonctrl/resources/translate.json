@@ -249,6 +249,11 @@
 		"ru": "{cyan}===[ Статус ноды ]==={endc}",
 		"zh_TW": "{cyan}===[ 节点狀態 ]==={endc}"
 	},
+	"node_ip_address": {
+		"en": "Node IP address: {{bold}}{0}{{endc}}",
+		"ru": "IP адрес Ноды: {{bold}}{0}{{endc}}",
+		"zh_TW": "節點 IP 地址: {{bold}}{0}{{endc}}"
+	},
 	"local_status_validator_index": {
 		"en": "Validator index: {0}",
 		"ru": "Индекс валидатора: {0}",
@@ -483,11 +488,6 @@
 		"en": "Send test alert via Telegram Bot",
 		"ru": "Отправить тестовое оповещение через Telegram Bot",
 		"zh_TW": "通過 Telegram Bot 發送測試警報"
-	},
-	"cleanup_cmd": {
-		"en": "Clean node old logs and temp files",
-		"ru": "Очистить старые логи и временные файлы ноды",
-		"zh_TW": "清理節點舊日誌和臨時文件"
 	},
 	"benchmark_cmd": {
 		"en": "Run benchmark",

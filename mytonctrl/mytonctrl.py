@@ -85,14 +85,16 @@ def Init(local, ton, console, argv):
 	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
 	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
 	console.AddItem("rollback", inject_globals(rollback_to_mtc1), local.translate("rollback_cmd"))
-	console.AddItem("create_backup", inject_globals(create_backup), local.translate("create_backup_cmd"))
-	console.AddItem("restore_backup", inject_globals(restore_backup), local.translate("restore_backup_cmd"))
 
 	#console.AddItem("xrestart", inject_globals(Xrestart), local.translate("xrestart_cmd"))
 	#console.AddItem("xlist", inject_globals(Xlist), local.translate("xlist_cmd"))
 	#console.AddItem("gpk", inject_globals(GetPubKey), local.translate("gpk_cmd"))
 	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.translate("ssoc_cmd"))
 	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
+
+	from modules.backups import BackupModule
+	module = BackupModule(ton, local)
+	module.add_console_commands(console)
 
 	from modules.custom_overlays import CustomOverlayModule
 	module = CustomOverlayModule(ton, local)
@@ -140,7 +142,6 @@ def Init(local, ton, console, argv):
 		module = AlertBotModule(ton, local)
 		module.add_console_commands(console)
 
-	console.AddItem("cleanup", inject_globals(cleanup_validator_db), local.translate("cleanup_cmd"))
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
 	# console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
 
@@ -393,12 +394,6 @@ def rollback_to_mtc1(local, ton,  args):
 	run_args = ["bash", rollback_script_path]
 	run_as_root(run_args)
 	local.exit()
-#end define
-
-def cleanup_validator_db(ton, args):
-	cleanup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/cleanup.sh')
-	run_args = ["bash", cleanup_script_path]
-	exit_code = run_as_root(run_args)
 #end define
 
 def run_benchmark(ton, args):
@@ -759,6 +754,11 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
 
 	color_print(local.translate("local_status_head"))
+	node_ip = ton.get_validator_engine_ip()
+	is_node_remote = node_ip != '127.0.0.1'
+	if is_node_remote:
+		nodeIpAddr_text = local.translate("node_ip_address").format(node_ip)
+		color_print(nodeIpAddr_text)
 	if ton.using_validator():
 		print(validatorIndex_text)
 		# print(validatorEfficiency_text)
@@ -773,7 +773,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 
 	print(disksLoad_text)
 	print(mytoncoreStatus_text)
-	print(validatorStatus_text)
+	if not is_node_remote:
+		print(validatorStatus_text)
 	print(validator_out_of_sync_text)
 	print(validator_out_of_ser_text)
 	print(dbStatus_text)
@@ -928,53 +929,6 @@ def disable_mode(local, ton, args):
 	ton.disable_mode(name)
 	color_print("disable_mode - {green}OK{endc}")
 	local.exit()
-#end define
-
-
-def create_backup(local, ton, args):
-	if len(args) > 2:
-		color_print("{red}Bad args. Usage:{endc} create_backup [path_to_archive] [-y]")
-		return
-	if '-y' not in args:
-		res = input(f'Mytoncore service will be stopped for few seconds while backup is created, Proceed [y/n]?')
-		if res.lower() != 'y':
-			print('aborted.')
-			return
-	else:
-		args.pop(args.index('-y'))
-	command_args = ["-m", ton.local.buffer.my_work_dir]
-	if len(args) == 1:
-		command_args += ["-d", args[0]]
-	backup_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/create_backup.sh')
-	if run_as_root(["bash", backup_script_path] + command_args) == 0:
-		color_print("create_backup - {green}OK{endc}")
-	else:
-		color_print("create_backup - {red}Error{endc}")
-#end define
-
-
-def restore_backup(local, ton, args):
-	if len(args) == 0 or len(args) > 2:
-		color_print("{red}Bad args. Usage:{endc} restore_backup <path_to_archive> [-y]")
-		return
-	if '-y' not in args:
-		res = input(f'This action will overwrite existing configuration with contents of backup archive, please make sure that donor node is not in operation prior to this action. Proceed [y/n]')
-		if res.lower() != 'y':
-			print('aborted.')
-			return
-	else:
-		args.pop(args.index('-y'))
-	print('Before proceeding, mtc will create a backup of current configuration.')
-	create_backup(local, ton, ['-y'])
-	ip = str(ip2int(get_own_ip()))
-	command_args = ["-m", ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
-
-	restore_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/restore_backup.sh')
-	if run_as_root(["bash", restore_script_path] + command_args) == 0:
-		color_print("restore_backup - {green}OK{endc}")
-		local.exit()
-	else:
-		color_print("restore_backup - {red}Error{endc}")
 #end define
 
 
