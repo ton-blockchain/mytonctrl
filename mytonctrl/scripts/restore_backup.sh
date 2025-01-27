@@ -43,6 +43,8 @@ rm -rf /var/ton-work/db/keyring
 
 chown -R $user:$user ${tmp_dir}/mytoncore
 chown -R $user:$user ${tmp_dir}/keys
+chown validator:validator ${tmp_dir}/keys
+chown -R validator:validator ${tmp_dir}/db
 
 cp -rfp ${tmp_dir}/db /var/ton-work
 cp -rfp ${tmp_dir}/keys /var/ton-work
