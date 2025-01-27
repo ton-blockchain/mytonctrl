@@ -796,6 +796,7 @@ class MyTonCore():
 			status.masterchain_out_of_ser = status.masterchainblock - status.stateserializermasterchainseqno
 			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
 			status.out_of_ser = status.masterchain_out_of_ser
+			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
 		except Exception as ex:
 			self.local.add_log(f"GetValidatorStatus warning: {ex}", "warning")
 			status.is_working = False
@@ -3122,6 +3123,9 @@ class MyTonCore():
 
 	def using_alert_bot(self):
 		return self.get_mode_value('alert-bot')
+
+	def using_prometheus(self):
+		return self.get_mode_value('prometheus')
 
 	def Tlb2Json(self, text):
 		# Заменить скобки

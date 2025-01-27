@@ -9,6 +9,7 @@ from modules.validator import ValidatorModule
 from modules.controller import ControllerModule
 from modules.liteserver import LiteserverModule
 from modules.alert_bot import AlertBotModule
+from modules.prometheus import PrometheusModule
 
 
 MODES = {
@@ -17,7 +18,8 @@ MODES = {
     'single-nominator': SingleNominatorModule,
     'liquid-staking': ControllerModule,
     'liteserver': LiteserverModule,
-    'alert-bot': AlertBotModule
+    'alert-bot': AlertBotModule,
+    'prometheus': PrometheusModule
 }
 
 
@@ -61,6 +63,7 @@ SETTINGS = {
     'ChatId': Setting('alert-bot', None, 'Alerting Telegram chat id'),
     'auto_backup': Setting('validator', None, 'Make validator backup every election'),
     'auto_backup_path': Setting('validator', '/tmp/mytoncore/auto_backups/', 'Path to store auto-backups'),
+    'prometheus_url': Setting('prometheus', None, 'Prometheus pushgateway url'),
     'onlyNode': Setting(None, None, 'MyTonCtrl will work only for collecting validator telemetry (if `sendTelemetry` is True), without participating in Elections and etc.')
 }
 
