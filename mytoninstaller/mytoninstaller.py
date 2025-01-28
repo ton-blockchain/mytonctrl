@@ -34,7 +34,6 @@ from mytoninstaller.settings import (
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
-	BackupVconfig,
 	BackupMconfig,
 )
 
@@ -293,7 +292,6 @@ def General(local, console):
 	FirstNodeSettings(local)
 	EnableValidatorConsole(local)
 	EnableLiteServer(local)
-	BackupVconfig(local)
 	BackupMconfig(local)
 	CreateSymlinks(local)
 	EnableMode(local)
