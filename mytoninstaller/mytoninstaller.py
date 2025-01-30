@@ -34,7 +34,6 @@ from mytoninstaller.settings import (
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
-	BackupVconfig,
 	BackupMconfig,
 )
 
@@ -144,7 +143,7 @@ def set_node_argument(local, args):
 					"Examples: 'set_node_argument --archive-ttl 86400' or 'set_node_argument --archive-ttl -d' or 'set_node_argument -M' or 'set_node_argument --add-shard 0:2000000000000000 0:a000000000000000'")
 		return
 	arg_name = args[0]
-	args = [arg_name, args[1] if len(args) > 1 else ""]
+	args = [arg_name, " ".join(args[1:])]
 	script_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'set_node_argument.py')
 	run_as_root(['python3', script_path] + args)
 	color_print("set_node_argument - {green}OK{endc}")
@@ -295,7 +294,6 @@ def General(local, console):
 	FirstNodeSettings(local)
 	EnableValidatorConsole(local)
 	EnableLiteServer(local)
-	BackupVconfig(local)
 	BackupMconfig(local)
 	CreateSymlinks(local)
 	EnableMode(local)
