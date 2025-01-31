@@ -48,8 +48,11 @@ class PrometheusModule(MtcModule):
             result.append(METRICS['out_of_ser'].to_format(status.masterchain_out_of_ser))
         if status.masterchainblock is not None and status.gcmasterchainblock is not None:
             result.append(METRICS['celldb_gc_block'].to_format(status.masterchainblock - status.gcmasterchainblock))
-        if status.gcmasterchainblock is not None and status.last_deleted_mc_state is not None and status.last_deleted_mc_state != 0:
-            result.append(METRICS['celldb_gc_state'].to_format(status.gcmasterchainblock - status.last_deleted_mc_state))
+        if status.gcmasterchainblock is not None and status.last_deleted_mc_state is not None:
+            if status.last_deleted_mc_state != 0:
+                result.append(METRICS['celldb_gc_state'].to_format(status.gcmasterchainblock - status.last_deleted_mc_state))
+            else:
+                result.append(METRICS['celldb_gc_state'].to_format(-1))
         result.append(METRICS['vc_up'].to_format(int(is_working)))
 
     def get_validator_validation_metrics(self, result: list):
