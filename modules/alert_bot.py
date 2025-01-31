@@ -218,6 +218,7 @@ Alert text:
         color_print("disable_alert - {green}OK{endc}")
 
     def print_alerts(self, args):
+        init_alerts()
         table = [['Name', 'Enabled', 'Last sent']]
         for alert_name in ALERTS:
             alert = self.get_alert_from_db(alert_name)
