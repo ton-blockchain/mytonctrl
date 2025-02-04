@@ -370,14 +370,6 @@ def Upgrade(ton, args):
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
-	if ton.using_validator():
-		try:
-			from mytoninstaller.mytoninstaller import set_node_argument, get_node_args
-			node_args = get_node_args()
-			if node_args.get('--state-ttl') == '604800':
-				set_node_argument(ton.local, ["--state-ttl", "-d"])
-		except Exception as e:
-			color_print(f"{{red}}Failed to set node argument: {e} {{endc}}")
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
@@ -762,6 +754,11 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
 
 	color_print(local.translate("local_status_head"))
+	node_ip = ton.get_validator_engine_ip()
+	is_node_remote = node_ip != '127.0.0.1'
+	if is_node_remote:
+		nodeIpAddr_text = local.translate("node_ip_address").format(node_ip)
+		color_print(nodeIpAddr_text)
 	if ton.using_validator():
 		print(validatorIndex_text)
 		# print(validatorEfficiency_text)
@@ -776,7 +773,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 
 	print(disksLoad_text)
 	print(mytoncoreStatus_text)
-	print(validatorStatus_text)
+	if not is_node_remote:
+		print(validatorStatus_text)
 	print(validator_out_of_sync_text)
 	print(validator_out_of_ser_text)
 	print(dbStatus_text)

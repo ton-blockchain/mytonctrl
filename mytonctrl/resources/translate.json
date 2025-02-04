@@ -249,6 +249,11 @@
 		"ru": "{cyan}===[ Статус ноды ]==={endc}",
 		"zh_TW": "{cyan}===[ 节点狀態 ]==={endc}"
 	},
+	"node_ip_address": {
+		"en": "Node IP address: {{bold}}{0}{{endc}}",
+		"ru": "IP адрес Ноды: {{bold}}{0}{{endc}}",
+		"zh_TW": "節點 IP 地址: {{bold}}{0}{{endc}}"
+	},
 	"local_status_validator_index": {
 		"en": "Validator index: {0}",
 		"ru": "Индекс валидатора: {0}",

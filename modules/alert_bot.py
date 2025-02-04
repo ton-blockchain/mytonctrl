@@ -18,59 +18,90 @@ class Alert:
 HOUR = 3600
 VALIDATION_PERIOD = 65536
 FREEZE_PERIOD = 32768
+ELECTIONS_START_BEFORE = 8192
 
 
-ALERTS = {
-    "low_wallet_balance": Alert(
-        "low",
-        "Validator wallet {wallet} balance is low: {balance} TON.",
-        18*HOUR
-    ),
-    "db_usage_80": Alert(
-        "high",
-        """TON DB usage > 80%. Clean the TON database: 
-        https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
-        or (and) set node\'s archive ttl to lower value.""",
-        24*HOUR
-    ),
-    "db_usage_95": Alert(
-        "critical",
-        """TON DB usage > 95%. Disk is almost full, clean the TON database immediately: 
-        https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
-        or (and) set node\'s archive ttl to lower value.""",
-        6*HOUR
-    ),
-    "low_efficiency": Alert(
-        "high",
-        """Validator efficiency is low: {efficiency}%.""",
-        VALIDATION_PERIOD // 3
-    ),
-    "out_of_sync": Alert(
-        "critical",
-        "Node is out of sync on {sync} sec.",
-        300
-    ),
-    "service_down": Alert(
-        "critical",
-        "validator.service is down.",
-        300
-    ),
-    "adnl_connection_failed": Alert(
-        "high",
-        "ADNL connection to node failed",
-        3*HOUR
-    ),
-    "zero_block_created": Alert(
-        "critical",
-        "Validator has not created any blocks in the last {hours} hours.",
-        VALIDATION_PERIOD // 3
-    ),
-    "validator_slashed": Alert(
-        "high",
-        "Validator has been slashed in previous round for {amount} TON",
-        FREEZE_PERIOD
-    ),
-}
+ALERTS = {}
+
+
+def init_alerts():
+    global ALERTS
+    ALERTS = {
+        "low_wallet_balance": Alert(
+            "low",
+            "Validator wallet {wallet} balance is low: {balance} TON.",
+            18 * HOUR
+        ),
+        "db_usage_80": Alert(
+            "high",
+            """TON DB usage > 80%. Clean the TON database: 
+            https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
+            or (and) set node\'s archive ttl to lower value.""",
+            24 * HOUR
+        ),
+        "db_usage_95": Alert(
+            "critical",
+            """TON DB usage > 95%. Disk is almost full, clean the TON database immediately: 
+            https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
+            or (and) set node\'s archive ttl to lower value.""",
+            6 * HOUR
+        ),
+        "low_efficiency": Alert(
+            "high",
+            """Validator efficiency is low: {efficiency}%.""",
+            VALIDATION_PERIOD // 3
+        ),
+        "out_of_sync": Alert(
+            "critical",
+            "Node is out of sync on {sync} sec.",
+            300
+        ),
+        "service_down": Alert(
+            "critical",
+            "validator.service is down.",
+            300
+        ),
+        "adnl_connection_failed": Alert(
+            "high",
+            "ADNL connection to node failed",
+            3 * HOUR
+        ),
+        "zero_block_created": Alert(
+            "critical",
+            "Validator has not created any blocks in the last {hours} hours.",
+            VALIDATION_PERIOD // 3
+        ),
+        "validator_slashed": Alert(
+            "high",
+            "Validator has been slashed in previous round for {amount} TON",
+            FREEZE_PERIOD
+        ),
+        "stake_not_accepted": Alert(
+            "high",
+            "Validator's stake has not been accepted",
+            ELECTIONS_START_BEFORE
+        ),
+        "stake_accepted": Alert(
+            "info",
+            "Validator's stake {stake} TON has been accepted",
+            ELECTIONS_START_BEFORE
+        ),
+        "stake_returned": Alert(
+            "info",
+            "Validator's stake {stake} TON has been returned on address {address}. The reward amount is {reward} TON.",
+            60
+        ),
+        "stake_not_returned": Alert(
+            "high",
+            "Validator's stake has not been returned on address {address}.",
+            60
+        ),
+        "voting": Alert(
+            "high",
+            "Found proposals with hashes `{hashes}` that have significant amount of votes, but current validator didn't vote for them. Please check @tonstatus for more details.",
+            VALIDATION_PERIOD
+        ),
+    }
 
 
 class AlertBotModule(MtcModule):
@@ -88,13 +119,13 @@ class AlertBotModule(MtcModule):
         self.chat_id = None
         self.last_db_check = 0
 
-    def send_message(self, text: str):
+    def send_message(self, text: str, silent: bool = False):
         if self.token is None:
             raise Exception("send_message error: token is not initialized")
         if self.chat_id is None:
             raise Exception("send_message error: chat_id is not initialized")
         request_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-        data = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML'}
+        data = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML', 'disable_notification': silent}
         response = requests.post(request_url, data=data, timeout=3)
         if response.status_code != 200:
             raise Exception(f"send_message error: {response.text}")
@@ -122,15 +153,16 @@ Alert text:
 <blockquote> {alert.text.format(*args, **kwargs)} </blockquote>
 '''
         if time.time() - last_sent > alert.timeout:
-            self.send_message(text)
+            self.send_message(text, alert.severity == "info")  # send info alerts without sound
             self.set_alert_sent(alert_name)
 
     def set_global_vars(self):
         # set global vars for correct alerts timeouts for current network
         config15 = self.ton.GetConfig15()
-        global VALIDATION_PERIOD, FREEZE_PERIOD
+        global VALIDATION_PERIOD, FREEZE_PERIOD, ELECTIONS_START_BEFORE
         VALIDATION_PERIOD = config15["validatorsElectedFor"]
         FREEZE_PERIOD = config15["stakeHeldFor"]
+        ELECTIONS_START_BEFORE = config15["electionsStartBefore"]
 
     def init(self):
         if not self.ton.get_mode_value('alert-bot'):
@@ -142,8 +174,9 @@ Alert text:
         from modules.validator import ValidatorModule
         self.validator_module = ValidatorModule(self.ton, self.local)
         self.hostname = get_hostname()
-        self.ip = self.ton.get_validator_engine_ip()
+        self.ip = self.ton.get_node_ip()
         self.set_global_vars()
+        init_alerts()
         self.inited = True
 
     def get_alert_from_db(self, alert_name: str):
@@ -185,6 +218,7 @@ Alert text:
         color_print("disable_alert - {green}OK{endc}")
 
     def print_alerts(self, args):
+        init_alerts()
         table = [['Name', 'Enabled', 'Last sent']]
         for alert_name in ALERTS:
             alert = self.get_alert_from_db(alert_name)
@@ -271,6 +305,69 @@ Alert text:
         if not ok:
             self.send_alert("adnl_connection_failed")
 
+    def get_myself_from_election(self, config: dict):
+        if not config["validators"]:
+            return
+        adnl = self.ton.GetAdnlAddr()
+        save_elections = self.ton.GetSaveElections()
+        elections = save_elections.get(str(config["startWorkTime"]))
+        if elections is None:
+            return
+        if adnl not in elections:  # didn't participate in elections
+            return
+        validator = self.validator_module.find_myself(config["validators"])
+        if validator is None:
+            return False
+        validator['stake'] = elections[adnl].get('stake')
+        validator['walletAddr'] = elections[adnl].get('walletAddr')
+        return validator
+
+    def check_stake_sent(self):
+        if not self.ton.using_validator():
+            return
+        config = self.ton.GetConfig36()
+        res = self.get_myself_from_election(config)
+        if res is None:
+            return
+        if res is False:
+            self.send_alert("stake_not_accepted")
+            return
+        self.send_alert("stake_accepted", stake=round(res.get('stake'), 2))
+
+    def check_stake_returned(self):
+        if not self.ton.using_validator():
+            return
+        config = self.ton.GetConfig32()
+        if not (config['endWorkTime'] + FREEZE_PERIOD + 1800 <= time.time() < config['endWorkTime'] + FREEZE_PERIOD + 1860):  # check between 30th and 31st minutes after stakes have been unfrozen
+            return
+        res = self.get_myself_from_election(config)
+        if not res:
+            return
+        trs = self.ton.GetAccountHistory(self.ton.GetAccount(res["walletAddr"]), limit=10)
+
+        for tr in trs:
+            if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.srcAddr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
+                self.send_alert("stake_returned", stake=round(tr.value, 2), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
+                return
+        self.send_alert("stake_not_returned", address=res["walletAddr"])
+
+    def check_voting(self):
+        if not self.ton.using_validator():
+            return
+        validator_index = self.ton.GetValidatorIndex()
+        if validator_index == -1:
+            return
+        config = self.ton.GetConfig34()
+        if time.time() - config['startWorkTime'] < 600:  # less than 10 minutes passed since round start
+            return
+        need_to_vote = []
+        offers = self.ton.GetOffers()
+        for offer in offers:
+            if not offer['isPassed'] and offer['approvedPercent'] >= 50 and validator_index not in offer['votedValidators']:
+                need_to_vote.append(offer['hash'])
+        if need_to_vote:
+            self.send_alert("voting", hashes=' '.join(need_to_vote))
+
     def check_status(self):
         if not self.ton.using_alert_bot():
             return
@@ -285,6 +382,9 @@ Alert text:
         self.local.try_function(self.check_sync)
         self.local.try_function(self.check_slashed)
         self.local.try_function(self.check_adnl_connection_failed)
+        self.local.try_function(self.check_stake_sent)
+        self.local.try_function(self.check_stake_returned)
+        self.local.try_function(self.check_voting)
 
     def add_console_commands(self, console):
         console.AddItem("enable_alert", self.enable_alert, self.local.translate("enable_alert_cmd"))

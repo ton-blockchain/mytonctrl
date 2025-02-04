@@ -12,7 +12,7 @@ author="ton-blockchain"
 repo="mytonctrl"
 branch="master"
 srcdir="/usr/src/"
-bindir="/usr/bin/"
+tmpdir="/tmp/mytonctrl_src/"
 
 # Get arguments
 while getopts a:r:b: flag
@@ -28,16 +28,18 @@ done
 COLOR='\033[92m'
 ENDC='\033[0m'
 
-# Go to work dir
-cd ${srcdir}
+mkdir -p ${tmpdir}
+cd ${tmpdir}
+rm -rf ${tmpdir}/${repo}
+echo "https://github.com/${author}/${repo}.git -> ${branch}"
+git clone --recursive https://github.com/${author}/${repo}.git || exit 1
 
-# uninstall previous version
 rm -rf ${srcdir}/${repo}
 pip3 uninstall -y mytonctrl
 
 # Update code
-echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone --recursive https://github.com/${author}/${repo}.git
+cd ${srcdir}
+cp -rf ${tmpdir}/${repo} ${srcdir}
 cd ${repo} && git checkout ${branch}
 pip3 install -U .
 
