@@ -73,7 +73,7 @@ def FirstNodeSettings(local):
 		for shard in add_shard.split():
 			cmd += f' --add-shard {shard}'
 
-	add2systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
+	add2systemd(name="validator", user=vuser, start=cmd, pre='/bin/sleep 2') # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
 	ip = get_own_ip()
