@@ -66,7 +66,14 @@ def FirstNodeSettings(local):
 	# Прописать автозагрузку
 	cpus = psutil.cpu_count() - 1
 	cmd = f"{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --archive-ttl {archive_ttl} --verbosity 1"
+
 	add2systemd(name="validator", user=vuser, start=cmd, pre='/bin/sleep 2') # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
+
+	if os.getenv('ADD_SHARD'):
+		add_shard = os.getenv('ADD_SHARD')
+		cmd += f' -M'
+		for shard in add_shard.split():
+			cmd += f' --add-shard {shard}'
 
 	# Получить внешний ip адрес
 	ip = get_own_ip()
