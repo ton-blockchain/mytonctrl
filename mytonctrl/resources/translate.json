@@ -324,6 +324,16 @@
 		"ru": "Рассинхронизация локального валидатора: {0}",
 		"zh_TW": "本地驗證者不同步: {0}"
 	},
+	"local_status_master_out_of_sync": {
+		"en": "Masterchain out of sync: {0}",
+		"ru": "Рассинхронизация Мастерчейна локального валидатора: {0}",
+		"zh_TW": "主鏈不同步: {0}"
+	},
+	"local_status_shard_out_of_sync": {
+		"en": "Shardchain out of sync: {0}",
+		"ru": "Рассинхронизация Шардчейна локального валидатора: {0}",
+		"zh_TW": "分片鏈不同步: {0}"
+	},
 	"local_status_validator_out_of_ser": {
 		"en": "Local validator last state serialization: {0}",
 		"ru": "Серализация стейта локального валидатора была: {0}",
