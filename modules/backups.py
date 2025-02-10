@@ -56,8 +56,8 @@ class BackupModule(MtcModule):
         return run_as_root(["bash", restore_script_path] + args)
 
     def restore_backup(self, args):
-        if len(args) == 0 or len(args) > 2:
-            color_print("{red}Bad args. Usage:{endc} restore_backup <filename> [-y]")
+        if len(args) == 0 or len(args) > 3:
+            color_print("{red}Bad args. Usage:{endc} restore_backup <filename> [-y] [--skip-create-backup]")
             return
         if '-y' not in args:
             res = input(
@@ -67,11 +67,14 @@ class BackupModule(MtcModule):
                 return
         else:
             args.pop(args.index('-y'))
-        print('Before proceeding, mtc will create a backup of current configuration.')
-        try:
-            self.create_backup([])
-        except:
-            color_print("{red}Could not create backup{endc}")
+        if '--skip-create-backup' in args:
+            args.pop(args.index('--skip-create-backup'))
+        else:
+            print('Before proceeding, mtc will create a backup of current configuration.')
+            try:
+                self.create_backup([])
+            except:
+                color_print("{red}Could not create backup{endc}")
 
         ip = str(ip2int(get_own_ip()))
         command_args = ["-m", self.ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
