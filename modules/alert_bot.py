@@ -115,6 +115,7 @@ class AlertBotModule(MtcModule):
         self.inited = False
         self.hostname = None
         self.ip = None
+        self.adnl = None
         self.token = None
         self.chat_id = None
         self.last_db_check = 0
@@ -141,16 +142,19 @@ class AlertBotModule(MtcModule):
         alert = ALERTS.get(alert_name)
         if alert is None:
             raise Exception(f"Alert {alert_name} not found")
-        text = f'''
-❗️ <b>MyTonCtrl Alert {alert_name}</b> ❗️
+        alert_name_readable = alert_name.replace('_', ' ').title()
+        text = '🆘' if alert.severity != 'info' else ''
+        text += f'''
+️ <b>Node {self.hostname}: {alert_name_readable} </b> 
+
+{alert.text.format(*args, **kwargs)}
 
 Hostname: <code>{self.hostname}</code>
 Node IP: <code>{self.ip}</code>
+ADNL: <code>{self.adnl}</code>
 Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
+Alert name: <code>{alert_name}</code>
 Severity: <code>{alert.severity}</code>
-
-Alert text:
-<blockquote> {alert.text.format(*args, **kwargs)} </blockquote>
 '''
         if time.time() - last_sent > alert.timeout:
             self.send_message(text, alert.severity == "info")  # send info alerts without sound
@@ -174,6 +178,8 @@ Alert text:
         from modules.validator import ValidatorModule
         self.validator_module = ValidatorModule(self.ton, self.local)
         self.hostname = get_hostname()
+        adnl = self.ton.GetAdnlAddr()
+        self.adnl = adnl[:4] + '...' + adnl[-4:]
         self.ip = self.ton.get_node_ip()
         self.set_global_vars()
         init_alerts()
