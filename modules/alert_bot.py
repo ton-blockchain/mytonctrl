@@ -424,7 +424,8 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
     def check_status(self):
         if not self.ton.using_alert_bot():
             return
-        if not self.inited:
+
+        if not self.inited or self.token != self.ton.local.db.get("BotToken") or self.chat_id != self.ton.local.db.get("ChatId"):
             self.init()
 
         self.local.try_function(self.check_db_usage)
