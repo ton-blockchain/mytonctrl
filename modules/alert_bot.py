@@ -30,7 +30,7 @@ def init_alerts():
     ALERTS = {
         "low_wallet_balance": Alert(
             "low",
-            "Validator's wallet balance is low",
+            "Validator's wallet balance is less than 10 TON",
             "Validator's wallet {wallet} balance is less than 10 TON: {balance} TON.",
             18 * HOUR
         ),
@@ -52,13 +52,13 @@ def init_alerts():
         ),
         "low_efficiency": Alert(
             "high",
-            "Validator had low efficiency in the validation round",
+            "Validator had efficiency less than 90% in the validation round",
             """Validator efficiency is less than 90%: <b>{efficiency}%</b>.""",
             VALIDATION_PERIOD // 3
         ),
         "out_of_sync": Alert(
             "critical",
-            "Validator had low efficiency in the round",
+            "Node is out of sync on more than 20 sec",
             "Node is out of sync on more than 20 sec: <b>{sync} sec</b>.",
             300
         ),
@@ -76,7 +76,7 @@ def init_alerts():
         ),
         "zero_block_created": Alert(
             "critical",
-            "Validator has not created any blocks in the last few hours",
+            f"Validator has not created any blocks in the {int(VALIDATION_PERIOD // 3 // 3600)} hours",
             "Validator has not created any blocks in the last {hours} hours.",
             VALIDATION_PERIOD // 3
         ),
@@ -101,18 +101,18 @@ def init_alerts():
         "stake_returned": Alert(
             "info",
             "Validator's stake has been returned (info alert with no sound)",
-            "Validator's stake {stake} TON has been returned on address {address}. The reward amount is {reward} TON.",
+            "Validator's stake {stake} TON has been returned on address <code>{address}</code>. The reward amount is {reward} TON.",
             60
         ),
         "stake_not_returned": Alert(
             "high",
             "Validator's stake has not been returned",
-            "Validator's stake has not been returned on address {address}.",
+            "Validator's stake has not been returned on address <code>{address}.</code>",
             60
         ),
         "voting": Alert(
             "high",
-            "There is an active network proposal that has many votes but is not voted by the validator",
+            "There is an active network proposal that has many votes (more than 50% of required) but is not voted by the validator",
             "Found proposals with hashes `{hashes}` that have significant amount of votes, but current validator didn't vote for them. Please check @tonstatus for more details.",
             VALIDATION_PERIOD
         ),
@@ -166,6 +166,7 @@ class AlertBotModule(MtcModule):
 Hostname: <code>{self.hostname}</code>
 Node IP: <code>{self.ip}</code>
 ADNL: <code>{self.adnl}</code>
+Wallet: <code>{self.wallet}</code>
 Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
 Alert name: <code>{alert_name}</code>
 Severity: <code>{alert.severity}</code>
@@ -193,7 +194,8 @@ Severity: <code>{alert.severity}</code>
         self.validator_module = ValidatorModule(self.ton, self.local)
         self.hostname = get_hostname()
         adnl = self.ton.GetAdnlAddr()
-        self.adnl = adnl[:4] + '...' + adnl[-4:]
+        self.adnl = adnl
+        self.wallet = self.ton.GetValidatorWallet().addrB64
         self.ip = self.ton.get_node_ip()
         self.set_global_vars()
         init_alerts()
@@ -251,8 +253,8 @@ Severity: <code>{alert.severity}</code>
         self.send_message('Test alert')
 
     def send_welcome_message(self):
-        message = """
-👋 Hello, this is alert bot.
+        message = f"""
+This is alert bot. You have connected validator with ADNL <code>{self.ton.GetAdnlAddr()}</code>.
 
 I don't process any commands, I only send notifications. 
 
@@ -263,9 +265,9 @@ Current notifications enabled:
             message += f"- {alert.description}\n"
 
         message += """
-If you want, you can disable some notifications in mytonctrl by the <a href="https://docs.ton.org/v3/guidelines/nodes/maintenance-guidelines/mytonctrl-private-alerting#endisbling-alerts"> instruction </a>.
+If you want, you can disable some notifications in mytonctrl by the <a href="https://docs.ton.org/v3/guidelines/nodes/maintenance-guidelines/mytonctrl-private-alerting#endisbling-alerts"> instruction</a>.
 
-Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/maintenance-guidelines/mytonctrl-private-alerting"> here</a>.
+Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/maintenance-guidelines/mytonctrl-private-alerting">here</a>.
 """
         self.send_message(text=message, disable_web_page_preview=True)
 
@@ -280,7 +282,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
             return True
         except Exception as e:
             self.local.add_log(f"Error while sending welcome message: {e}", "error")
-            self.local.add_log(f"If you want the bot to write to a multi-person chat group, make sure the bot is added to that chat group and has admin rights. If it is not - do it and run the command `set ChatId <ChatId>` again.", "info")
+            self.local.add_log(f"If you want the bot to write to a multi-person chat group, make sure the bot is added to that chat group. If it is not - do it and run the command `set ChatId <ChatId>` again.", "info")
             return False
 
     def check_db_usage(self):
