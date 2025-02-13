@@ -32,8 +32,7 @@ from mypylib.mypylib import (
 	dec2hex,
 	Dict, int2ip
 )
-
-from mytoninstaller.utils import enable_tha
+from mytoninstaller.settings import enable_ton_http_api
 
 
 class MyTonCore():
@@ -3081,7 +3080,7 @@ class MyTonCore():
 				raise Exception(f'Cannot enable validator mode while liteserver mode is enabled. '
 								f'Use `disable_mode liteserver` first.')
 		if name == 'liquid-staking':
-			enable_tha(self.local)
+			enable_ton_http_api(self.local)
 
 	def enable_mode(self, name):
 		if name not in MODES:
