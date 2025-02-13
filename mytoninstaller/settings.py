@@ -498,7 +498,7 @@ def tha_exists():
 def enable_ton_http_api(local):
 	try:
 		if not tha_exists():
-			enable_ton_http_api(local)
+			do_enable_ton_http_api(local)
 	except Exception as e:
 		local.add_log(f"Error in enable_ton_http_api: {e}", "warning")
 		pass
