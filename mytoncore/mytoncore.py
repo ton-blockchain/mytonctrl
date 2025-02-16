@@ -117,10 +117,17 @@ class MyTonCore():
 				subprocess.run(args)
 				self.dbFile = mconfig_path
 				self.Refresh()
-		elif os.path.isfile(backup_path) == False:
+		elif not os.path.isfile(backup_path) or time.time() - os.path.getmtime(backup_path) > 3600:
 			self.local.add_log("Create backup config file", "info")
-			args = ["cp", mconfig_path, backup_path]
-			subprocess.run(args)
+			backup_tmp_path = backup_path + '.tmp'
+			subprocess.run(["cp", mconfig_path, backup_tmp_path])
+			try:
+				with open(backup_tmp_path, "r") as file:
+					json.load(file)
+				os.rename(backup_tmp_path, backup_path)  # atomic opetation
+			except:
+				self.local.add_log("Could not update backup, backup_tmp file is broken", "warning")
+				os.remove(backup_tmp_path)
 	#end define
 
 	def GetVarFromWorkerOutput(self, text, search):
