@@ -118,17 +118,22 @@ class MyTonCore():
 				self.dbFile = mconfig_path
 				self.Refresh()
 		elif not os.path.isfile(backup_path) or time.time() - os.path.getmtime(backup_path) > 3600:
-			self.local.add_log("Create backup config file", "info")
-			backup_tmp_path = backup_path + '.tmp'
-			subprocess.run(["cp", mconfig_path, backup_tmp_path])
-			try:
-				with open(backup_tmp_path, "r") as file:
-					json.load(file)
-				os.rename(backup_tmp_path, backup_path)  # atomic opetation
-			except:
-				self.local.add_log("Could not update backup, backup_tmp file is broken", "warning")
-				os.remove(backup_tmp_path)
+			self.local.try_function(self.create_self_db_backup)
 	#end define
+
+	def create_self_db_backup(self):
+		self.local.add_log("Create backup config file", "info")
+		mconfig_path = self.local.buffer.db_path
+		backup_path = mconfig_path + ".backup"
+		backup_tmp_path = backup_path + '.tmp'
+		subprocess.run(["cp", mconfig_path, backup_tmp_path])
+		try:
+			with open(backup_tmp_path, "r") as file:
+				json.load(file)
+			os.rename(backup_tmp_path, backup_path)  # atomic opetation
+		except:
+			self.local.add_log("Could not update backup, backup_tmp file is broken", "warning")
+			os.remove(backup_tmp_path)
 
 	def GetVarFromWorkerOutput(self, text, search):
 		if ':' not in search:
@@ -3044,6 +3049,7 @@ class MyTonCore():
 		except: pass
 		self.local.db[name] = data
 		self.local.save()
+		self.create_self_db_backup()
 	#end define
 
 	def migrate_to_modes(self):
