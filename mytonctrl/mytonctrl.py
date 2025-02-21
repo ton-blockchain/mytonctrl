@@ -440,6 +440,9 @@ def check_disk_usage(local, ton):
 
 def check_sync(local, ton):
 	validator_status = ton.GetValidatorStatus()
+	if validator_status.initial_sync:
+		print_warning(local, "initial_sync_warning")
+		return
 	if not validator_status.is_working or validator_status.out_of_sync >= 20:
 		print_warning(local, "sync_warning")
 #end define
@@ -728,6 +731,11 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorStatus_color = GetColorStatus(validatorStatus_bool)
 	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus_color, mytoncoreUptime_text)
 	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus_color, validatorUptime_text)
+
+	validator_initial_sync_text = ''
+
+	if validator_status.initial_sync:
+		validator_initial_sync_text = local.translate("local_status_validator_initial_sync").format(validator_status['process.initial_sync'])
 	validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less"))
 	master_out_of_sync_text = local.translate("local_status_master_out_of_sync").format(GetColorInt(validator_status.masterchain_out_of_sync, 20, logic="less", ending=" sec"))
 	shard_out_of_sync_text = local.translate("local_status_shard_out_of_sync").format(GetColorInt(validator_status.shardchain_out_of_sync, 5, logic="less", ending=" blocks"))
@@ -777,6 +785,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	print(mytoncoreStatus_text)
 	if not is_node_remote:
 		print(validatorStatus_text)
+	if validator_status.initial_sync:
+		print(validator_initial_sync_text)
 	print(validator_out_of_sync_text)
 	print(master_out_of_sync_text)
 	print(shard_out_of_sync_text)

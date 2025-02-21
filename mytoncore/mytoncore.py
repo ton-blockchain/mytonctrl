@@ -764,6 +764,13 @@ class MyTonCore():
 		return shardsNum
 	#end define
 
+	def parse_stats_from_vc(self, output: str, result: dict):
+		for line in output.split('\n'):
+			if len(line.split('\t\t\t')) == 2:
+				name, value = line.split('\t\t\t')  # https://github.com/ton-blockchain/ton/blob/master/validator-engine-console/validator-engine-console-query.cpp#L648
+				if name not in result:
+					result[name] = value
+
 	def GetValidatorStatus(self):
 		# Get buffer
 		bname = "validator_status"
@@ -797,10 +804,13 @@ class MyTonCore():
 			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
 			status.out_of_ser = status.masterchain_out_of_ser
 			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
+			self.local.try_function(self.parse_stats_from_vc, args=[result, status])
 		except Exception as ex:
 			self.local.add_log(f"GetValidatorStatus warning: {ex}", "warning")
 			status.is_working = False
+			self.local.try_function(self.parse_stats_from_vc, args=[result, status])
 		#end try
+		status.initial_sync = status.get("process.initial_sync")
 
 		# old vars
 		status.outOfSync = status.out_of_sync
