@@ -319,6 +319,11 @@
 		"ru": "Статус локального валидатора: {0}, {1}",
 		"zh_TW": "本地驗證者狀態: {0}, {1}"
 	},
+	"local_status_validator_initial_sync": {
+		"en": "Local validator initial sync status: {0}",
+		"ru": "Статус начальной синхронизации локального валидатора: {0}",
+		"zh_TW": "本地驗證者初始同步狀態: {0}"
+	},
 	"local_status_validator_out_of_sync": {
 		"en": "Local validator out of sync: {0}",
 		"ru": "Рассинхронизация локального валидатора: {0}",
@@ -438,6 +443,11 @@
 		"en": "{red}Make sure you are subscribed to the TON validators channel on Telegram: https://t.me/tonstatus {endc}\nTo disable this warning use command `set subscribe_tg_channel true`",
 		"ru": "{red}Убедитесь, что вы подписаны на канал валидаторов TON в Telegram: https://t.me/tonstatus {endc}\nЧтобы отключить это предупреждение, используйте команду `set subscribe_tg_channel true`",
 		"zh_TW": "{red}確保您已訂閱了 Telegram 上的 TON 驗證者頻道: https://t.me/tonstatus {endc}\n要禁用此警告，請使用命令 `set subscribe_tg_channel true`"
+	},
+	"initial_sync_warning": {
+		"en": "{red}Initial Node sync is not completed. The displayed status is incomplete. {endc}",
+		"ru": "{red}Начальная синхронизация ноды не завершена. Отображаемый статус не полный. {endc}",
+		"zh_TW": "{red}初始節點同步未完成。顯示的狀態不完整。 {endc}"
 	},
 	"sync_warning": {
 		"en": "{red}Node is out of sync. The displayed status is incomplete. {endc}",
