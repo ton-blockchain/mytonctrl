@@ -781,6 +781,7 @@ class MyTonCore():
 
 		self.local.add_log("start GetValidatorStatus function", "debug")
 		status = Dict()
+		result = None
 		try:
 			# Parse
 			status.is_working = True
@@ -808,7 +809,8 @@ class MyTonCore():
 		except Exception as ex:
 			self.local.add_log(f"GetValidatorStatus warning: {ex}", "warning")
 			status.is_working = False
-			self.local.try_function(self.parse_stats_from_vc, args=[result, status])
+			if result is not None:
+				self.local.try_function(self.parse_stats_from_vc, args=[result, status])
 		#end try
 		status.initial_sync = status.get("process.initial_sync")
 
@@ -3136,6 +3138,13 @@ class MyTonCore():
 
 	def using_prometheus(self):
 		return self.get_mode_value('prometheus')
+
+	def in_initial_sync(self):
+		return self.local.db.get('initialSync', False)
+
+	def set_initial_sync_off(self):
+		self.local.db.pop('initialSync', None)
+		self.local.save()
 
 	def Tlb2Json(self, text):
 		# Заменить скобки
