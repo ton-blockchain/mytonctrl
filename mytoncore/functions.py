@@ -544,6 +544,17 @@ def ScanLiteServers(local, ton):
 # end define
 
 
+def check_initial_sync(local, ton):
+    if not ton.in_initial_sync():
+        return
+    validator_status = ton.GetValidatorStatus()
+    if validator_status.initial_sync:
+        return
+    if validator_status.out_of_sync < 20:
+        ton.set_initial_sync_off()
+        return
+
+
 def General(local):
     local.add_log("start General function", "debug")
     ton = MyTonCore(local)
@@ -578,6 +589,9 @@ def General(local):
 
     from modules.prometheus import PrometheusModule
     local.start_cycle(PrometheusModule(ton, local).push_metrics, sec=30, args=())
+
+    if ton.in_initial_sync():
+        local.start_cycle(check_initial_sync, sec=120, args=(local, ton))
 
     thr_sleep()
 # end define
