@@ -206,8 +206,6 @@ def FirstMytoncoreSettings(local):
 	# Telemetry
 	mconfig.sendTelemetry = local.buffer.telemetry
 
-	mconfig.initialSync = True
-
 	# Записать настройки в файл
 	SetConfig(path=mconfig_path, data=mconfig)
 
@@ -997,6 +995,16 @@ def ConfigureOnlyNode(local):
 
 	mconfig = GetConfig(path=mconfig_path)
 	mconfig.onlyNode = True
+	SetConfig(path=mconfig_path, data=mconfig)
+
+	start_service(local, 'mytoncore')
+
+
+def SetInitialSync(local):
+	mconfig_path = local.buffer.mconfig_path
+
+	mconfig = GetConfig(path=mconfig_path)
+	mconfig.initialSync = True
 	SetConfig(path=mconfig_path, data=mconfig)
 
 	start_service(local, 'mytoncore')

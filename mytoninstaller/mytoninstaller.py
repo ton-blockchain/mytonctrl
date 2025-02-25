@@ -30,7 +30,7 @@ from mytoninstaller.settings import (
 	enable_ls_proxy,
 	enable_ton_storage,
 	enable_ton_storage_provider,
-	EnableMode, ConfigureFromBackup, ConfigureOnlyNode
+	EnableMode, ConfigureFromBackup, ConfigureOnlyNode, SetInitialSync
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
@@ -299,6 +299,7 @@ def General(local, console):
 	EnableMode(local)
 	ConfigureFromBackup(local)
 	ConfigureOnlyNode(local)
+	SetInitialSync(local)
 #end define
 
 
