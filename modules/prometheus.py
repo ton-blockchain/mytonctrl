@@ -44,7 +44,7 @@ class PrometheusModule(MtcModule):
             result.append(METRICS['master_out_of_sync'].to_format(status.masterchain_out_of_sync))
         if status.shardchain_out_of_sync is not None:
             result.append(METRICS['shard_out_of_sync'].to_format(status.shardchain_out_of_sync))
-        if status.masterchain_out_of_ser is not None and status.stateserializermasterchainseqno != 0:
+        if status.stateserializerenabled and status.masterchain_out_of_ser is not None and status.stateserializermasterchainseqno != 0:
             result.append(METRICS['out_of_ser'].to_format(status.masterchain_out_of_ser))
         if status.masterchainblock is not None and status.gcmasterchainblock is not None:
             result.append(METRICS['celldb_gc_block'].to_format(status.masterchainblock - status.gcmasterchainblock))
