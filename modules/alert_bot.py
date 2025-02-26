@@ -31,7 +31,7 @@ def init_alerts():
         "low_wallet_balance": Alert(
             "low",
             "Validator's wallet balance is less than 10 TON",
-            "Validator's wallet {wallet} balance is less than 10 TON: {balance} TON.",
+            "Validator's wallet <code>{wallet}</code> balance is less than 10 TON: {balance} TON.",
             18 * HOUR
         ),
         "db_usage_80": Alert(
@@ -165,8 +165,12 @@ class AlertBotModule(MtcModule):
 
 Hostname: <code>{self.hostname}</code>
 Node IP: <code>{self.ip}</code>
-ADNL: <code>{self.adnl}</code>
-Wallet: <code>{self.wallet}</code>
+ADNL: <code>{self.adnl}</code>'''
+
+        if self.ton.using_validator():
+            text += f"\nWallet: <code>{self.wallet}</code>"
+
+        text += f'''
 Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
 Alert name: <code>{alert_name}</code>
 Severity: <code>{alert.severity}</code>
