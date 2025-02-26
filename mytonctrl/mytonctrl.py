@@ -746,7 +746,10 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 		master_out_of_sync_text = local.translate("local_status_master_out_of_sync").format(GetColorInt(validator_status.masterchain_out_of_sync, 20, logic="less", ending=" sec"))
 		shard_out_of_sync_text = local.translate("local_status_shard_out_of_sync").format(GetColorInt(validator_status.shardchain_out_of_sync, 5, logic="less", ending=" blocks"))
 
-	validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
+	validator_out_of_ser_text = None
+
+	if validator_status.stateserializerenabled:
+		validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
 
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
@@ -797,7 +800,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 		print(validator_out_of_sync_text)
 		print(master_out_of_sync_text)
 		print(shard_out_of_sync_text)
-	print(validator_out_of_ser_text)
+	if validator_out_of_ser_text:
+		print(validator_out_of_ser_text)
 	print(dbStatus_text)
 	print(mtcVersion_text)
 	print(validatorVersion_text)

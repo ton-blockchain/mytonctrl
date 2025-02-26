@@ -805,6 +805,7 @@ class MyTonCore():
 			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
 			status.out_of_ser = status.masterchain_out_of_ser
 			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
+			status.stateserializerenabled = parse(result, "stateserializerenabled", '\n') == "true"
 			self.local.try_function(self.parse_stats_from_vc, args=[result, status])
 		except Exception as ex:
 			self.local.add_log(f"GetValidatorStatus warning: {ex}", "warning")
