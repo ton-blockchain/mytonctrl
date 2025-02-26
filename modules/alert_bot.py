@@ -362,6 +362,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         utils_module = UtilitiesModule(self.ton, self.local)
         ok, error = utils_module.check_adnl_connection()
         if not ok:
+            self.local.add_log(error, "warning")
             self.send_alert("adnl_connection_failed")
 
     def get_myself_from_election(self, config: dict):

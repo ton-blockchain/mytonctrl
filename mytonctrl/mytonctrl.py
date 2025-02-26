@@ -488,6 +488,7 @@ def check_adnl(local, ton):
 	utils_module = UtilitiesModule(ton, local)
 	ok, error = utils_module.check_adnl_connection()
 	if not ok:
+		error = "{red}" + error + "{endc}"
 		print_warning(local, error)
 #end define
 
