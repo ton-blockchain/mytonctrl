@@ -355,7 +355,7 @@ class UtilitiesModule(MtcModule):
                 response = requests.post(url, json=data, timeout=5).json()
             except Exception as e:
                 ok = False
-                error = f'{{red}}Failed to check ADNL connection to local node: {type(e)}: {e}{{endc}}'
+                error = f'Failed to check ADNL connection to local node: {type(e)}: {e}'
                 continue
             result = response.get("ok")
             if result:
@@ -363,7 +363,7 @@ class UtilitiesModule(MtcModule):
                 break
             if not result:
                 ok = False
-                error = f'{{red}}Failed to check ADNL connection to local node: {response.get("message")}{{endc}}'
+                error = f'Failed to check ADNL connection to local node: {response.get("message")}'
         return ok, error
 
     def get_pool_data(self, args):
