@@ -315,22 +315,27 @@ def save_node_statistics(local, ton):
         data['ext_msg_check'] = {'ok': ok, 'error': error}
     if 'total.ls_queries_ok' in status and 'total.ls_queries_error' in status:
         data['ls_queries'] = {}
-        for k in status['total.ls_queries_ok']:
+        for k in status['total.ls_queries_ok'].split():
             if k.startswith('TOTAL'):
-                data['ls_queries']['ok'] = k.split(':')[1]
-        for k in status['total.ls_queries_error']:
+                data['ls_queries']['ok'] = int(k.split(':')[1])
+        for k in status['total.ls_queries_error'].split():
             if k.startswith('TOTAL'):
-                data['ls_queries']['error'] = k.split(':')[1]
+                data['ls_queries']['error'] = int(k.split(':')[1])
     statistics = local.db.get("statistics", dict())
 
     # statistics['node'] = [stats_from_election_id, stats_from_prev_min, stats_now]
 
-    election_id = ton.GetConfig32()['startWorkTime']
-    if 'node' not in statistics or len(statistics['node']) < 1:
-        statistics['node'] = [data]
-    elif statistics['node'][0]['timestamp'] < election_id:
-        statistics['node'] = [data, data]
-    else:
+    election_id = ton.GetConfig34()['startWorkTime']
+    if 'node' not in statistics or len(statistics['node']) == 0:
+        statistics['node'] = [None, data]
+    elif len(statistics['node']) < 3:
+        statistics['node'].append(data)
+    if len(statistics['node']) == 3:
+        if statistics['node'][0] is None:
+            if 0 < data['timestamp'] - election_id < 90:
+                statistics['node'][0] = data
+        elif statistics['node'][0]['timestamp'] < election_id:
+            statistics['node'][0] = data
         statistics['node'] = statistics.get('node', []) + [data]
         statistics['node'].pop(1)
     local.db["statistics"] = statistics
