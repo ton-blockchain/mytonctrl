@@ -256,6 +256,22 @@ Severity: <code>{alert.severity}</code>
             self.init()
         self.send_message('Test alert')
 
+    def setup_alert_bot(self, args):
+        if len(args) != 2:
+            raise Exception("Usage: setup_alert_bot <bot_token> <chat_id>")
+        self.token = args[0]
+        self.chat_id = args[1]
+        init_alerts()
+        try:
+            self.send_welcome_message()
+            self.ton.local.db['BotToken'] = args[0]
+            self.ton.local.db['ChatId'] = args[1]
+            color_print("setup_alert_bot - {green}OK{endc}")
+        except Exception as e:
+            self.local.add_log(f"Error while sending welcome message: {e}", "error")
+            self.local.add_log(f"If you want the bot to write to a multi-person chat group, make sure the bot is added to that chat group. If it is not - do it and run the command `setup_alert_bot <bot_token> <chat_id>` again.", "info")
+            color_print("setup_alert_bot - {red}Error{endc}")
+
     def send_welcome_message(self):
         message = f"""
 This is alert bot. You have connected validator with ADNL <code>{self.ton.GetAdnlAddr()}</code>.
@@ -274,20 +290,6 @@ If you want, you can disable some notifications in mytonctrl by the <a href="htt
 Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/maintenance-guidelines/mytonctrl-private-alerting">here</a>.
 """
         self.send_message(text=message, disable_web_page_preview=True)
-
-    def on_set_chat_id(self, chat_id):
-        self.token = self.ton.local.db.get("BotToken")
-        if self.token is None:
-            raise Exception("BotToken is not set")
-        self.chat_id = chat_id
-        init_alerts()
-        try:
-            self.send_welcome_message()
-            return True
-        except Exception as e:
-            self.local.add_log(f"Error while sending welcome message: {e}", "error")
-            self.local.add_log(f"If you want the bot to write to a multi-person chat group, make sure the bot is added to that chat group. If it is not - do it and run the command `set ChatId <ChatId>` again.", "info")
-            return False
 
     def check_db_usage(self):
         if time.time() - self.last_db_check < 600:
@@ -452,3 +454,4 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         console.AddItem("disable_alert", self.disable_alert, self.local.translate("disable_alert_cmd"))
         console.AddItem("list_alerts", self.print_alerts, self.local.translate("list_alerts_cmd"))
         console.AddItem("test_alert", self.test_alert, self.local.translate("test_alert_cmd"))
+        console.AddItem("setup_alert_bot", self.setup_alert_bot, self.local.translate("setup_alert_bot_cmd"))

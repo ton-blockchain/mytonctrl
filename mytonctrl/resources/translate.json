@@ -499,6 +499,11 @@
 		"ru": "Отправить тестовое оповещение через Telegram Bot",
 		"zh_TW": "通過 Telegram Bot 發送測試警報"
 	},
+	"setup_alert_bot_cmd": {
+		"en": "Setup Telegram Bot for alerts",
+		"ru": "Настроить Telegram Bot для оповещений",
+		"zh_TW": "設置 Telegram Bot 以接收警報"
+	},
 	"benchmark_cmd": {
 		"en": "Run benchmark",
 		"ru": "Запустить бенчмарк",
