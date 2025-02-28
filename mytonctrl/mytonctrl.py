@@ -896,10 +896,6 @@ def SetSettings(local, ton, args):
 		color_print(f"{{red}} Error: set {name} ... is deprecated and does not work {{endc}}."
 					f"\nInstead, use {{bold}}enable_mode {mode_name}{{endc}}")
 		return
-	if name == 'ChatId':
-		from modules.alert_bot import AlertBotModule
-		if not AlertBotModule(ton, local).on_set_chat_id(value):
-			return
 	force = False
 	if len(args) > 2:
 		if args[2] == "--force":
