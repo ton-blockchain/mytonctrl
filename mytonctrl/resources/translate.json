@@ -344,6 +344,16 @@
 		"ru": "Серализация стейта локального валидатора была: {0}",
 		"zh_TW": "本地驗證者最後一次狀態序列化: {0}"
 	},
+	"collated_blocks": {
+		"en": "Collated blocks since validation round started (success/error): {0}",
+		"ru": "Собранные блоки с начала раунда валидации (успех/ошибка): {0}",
+		"zh_TW": "自驗證週期開始以來的彙編區塊 (成功/錯誤): {0}"
+	},
+	"validated_blocks": {
+		"en": "Validated blocks since validation round started (success/error): {0}",
+		"ru": "Проверенные блоки с начала раунда валидации (успех/ошибка): {0}",
+		"zh_TW": "自驗證週期開始以來的驗證區塊 (成功/錯誤): {0}"
+	},
 	"local_status_db": {
 		"en": "Local validator database size: {0}, {1}",
 		"ru": "Размер БД локального валидатора: {0}, {1}",
