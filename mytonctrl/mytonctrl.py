@@ -752,21 +752,16 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 		validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
 
 	collated, validated = None, None
+	ls_queries = None
 	if ton.using_validator() and validatorIndex != -1:
-		stats = ton.local.db.get('statistics', {}).get('node')
-		if stats is not None and len(stats) == 3:
-			collated_ok = 0
-			collated_error = 0
-			validated_ok = 0
-			validated_error = 0
-			for k in ['master', 'shard']:
-				collated_ok += stats[2]['collated_blocks'][k]['ok'] - stats[0]['collated_blocks'][k]['ok']
-				collated_error += stats[2]['collated_blocks'][k]['error'] - stats[0]['collated_blocks'][k]['error']
-				validated_ok += stats[2]['validated_blocks'][k]['ok'] - stats[0]['validated_blocks'][k]['ok']
-				validated_error += stats[2]['validated_blocks'][k]['error'] - stats[0]['validated_blocks'][k]['error']
-			collated = local.translate['collated_blocks'].format(collated_ok, collated_error)
-			validated = local.translate['validated_blocks'].format(validated_ok, validated_error)
-
+		node_stats = ton.get_node_statistics()
+		if node_stats and 'collated' in node_stats and 'validated' in node_stats:
+			collated = local.translate('collated_blocks').format(node_stats['collated']['ok'], node_stats['collated']['error'])
+			validated = local.translate('validated_blocks').format(node_stats['validated']['ok'], node_stats['validated']['error'])
+	if ton.using_liteserver():
+		node_stats = ton.get_node_statistics()
+		if node_stats and 'ls_queries' in node_stats:
+			ls_queries = local.translate('ls_queries').format(node_stats['ls_queries']['time'], node_stats['ls_queries']['ok'], node_stats['ls_queries']['error'])
 
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
@@ -817,11 +812,13 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 		print(validator_out_of_sync_text)
 		print(master_out_of_sync_text)
 		print(shard_out_of_sync_text)
+	if validator_out_of_ser_text:
+		print(validator_out_of_ser_text)
 	if collated and validated:
 		print(collated)
 		print(validated)
-	if validator_out_of_ser_text:
-		print(validator_out_of_ser_text)
+	if ls_queries:
+		print(ls_queries)
 	print(dbStatus_text)
 	print(mtcVersion_text)
 	print(validatorVersion_text)

@@ -771,11 +771,11 @@ class MyTonCore():
 				if name not in result:
 					result[name] = value
 
-	def GetValidatorStatus(self):
+	def GetValidatorStatus(self, no_cache=False):
 		# Get buffer
 		bname = "validator_status"
 		buff = self.GetFunctionBuffer(bname)
-		if buff:
+		if buff and not no_cache:
 			return buff
 		#end if
 
@@ -3037,6 +3037,40 @@ class MyTonCore():
 			data = [-1, -1, -1]
 		return data
 	#end define
+
+	def get_node_statistics(self):
+		"""
+		:return: stats for collated/validated blocks since round beggining and stats for ls queries for the last minute
+		"""
+		stats = self.local.db.get('statistics', {}).get('node')
+		result = {}
+		if stats is not None and len(stats) == 3 and stats[0] is not None:
+			collated_ok = 0
+			collated_error = 0
+			validated_ok = 0
+			validated_error = 0
+			for k in ['master', 'shard']:
+				collated_ok += stats[2]['collated_blocks'][k]['ok'] - stats[0]['collated_blocks'][k]['ok']
+				collated_error += stats[2]['collated_blocks'][k]['error'] - stats[0]['collated_blocks'][k]['error']
+				validated_ok += stats[2]['validated_blocks'][k]['ok'] - stats[0]['validated_blocks'][k]['ok']
+				validated_error += stats[2]['validated_blocks'][k]['error'] - stats[0]['validated_blocks'][k]['error']
+			result = {
+				'collated': {
+					'ok': collated_ok,
+					'error': collated_error,
+				},
+				'validated': {
+					'ok': validated_ok,
+					'error': validated_error,
+				},
+			}
+		if stats is not None and len(stats) >= 2:
+			result['ls_queries'] = {
+				'ok': stats[-1]['ls_queries']['ok'] - stats[-2]['ls_queries']['ok'],
+				'error': stats[-1]['ls_queries']['error'] - stats[-2]['ls_queries']['error'],
+				'time': stats[-1].get('timestamp', 0) - stats[-2].get('timestamp', 0),
+			}
+		return result
 
 	def GetSettings(self, name):
 		# self.local.load_db()

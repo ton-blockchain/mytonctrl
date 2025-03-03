@@ -287,7 +287,7 @@ def CalculateNetworkStatistics(zerodata, data):
 
 
 def save_node_statistics(local, ton):
-    status = ton.GetValidatorStatus()
+    status = ton.GetValidatorStatus(no_cache=True)
     if status.unixtime is None:
         return
     data = {'timestamp': status.unixtime}
