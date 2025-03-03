@@ -26,6 +26,12 @@ METRICS = {
     'stake': Metric('validator_stake', 'Validator stake', 'gauge'),
     'celldb_gc_block': Metric('validator_celldb_gc_block', 'Celldb GC block latency', 'gauge'),
     'celldb_gc_state': Metric('validator_celldb_gc_state', 'Celldb GC queue size', 'gauge'),
+    'collated_master_ok': Metric('validator_blocks_collated_master_ok', 'Number of masterchain blocks successfully collated', 'gauge'),
+    'collated_master_err': Metric('validator_blocks_collated_master_err', 'Number of masterchain blocks failed to collate', 'gauge'),
+    'collated_shard_ok': Metric('validator_blocks_collated_shard_ok', 'Number of shardchain blocks successfully collated', 'gauge'),
+    'collated_shard_err': Metric('validator_blocks_collated_shard_err', 'Number of shardchain blocks failed to collate', 'gauge'),
+    'ls_queries_ok': Metric('validator_ls_queries_ok', 'Number of Liteserver successful queries', 'gauge'),
+    'ls_queries_err': Metric('validator_ls_queries_err', 'Number of Liteserver failed queries', 'gauge'),
 }
 
 
@@ -67,6 +73,15 @@ class PrometheusModule(MtcModule):
             if stake:
                 result.append(METRICS['stake'].to_format(round(stake, 2)))
 
+    def get_node_stats_metrics(self, result: list):
+        stats = self.ton.get_node_statistics()
+        if stats and 'ls_queries' in stats:
+            if stats['ls_queries']['time'] < 50:
+                self.local.add_log(f'Liteserver queries time is too low: {stats}')
+                return
+            result.append(METRICS['ls_queries_ok'].to_format(stats['ls_queries']['ok']))
+            result.append(METRICS['ls_queries_err'].to_format(stats['ls_queries']['error']))
+
     def push_metrics(self):
         if not self.ton.using_prometheus():
             return
@@ -77,6 +92,7 @@ class PrometheusModule(MtcModule):
         metrics = []
         self.local.try_function(self.get_validator_status_metrics, args=[metrics])
         self.local.try_function(self.get_validator_validation_metrics, args=[metrics])
+        self.local.try_function(self.get_node_stats_metrics, args=[metrics])
         requests.post(url, data='\n'.join(metrics).encode())
 
     def add_console_commands(self, console):
