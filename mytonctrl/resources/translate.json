@@ -345,14 +345,19 @@
 		"zh_TW": "本地驗證者最後一次狀態序列化: {0}"
 	},
 	"collated_blocks": {
-		"en": "Collated blocks since validation round started (success/error): {0}",
-		"ru": "Собранные блоки с начала раунда валидации (успех/ошибка): {0}",
-		"zh_TW": "自驗證週期開始以來的彙編區塊 (成功/錯誤): {0}"
+		"en": "Collated blocks since validation round started (success/error): {0}/{1}",
+		"ru": "Собранные блоки с начала раунда валидации (успех/ошибка): {0}/{1}",
+		"zh_TW": "自驗證週期開始以來的彙編區塊 (成功/錯誤): {0}/{1}"
 	},
 	"validated_blocks": {
-		"en": "Validated blocks since validation round started (success/error): {0}",
-		"ru": "Проверенные блоки с начала раунда валидации (успех/ошибка): {0}",
-		"zh_TW": "自驗證週期開始以來的驗證區塊 (成功/錯誤): {0}"
+		"en": "Validated blocks since validation round started (success/error): {0}/{1}",
+		"ru": "Проверенные блоки с начала раунда валидации (успех/ошибка): {0}/{1}",
+		"zh_TW": "自驗證週期開始以來的驗證區塊 (成功/錯誤): {0}/{1}"
+	},
+	"ls_queries": {
+		"en": "Liteserver queries for the past {0} sec (success/error): {1}/{2}",
+		"ru": "Запросы к лайтсерверу за последние {0} сек (успех/ошибка): {1}/{2}",
+		"zh_TW": "過去 {0} 秒的輕量級服務器查詢 (成功/錯誤): {1}/{2}"
 	},
 	"local_status_db": {
 		"en": "Local validator database size: {0}, {1}",
