@@ -77,7 +77,7 @@ def init_alerts():
         "zero_block_created": Alert(
             "critical",
             f"Validator has not created any blocks in the {int(VALIDATION_PERIOD // 6 // 3600)} hours",
-            "Validator has not created any blocks in the last {hours} hours.",
+            "Validator has not created any blocks in the last <b>{hours} hours</b>.",
             VALIDATION_PERIOD // 6
         ),
         "validator_slashed": Alert(
@@ -95,13 +95,13 @@ def init_alerts():
         "stake_accepted": Alert(
             "info",
             "Validator's stake has been accepted (info alert with no sound)",
-            "Validator's stake {stake} TON has been accepted",
+            "Validator's stake <b>{stake} TON</b> has been accepted",
             ELECTIONS_START_BEFORE
         ),
         "stake_returned": Alert(
             "info",
             "Validator's stake has been returned (info alert with no sound)",
-            "Validator's stake {stake} TON has been returned on address <code>{address}</code>. The reward amount is {reward} TON.",
+            "Validator's stake <b>{stake} TON</b> has been returned on address <code>{address}</code>. The reward amount is <b>{reward} TON</b>.",
             60
         ),
         "stake_not_returned": Alert(
