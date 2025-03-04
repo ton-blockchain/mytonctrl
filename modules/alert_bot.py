@@ -158,6 +158,11 @@ class AlertBotModule(MtcModule):
         if alert is None:
             raise Exception(f"Alert {alert_name} not found")
         alert_name_readable = alert_name.replace('_', ' ').title()
+
+        for key, value in kwargs.items():
+            if isinstance(value, (int, float)):
+                kwargs[key] = f'{value:,}'.replace(',', ' ')  # make space separator for thousands
+
         text = '🆘' if alert.severity != 'info' else ''
         text += f''' <b>Node {self.hostname}: {alert_name_readable} </b> 
 
@@ -394,7 +399,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         if res is False:
             self.send_alert("stake_not_accepted")
             return
-        self.send_alert("stake_accepted", stake=round(res.get('stake'), 2))
+        self.send_alert("stake_accepted", stake=round(res.get('stake')))
 
     def check_stake_returned(self):
         if not self.ton.using_validator():
@@ -409,7 +414,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
 
         for tr in trs:
             if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.srcAddr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
-                self.send_alert("stake_returned", stake=round(tr.value, 2), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
+                self.send_alert("stake_returned", stake=round(tr.value), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
                 return
         self.send_alert("stake_not_returned", address=res["walletAddr"])
 
