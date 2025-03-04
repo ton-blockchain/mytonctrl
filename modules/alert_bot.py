@@ -76,9 +76,9 @@ def init_alerts():
         ),
         "zero_block_created": Alert(
             "critical",
-            f"Validator has not created any blocks in the {int(VALIDATION_PERIOD // 3 // 3600)} hours",
+            f"Validator has not created any blocks in the {int(VALIDATION_PERIOD // 6 // 3600)} hours",
             "Validator has not created any blocks in the last {hours} hours.",
-            VALIDATION_PERIOD // 3
+            VALIDATION_PERIOD // 6
         ),
         "validator_slashed": Alert(
             "high",
@@ -341,7 +341,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         if not self.ton.using_validator():
             return
         ts = get_timestamp()
-        period = VALIDATION_PERIOD // 3  # 6h for mainnet, 40m for testnet
+        period = VALIDATION_PERIOD // 6  # 3h for mainnet, 40m for testnet
         start, end = ts - period, ts - 60
         config34 = self.ton.GetConfig34()
         if start < config34.startWorkTime:  # round started recently
