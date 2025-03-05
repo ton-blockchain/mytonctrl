@@ -323,6 +323,9 @@ def save_node_statistics(local, ton):
                 data['ls_queries']['error'] = int(k.split(':')[1])
     statistics = local.db.get("statistics", dict())
 
+    if time.time() - int(status.start_time) <= 60:  # was node restart <60 sec ago, resetting node statistics
+        statistics['node'] = []
+
     # statistics['node'] = [stats_from_election_id, stats_from_prev_min, stats_now]
 
     election_id = ton.GetConfig34()['startWorkTime']
