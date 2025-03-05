@@ -30,6 +30,12 @@ METRICS = {
     'collated_master_err': Metric('validator_blocks_collated_master_err', 'Number of masterchain blocks failed to collate', 'gauge'),
     'collated_shard_ok': Metric('validator_blocks_collated_shard_ok', 'Number of shardchain blocks successfully collated', 'gauge'),
     'collated_shard_err': Metric('validator_blocks_collated_shard_err', 'Number of shardchain blocks failed to collate', 'gauge'),
+    'validated_master_ok': Metric('validator_blocks_validated_master_ok', 'Number of masterchain blocks successfully validated', 'gauge'),
+    'validated_master_err': Metric('validator_blocks_validated_master_err', 'Number of masterchain blocks failed to validate', 'gauge'),
+    'validated_shard_ok': Metric('validator_blocks_validated_shard_ok', 'Number of shardchain blocks successfully validated', 'gauge'),
+    'validated_shard_err': Metric('validator_blocks_validated_shard_err', 'Number of shardchain blocks failed to validate', 'gauge'),
+    'validator_groups_master': Metric('validator_active_groups_master', 'Number of masterchain validation groups validator participates in', 'gauge'),
+    'validator_groups_shard': Metric('validator_active_groups_shard', 'Number of shardchain validation groups validator participates in', 'gauge'),
     'ls_queries_ok': Metric('validator_ls_queries_ok', 'Number of Liteserver successful queries', 'gauge'),
     'ls_queries_err': Metric('validator_ls_queries_err', 'Number of Liteserver failed queries', 'gauge'),
 }
@@ -59,6 +65,9 @@ class PrometheusModule(MtcModule):
                 result.append(METRICS['celldb_gc_state'].to_format(status.gcmasterchainblock - status.last_deleted_mc_state))
             else:
                 result.append(METRICS['celldb_gc_state'].to_format(-1))
+        if status.validator_groups_master is not None:
+            result.append(METRICS['validator_groups_master'].to_format(status.validator_groups_master))
+            result.append(METRICS['validator_groups_shard'].to_format(status.validator_groups_shard))
         result.append(METRICS['vc_up'].to_format(int(is_working)))
 
     def get_validator_validation_metrics(self, result: list):
@@ -81,6 +90,16 @@ class PrometheusModule(MtcModule):
                 return
             result.append(METRICS['ls_queries_ok'].to_format(stats['ls_queries']['ok']))
             result.append(METRICS['ls_queries_err'].to_format(stats['ls_queries']['error']))
+        if stats and 'collated' in stats:
+            result.append(METRICS['collated_master_ok'].to_format(stats['collated']['master']['ok']))
+            result.append(METRICS['collated_master_err'].to_format(stats['collated']['master']['error']))
+            result.append(METRICS['collated_shard_ok'].to_format(stats['collated']['shard']['ok']))
+            result.append(METRICS['collated_shard_err'].to_format(stats['collated']['shard']['error']))
+        if stats and 'validated' in stats:
+            result.append(METRICS['validated_master_ok'].to_format(stats['validated']['master']['ok']))
+            result.append(METRICS['validated_master_err'].to_format(stats['validated']['master']['error']))
+            result.append(METRICS['validated_shard_ok'].to_format(stats['validated']['shard']['ok']))
+            result.append(METRICS['validated_shard_err'].to_format(stats['validated']['shard']['error']))
 
     def push_metrics(self):
         if not self.ton.using_prometheus():

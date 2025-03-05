@@ -807,6 +807,10 @@ class MyTonCore():
 			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
 			status.stateserializerenabled = parse(result, "stateserializerenabled", '\n') == "true"
 			self.local.try_function(self.parse_stats_from_vc, args=[result, status])
+			if 'active_validator_groups' in status:
+				groups = status.active_validator_groups.split()  # master:1 shard:2
+				status.validator_groups_master = int(groups[0].split(':')[1])
+				status.validator_groups_shard = int(groups[1].split(':')[1])
 		except Exception as ex:
 			self.local.add_log(f"GetValidatorStatus warning: {ex}", "warning")
 			status.is_working = False
@@ -3043,27 +3047,34 @@ class MyTonCore():
 		:return: stats for collated/validated blocks since round beggining and stats for ls queries for the last minute
 		"""
 		stats = self.local.db.get('statistics', {}).get('node')
-		result = {}
+		result = {
+			'collated': {
+				'ok': 0,
+				'error': 0,
+			},
+			'validated': {
+				'ok': 0,
+				'error': 0,
+			}
+		}
 		if stats is not None and len(stats) == 3 and stats[0] is not None:
-			collated_ok = 0
-			collated_error = 0
-			validated_ok = 0
-			validated_error = 0
 			for k in ['master', 'shard']:
-				collated_ok += stats[2]['collated_blocks'][k]['ok'] - stats[0]['collated_blocks'][k]['ok']
-				collated_error += stats[2]['collated_blocks'][k]['error'] - stats[0]['collated_blocks'][k]['error']
-				validated_ok += stats[2]['validated_blocks'][k]['ok'] - stats[0]['validated_blocks'][k]['ok']
-				validated_error += stats[2]['validated_blocks'][k]['error'] - stats[0]['validated_blocks'][k]['error']
-			result = {
-				'collated': {
+				collated_ok = stats[2]['collated_blocks'][k]['ok'] - stats[0]['collated_blocks'][k]['ok']
+				collated_error = stats[2]['collated_blocks'][k]['error'] - stats[0]['collated_blocks'][k]['error']
+				validated_ok = stats[2]['validated_blocks'][k]['ok'] - stats[0]['validated_blocks'][k]['ok']
+				validated_error = stats[2]['validated_blocks'][k]['error'] - stats[0]['validated_blocks'][k]['error']
+				result['collated'][k] = {
 					'ok': collated_ok,
 					'error': collated_error,
-				},
-				'validated': {
+				}
+				result['validated'][k] = {
 					'ok': validated_ok,
 					'error': validated_error,
-				},
-			}
+				}
+				result['collated']['ok'] += collated_ok
+				result['collated']['error'] += collated_error
+				result['validated']['ok'] += validated_ok
+				result['validated']['error'] += validated_error
 		if stats is not None and len(stats) >= 2:
 			result['ls_queries'] = {
 				'ok': stats[-1]['ls_queries']['ok'] - stats[-2]['ls_queries']['ok'],
