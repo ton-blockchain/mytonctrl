@@ -344,6 +344,11 @@
 		"ru": "Серализация стейта локального валидатора была: {0}",
 		"zh_TW": "本地驗證者最後一次狀態序列化: {0}"
 	},
+	"active_validator_groups": {
+		"en": "Active validator groups (masterchain,shardchain): {0},{1}",
+		"ru": "Активные группы валидатора (мастерчейн, шардчейн): {0},{1}",
+		"zh_TW": "活动验证器组（主链、碎片链: {0},{1}"
+	},
 	"collated_blocks": {
 		"en": "Collated blocks since validation round started (success/error): {0}/{1}",
 		"ru": "Собранные блоки с начала раунда валидации (успех/ошибка): {0}/{1}",

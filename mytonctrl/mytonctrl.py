@@ -751,6 +751,11 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	if validator_status.stateserializerenabled:
 		validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
 
+	active_validator_groups = None
+
+	if ton.using_validator() and validator_status.validator_groups_master and validator_status.validator_groups_shard:
+		active_validator_groups = local.translate("active_validator_groups").format(validator_status.validator_groups_master, validator_status.validator_groups_shard)
+
 	collated, validated = None, None
 	ls_queries = None
 	if ton.using_validator() and validatorIndex != -1:
@@ -814,6 +819,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 		print(shard_out_of_sync_text)
 	if validator_out_of_ser_text:
 		print(validator_out_of_ser_text)
+	if active_validator_groups:
+		print(active_validator_groups)
 	if collated and validated:
 		print(collated)
 		print(validated)
