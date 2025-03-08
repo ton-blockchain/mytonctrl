@@ -758,11 +758,14 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 
 	collated, validated = None, None
 	ls_queries = None
-	if ton.using_validator() and validatorIndex != -1:
+	if ton.using_validator():
 		node_stats = ton.get_node_statistics()
 		if node_stats and 'collated' in node_stats and 'validated' in node_stats:
 			collated = local.translate('collated_blocks').format(node_stats['collated']['ok'], node_stats['collated']['error'])
 			validated = local.translate('validated_blocks').format(node_stats['validated']['ok'], node_stats['validated']['error'])
+		else:
+			collated = local.translate('collated_blocks').format('collecting data...', 'wait for the next validation round')
+			validated = local.translate('validated_blocks').format('collecting data...', 'wait for the next validation round')
 	if ton.using_liteserver():
 		node_stats = ton.get_node_statistics()
 		if node_stats and 'ls_queries' in node_stats:
