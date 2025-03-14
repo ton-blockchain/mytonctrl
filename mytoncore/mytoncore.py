@@ -3597,7 +3597,12 @@ class MyTonCore():
 		data = self.Result2List(result)
 		if data is None:
 			return
+
+		# LSt v1 as default (14 vars)
 		result_vars = ["state", "halted", "approved", "stake_amount_sent", "stake_at", "saved_validator_set_hash", "validator_set_changes_count", "validator_set_change_time", "stake_held_for", "borrowed_amount", "borrowing_time"]
+		if len(data) > 14: # LSt v2 (18 vars)
+			result_vars = ["state", "halted", "approved", "stake_amount_sent", "stake_at", "saved_validator_set_hash", "validator_set_changes_count", "validator_set_change_time", "stake_held_for", "interest", "allowed_borrow_start_prior_elections_end", "approver_set_profit_share", "acceptable_profit_share", "allocation", "borrowed_amount", "borrowing_time"]
+		
 		controllerData = dict()
 		for name in result_vars:
 			controllerData[name] = data.pop(0)
