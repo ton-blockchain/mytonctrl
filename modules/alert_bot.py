@@ -76,9 +76,9 @@ def init_alerts():
         ),
         "zero_block_created": Alert(
             "critical",
-            f"Validator has not created any blocks in the {int(VALIDATION_PERIOD // 3 // 3600)} hours",
-            "Validator has not created any blocks in the last {hours} hours.",
-            VALIDATION_PERIOD // 3
+            f"Validator has not created any blocks in the {int(VALIDATION_PERIOD // 6 // 3600)} hours",
+            "Validator has not created any blocks in the last <b>{hours} hours</b>.",
+            VALIDATION_PERIOD // 6
         ),
         "validator_slashed": Alert(
             "high",
@@ -95,13 +95,13 @@ def init_alerts():
         "stake_accepted": Alert(
             "info",
             "Validator's stake has been accepted (info alert with no sound)",
-            "Validator's stake {stake} TON has been accepted",
+            "Validator's stake <b>{stake} TON</b> has been accepted",
             ELECTIONS_START_BEFORE
         ),
         "stake_returned": Alert(
             "info",
             "Validator's stake has been returned (info alert with no sound)",
-            "Validator's stake {stake} TON has been returned on address <code>{address}</code>. The reward amount is {reward} TON.",
+            "Validator's stake <b>{stake} TON</b> has been returned on address <code>{address}</code>. The reward amount is <b>{reward} TON</b>.",
             60
         ),
         "stake_not_returned": Alert(
@@ -158,6 +158,11 @@ class AlertBotModule(MtcModule):
         if alert is None:
             raise Exception(f"Alert {alert_name} not found")
         alert_name_readable = alert_name.replace('_', ' ').title()
+
+        for key, value in kwargs.items():
+            if isinstance(value, (int, float)):
+                kwargs[key] = f'{value:,}'.replace(',', ' ')  # make space separator for thousands
+
         text = '🆘' if alert.severity != 'info' else ''
         text += f''' <b>Node {self.hostname}: {alert_name_readable} </b> 
 
@@ -341,7 +346,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         if not self.ton.using_validator():
             return
         ts = get_timestamp()
-        period = VALIDATION_PERIOD // 3  # 6h for mainnet, 40m for testnet
+        period = VALIDATION_PERIOD // 6  # 3h for mainnet, 40m for testnet
         start, end = ts - period, ts - 60
         config34 = self.ton.GetConfig34()
         if start < config34.startWorkTime:  # round started recently
@@ -394,7 +399,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         if res is False:
             self.send_alert("stake_not_accepted")
             return
-        self.send_alert("stake_accepted", stake=round(res.get('stake'), 2))
+        self.send_alert("stake_accepted", stake=round(res.get('stake')))
 
     def check_stake_returned(self):
         if not self.ton.using_validator():
@@ -409,7 +414,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
 
         for tr in trs:
             if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.srcAddr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
-                self.send_alert("stake_returned", stake=round(tr.value, 2), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
+                self.send_alert("stake_returned", stake=round(tr.value), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
                 return
         self.send_alert("stake_not_returned", address=res["walletAddr"])
 
