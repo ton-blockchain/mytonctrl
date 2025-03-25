@@ -488,6 +488,7 @@ def check_adnl(local, ton):
 	utils_module = UtilitiesModule(ton, local)
 	ok, error = utils_module.check_adnl_connection()
 	if not ok:
+		error = "{red}" + error + "{endc}"
 		print_warning(local, error)
 #end define
 
@@ -728,7 +729,9 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorStatus_color = GetColorStatus(validatorStatus_bool)
 	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus_color, mytoncoreUptime_text)
 	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus_color, validatorUptime_text)
-	validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less", ending=" s"))
+	validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less"))
+	master_out_of_sync_text = local.translate("local_status_master_out_of_sync").format(GetColorInt(validator_status.masterchain_out_of_sync, 20, logic="less", ending=" sec"))
+	shard_out_of_sync_text = local.translate("local_status_shard_out_of_sync").format(GetColorInt(validator_status.shardchain_out_of_sync, 5, logic="less", ending=" blocks"))
 
 	validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
 
@@ -776,6 +779,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	if not is_node_remote:
 		print(validatorStatus_text)
 	print(validator_out_of_sync_text)
+	print(master_out_of_sync_text)
+	print(shard_out_of_sync_text)
 	print(validator_out_of_ser_text)
 	print(dbStatus_text)
 	print(mtcVersion_text)
@@ -879,7 +884,7 @@ def GetSettings(ton, args):
 	print(json.dumps(result, indent=2))
 #end define
 
-def SetSettings(ton, args):
+def SetSettings(local, ton, args):
 	try:
 		name = args[0]
 		value = args[1]

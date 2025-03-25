@@ -66,7 +66,14 @@ def FirstNodeSettings(local):
 	# Прописать автозагрузку
 	cpus = psutil.cpu_count() - 1
 	cmd = f"{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --archive-ttl {archive_ttl} --verbosity 1"
-	add2systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
+
+	if os.getenv('ADD_SHARD'):
+		add_shard = os.getenv('ADD_SHARD')
+		cmd += f' -M'
+		for shard in add_shard.split():
+			cmd += f' --add-shard {shard}'
+
+	add2systemd(name="validator", user=vuser, start=cmd, pre='/bin/sleep 2') # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
 	ip = get_own_ip()
@@ -478,17 +485,36 @@ def EnableJsonRpc(local):
 	color_print(text)
 #end define
 
+def tha_exists():
+	try:
+		resp = requests.get('http://127.0.0.1:8801/healthcheck', timeout=3)
+	except:
+		return False
+	if resp.status_code == 200 and resp.text == '"OK"':
+		return True
+	return False
+#end define
+
 def enable_ton_http_api(local):
-	local.add_log("start EnableTonHttpApi function", "debug")
+	try:
+		if not tha_exists():
+			do_enable_ton_http_api(local)
+	except Exception as e:
+		local.add_log(f"Error in enable_ton_http_api: {e}", "warning")
+		pass
+#end define
+
+def do_enable_ton_http_api(local):
+	local.add_log("start do_enable_ton_http_api function", "debug")
 	if not os.path.exists('/usr/bin/ton/local.config.json'):
 		from mytoninstaller.mytoninstaller import CreateLocalConfigFile
 		CreateLocalConfigFile(local, [])
 	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'ton_http_api_installer.sh')
 	exit_code = run_as_root(["bash", ton_http_api_installer_path])
 	if exit_code == 0:
-		text = "EnableTonHttpApi - {green}OK{endc}"
+		text = "do_enable_ton_http_api - {green}OK{endc}"
 	else:
-		text = "EnableTonHttpApi - {red}Error{endc}"
+		text = "do_enable_ton_http_api - {red}Error{endc}"
 	color_print(text)
 #end define
 

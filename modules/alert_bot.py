@@ -11,6 +11,7 @@ from mytonctrl.utils import timestamp2utcdatetime
 @dataclasses.dataclass
 class Alert:
     severity: str
+    description: str
     text: str
     timeout: int
 
@@ -29,11 +30,13 @@ def init_alerts():
     ALERTS = {
         "low_wallet_balance": Alert(
             "low",
-            "Validator wallet {wallet} balance is low: {balance} TON.",
+            "Validator's wallet balance is less than 10 TON",
+            "Validator's wallet <code>{wallet}</code> balance is less than 10 TON: {balance} TON.",
             18 * HOUR
         ),
         "db_usage_80": Alert(
             "high",
+            "Node's db usage is more than 80%",
             """TON DB usage > 80%. Clean the TON database: 
             https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
             or (and) set node\'s archive ttl to lower value.""",
@@ -41,6 +44,7 @@ def init_alerts():
         ),
         "db_usage_95": Alert(
             "critical",
+            "Node's db usage is more than 95%",
             """TON DB usage > 95%. Disk is almost full, clean the TON database immediately: 
             https://docs.ton.org/participate/nodes/node-maintenance-and-security#database-grooming 
             or (and) set node\'s archive ttl to lower value.""",
@@ -48,56 +52,67 @@ def init_alerts():
         ),
         "low_efficiency": Alert(
             "high",
-            """Validator efficiency is low: {efficiency}%.""",
+            "Validator had efficiency less than 90% in the validation round",
+            """Validator efficiency is less than 90%: <b>{efficiency}%</b>.""",
             VALIDATION_PERIOD // 3
         ),
         "out_of_sync": Alert(
             "critical",
-            "Node is out of sync on {sync} sec.",
+            "Node is out of sync on more than 20 sec",
+            "Node is out of sync on more than 20 sec: <b>{sync} sec</b>.",
             300
         ),
         "service_down": Alert(
             "critical",
+            "Node is not running (service is down)",
             "validator.service is down.",
             300
         ),
         "adnl_connection_failed": Alert(
             "high",
+            "Node is not answering to ADNL connection",
             "ADNL connection to node failed",
             3 * HOUR
         ),
         "zero_block_created": Alert(
             "critical",
-            "Validator has not created any blocks in the last {hours} hours.",
-            VALIDATION_PERIOD // 3
+            f"Validator has not created any blocks in the {int(VALIDATION_PERIOD // 6 // 3600)} hours",
+            "Validator has not created any blocks in the last <b>{hours} hours</b>.",
+            VALIDATION_PERIOD // 6
         ),
         "validator_slashed": Alert(
             "high",
+            "Validator has been slashed in the previous validation round",
             "Validator has been slashed in previous round for {amount} TON",
             FREEZE_PERIOD
         ),
         "stake_not_accepted": Alert(
             "high",
             "Validator's stake has not been accepted",
+            "Validator's stake has not been accepted",
             ELECTIONS_START_BEFORE
         ),
         "stake_accepted": Alert(
             "info",
-            "Validator's stake {stake} TON has been accepted",
+            "Validator's stake has been accepted (info alert with no sound)",
+            "Validator's stake <b>{stake} TON</b> has been accepted",
             ELECTIONS_START_BEFORE
         ),
         "stake_returned": Alert(
             "info",
-            "Validator's stake {stake} TON has been returned on address {address}. The reward amount is {reward} TON.",
+            "Validator's stake has been returned (info alert with no sound)",
+            "Validator's stake <b>{stake} TON</b> has been returned on address <code>{address}</code>. The reward amount is <b>{reward} TON</b>.",
             60
         ),
         "stake_not_returned": Alert(
             "high",
-            "Validator's stake has not been returned on address {address}.",
+            "Validator's stake has not been returned",
+            "Validator's stake has not been returned on address <code>{address}.</code>",
             60
         ),
         "voting": Alert(
             "high",
+            "There is an active network proposal that has many votes (more than 50% of required) but is not voted by the validator",
             "Found proposals with hashes `{hashes}` that have significant amount of votes, but current validator didn't vote for them. Please check @tonstatus for more details.",
             VALIDATION_PERIOD
         ),
@@ -115,18 +130,19 @@ class AlertBotModule(MtcModule):
         self.inited = False
         self.hostname = None
         self.ip = None
+        self.adnl = None
         self.token = None
         self.chat_id = None
         self.last_db_check = 0
 
-    def send_message(self, text: str, silent: bool = False):
+    def send_message(self, text: str, silent: bool = False, disable_web_page_preview: bool = False):
         if self.token is None:
             raise Exception("send_message error: token is not initialized")
         if self.chat_id is None:
             raise Exception("send_message error: chat_id is not initialized")
         request_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-        data = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML', 'disable_notification': silent}
-        response = requests.post(request_url, data=data, timeout=3)
+        data = {'chat_id': self.chat_id, 'text': text, 'parse_mode': 'HTML', 'disable_notification': silent, 'link_preview_options': {'is_disabled': disable_web_page_preview}}
+        response = requests.post(request_url, json=data, timeout=3)
         if response.status_code != 200:
             raise Exception(f"send_message error: {response.text}")
         response = response.json()
@@ -141,16 +157,28 @@ class AlertBotModule(MtcModule):
         alert = ALERTS.get(alert_name)
         if alert is None:
             raise Exception(f"Alert {alert_name} not found")
-        text = f'''
-❗️ <b>MyTonCtrl Alert {alert_name}</b> ❗️
+        alert_name_readable = alert_name.replace('_', ' ').title()
+
+        for key, value in kwargs.items():
+            if isinstance(value, (int, float)):
+                kwargs[key] = f'{value:,}'.replace(',', ' ')  # make space separator for thousands
+
+        text = '🆘' if alert.severity != 'info' else ''
+        text += f''' <b>Node {self.hostname}: {alert_name_readable} </b> 
+
+{alert.text.format(*args, **kwargs)}
 
 Hostname: <code>{self.hostname}</code>
 Node IP: <code>{self.ip}</code>
-Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
-Severity: <code>{alert.severity}</code>
+ADNL: <code>{self.adnl}</code>'''
 
-Alert text:
-<blockquote> {alert.text.format(*args, **kwargs)} </blockquote>
+        if self.ton.using_validator():
+            text += f"\nWallet: <code>{self.wallet}</code>"
+
+        text += f'''
+Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
+Alert name: <code>{alert_name}</code>
+Severity: <code>{alert.severity}</code>
 '''
         if time.time() - last_sent > alert.timeout:
             self.send_message(text, alert.severity == "info")  # send info alerts without sound
@@ -174,6 +202,9 @@ Alert text:
         from modules.validator import ValidatorModule
         self.validator_module = ValidatorModule(self.ton, self.local)
         self.hostname = get_hostname()
+        adnl = self.ton.GetAdnlAddr()
+        self.adnl = adnl
+        self.wallet = self.ton.GetValidatorWallet().addrB64
         self.ip = self.ton.get_node_ip()
         self.set_global_vars()
         init_alerts()
@@ -230,6 +261,41 @@ Alert text:
             self.init()
         self.send_message('Test alert')
 
+    def setup_alert_bot(self, args):
+        if len(args) != 2:
+            raise Exception("Usage: setup_alert_bot <bot_token> <chat_id>")
+        self.token = args[0]
+        self.chat_id = args[1]
+        init_alerts()
+        try:
+            self.send_welcome_message()
+            self.ton.local.db['BotToken'] = args[0]
+            self.ton.local.db['ChatId'] = args[1]
+            color_print("setup_alert_bot - {green}OK{endc}")
+        except Exception as e:
+            self.local.add_log(f"Error while sending welcome message: {e}", "error")
+            self.local.add_log(f"If you want the bot to write to a multi-person chat group, make sure the bot is added to that chat group. If it is not - do it and run the command `setup_alert_bot <bot_token> <chat_id>` again.", "info")
+            color_print("setup_alert_bot - {red}Error{endc}")
+
+    def send_welcome_message(self):
+        message = f"""
+This is alert bot. You have connected validator with ADNL <code>{self.ton.GetAdnlAddr()}</code>.
+
+I don't process any commands, I only send notifications. 
+
+Current notifications enabled:
+
+"""
+        for alert in ALERTS.values():
+            message += f"- {alert.description}\n"
+
+        message += """
+If you want, you can disable some notifications in mytonctrl by the <a href="https://docs.ton.org/v3/guidelines/nodes/maintenance-guidelines/mytonctrl-private-alerting#endisbling-alerts"> instruction</a>.
+
+Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/maintenance-guidelines/mytonctrl-private-alerting">here</a>.
+"""
+        self.send_message(text=message, disable_web_page_preview=True)
+
     def check_db_usage(self):
         if time.time() - self.last_db_check < 600:
             return
@@ -280,7 +346,7 @@ Alert text:
         if not self.ton.using_validator():
             return
         ts = get_timestamp()
-        period = VALIDATION_PERIOD // 3  # 6h for mainnet, 40m for testnet
+        period = VALIDATION_PERIOD // 6  # 3h for mainnet, 40m for testnet
         start, end = ts - period, ts - 60
         config34 = self.ton.GetConfig34()
         if start < config34.startWorkTime:  # round started recently
@@ -303,6 +369,7 @@ Alert text:
         utils_module = UtilitiesModule(self.ton, self.local)
         ok, error = utils_module.check_adnl_connection()
         if not ok:
+            self.local.add_log(error, "warning")
             self.send_alert("adnl_connection_failed")
 
     def get_myself_from_election(self, config: dict):
@@ -332,13 +399,13 @@ Alert text:
         if res is False:
             self.send_alert("stake_not_accepted")
             return
-        self.send_alert("stake_accepted", stake=round(res.get('stake'), 2))
+        self.send_alert("stake_accepted", stake=round(res.get('stake')))
 
     def check_stake_returned(self):
         if not self.ton.using_validator():
             return
         config = self.ton.GetConfig32()
-        if not (config['endWorkTime'] + FREEZE_PERIOD + 1800 <= time.time() < config['endWorkTime'] + FREEZE_PERIOD + 1860):  # check between 25th and 26th minutes after stakes have been unfrozen
+        if not (config['endWorkTime'] + FREEZE_PERIOD + 1800 <= time.time() < config['endWorkTime'] + FREEZE_PERIOD + 1860):  # check between 30th and 31st minutes after stakes have been unfrozen
             return
         res = self.get_myself_from_election(config)
         if not res:
@@ -347,7 +414,7 @@ Alert text:
 
         for tr in trs:
             if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.srcAddr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
-                self.send_alert("stake_returned", stake=round(tr.value, 2), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
+                self.send_alert("stake_returned", stake=round(tr.value), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
                 return
         self.send_alert("stake_not_returned", address=res["walletAddr"])
 
@@ -356,6 +423,9 @@ Alert text:
             return
         validator_index = self.ton.GetValidatorIndex()
         if validator_index == -1:
+            return
+        config = self.ton.GetConfig34()
+        if time.time() - config['startWorkTime'] < 600:  # less than 10 minutes passed since round start
             return
         need_to_vote = []
         offers = self.ton.GetOffers()
@@ -368,7 +438,8 @@ Alert text:
     def check_status(self):
         if not self.ton.using_alert_bot():
             return
-        if not self.inited:
+
+        if not self.inited or self.token != self.ton.local.db.get("BotToken") or self.chat_id != self.ton.local.db.get("ChatId"):
             self.init()
 
         self.local.try_function(self.check_db_usage)
@@ -388,3 +459,4 @@ Alert text:
         console.AddItem("disable_alert", self.disable_alert, self.local.translate("disable_alert_cmd"))
         console.AddItem("list_alerts", self.print_alerts, self.local.translate("list_alerts_cmd"))
         console.AddItem("test_alert", self.test_alert, self.local.translate("test_alert_cmd"))
+        console.AddItem("setup_alert_bot", self.setup_alert_bot, self.local.translate("setup_alert_bot_cmd"))
