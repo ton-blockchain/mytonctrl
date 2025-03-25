@@ -2,8 +2,6 @@ import base64
 import json
 import time
 import subprocess
-
-import requests
 from nacl.signing import SigningKey
 
 
@@ -52,23 +50,3 @@ def get_ed25519_pubkey(privkey):
 	pubkey = privkey_obj.verify_key.encode()
 	return pubkey
 #end define
-
-
-def tha_exists():
-	try:
-		resp = requests.get('http://127.0.0.1:8801/healthcheck', timeout=3)
-	except:
-		return False
-	if resp.status_code == 200 and resp.text == '"OK"':
-		return True
-	return False
-
-
-def enable_tha(local):
-	try:
-		if not tha_exists():
-			from mytoninstaller.settings import enable_ton_http_api
-			enable_ton_http_api(local)
-	except Exception as e:
-		local.add_log(f"Error in enable_tha: {e}", "warning")
-		pass

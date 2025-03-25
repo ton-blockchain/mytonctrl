@@ -50,7 +50,6 @@ from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_conf
 import sys, getopt, os
 
 from mytoninstaller.config import get_own_ip
-from mytoninstaller.utils import enable_tha
 
 
 def Init(local, ton, console, argv):
@@ -347,7 +346,6 @@ def Update(local, args):
 
 def Upgrade(local, ton, args):
 	if '--btc-teleport' in args:  # upgrade --btc-teleport
-		enable_tha(local)
 		upgrade_btc_teleport(local, ton)
 		return
 	repo = "ton"
@@ -376,7 +374,6 @@ def Upgrade(local, ton, args):
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
 	if ton.using_validator():
-		enable_tha(local)
 		upgrade_btc_teleport(local, ton)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
