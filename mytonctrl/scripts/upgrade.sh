@@ -13,6 +13,7 @@ repo="ton"
 branch="master"
 srcdir="/usr/src/"
 bindir="/usr/bin/"
+tmpdir="/tmp/ton_src/"
 
 # Get arguments
 while getopts a:r:b: flag
@@ -29,7 +30,7 @@ COLOR='\033[92m'
 ENDC='\033[0m'
 
 # Установить дополнительные зависимости
-apt-get install -y libsecp256k1-dev libsodium-dev ninja-build fio rocksdb-tools liblz4-dev libjemalloc-dev unzip
+apt-get install -y libsecp256k1-dev libsodium-dev ninja-build fio rocksdb-tools liblz4-dev libjemalloc-dev automake libtool unzip
 
 # bugfix if the files are in the wrong place
 wget "https://ton-blockchain.github.io/global.config.json" -O global.config.json
@@ -59,14 +60,23 @@ else
   opensslPath=${bindir}/openssl_3
 fi
 
+rm -rf ${tmpdir}/${repo}
+mkdir -p ${tmpdir}/${repo}
+cd ${tmpdir}/${repo}
+echo "https://github.com/${author}/${repo}.git -> ${branch}"
+git clone --recursive https://github.com/${author}/${repo}.git . || exit 1
+
 # Go to work dir
 cd ${srcdir}/${repo}
 ls -A1 | xargs rm -rf
 
 # Update code
-echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone --recursive https://github.com/${author}/${repo}.git .
+cp -rfT ${tmpdir}/${repo} .
 git checkout ${branch}
+
+git submodule sync --recursive
+git submodule update
+
 export CC=/usr/bin/clang
 export CXX=/usr/bin/clang++
 export CCACHE_DISABLE=1

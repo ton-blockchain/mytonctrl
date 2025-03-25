@@ -43,15 +43,6 @@ def backup_config(local, config_path):
 #end define
 
 
-def BackupVconfig(local):
-	local.add_log("Backup validator config file 'config.json' to 'config.json.backup'", "debug")
-	vconfig_path = local.buffer.vconfig_path
-	backupPath = vconfig_path + ".backup"
-	args = ["cp", vconfig_path, backupPath]
-	subprocess.run(args)
-#end define
-
-
 def BackupMconfig(local):
 	local.add_log("Backup mytoncore config file 'mytoncore.db' to 'mytoncore.db.backup'", "debug")
 	mconfig_path = local.buffer.mconfig_path

@@ -32,6 +32,9 @@ show_help_and_exit() {
     echo ' -n  NETWORK      Specify the network (mainnet or testnet)'
     echo ' -v  VERSION      Specify the ton node version (commit, branch, or tag)'
     echo ' -u  USER         Specify the user to be used for MyTonCtrl installation'
+    echo ' -p  PATH         Provide backup file for MyTonCtrl installation'
+    echo ' -o               Install only MyTonCtrl. Must be used with -p'
+    echo ' -l               Install only TON node'
     echo ' -h               Show this help'
     exit
 }
@@ -45,10 +48,14 @@ config="https://ton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
 dump=false
+only_mtc=false
+only_node=false
+backup=none
+mode=none
 cpu_required=16
 mem_required=64000000  # 64GB in KB
 
-while getopts ":c:tida:r:b:m:n:v:u:h" flag; do
+while getopts ":c:tidola:r:b:m:n:v:u:p:h" flag; do
     case "${flag}" in
         c) config=${OPTARG};;
         t) telemetry=false;;
@@ -61,6 +68,9 @@ while getopts ":c:tida:r:b:m:n:v:u:h" flag; do
         n) network=${OPTARG};;
         v) ton_node_version=${OPTARG};;
         u) user=${OPTARG};;
+        o) only_mtc=true;;
+        l) only_node=true;;
+        p) backup=${OPTARG};;
         h) show_help_and_exit;;
         *)
             echo "Flag -${flag} is not recognized. Aborting"
@@ -69,10 +79,17 @@ while getopts ":c:tida:r:b:m:n:v:u:h" flag; do
 done
 
 
-if [ "${mode}" = "" ]; then  # no mode
+if [ "$only_mtc" = true ] && [ "$backup" = "none" ]; then
+    echo "Backup file must be provided if only mtc installation"
+    exit 1
+fi
+
+
+if [ "${mode}" = "none" ] && [ "$backup" = "none" ]; then  # no mode or backup was provided
     echo "Running cli installer"
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
-    pip3 install inquirer
+    python3 -m pip install --upgrade pip
+    pip3 install inquirer==3.4.0 --break-system-packages
     python3 install.py
     exit
 fi
@@ -106,6 +123,16 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
     BIN_DIR=/usr/local/bin
     mkdir -p ${SOURCES_DIR}
 fi
+
+
+if [ ! -f ~/.config/pip/pip.conf ]; then  # create pip config
+    mkdir -p ~/.config/pip
+cat > ~/.config/pip/pip.conf <<EOF
+[global]
+break-system-packages = true
+EOF
+fi
+
 
 # check TON components
 file1=${BIN_DIR}/ton/crypto/fift
@@ -144,7 +171,7 @@ if [ "${user}" = "" ]; then  # no user
     fi
 fi
 echo "User: $user"
-python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode}
+python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode} --only-mtc ${only_mtc} --backup ${backup} --only-node ${only_node}
 
 # set migrate version
 migrate_version=1

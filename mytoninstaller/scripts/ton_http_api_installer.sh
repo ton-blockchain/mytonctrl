@@ -12,7 +12,7 @@ COLOR='\033[92m'
 ENDC='\033[0m'
 
 # install python3 packages
-pip3 install virtualenv
+pip3 install virtualenv==20.27.1
 
 # prepare the virtual environment
 echo -e "${COLOR}[1/4]${ENDC} Preparing the virtual environment"

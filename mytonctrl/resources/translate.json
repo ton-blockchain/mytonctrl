@@ -249,6 +249,11 @@
 		"ru": "{cyan}===[ Статус ноды ]==={endc}",
 		"zh_TW": "{cyan}===[ 节点狀態 ]==={endc}"
 	},
+	"node_ip_address": {
+		"en": "Node IP address: {{bold}}{0}{{endc}}",
+		"ru": "IP адрес Ноды: {{bold}}{0}{{endc}}",
+		"zh_TW": "節點 IP 地址: {{bold}}{0}{{endc}}"
+	},
 	"local_status_validator_index": {
 		"en": "Validator index: {0}",
 		"ru": "Индекс валидатора: {0}",
@@ -318,6 +323,16 @@
 		"en": "Local validator out of sync: {0}",
 		"ru": "Рассинхронизация локального валидатора: {0}",
 		"zh_TW": "本地驗證者不同步: {0}"
+	},
+	"local_status_master_out_of_sync": {
+		"en": "Masterchain out of sync: {0}",
+		"ru": "Рассинхронизация Мастерчейна локального валидатора: {0}",
+		"zh_TW": "主鏈不同步: {0}"
+	},
+	"local_status_shard_out_of_sync": {
+		"en": "Shardchain out of sync: {0}",
+		"ru": "Рассинхронизация Шардчейна локального валидатора: {0}",
+		"zh_TW": "分片鏈不同步: {0}"
 	},
 	"local_status_validator_out_of_ser": {
 		"en": "Local validator last state serialization: {0}",
@@ -445,9 +460,9 @@
 		"zh_TW": "{red}錯誤 - 驗證器的 UDP 端口無法從外部訪問.{endc}"
 	},
 	"slashed_warning": {
-		"en": "{red}You were fined by {0} TON for low efficiency in the previous round.{endc}",
- 		"ru": "{red}Вы были оштрафованы на {0} TON за низкую эффективность в предыдущем раунде.{endc}",
- 		"zh_TW": "{red}您因上一輪效率低而被罰款 {0} TON。{endc}"
+		"en": "{{red}}You were fined by {0} TON for low efficiency in the previous round.{{endc}}",
+ 		"ru": "{{red}}Вы были оштрафованы на {0} TON за низкую эффективность в предыдущем раунде.{{endc}}",
+ 		"zh_TW": "{{red}}您因上一輪效率低而被罰款 {0} TON。{{endc}}"
 	},
 	"add_custom_overlay_cmd": {
 		"en": "Add custom overlay",
@@ -484,10 +499,10 @@
 		"ru": "Отправить тестовое оповещение через Telegram Bot",
 		"zh_TW": "通過 Telegram Bot 發送測試警報"
 	},
-	"cleanup_cmd": {
-		"en": "Clean node old logs and temp files",
-		"ru": "Очистить старые логи и временные файлы ноды",
-		"zh_TW": "清理節點舊日誌和臨時文件"
+	"setup_alert_bot_cmd": {
+		"en": "Setup Telegram Bot for alerts",
+		"ru": "Настроить Telegram Bot для оповещений",
+		"zh_TW": "設置 Telegram Bot 以接收警報"
 	},
 	"benchmark_cmd": {
 		"en": "Run benchmark",

@@ -30,7 +30,7 @@ from mypylib.mypylib import (
 	get_timestamp,
 	timestamp2datetime,
 	dec2hex,
-	Dict
+	Dict, int2ip
 )
 from mytoninstaller.utils import enable_tha
 
@@ -116,12 +116,25 @@ class MyTonCore():
 				self.local.add_log("Restoring the configuration file", "info")
 				args = ["cp", backup_path, mconfig_path]
 				subprocess.run(args)
+				self.dbFile = mconfig_path
 				self.Refresh()
-		elif os.path.isfile(backup_path) == False:
-			self.local.add_log("Create backup config file", "info")
-			args = ["cp", mconfig_path, backup_path]
-			subprocess.run(args)
+		elif not os.path.isfile(backup_path) or time.time() - os.path.getmtime(backup_path) > 3600:
+			self.local.try_function(self.create_self_db_backup)
 	#end define
+
+	def create_self_db_backup(self):
+		self.local.add_log("Create backup config file", "info")
+		mconfig_path = self.local.buffer.db_path
+		backup_path = mconfig_path + ".backup"
+		backup_tmp_path = backup_path + '.tmp'
+		subprocess.run(["cp", mconfig_path, backup_tmp_path])
+		try:
+			with open(backup_tmp_path, "r") as file:
+				json.load(file)
+			os.rename(backup_tmp_path, backup_path)  # atomic opetation
+		except:
+			self.local.add_log("Could not update backup, backup_tmp file is broken", "warning")
+			os.remove(backup_tmp_path)
 
 	def GetVarFromWorkerOutput(self, text, search):
 		if ':' not in search:
@@ -796,6 +809,7 @@ class MyTonCore():
 			status.masterchain_out_of_ser = status.masterchainblock - status.stateserializermasterchainseqno
 			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
 			status.out_of_ser = status.masterchain_out_of_ser
+			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
 		except Exception as ex:
 			self.local.add_log(f"GetValidatorStatus warning: {ex}", "warning")
 			status.is_working = False
@@ -1455,21 +1469,47 @@ class MyTonCore():
 		self.local.add_log("ElectionEntry completed. Start work time: " + str(startWorkTime))
 
 		self.clear_tmp()
+		self.make_backup(startWorkTime)
 
 	#end define
 
-	def clear_tmp(self):
+	def clear_dir(self, dir_name):
 		start = time.time()
 		count = 0
 		week_ago = 60 * 60 * 24 * 7
-		dir = self.tempDir
-		for f in os.listdir(dir):
-			ts = os.path.getmtime(os.path.join(dir, f))
+		for f in os.listdir(dir_name):
+			ts = os.path.getmtime(os.path.join(dir_name, f))
 			if ts < time.time() - week_ago:
 				count += 1
-				os.remove(os.path.join(dir, f))
+				if os.path.isfile(os.path.join(dir_name, f)):
+					os.remove(os.path.join(dir_name, f))
+		self.local.add_log(f"Removed {count} old files from {dir_name} directory for {int(time.time() - start)} seconds", "info")
 
-		self.local.add_log(f"Removed {count} old files from tmp dir for {int(time.time() - start)} seconds", "info")
+	def clear_tmp(self):
+		self.clear_dir(self.tempDir)
+
+	def make_backup(self, election_id: str):
+		if not self.local.db.get("auto_backup"):
+			return
+		from modules.backups import BackupModule
+		module = BackupModule(self, self.local)
+		args = []
+		name = f"/mytonctrl_backup_elid{election_id}.zip"
+		backups_dir = self.tempDir + "/auto_backups"
+		if self.local.db.get("auto_backup_path"):
+			backups_dir = self.local.db.get("auto_backup_path")
+		os.makedirs(backups_dir, exist_ok=True)
+		args.append(backups_dir + name)
+		self.clear_dir(backups_dir)
+		exit_code = module.create_backup(args)
+		if exit_code != 0:
+			self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
+			# try one more time
+			exit_code = module.create_backup(args)
+			if exit_code != 0:
+				self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
+		if exit_code == 0:
+			self.local.add_log(f"Backup created successfully", "info")
 
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
 		self.local.add_log("start GetValidatorKeyByTime function", "debug")
@@ -2491,6 +2531,8 @@ class MyTonCore():
 					validator["efficiency"] = round(validator["wr"] * 100, 2)
 			if saveElectionEntries and adnlAddr in saveElectionEntries:
 				validator["walletAddr"] = saveElectionEntries[adnlAddr]["walletAddr"]
+				validator["stake"] = saveElectionEntries[adnlAddr].get("stake")
+				validator["stake"] = int(validator["stake"]) if validator["stake"] else None
 		#end for
 
 		# Set buffer
@@ -3008,6 +3050,7 @@ class MyTonCore():
 		except: pass
 		self.local.db[name] = data
 		self.local.save()
+		self.create_self_db_backup()
 	#end define
 
 	def migrate_to_modes(self):
@@ -3092,6 +3135,9 @@ class MyTonCore():
 
 	def using_alert_bot(self):
 		return self.get_mode_value('alert-bot')
+
+	def using_prometheus(self):
+		return self.get_mode_value('prometheus')
 
 	def Tlb2Json(self, text):
 		# Заменить скобки
@@ -3789,6 +3835,16 @@ class MyTonCore():
 		else:
 			return "unknown"
 	#end define
+
+	def get_node_ip(self):
+		try:
+			config = self.GetValidatorConfig()
+			return int2ip(config['addrs'][0]['ip'])
+		except:
+			return None
+
+	def get_validator_engine_ip(self):
+		return self.validatorConsole.addr.split(':')[0]
 
 	def GetFunctionBuffer(self, name, timeout=10):
 		timestamp = get_timestamp()

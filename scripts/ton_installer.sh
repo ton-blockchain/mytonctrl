@@ -55,7 +55,7 @@ if [ "$OSTYPE" == "linux-gnu" ]; then
 	elif [ -f /etc/debian_version ]; then
 		echo "Ubuntu/Debian Linux detected."
 		apt-get update
-		apt-get install -y build-essential curl git cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip libsecp256k1-dev libsodium-dev liblz4-dev libjemalloc-dev
+		apt-get install -y build-essential curl git cmake clang libgflags-dev zlib1g-dev libssl-dev libreadline-dev libmicrohttpd-dev pkg-config libgsl-dev python3 python3-dev python3-pip libsecp256k1-dev libsodium-dev liblz4-dev libjemalloc-dev automake libtool
 
 		# Install ninja
 		apt-get install -y ninja-build
@@ -92,7 +92,7 @@ else
 fi
 
 # Установка компонентов python3
-pip3 install psutil crc16 requests
+pip3 install psutil==6.1.0 crc16==0.1.1 requests==2.32.3
 
 # build openssl 3.0
 echo -e "${COLOR}[2/6]${ENDC} Building OpenSSL 3.0"
@@ -117,6 +117,11 @@ if [ "${ton_node_version}" != "master" ]; then
   git checkout ${ton_node_version}
   cd ../
 fi
+
+cd $SOURCES_DIR/ton
+git submodule sync --recursive
+git submodule update
+cd ../
 
 git config --global --add safe.directory $SOURCES_DIR/ton
 

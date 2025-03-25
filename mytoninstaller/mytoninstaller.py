@@ -30,11 +30,10 @@ from mytoninstaller.settings import (
 	enable_ls_proxy,
 	enable_ton_storage,
 	enable_ton_storage_provider,
-	EnableMode
+	EnableMode, ConfigureFromBackup, ConfigureOnlyNode
 )
 from mytoninstaller.config import (
 	CreateLocalConfig,
-	BackupVconfig,
 	BackupMconfig,
 )
 
@@ -133,16 +132,18 @@ def Status(local, args):
 	node_args = get_node_args()
 	color_print("{cyan}===[ Node arguments ]==={endc}")
 	for key, value in node_args.items():
-		print(f"{key}: {value}")
+		for v in value:
+			print(f"{key}: {v}")
 #end define
 
 
 def set_node_argument(local, args):
 	if len(args) < 1:
-		color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)]")
+		color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)].\n"
+					"Examples: 'set_node_argument --archive-ttl 86400' or 'set_node_argument --archive-ttl -d' or 'set_node_argument -M' or 'set_node_argument --add-shard 0:2000000000000000 0:a000000000000000'")
 		return
 	arg_name = args[0]
-	args = [arg_name, args[1] if len(args) > 1 else ""]
+	args = [arg_name, " ".join(args[1:])]
 	script_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'set_node_argument.py')
 	run_as_root(['python3', script_path] + args)
 	color_print("set_node_argument - {green}OK{endc}")
@@ -194,9 +195,8 @@ def PrintLiteServerConfig(local, args):
 def CreateLocalConfigFile(local, args):
 	initBlock = GetInitBlock()
 	initBlock_b64 = dict2b64(initBlock)
-	if local.buffer.user is None:
-		local.buffer.user = os.environ.get("USER", "root")
-	args = ["python3", "-m", "mytoninstaller", "-u", local.buffer.user, "-e", "clc", "-i", initBlock_b64]
+	user = local.buffer.user or os.environ.get("USER", "root")
+	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "clc", "-i", initBlock_b64]
 	run_as_root(args)
 #end define
 
@@ -278,16 +278,28 @@ def General(local, console):
 		mx = sys.argv.index("-m")
 		mode = sys.argv[mx+1]
 		local.buffer.mode = mode
+	if "--only-mtc" in sys.argv:
+		ox = sys.argv.index("--only-mtc")
+		local.buffer.only_mtc = str2bool(sys.argv[ox+1])
+	if "--only-node" in sys.argv:
+		ox = sys.argv.index("--only-node")
+		local.buffer.only_node = str2bool(sys.argv[ox+1])
+	if "--backup" in sys.argv:
+		bx = sys.argv.index("--backup")
+		backup = sys.argv[bx+1]
+		if backup != "none":
+			local.buffer.backup = backup
 	#end if
 
 	FirstMytoncoreSettings(local)
 	FirstNodeSettings(local)
 	EnableValidatorConsole(local)
 	EnableLiteServer(local)
-	BackupVconfig(local)
 	BackupMconfig(local)
 	CreateSymlinks(local)
 	EnableMode(local)
+	ConfigureFromBackup(local)
+	ConfigureOnlyNode(local)
 #end define
 
 

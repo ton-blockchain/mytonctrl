@@ -313,13 +313,14 @@ class UtilitiesModule(MtcModule):
             print(text)
         else:
             table = list()
-            table += [["id", "ADNL", "Pubkey", "Wallet", "Efficiency", "Online"]]
+            table += [["id", "ADNL", "Pubkey", "Wallet", "Stake", "Efficiency", "Online"]]
             for i, item in enumerate(data):
                 adnl = item.get("adnlAddr")
                 pubkey = item.get("pubkey")
                 walletAddr = item.get("walletAddr")
                 efficiency = item.get("efficiency")
                 online = item.get("online")
+                stake = item.get("stake")
                 if "adnl" not in args:
                     adnl = self.reduct(adnl)
                 if "pubkey" not in args:
@@ -332,7 +333,7 @@ class UtilitiesModule(MtcModule):
                     online = bcolors.green_text("true")
                 if not online:
                     online = bcolors.red_text("false")
-                table += [[str(i), adnl, pubkey, walletAddr, efficiency, online]]
+                table += [[str(i), adnl, pubkey, walletAddr, stake, efficiency, online]]
             print_table(table)
     # end define
 
@@ -354,7 +355,7 @@ class UtilitiesModule(MtcModule):
                 response = requests.post(url, json=data, timeout=5).json()
             except Exception as e:
                 ok = False
-                error = f'{{red}}Failed to check ADNL connection to local node: {type(e)}: {e}{{endc}}'
+                error = f'Failed to check ADNL connection to local node: {type(e)}: {e}'
                 continue
             result = response.get("ok")
             if result:
@@ -362,7 +363,7 @@ class UtilitiesModule(MtcModule):
                 break
             if not result:
                 ok = False
-                error = f'{{red}}Failed to check ADNL connection to local node: {response.get("message")}{{endc}}'
+                error = f'Failed to check ADNL connection to local node: {response.get("message")}'
         return ok, error
 
     def get_pool_data(self, args):
