@@ -50,6 +50,7 @@ from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_conf
 import sys, getopt, os
 
 from mytoninstaller.config import get_own_ip
+from mytoninstaller.utils import enable_tha
 
 
 def Init(local, ton, console, argv):
@@ -344,7 +345,11 @@ def Update(local, args):
 	local.exit()
 #end define
 
-def Upgrade(ton, args):
+def Upgrade(local, ton, args):
+	if '--btc-teleport' in args:  # upgrade --btc-teleport
+		enable_tha(local)
+		upgrade_btc_teleport(local, ton)
+		return
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
 
@@ -370,12 +375,20 @@ def Upgrade(ton, args):
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
+	if ton.using_validator():
+		enable_tha(local)
+		upgrade_btc_teleport(local, ton)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
 		text = "Upgrade - {red}Error{endc}"
 	color_print(text)
 #end define
+
+def upgrade_btc_teleport(local, ton):
+	from modules.btc_teleport import BtcTeleportModule
+	module = BtcTeleportModule(ton, local)
+	local.try_function(module.init)
 
 def rollback_to_mtc1(local, ton,  args):
 	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
@@ -501,6 +514,7 @@ def warnings(local, ton):
 	local.try_function(check_tg_channel, args=[local, ton])
 	local.try_function(check_slashed, args=[local, ton])
 #end define
+
 
 def CheckTonUpdate(local):
 	git_path = "/usr/src/ton"
