@@ -46,8 +46,6 @@ pip3 install -U .
 systemctl daemon-reload
 systemctl restart mytoncore
 
-apt-get install -y unzip
-
 # Конец
 echo -e "${COLOR}[1/1]${ENDC} MyTonCtrl components update completed"
 exit 0
