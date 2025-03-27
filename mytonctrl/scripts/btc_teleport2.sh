@@ -14,6 +14,7 @@ then
   echo "installing rust"
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rust.sh && bash /tmp/rust.sh -y
   rm /tmp/rust.sh
+  . "$HOME/.cargo/env"
   echo "installed rust"
 fi
 
