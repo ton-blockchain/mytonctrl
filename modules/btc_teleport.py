@@ -50,7 +50,7 @@ ORACLE_VALIDATOR_SERVER_ADDR={self.ton.validatorConsole.addr}
     def init(self, reinstall=False):
         if os.path.exists(self.src_dir) and not reinstall:
             return
-        os.makedirs(self.keystore_path, exist_ok=True)
+        os.makedirs(self.keystore_path, mode=0o700, exist_ok=True)
         self.install()
         self.create_env_file()
         self.add_daemon()
