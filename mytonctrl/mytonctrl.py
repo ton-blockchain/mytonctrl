@@ -346,7 +346,7 @@ def Update(local, args):
 
 def Upgrade(local, ton, args):
 	if '--btc-teleport' in args:  # upgrade --btc-teleport
-		upgrade_btc_teleport(local, ton)
+		upgrade_btc_teleport(local, ton, reinstall=True)
 		return
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
@@ -382,10 +382,10 @@ def Upgrade(local, ton, args):
 	color_print(text)
 #end define
 
-def upgrade_btc_teleport(local, ton):
+def upgrade_btc_teleport(local, ton, reinstall=False):
 	from modules.btc_teleport import BtcTeleportModule
 	module = BtcTeleportModule(ton, local)
-	local.try_function(module.init)
+	local.try_function(module.init, args=[reinstall])
 
 def rollback_to_mtc1(local, ton,  args):
 	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
