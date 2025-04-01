@@ -50,10 +50,15 @@ ORACLE_VALIDATOR_SERVER_ADDR={self.ton.validatorConsole.addr}
     def init(self, reinstall=False):
         if os.path.exists(self.src_dir) and not reinstall:
             return
+        self.local.add_log('Installing btc_teleport', 'info')
         os.makedirs(self.keystore_path, mode=0o700, exist_ok=True)
         self.install()
         self.create_env_file()
         self.add_daemon()
+        self.local.add_log('Installed btc_teleport', 'info')
+
+    def remove_btc_teleport(self, args: list):
+        pass
 
     def add_console_commands(self, console):
         pass
