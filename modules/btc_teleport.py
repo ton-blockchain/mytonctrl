@@ -23,7 +23,7 @@ class BtcTeleportModule(MtcModule):
 
         text = f"""
 COMMON_TON_CONFIG_URL=https://ton-blockchain.github.io/testnet-global.config.json
-COMMON_TON_CONTRACT_COORDINATOR=EQD5URgpjt00h5x4i9MFHWX1UjmuniYPMWnYVGwmZguJ0tMh
+COMMON_TON_CONTRACT_COORDINATOR=EQAmHFjKpq3ecr3WqSY4w-qy6VHVVdjYH8kIRWq5xdwudIPC
 ORACLE_STANDALONE_MODE=false
 ORACLE_KEYSTORE_PATH={self.keystore_path}
 ORACLE_VALIDATOR_ENGINE_CONSOLE_PATH={self.ton.validatorConsole.appPath}

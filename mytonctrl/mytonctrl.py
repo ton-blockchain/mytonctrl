@@ -754,8 +754,18 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	mtcGitPath = "/usr/src/mytonctrl"
 	validatorGitPath = "/usr/src/ton"
 	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
+	btc_teleport_path = "/usr/src/ton-teleport-btc-periphery/"
 	mtcGitHash = get_git_hash(mtcGitPath, short=True)
 	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+	btc_teleport_git_hash = None
+	btc_teleport_git_branch = None
+	if ton.using_validator():
+		if os.path.exists(btc_teleport_path):
+			btc_teleport_git_hash = get_git_hash(btc_teleport_path, short=True)
+			btc_teleport_git_branch = get_git_branch(btc_teleport_path)
+		else:
+			btc_teleport_git_hash = "n/a"
+			btc_teleport_git_branch = "n/a"
 	fix_git_config(mtcGitPath)
 	fix_git_config(validatorGitPath)
 	mtcGitBranch = get_git_branch(mtcGitPath)
@@ -766,6 +776,11 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorGitBranch_text = bcolors.yellow_text(validatorGitBranch)
 	mtcVersion_text = local.translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
 	validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
+	btc_teleport_version_text = None
+	if btc_teleport_git_hash:
+		btc_teleport_git_hash_text = bcolors.yellow_text(btc_teleport_git_hash)
+		btc_teleport_git_branch_text = bcolors.yellow_text(btc_teleport_git_branch)
+		btc_teleport_version_text = local.translate("local_status_version_teleport").format(btc_teleport_git_hash_text, btc_teleport_git_branch_text)
 
 	color_print(local.translate("local_status_head"))
 	node_ip = ton.get_validator_engine_ip()
@@ -796,6 +811,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	print(dbStatus_text)
 	print(mtcVersion_text)
 	print(validatorVersion_text)
+	if btc_teleport_version_text:
+		print(btc_teleport_version_text)
 	print()
 #end define
 

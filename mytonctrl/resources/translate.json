@@ -354,6 +354,11 @@
 		"ru": "Версия валидатора: {0} ({1})",
 		"zh_TW": "驗證者版本: {0} ({1})"
 	},
+	"local_status_version_teleport": {
+		"en": "Version BTC Teleport: {0} ({1})",
+		"ru": "Версия BTC Teleport: {0} ({1})",
+		"zh_TW": "BTC Teleport 版本: {0} ({1})"
+	},
 	"ton_config_head": {
 		"en": "{cyan}===[ TON network configuration ]==={endc}",
 		"ru": "{cyan}===[ Конфигурация сети TON ]==={endc}",
