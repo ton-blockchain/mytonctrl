@@ -4,7 +4,7 @@ import subprocess
 import pkg_resources
 
 from modules.module import MtcModule
-from mypylib.mypylib import run_as_root
+from mypylib.mypylib import run_as_root, color_print
 
 
 class BtcTeleportModule(MtcModule):
@@ -58,7 +58,17 @@ ORACLE_VALIDATOR_SERVER_ADDR={self.ton.validatorConsole.addr}
         self.local.add_log('Installed btc_teleport', 'info')
 
     def remove_btc_teleport(self, args: list):
-        pass
+        if len(args) > 1:
+            color_print("{red}Bad args. Usage:{endc} remove_btc_teleport [--force]")
+            return
+        if '--force' not in args:
+            if -1 < self.ton.GetValidatorIndex() < self.ton.GetConfig34()['mainValidators']:
+                self.local.add_log('You can not remove btc_teleport on working masterchain validator', 'error')
+                return
+        import shutil
+        shutil.rmtree(self.keystore_path)
+        run_as_root(['rm', '-rf', self.src_dir])
+        self.local.add_log('Removed btc_teleport', 'info')
 
     def add_console_commands(self, console):
-        pass
+        console.AddItem("remove_btc_teleport", self.remove_btc_teleport, self.local.translate("remove_btc_teleport_cmd"))

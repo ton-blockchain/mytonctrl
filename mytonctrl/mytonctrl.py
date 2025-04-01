@@ -100,6 +100,10 @@ def Init(local, ton, console, argv):
 	module = CustomOverlayModule(ton, local)
 	module.add_console_commands(console)
 
+	from modules.btc_teleport import BtcTeleportModule
+	module = BtcTeleportModule(ton, local)
+	module.add_console_commands(console)
+
 	if ton.using_validator():
 		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)

@@ -509,6 +509,11 @@
 		"ru": "Настроить Telegram Bot для оповещений",
 		"zh_TW": "設置 Telegram Bot 以接收警報"
 	},
+	"remove_btc_teleport_cmd": {
+		"en": "Remove BTC Teleport Oracle",
+		"ru": "Удалить BTC Teleport Oracle",
+		"zh_TW": "刪除 BTC Teleport Oracle"
+	},
 	"benchmark_cmd": {
 		"en": "Run benchmark",
 		"ru": "Запустить бенчмарк",
