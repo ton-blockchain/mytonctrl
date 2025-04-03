@@ -3559,7 +3559,7 @@ class MyTonCore():
 	#end define
 
 	def GetControllerRequiredBalanceForLoan(self, controllerAddr, credit, interest):
-		cmd = f"runmethodfull {controllerAddr} required_balance_for_loan {credit} {interest}"
+		cmd = f"runmethodfull {controllerAddr} required_balance_for_loan {credit*10**9} {interest}"
 		result = self.liteClient.Run(cmd)
 		data = self.Result2List(result)
 		if data is None:
