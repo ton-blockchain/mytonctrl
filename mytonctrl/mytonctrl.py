@@ -440,6 +440,9 @@ def check_disk_usage(local, ton):
 
 def check_sync(local, ton):
 	validator_status = ton.GetValidatorStatus()
+	if validator_status.initial_sync or ton.in_initial_sync():
+		print_warning(local, "initial_sync_warning")
+		return
 	if not validator_status.is_working or validator_status.out_of_sync >= 20:
 		print_warning(local, "sync_warning")
 #end define
@@ -729,11 +732,45 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorStatus_color = GetColorStatus(validatorStatus_bool)
 	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus_color, mytoncoreUptime_text)
 	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus_color, validatorUptime_text)
-	validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less"))
-	master_out_of_sync_text = local.translate("local_status_master_out_of_sync").format(GetColorInt(validator_status.masterchain_out_of_sync, 20, logic="less", ending=" sec"))
-	shard_out_of_sync_text = local.translate("local_status_shard_out_of_sync").format(GetColorInt(validator_status.shardchain_out_of_sync, 5, logic="less", ending=" blocks"))
 
-	validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
+	validator_initial_sync_text = ''
+	validator_out_of_sync_text = ''
+
+	if validator_status.initial_sync:
+		validator_initial_sync_text = local.translate("local_status_validator_initial_sync").format(validator_status['process.initial_sync'])
+	elif ton.in_initial_sync():  # states have been downloaded, now downloading blocks
+		validator_initial_sync_text = local.translate("local_status_validator_initial_sync").format(
+			f'Syncing blocks, last known block was {validator_status.out_of_sync} s ago'
+		)
+	else:
+		validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less"))
+		master_out_of_sync_text = local.translate("local_status_master_out_of_sync").format(GetColorInt(validator_status.masterchain_out_of_sync, 20, logic="less", ending=" sec"))
+		shard_out_of_sync_text = local.translate("local_status_shard_out_of_sync").format(GetColorInt(validator_status.shardchain_out_of_sync, 5, logic="less", ending=" blocks"))
+
+	validator_out_of_ser_text = None
+
+	if validator_status.stateserializerenabled:
+		validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
+
+	active_validator_groups = None
+
+	if ton.using_validator() and validator_status.validator_groups_master and validator_status.validator_groups_shard:
+		active_validator_groups = local.translate("active_validator_groups").format(validator_status.validator_groups_master, validator_status.validator_groups_shard)
+
+	collated, validated = None, None
+	ls_queries = None
+	if ton.using_validator():
+		node_stats = ton.get_node_statistics()
+		if node_stats and 'collated' in node_stats and 'validated' in node_stats:
+			collated = local.translate('collated_blocks').format(node_stats['collated']['ok'], node_stats['collated']['error'])
+			validated = local.translate('validated_blocks').format(node_stats['validated']['ok'], node_stats['validated']['error'])
+		else:
+			collated = local.translate('collated_blocks').format('collecting data...', 'wait for the next validation round')
+			validated = local.translate('validated_blocks').format('collecting data...', 'wait for the next validation round')
+	if ton.using_liteserver():
+		node_stats = ton.get_node_statistics()
+		if node_stats and 'ls_queries' in node_stats:
+			ls_queries = local.translate('ls_queries').format(node_stats['ls_queries']['time'], node_stats['ls_queries']['ok'], node_stats['ls_queries']['error'])
 
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
@@ -778,10 +815,21 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	print(mytoncoreStatus_text)
 	if not is_node_remote:
 		print(validatorStatus_text)
-	print(validator_out_of_sync_text)
-	print(master_out_of_sync_text)
-	print(shard_out_of_sync_text)
-	print(validator_out_of_ser_text)
+	if validator_initial_sync_text:
+		print(validator_initial_sync_text)
+	if validator_out_of_sync_text:
+		print(validator_out_of_sync_text)
+		print(master_out_of_sync_text)
+		print(shard_out_of_sync_text)
+	if validator_out_of_ser_text:
+		print(validator_out_of_ser_text)
+	if active_validator_groups:
+		print(active_validator_groups)
+	if collated and validated:
+		print(collated)
+		print(validated)
+	if ls_queries:
+		print(ls_queries)
 	print(dbStatus_text)
 	print(mtcVersion_text)
 	print(validatorVersion_text)

@@ -286,6 +286,64 @@ def CalculateNetworkStatistics(zerodata, data):
 # end define
 
 
+def save_node_statistics(local, ton):
+    status = ton.GetValidatorStatus(no_cache=True)
+    if status.unixtime is None:
+        return
+    data = {'timestamp': status.unixtime}
+
+    def get_ok_error(value: str):
+        ok, error = value.split()
+        return int(ok.split(':')[1]), int(error.split(':')[1])
+
+    if 'total.collated_blocks.master' in status:
+        master_ok, master_error = get_ok_error(status['total.collated_blocks.master'])
+        shard_ok, shard_error = get_ok_error(status['total.collated_blocks.shard'])
+        data['collated_blocks'] = {
+            'master': {'ok': master_ok, 'error': master_error},
+            'shard': {'ok': shard_ok, 'error': shard_error},
+        }
+    if 'total.validated_blocks.master' in status:
+        master_ok, master_error = get_ok_error(status['total.validated_blocks.master'])
+        shard_ok, shard_error = get_ok_error(status['total.validated_blocks.shard'])
+        data['validated_blocks'] = {
+            'master': {'ok': master_ok, 'error': master_error},
+            'shard': {'ok': shard_ok, 'error': shard_error},
+        }
+    if 'total.ext_msg_check' in status:
+        ok, error = get_ok_error(status['total.ext_msg_check'])
+        data['ext_msg_check'] = {'ok': ok, 'error': error}
+    if 'total.ls_queries_ok' in status and 'total.ls_queries_error' in status:
+        data['ls_queries'] = {}
+        for k in status['total.ls_queries_ok'].split():
+            if k.startswith('TOTAL'):
+                data['ls_queries']['ok'] = int(k.split(':')[1])
+        for k in status['total.ls_queries_error'].split():
+            if k.startswith('TOTAL'):
+                data['ls_queries']['error'] = int(k.split(':')[1])
+    statistics = local.db.get("statistics", dict())
+
+    if time.time() - int(status.start_time) <= 60:  # was node restart <60 sec ago, resetting node statistics
+        statistics['node'] = []
+
+    # statistics['node'] = [stats_from_election_id, stats_from_prev_min, stats_now]
+
+    election_id = ton.GetConfig34()['startWorkTime']
+    if 'node' not in statistics or len(statistics['node']) == 0:
+        statistics['node'] = [None, data]
+    elif len(statistics['node']) < 3:
+        statistics['node'].append(data)
+    if len(statistics['node']) == 3:
+        if statistics['node'][0] is None:
+            if 0 < data['timestamp'] - election_id < 90:
+                statistics['node'][0] = data
+        elif statistics['node'][0]['timestamp'] < election_id:
+            statistics['node'][0] = data
+        statistics['node'] = statistics.get('node', []) + [data]
+        statistics['node'].pop(1)
+    local.db["statistics"] = statistics
+
+
 def ReadTransData(local, scanner):
     transData = local.buffer.transData
     SetToTimeData(transData, scanner.transNum)
@@ -544,6 +602,17 @@ def ScanLiteServers(local, ton):
 # end define
 
 
+def check_initial_sync(local, ton):
+    if not ton.in_initial_sync():
+        return
+    validator_status = ton.GetValidatorStatus()
+    if validator_status.initial_sync:
+        return
+    if validator_status.out_of_sync < 20:
+        ton.set_initial_sync_off()
+        return
+
+
 def General(local):
     local.add_log("start General function", "debug")
     ton = MyTonCore(local)
@@ -570,6 +639,8 @@ def General(local):
 
     local.start_cycle(ScanLiteServers, sec=60, args=(local, ton,))
 
+    local.start_cycle(save_node_statistics, sec=60, args=(local, ton, ))
+
     from modules.custom_overlays import CustomOverlayModule
     local.start_cycle(CustomOverlayModule(ton, local).custom_overlays, sec=60, args=())
 
@@ -578,6 +649,9 @@ def General(local):
 
     from modules.prometheus import PrometheusModule
     local.start_cycle(PrometheusModule(ton, local).push_metrics, sec=30, args=())
+
+    if ton.in_initial_sync():
+        local.start_cycle(check_initial_sync, sec=120, args=(local, ton))
 
     thr_sleep()
 # end define
