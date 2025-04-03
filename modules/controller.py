@@ -232,6 +232,15 @@ class ControllerModule(MtcModule):
         t = self.do_calculate_loan_amount_test()
         print(t)
 
+    def recover_stake(self, args):
+        try:
+            controller_addr = args[0]
+        except:
+            color_print("{red}Bad args. Usage:{endc} recover_stake <controller-addr>")
+            return
+        self.ton.ControllerRecoverStake(controller_addr)
+        color_print("recover stake - {green}OK{endc}")
+
     def add_console_commands(self, console):
         console.AddItem("create_controllers", self.create_controllers, self.local.translate("_"))
         console.AddItem("update_controllers", self.create_controllers, self.local.translate("_"))
@@ -246,3 +255,4 @@ class ControllerModule(MtcModule):
         console.AddItem("add_controller", self.add_controller, self.local.translate("_"))
         console.AddItem("check_liquid_pool", self.check_liquid_pool, self.local.translate("_"))
         console.AddItem("test_calculate_loan_amount", self.calculate_loan_amount_test, self.local.translate("_"))
+        console.AddItem("recover_stake", self.recover_stake, self.local.translate("_"))
