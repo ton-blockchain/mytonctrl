@@ -65,9 +65,10 @@ ORACLE_VALIDATOR_SERVER_ADDR={self.ton.validatorConsole.addr}
             if -1 < self.ton.GetValidatorIndex() < self.ton.GetConfig34()['mainValidators']:
                 self.local.add_log('You can not remove btc_teleport on working masterchain validator', 'error')
                 return
-        import shutil
-        shutil.rmtree(self.keystore_path)
-        run_as_root(['rm', '-rf', self.src_dir])
+        script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/remove_btc_teleport.sh')
+        exit_code = run_as_root(["bash", script_path, "-s", self.src_dir, "-k", self.keystore_path])
+        if exit_code != 0:
+            raise Exception('Failed to remove btc_teleport')
         self.local.add_log('Removed btc_teleport', 'info')
 
     def add_console_commands(self, console):
