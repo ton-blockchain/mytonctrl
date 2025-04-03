@@ -1017,3 +1017,13 @@ def ConfigureOnlyNode(local):
 	SetConfig(path=mconfig_path, data=mconfig)
 
 	start_service(local, 'mytoncore')
+
+
+def SetInitialSync(local):
+	mconfig_path = local.buffer.mconfig_path
+
+	mconfig = GetConfig(path=mconfig_path)
+	mconfig.initialSync = True
+	SetConfig(path=mconfig_path, data=mconfig)
+
+	start_service(local, 'mytoncore')
