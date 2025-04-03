@@ -22,7 +22,7 @@ fi
 
 # clone repo
 
-REPO_URL=https://github.com/RSquad/${REPO}.git
+REPO_URL=git@github.com:RSquad/${REPO}.git
 
 cd $SRC_DIR || exit 1
 rm -rf $REPO
