@@ -366,6 +366,29 @@ class UtilitiesModule(MtcModule):
                 error = f'Failed to check ADNL connection to local node: {response.get("message")}'
         return ok, error
 
+    def get_seqno(self, args):
+        try:
+            walletName = args[0]
+        except:
+            color_print("{red}Bad args. Usage:{endc} seqno <wallet-name>")
+            return
+        wallet = self.ton.GetLocalWallet(walletName)
+        seqno = self.ton.GetSeqno(wallet)
+        print(walletName, "seqno:", seqno)
+    # end define
+
+    def get_config(self, args):
+        try:
+            configId = args[0]
+            configId = int(configId)
+        except:
+            color_print("{red}Bad args. Usage:{endc} gc <config-id>")
+            return
+        data = self.ton.GetConfig(configId)
+        text = json.dumps(data, indent=2)
+        print(text)
+    # end define
+
     def get_pool_data(self, args):
         try:
             pool_name = args[0]
@@ -396,4 +419,6 @@ class UtilitiesModule(MtcModule):
         console.AddItem("vl", self.print_validator_list, self.local.translate("vl_cmd"))
         console.AddItem("cl", self.print_complaints_list, self.local.translate("cl_cmd"))
 
+        console.AddItem("seqno", self.get_seqno, self.local.translate("seqno_cmd"))
+        console.AddItem("getconfig", self.get_config, self.local.translate("getconfig_cmd"))
         console.AddItem("get_pool_data", self.get_pool_data, self.local.translate("get_pool_data_cmd"))
