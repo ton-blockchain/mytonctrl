@@ -27,13 +27,14 @@ class BtcTeleportModule(MtcModule):
         self.create_local_file()
         text = f"""
 COMMON_TON_CONFIG=/usr/bin/ton/local.config.json
-COMMON_TON_CONTRACT_COORDINATOR=EQAmHFjKpq3ecr3WqSY4w-qy6VHVVdjYH8kIRWq5xdwudIPC
+COMMON_TON_CONTRACT_COORDINATOR=EQDnwZfGuNxUyIt78PuG6INOl-50DOtHJU5KFU5-4COEj_1x
 ORACLE_STANDALONE_MODE=false
 ORACLE_KEYSTORE_PATH={self.keystore_path}
 ORACLE_VALIDATOR_ENGINE_CONSOLE_PATH={self.ton.validatorConsole.appPath}
 ORACLE_SERVER_PUBLIC_KEY_PATH={self.ton.validatorConsole.pubKeyPath}
 ORACLE_CLIENT_PRIVATE_KEY_PATH={self.ton.validatorConsole.privKeyPath}
 ORACLE_VALIDATOR_SERVER_ADDR={self.ton.validatorConsole.addr}
+API_CALL_TIMEOUT=30
 """
         with open(env_path, 'w') as f:
             f.write(text)
