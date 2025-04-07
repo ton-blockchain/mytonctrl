@@ -16,13 +16,17 @@ class BtcTeleportModule(MtcModule):
         self.src_dir = '/usr/src/' + f'/{self.repo_name}'
         self.bin_dir = self.src_dir + '/out'
 
+    def create_local_file(self):
+        from mytoninstaller.mytoninstaller import CreateLocalConfigFile
+        CreateLocalConfigFile(self.local, [])
+
     def create_env_file(self):
         env_path = self.bin_dir + '/.env'
         if os.path.exists(env_path):
             return
-
+        self.create_local_file()
         text = f"""
-COMMON_TON_CONFIG=https://ton-blockchain.github.io/testnet-global.config.json
+COMMON_TON_CONFIG=/usr/bin/ton/local.config.json
 COMMON_TON_CONTRACT_COORDINATOR=EQAmHFjKpq3ecr3WqSY4w-qy6VHVVdjYH8kIRWq5xdwudIPC
 ORACLE_STANDALONE_MODE=false
 ORACLE_KEYSTORE_PATH={self.keystore_path}
