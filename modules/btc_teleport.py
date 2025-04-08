@@ -25,8 +25,17 @@ class BtcTeleportModule(MtcModule):
         if os.path.exists(env_path):
             return
         self.create_local_file()
+        config_path = "/usr/bin/ton/local.config.json"
+        if not os.path.exists(config_path):
+            config_path = 'https://ton.org/global-config.json'
+            warning_text = f"""
+WARNING: Could not create local config file. Using global config file ({config_path}).
+Please try to create local config file (`mytonctrl <<< "installer clcf"`) and update its path in {env_path} and restart 
+btc teleport service (`systemctl restart btc_teleport`) or contact validators support. 
+"""
+            self.local.add_log(warning_text, 'warning')
         text = f"""
-COMMON_TON_CONFIG=/usr/bin/ton/local.config.json
+COMMON_TON_CONFIG={config_path}
 COMMON_TON_CONTRACT_COORDINATOR=EQDnwZfGuNxUyIt78PuG6INOl-50DOtHJU5KFU5-4COEj_1x
 ORACLE_STANDALONE_MODE=false
 ORACLE_KEYSTORE_PATH={self.keystore_path}
