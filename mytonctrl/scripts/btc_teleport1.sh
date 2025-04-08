@@ -33,3 +33,6 @@ chown -R $USER:$USER $REPO
 git config --global --add safe.directory $SRC_DIR/$REPO
 
 echo "oracle sources cloned successfully"
+
+mkdir -p /var/log/btc_teleport
+chown -R $USER:$USER /var/log/btc_teleport

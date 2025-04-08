@@ -44,6 +44,7 @@ ORACLE_SERVER_PUBLIC_KEY_PATH={self.ton.validatorConsole.pubKeyPath}
 ORACLE_CLIENT_PRIVATE_KEY_PATH={self.ton.validatorConsole.privKeyPath}
 ORACLE_VALIDATOR_SERVER_ADDR={self.ton.validatorConsole.addr}
 API_CALL_TIMEOUT=30
+LOG_FILE=/var/log/btc_teleport/btc_teleport.log
 """
         with open(env_path, 'w') as f:
             f.write(text)
