@@ -51,8 +51,9 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
 
     def add_daemon(self):
         start = f'{self.bin_dir}/oracle'
-        cmd = f'''import subprocess; import os; from mypylib.mypylib import add2systemd; add2systemd(name='btc_teleport', user=os.getlogin(), start='{start}', workdir='{self.bin_dir}'); subprocess.run(['systemctl', 'restart', 'btc_teleport'])'''
-        run_as_root(['python3', '-c', cmd])
+        script_path = pkg_resources.resource_filename('mytoninstaller', 'scripts/add2systemd.sh')
+        user = os.environ.get("USER", "root")
+        run_as_root(['bash', script_path, '-n', 'btc_teleport', '-u', user, '-g', user, '-s', start, '-w', self.bin_dir])
 
     def install(self):
         script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/btc_teleport1.sh')
