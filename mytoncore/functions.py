@@ -57,6 +57,8 @@ def Event(local, event_name):
         enable_ton_storage_provider_event(local)
     elif event_name.startswith("enable_mode"):
         enable_mode(local, event_name)
+    elif event_name == "enable_btc_teleport":
+        enable_btc_teleport(local)
     local.exit()
 # end define
 
@@ -101,6 +103,10 @@ def enable_mode(local, event_name):
     ton.enable_mode(mode)
 #end define
 
+def enable_btc_teleport(local):
+    ton = MyTonCore(local)
+    from modules.btc_teleport import BtcTeleportModule
+    BtcTeleportModule(ton, local).init(reinstall=True)
 
 def Elections(local, ton):
     use_pool = ton.using_pool()

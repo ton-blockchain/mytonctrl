@@ -15,3 +15,4 @@ rm -rf $KEYSTORE_PATH
 rm -rf $SRC_DIR
 systemctl stop btc_teleport
 rm -rf /etc/systemd/system/btc_teleport.service
+systemctl daemon-reload

@@ -6,7 +6,7 @@ import time
 import pkg_resources
 
 from modules.module import MtcModule
-from mypylib.mypylib import color_print, ip2int, run_as_root, parse
+from mypylib.mypylib import color_print, ip2int, run_as_root, parse, MyPyClass
 from mytoninstaller.config import get_own_ip
 
 
@@ -80,6 +80,10 @@ class BackupModule(MtcModule):
         command_args = ["-m", self.ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
 
         if self.run_restore_backup(command_args) == 0:
+            self.local.load_db()
+            if self.ton.using_validator():
+                from modules.btc_teleport import BtcTeleportModule
+                BtcTeleportModule(self.ton, self.local).init(reinstall=True)
             color_print("restore_backup - {green}OK{endc}")
             self.local.exit()
         else:

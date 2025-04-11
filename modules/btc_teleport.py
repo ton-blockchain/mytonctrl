@@ -20,9 +20,9 @@ class BtcTeleportModule(MtcModule):
         from mytoninstaller.mytoninstaller import CreateLocalConfigFile
         CreateLocalConfigFile(self.local, [])
 
-    def create_env_file(self):
+    def create_env_file(self, reinit=False):
         env_path = self.bin_dir + '/.env'
-        if os.path.exists(env_path):
+        if os.path.exists(env_path) and not reinit:
             return
         self.create_local_file()
         config_path = "/usr/bin/ton/local.config.json"
@@ -73,6 +73,11 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         self.add_daemon()
         self.local.add_log('Installed btc_teleport', 'info')
 
+    @staticmethod
+    def run_remove_btc_teleport(args):
+        script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/remove_btc_teleport.sh')
+        return run_as_root(["bash", script_path] + args)
+
     def remove_btc_teleport(self, args: list):
         if len(args) > 1:
             color_print("{red}Bad args. Usage:{endc} remove_btc_teleport [--force]")
@@ -81,8 +86,7 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
             if -1 < self.ton.GetValidatorIndex() < self.ton.GetConfig34()['mainValidators']:
                 self.local.add_log('You can not remove btc_teleport on working masterchain validator', 'error')
                 return
-        script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/remove_btc_teleport.sh')
-        exit_code = run_as_root(["bash", script_path, "-s", self.src_dir, "-k", self.keystore_path])
+        exit_code = self.run_remove_btc_teleport(["-s", self.src_dir, "-k", self.keystore_path])
         if exit_code != 0:
             raise Exception('Failed to remove btc_teleport')
         self.local.add_log('Removed btc_teleport', 'info')
