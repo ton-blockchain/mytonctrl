@@ -80,7 +80,7 @@ class BackupModule(MtcModule):
         command_args = ["-m", self.ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
 
         if self.run_restore_backup(command_args) == 0:
-            self.local.load_db()
+            self.ton.local.load_db()
             if self.ton.using_validator():
                 from modules.btc_teleport import BtcTeleportModule
                 BtcTeleportModule(self.ton, self.local).init(reinstall=True)
