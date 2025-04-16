@@ -2092,8 +2092,8 @@ class MyTonCore():
 			item["votedValidators"] = subdata[4] # *voters_list*
 			weightRemaining = subdata[5] # *weight_remaining*
 			item["roundsRemaining"] = subdata[6] # *rounds_remaining*
-			item["wins"] = subdata[7] # *losses*
-			item["losses"] = subdata[8] # *wins*
+			item["losses"] = subdata[7] # *losses*
+			item["wins"] = subdata[8] # *wins*
 			requiredWeight = totalWeight * 3 / 4
 			if len(item["votedValidators"]) == 0:
 				weightRemaining = requiredWeight
