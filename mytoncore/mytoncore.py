@@ -903,10 +903,10 @@ class MyTonCore():
 		self.local.add_log("start GetConfig32 function", "debug")
 		config32 = Dict()
 		result = self.liteClient.Run("getconfig 32")
-		config32["totalValidators"] = int(parse(result, "total:", ' ') or 0)
-		config32["mainValidators"] = int(parse(result, "main:", ' ') or 0)
-		config32["startWorkTime"] = int(parse(result, "utime_since:", ' ') or 0)
-		config32["endWorkTime"] = int(parse(result, "utime_until:", ' ') or 0)
+		config32["totalValidators"] = int(parse(result, "total:", ' '))
+		config32["mainValidators"] = int(parse(result, "main:", ' '))
+		config32["startWorkTime"] = int(parse(result, "utime_since:", ' '))
+		config32["endWorkTime"] = int(parse(result, "utime_until:", ' '))
 		lines = result.split('\n')
 		validators = list()
 		for line in lines:
@@ -914,9 +914,9 @@ class MyTonCore():
 				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
 				pubkey = parse(line, "pubkey:x", ')')
 				try:
-					validatorWeight = int(parse(line, "weight:", ' ') or 0)
+					validatorWeight = int(parse(line, "weight:", ' '))
 				except ValueError:
-					validatorWeight = int(parse(line, "weight:", ')') or 0)
+					validatorWeight = int(parse(line, "weight:", ')'))
 				buff = Dict()
 				buff["adnlAddr"] = validatorAdnlAddr
 				buff["pubkey"] = pubkey
@@ -940,11 +940,11 @@ class MyTonCore():
 		self.local.add_log("start GetConfig34 function", "debug")
 		config34 = Dict()
 		result = self.liteClient.Run("getconfig 34")
-		config34["totalValidators"] = int(parse(result, "total:", ' ') or 0)
-		config34["mainValidators"] = int(parse(result, "main:", ' ') or 0)
-		config34["startWorkTime"] = int(parse(result, "utime_since:", ' ') or 0)
-		config34["endWorkTime"] = int(parse(result, "utime_until:", ' ') or 0)
-		config34["totalWeight"] = int(parse(result, "total_weight:", ' ') or 0)
+		config34["totalValidators"] = int(parse(result, "total:", ' '))
+		config34["mainValidators"] = int(parse(result, "main:", ' '))
+		config34["startWorkTime"] = int(parse(result, "utime_since:", ' '))
+		config34["endWorkTime"] = int(parse(result, "utime_until:", ' '))
+		config34["totalWeight"] = int(parse(result, "total_weight:", ' '))
 		lines = result.split('\n')
 		validators = list()
 		for line in lines:
@@ -952,9 +952,9 @@ class MyTonCore():
 				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
 				pubkey = parse(line, "pubkey:x", ')')
 				try:
-					validatorWeight = int(parse(line, "weight:", ' ') or 0)
+					validatorWeight = int(parse(line, "weight:", ' '))
 				except ValueError:
-					validatorWeight = int(parse(line, "weight:", ')') or 0)
+					validatorWeight = int(parse(line, "weight:", ')'))
 				buff = Dict()
 				buff["adnlAddr"] = validatorAdnlAddr
 				buff["pubkey"] = pubkey
@@ -979,9 +979,9 @@ class MyTonCore():
 		config36 = dict()
 		try:
 			result = self.liteClient.Run("getconfig 36")
-			config36["totalValidators"] = int(parse(result, "total:", ' ') or 0)
-			config36["startWorkTime"] = int(parse(result, "utime_since:", ' ') or 0)
-			config36["endWorkTime"] = int(parse(result, "utime_until:", ' ') or 0)
+			config36["totalValidators"] = int(parse(result, "total:", ' '))
+			config36["startWorkTime"] = int(parse(result, "utime_since:", ' '))
+			config36["endWorkTime"] = int(parse(result, "utime_until:", ' '))
 			lines = result.split('\n')
 			validators = list()
 			for line in lines:
