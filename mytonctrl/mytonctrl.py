@@ -366,6 +366,15 @@ def Upgrade(ton, args):
 		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
 	ton.SetSettings("validatorConsole", validatorConsole)
 
+	clang_version = get_clang_major_version()
+	if (clang_version is None or clang_version < 16) and ('--force' not in args):
+		text = "{red}Error: clang version 16 or higher is required for TON Node software upgrade.{endc}\n"
+		if clang_version is None:
+			text += "Could not check clang version.\n If you are sure that clang version is 16 or higher, use --force option.\n"
+		text += "For clang update check the following instructions: https://gist.github.com/neodix42/e4b1b68d2d5dd3dec75b5221657f05d7"
+		color_print(text)
+		return
+
 	# Run script
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
@@ -376,6 +385,35 @@ def Upgrade(ton, args):
 		text = "Upgrade - {red}Error{endc}"
 	color_print(text)
 #end define
+
+def get_clang_major_version():
+	try:
+		process = subprocess.run(["clang", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+								 text=True, timeout=3)
+		if process.returncode != 0:
+			return None
+
+		output = process.stdout
+
+		lines = output.strip().split('\n')
+		if not lines:
+			return None
+
+		first_line = lines[0]
+		if "clang version" not in first_line:
+			return None
+
+		version_part = first_line.split("clang version")[1].strip()
+		major_version = version_part.split('.')[0]
+
+		major_version = ''.join(c for c in major_version if c.isdigit())
+
+		if not major_version:
+			return None
+
+		return int(major_version)
+	except Exception:
+		return None
 
 def rollback_to_mtc1(local, ton,  args):
 	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
