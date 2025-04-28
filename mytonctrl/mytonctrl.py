@@ -345,6 +345,11 @@ def Update(local, args):
 #end define
 
 def Upgrade(ton, args):
+	force = False
+	if '--force' in args:
+		force = True
+		args.remove('--force')
+
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
 
@@ -365,11 +370,6 @@ def Upgrade(ton, args):
 	if "/usr/bin/ton" in pubKeyPath:
 		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
 	ton.SetSettings("validatorConsole", validatorConsole)
-
-	force = False
-	if '--force' in args:
-		force = True
-		args.remove('--force')
 
 	clang_version = get_clang_major_version()
 	if (clang_version is None or clang_version < 16) and not force:
