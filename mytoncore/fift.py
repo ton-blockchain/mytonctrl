@@ -19,7 +19,7 @@ class Fift:
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
-		if len(err) > 0:
+		if process.returncode != 0 and len(err) > 0:
 			self.local.add_log("args: {args}".format(args=args), "error")
 			raise Exception("Fift error: {err}".format(err=err))
 		return output
