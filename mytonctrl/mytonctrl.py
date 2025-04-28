@@ -366,8 +366,13 @@ def Upgrade(ton, args):
 		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
 	ton.SetSettings("validatorConsole", validatorConsole)
 
+	force = False
+	if '--force' in args:
+		force = True
+		args.remove('--force')
+
 	clang_version = get_clang_major_version()
-	if (clang_version is None or clang_version < 16) and ('--force' not in args):
+	if (clang_version is None or clang_version < 16) and not force:
 		text = "{red}Error: clang version 16 or higher is required for TON Node software upgrade.{endc}\n"
 		if clang_version is None:
 			text += "Could not check clang version.\n If you are sure that clang version is 16 or higher, use --force option.\n"
