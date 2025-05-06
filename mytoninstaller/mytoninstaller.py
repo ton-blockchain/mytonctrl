@@ -29,7 +29,6 @@ from mytoninstaller.settings import (
 	CreateSymlinks,
 	enable_ls_proxy,
 	enable_ton_storage,
-	enable_ton_storage_provider,
 	EnableMode, ConfigureFromBackup, ConfigureOnlyNode, SetInitialSync
 )
 from mytoninstaller.config import (
@@ -162,7 +161,7 @@ def Enable(local, args):
 		print("'JR' - jsonrpc")
 		print("'THA' - ton-http-api")
 		print("'LSP' - ls-proxy")
-		print("'TSP' - ton-storage + ton-storage-provider")
+		print("'TS' - ton-storage")
 		print("Example: 'enable FN'")
 		return
 	if name == "THA":
@@ -227,9 +226,8 @@ def Event(local, name):
 		enable_ton_http_api(local)
 	if name == "enableLSP":
 		enable_ls_proxy(local)
-	if name == "enableTSP":
+	if name == "enableTS":
 		enable_ton_storage(local)
-		enable_ton_storage_provider(local)
 	if name == "clc":
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]

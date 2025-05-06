@@ -53,8 +53,6 @@ def Event(local, event_name):
         EnableVcEvent(local)
     elif event_name == "validator down":
         ValidatorDownEvent(local)
-    elif event_name == "enable_ton_storage_provider":
-        enable_ton_storage_provider_event(local)
     elif event_name.startswith("enable_mode"):
         enable_mode(local, event_name)
     local.exit()
@@ -82,15 +80,6 @@ def ValidatorDownEvent(local):
     local.add_log("start ValidatorDownEvent function", "debug")
     local.add_log("Validator is down", "error")
 # end define
-
-
-def enable_ton_storage_provider_event(local):
-    config_path = local.db.ton_storage.provider.config_path
-    config = GetConfig(path=config_path)
-    key_bytes = base64.b64decode(config.ProviderKey)
-    ton = MyTonCore(local)
-    ton.import_wallet_with_version(key_bytes[:32], version="v3r2", wallet_name="provider_wallet_001")
-#end define
 
 
 def enable_mode(local, event_name):
