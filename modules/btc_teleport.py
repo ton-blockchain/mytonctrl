@@ -55,20 +55,20 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         user = os.environ.get("USER", "root")
         run_as_root(['bash', script_path, '-n', 'btc_teleport', '-u', user, '-g', user, '-s', start, '-w', self.bin_dir])
 
-    def install(self):
+    def install(self, branch):
         script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/btc_teleport1.sh')
-        exit_code = run_as_root(["bash", script_path, "-s", '/usr/src', "-r", self.repo_name])
+        exit_code = run_as_root(["bash", script_path, "-s", '/usr/src', "-r", self.repo_name, "-b", branch])
         if exit_code != 0:
             raise Exception('Failed to install btc_teleport')
         script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/btc_teleport2.sh')
         subprocess.run(["bash", script_path, "-s", self.src_dir])
 
-    def init(self, reinstall=False):
+    def init(self, reinstall=False, branch: str = 'master'):
         if os.path.exists(self.src_dir) and not reinstall:
             return
         self.local.add_log('Installing btc_teleport', 'info')
         os.makedirs(self.keystore_path, mode=0o700, exist_ok=True)
-        self.install()
+        self.install(branch)
         self.create_env_file()
         self.add_daemon()
         self.local.add_log('Installed btc_teleport', 'info')

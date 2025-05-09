@@ -1,12 +1,14 @@
 REPO=""
 SRC_DIR=""
 USER=$(logname)
+BRANCH=master
 
-while getopts s:r: flag
+while getopts s:r:b: flag
 do
 	case "${flag}" in
 		s) SRC_DIR=${OPTARG};;
     r) REPO=${OPTARG};;
+    b) BRANCH=${OPTARG};;
     *) echo "Flag -${flag} is not recognized. Aborting"; exit 1 ;;
 	esac
 done
@@ -27,6 +29,8 @@ REPO_URL=https://github.com/RSquad/${REPO}.git
 cd $SRC_DIR || exit 1
 rm -rf $REPO
 git clone $REPO_URL
+cd $REPO && git checkout $BRANCH
+cd ..
 
 chown -R $USER:$USER $REPO
 
