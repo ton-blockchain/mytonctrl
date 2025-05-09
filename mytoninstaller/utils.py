@@ -30,6 +30,11 @@ def stop_service(local, service_name:str):
 	subprocess.run(args)
 #end define
 
+def disable_service(local, service_name: str):
+	local.add_log(f"Disable {service_name} service", "debug")
+	args = ["systemctl", "disable", service_name]
+	subprocess.run(args)
+
 def StartValidator(local):
 	start_service(local, "validator", sleep=10)
 #end define

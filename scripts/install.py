@@ -34,10 +34,16 @@ def run_cli():
             ignore=lambda x: x["mode"] != "validator",  # do not ask this question if mode is not validator
             choices=["Validator wallet", "Nominator pool", "Single pool", "Liquid Staking", "Skip"],
         ),
+        inquirer.Text(
+            "archive-blocks",
+            message="Do you want to download archive blocks via TON Storage? If yes, provide block seqno to start from or press Enter to skip.",
+            ignore=lambda x: x["mode"] == "validator",
+            validate=lambda _, x: not x or (x.isdigit() and int(x) >= 0),
+        ),
         inquirer.Confirm(
             "dump",
-            message="Do you want to download blockchain's dump? "
-                    "This reduces synchronization time but requires to download a large file",
+            message="Do you want to download latest blockchain's state via TON Storage?",
+            ignore= lambda x: x["archive-blocks"],
         ),
         inquirer.Text(
             "add-shard",
@@ -60,6 +66,7 @@ def parse_args(answers: dict):
     archive_ttl = answers["archive-ttl"]
     add_shard = answers["add-shard"]
     validator_mode = answers["validator-mode"]
+    archive_blocks = answers["archive-blocks"]
     dump = answers["dump"]
 
     res = f' -n {network}'
@@ -71,6 +78,8 @@ def parse_args(answers: dict):
         os.putenv('ARCHIVE_TTL', archive_ttl)  # set env variable
     if add_shard:
         os.putenv('ADD_SHARD', add_shard)
+    if archive_blocks:
+        os.putenv('ARCHIVE_BLOCKS', archive_blocks)
 
     if validator_mode and validator_mode not in ('Skip', 'Validator wallet'):
         if validator_mode == 'Nominator pool':

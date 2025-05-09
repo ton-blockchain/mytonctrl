@@ -1,5 +1,7 @@
 import os
 import os.path
+import time
+
 import psutil
 import base64
 import subprocess
@@ -16,7 +18,8 @@ from mypylib.mypylib import (
 	ip2int,
 	Dict, int2ip
 )
-from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, get_ed25519_pubkey
+from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, get_ed25519_pubkey, \
+	disable_service
 from mytoninstaller.config import SetConfig, GetConfig, get_own_ip, backup_config
 from mytoncore.utils import hex2b64
 
@@ -86,8 +89,9 @@ def FirstNodeSettings(local):
 	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", ton_db_dir, "--ip", addr, "--logname", tonLogPath]
 	subprocess.run(args)
 
-	# Скачать дамп
-	DownloadDump(local)
+	# Download dumps from TON Storage
+	download_archive_from_ts(local)
+	# DownloadDump(local)
 
 	# chown 1
 	local.add_log("Chown ton-work dir", "debug")
@@ -105,6 +109,89 @@ def is_testnet(local):
 	if config['validator']['zero_state']['root_hash'] == testnet_zero_state_root_hash:
 		return True
 	return False
+
+def download_bag(local, bag_id: str):
+	local_ts_url = f"http://127.0.0.1:{local.buffer.ton_storage.api_port}"
+	downloads_path = '/tmp/ts-downloads/'
+
+	resp = requests.post(local_ts_url + '/api/v1/add', json={'bag_id': bag_id, 'download_all': True, 'path': downloads_path})
+	if not resp.json()['ok']:
+		local.add_log("Error adding bag: " + resp.json(), "error")
+		return False
+	resp = requests.get(local_ts_url + f'/api/v1/details?bag_id={bag_id}').json()
+	while not resp['completed']:
+		if resp['size'] == 0:
+			local.add_log(f"STARTING DOWNLOADING {bag_id}", "debug")
+			time.sleep(20)
+			resp = requests.get(local_ts_url + f'/api/v1/details?bag_id={bag_id}').json()
+			continue
+		text = f'DOWNLOADING {bag_id} {round((resp["downloaded"] / resp["size"]) * 100)}% ({resp["downloaded"] / 10**6} / {resp["size"] / 10**6} MB), speed: {resp["download_speed"] / 10**6} MB/s'
+		local.add_log(text, "debug")
+		time.sleep(20)
+		resp = requests.get(local_ts_url + f'/api/v1/details?bag_id={bag_id}').json()
+	local.add_log(f"DOWNLOADED {bag_id}", "debug")
+	return True
+
+
+def download_archive_from_ts(local):
+	archive_block = os.getenv('ARCHIVE_BLOCKS')
+	dump = local.buffer.dump
+	if not archive_block and not dump:
+		return
+
+	enable_ton_storage(local)
+	url = 'https://archival-dump.ton.org/index/mainnet.json'
+	if is_testnet(local):
+		url = 'https://archival-dump.ton.org/index/testnet.json'
+
+	state_bag = {}
+	block_bags = []
+
+	blocks_config = requests.get(url).json()
+	if dump:
+		state_bag = blocks_config['states'][-1]
+	else:
+		for block in blocks_config['blocks']:
+			if block['to'] >= archive_block:
+				block_bags.append(block)
+		for state in blocks_config['states']:
+			state_bag = state
+			if state['at_block'] > archive_block:
+				break
+		if not state_bag or not block_bags:
+			local.add_log("Skip downloading archive blocks: No bags found for the specified block", "error")
+			return
+
+	local.add_log(f"Downloading blockchain state for block {state_bag['at_block']}", "info")
+	if not download_bag(local, state_bag['bag']):
+		local.add_log("Error downloading state bag", "error")
+		return
+	local.add_log("Downloading archive blocks", "info")
+	for bag in block_bags:
+		local.add_log(f"Downloading blocks from {bag['from']} to {bag['to']}", "info")
+		if not download_bag(local, bag['bag']):
+			local.add_log("Error downloading archive bag", "error")
+			return
+	local.add_log(f"Downloading blocks is completed", "info")
+
+	states_dir = local.buffer.ton_db_dir + 'archive/states'
+	blocks_dir = local.buffer.ton_db_dir + 'archive/packages'
+	downloads_path = '/tmp/ts-downloads/'
+
+	os.makedirs(states_dir, exist_ok=True)
+	os.makedirs(blocks_dir, exist_ok=True)
+
+	subprocess.run(f'mv {downloads_path}/{state_bag["bag"]}/state-*/* {states_dir}', shell=True)
+	# subprocess.run(['rm', '-rf', f"{downloads_path}/{state_bag['bag']}"])
+
+	for bag in block_bags:
+		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/packages/* {blocks_dir}', shell=True)
+		# subprocess.run(['rm', '-rf', f"{downloads_path}/{bag['bag']}"])
+	subprocess.run(['rm', '-rf', downloads_path])
+
+	stop_service(local, "ton_storage")  # stop TS
+	disable_service(local, "ton_storage")
+
 
 def DownloadDump(local):
     dump = local.buffer.dump
@@ -635,6 +722,8 @@ def enable_ton_storage(local):
 	# write mconfig
 	local.add_log("write mconfig", "debug")
 	SetConfig(path=mconfig_path, data=mconfig)
+
+	local.buffer.ton_storage = ton_storage
 
 	# start ton_storage
 	start_service(local, bin_name)
