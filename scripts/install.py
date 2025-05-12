@@ -42,8 +42,9 @@ def run_cli():
         ),
         inquirer.Confirm(
             "dump",
-            message="Do you want to download latest blockchain's state via TON Storage?",
-            ignore= lambda x: x["archive-blocks"],
+            message="Do you want to download blockchain's dump? "
+                    "This reduces synchronization time but requires to download a large file",
+            ignore=lambda x: x["archive-blocks"],
         ),
         inquirer.Text(
             "add-shard",

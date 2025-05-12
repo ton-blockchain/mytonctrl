@@ -89,9 +89,8 @@ def FirstNodeSettings(local):
 	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", ton_db_dir, "--ip", addr, "--logname", tonLogPath]
 	subprocess.run(args)
 
-	# Download dumps from TON Storage
+	DownloadDump(local)
 	download_archive_from_ts(local)
-	# DownloadDump(local)
 
 	# chown 1
 	local.add_log("Chown ton-work dir", "debug")
@@ -130,14 +129,34 @@ def download_bag(local, bag_id: str):
 		time.sleep(20)
 		resp = requests.get(local_ts_url + f'/api/v1/details?bag_id={bag_id}').json()
 	local.add_log(f"DOWNLOADED {bag_id}", "debug")
+	requests.post(local_ts_url + '/api/v1/remove', json={'bag_id': bag_id, 'with_files': False})
+	return True
+
+
+def update_init_block(local, seqno: int):
+	local.add_log(f"Editing init block in {local.buffer.global_config_path}", "info")
+	url = f'https://toncenter.com/api/v2/lookupBlock?workchain=-1&shard=-9223372036854775808&seqno={seqno}'
+	if is_testnet(local):
+		url.replace('toncenter.com', 'testnet.toncenter.com')
+	resp = requests.get(url).json()
+	if not resp['ok']:
+		local.add_log("Error getting init block from toncenter", "error")
+		return False
+	with open(local.buffer.global_config_path, 'r') as f:
+		config = json.load(f)
+	config['validator']['init_block']['seqno'] = seqno
+	config['validator']['init_block']['file_hash'] = resp['result']['file_hash']
+	config['validator']['init_block']['root_hash'] = resp['result']['root_hash']
+	with open(local.buffer.global_config_path, 'w') as f:
+		f.write(json.dumps(config, indent=4))
 	return True
 
 
 def download_archive_from_ts(local):
 	archive_block = os.getenv('ARCHIVE_BLOCKS')
-	dump = local.buffer.dump
-	if not archive_block and not dump:
+	if archive_block is None:
 		return
+	archive_block = int(archive_block)
 
 	enable_ton_storage(local)
 	url = 'https://archival-dump.ton.org/index/mainnet.json'
@@ -148,24 +167,24 @@ def download_archive_from_ts(local):
 	block_bags = []
 
 	blocks_config = requests.get(url).json()
-	if dump:
-		state_bag = blocks_config['states'][-1]
-	else:
-		for block in blocks_config['blocks']:
-			if block['to'] >= archive_block:
-				block_bags.append(block)
-		for state in blocks_config['states']:
-			state_bag = state
-			if state['at_block'] > archive_block:
-				break
-		if not state_bag or not block_bags:
-			local.add_log("Skip downloading archive blocks: No bags found for the specified block", "error")
-			return
+	for block in blocks_config['blocks']:
+		if block['to'] >= archive_block:
+			block_bags.append(block)
+	for state in blocks_config['states']:
+		if state['at_block'] > archive_block:
+			break
+		state_bag = state
+	if not state_bag or not block_bags:
+		local.add_log("Skip downloading archive blocks: No bags found for the specified block", "error")
+		return
 
 	local.add_log(f"Downloading blockchain state for block {state_bag['at_block']}", "info")
 	if not download_bag(local, state_bag['bag']):
 		local.add_log("Error downloading state bag", "error")
 		return
+
+	update_init_block(local, state_bag['at_block'])
+
 	local.add_log("Downloading archive blocks", "info")
 	for bag in block_bags:
 		local.add_log(f"Downloading blocks from {bag['from']} to {bag['to']}", "info")
@@ -174,23 +193,27 @@ def download_archive_from_ts(local):
 			return
 	local.add_log(f"Downloading blocks is completed", "info")
 
-	states_dir = local.buffer.ton_db_dir + 'archive/states'
-	blocks_dir = local.buffer.ton_db_dir + 'archive/packages'
+	archive_dir = local.buffer.ton_db_dir + 'archive/'
+	import_dir = local.buffer.ton_db_dir + 'import/'
+	states_dir = archive_dir + '/states'
 	downloads_path = '/tmp/ts-downloads/'
 
 	os.makedirs(states_dir, exist_ok=True)
-	os.makedirs(blocks_dir, exist_ok=True)
 
-	subprocess.run(f'mv {downloads_path}/{state_bag["bag"]}/state-*/* {states_dir}', shell=True)
+	local.add_log("Copying data to node db", "info")
+	subprocess.run(f'cp -a {downloads_path}/{state_bag["bag"]}/state-*/* {states_dir}', shell=True)
 	# subprocess.run(['rm', '-rf', f"{downloads_path}/{state_bag['bag']}"])
-
 	for bag in block_bags:
-		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/packages/* {blocks_dir}', shell=True)
+		subprocess.run(f'cp -a {downloads_path}/{bag["bag"]}/packages {import_dir}', shell=True)
 		# subprocess.run(['rm', '-rf', f"{downloads_path}/{bag['bag']}"])
 	subprocess.run(['rm', '-rf', downloads_path])
 
 	stop_service(local, "ton_storage")  # stop TS
 	disable_service(local, "ton_storage")
+
+	from mytoninstaller.mytoninstaller import set_node_argument
+
+	set_node_argument(local, ['--skip-key-sync'])
 
 
 def DownloadDump(local):
