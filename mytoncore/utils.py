@@ -100,4 +100,4 @@ def parse_db_stats(path: str):
 # end define
 
 def get_hostname():
-    return subprocess.run(["hostname", "-f"], stdout=subprocess.PIPE).stdout.decode().strip()
+    return subprocess.run(["hostname"], stdout=subprocess.PIPE).stdout.decode().strip()

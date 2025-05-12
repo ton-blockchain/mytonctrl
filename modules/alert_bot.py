@@ -322,7 +322,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
             return
         validator_wallet = self.ton.GetValidatorWallet()
         validator_account = self.ton.GetAccount(validator_wallet.addrB64)
-        if validator_account.balance < 10:
+        if validator_account.status != "empty" and validator_account.balance < 10:
             self.send_alert("low_wallet_balance", wallet=validator_wallet.addrB64, balance=validator_account.balance)
 
     def check_efficiency(self):
