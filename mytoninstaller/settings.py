@@ -9,6 +9,8 @@ import requests
 import random
 import json
 import pkg_resources
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 from mypylib.mypylib import (
 	add2systemd,
@@ -109,6 +111,12 @@ def is_testnet(local):
 		return True
 	return False
 
+def download_blocks(local, bag: dict):
+	local.add_log(f"Downloading blocks from {bag['from']} to {bag['to']}", "info")
+	if not download_bag(local, bag['bag']):
+		local.add_log("Error downloading archive bag", "error")
+		return
+
 def download_bag(local, bag_id: str):
 	local_ts_url = f"http://127.0.0.1:{local.buffer.ton_storage.api_port}"
 	downloads_path = '/tmp/ts-downloads/'
@@ -137,7 +145,7 @@ def update_init_block(local, seqno: int):
 	local.add_log(f"Editing init block in {local.buffer.global_config_path}", "info")
 	url = f'https://toncenter.com/api/v2/lookupBlock?workchain=-1&shard=-9223372036854775808&seqno={seqno}'
 	if is_testnet(local):
-		url.replace('toncenter.com', 'testnet.toncenter.com')
+		url = url.replace('toncenter.com', 'testnet.toncenter.com')
 	resp = requests.get(url).json()
 	if not resp['ok']:
 		local.add_log("Error getting init block from toncenter", "error")
@@ -186,11 +194,15 @@ def download_archive_from_ts(local):
 	update_init_block(local, state_bag['at_block'])
 
 	local.add_log("Downloading archive blocks", "info")
-	for bag in block_bags:
-		local.add_log(f"Downloading blocks from {bag['from']} to {bag['to']}", "info")
-		if not download_bag(local, bag['bag']):
-			local.add_log("Error downloading archive bag", "error")
-			return
+	with ThreadPoolExecutor(max_workers=4) as executor:
+		futures = [executor.submit(download_blocks, local, bag) for bag in block_bags]
+		for future in as_completed(futures):
+			try:
+				future.result()
+			except Exception as e:
+				local.add_log(f"Error while downloading blocks: {e}", "error")
+				return
+
 	local.add_log(f"Downloading blocks is completed", "info")
 
 	archive_dir = local.buffer.ton_db_dir + 'archive/'
