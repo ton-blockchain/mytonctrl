@@ -1,3 +1,4 @@
+import datetime
 import os
 import os.path
 import time
@@ -21,7 +22,7 @@ from mypylib.mypylib import (
 	Dict, int2ip
 )
 from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, get_ed25519_pubkey, \
-	disable_service
+	disable_service, is_testnet, get_block_from_toncenter
 from mytoninstaller.config import SetConfig, GetConfig, get_own_ip, backup_config
 from mytoncore.utils import hex2b64
 
@@ -70,7 +71,15 @@ def FirstNodeSettings(local):
 
 	# Прописать автозагрузку
 	cpus = psutil.cpu_count() - 1
+
+	ttl_cmd = ''
+	if archive_ttl == -1 and local.buffer.mode == 'liteserver':
+		archive_ttl = 10**9
+		ttl_cmd = f' --state-ttl {10**9} --permanent-celldb'
+
+
 	cmd = f"{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --archive-ttl {archive_ttl} --verbosity 1"
+	cmd += ttl_cmd
 
 	if os.getenv('ADD_SHARD'):
 		add_shard = os.getenv('ADD_SHARD')
@@ -102,14 +111,6 @@ def FirstNodeSettings(local):
 	# start validator
 	StartValidator(local)
 #end define
-
-def is_testnet(local):
-	testnet_zero_state_root_hash = "gj+B8wb/AmlPk1z1AhVI484rhrUpgSr2oSFIh56VoSg="
-	with open(local.buffer.global_config_path) as f:
-		config = json.load(f)
-	if config['validator']['zero_state']['root_hash'] == testnet_zero_state_root_hash:
-		return True
-	return False
 
 def download_blocks(local, bag: dict):
 	local.add_log(f"Downloading blocks from {bag['from']} to {bag['to']}", "info")
@@ -143,28 +144,36 @@ def download_bag(local, bag_id: str):
 
 def update_init_block(local, seqno: int):
 	local.add_log(f"Editing init block in {local.buffer.global_config_path}", "info")
-	url = f'https://toncenter.com/api/v2/lookupBlock?workchain=-1&shard=-9223372036854775808&seqno={seqno}'
-	if is_testnet(local):
-		url = url.replace('toncenter.com', 'testnet.toncenter.com')
-	resp = requests.get(url).json()
-	if not resp['ok']:
-		local.add_log("Error getting init block from toncenter", "error")
-		return False
+	data = get_block_from_toncenter(local, workchain=-1, seqno=seqno)
 	with open(local.buffer.global_config_path, 'r') as f:
 		config = json.load(f)
 	config['validator']['init_block']['seqno'] = seqno
-	config['validator']['init_block']['file_hash'] = resp['result']['file_hash']
-	config['validator']['init_block']['root_hash'] = resp['result']['root_hash']
+	config['validator']['init_block']['file_hash'] = data['file_hash']
+	config['validator']['init_block']['root_hash'] = data['root_hash']
 	with open(local.buffer.global_config_path, 'w') as f:
 		f.write(json.dumps(config, indent=4))
 	return True
 
 
+def parse_block_value(local, block: str):
+	if block is None:
+		return None
+	if block.isdigit():
+		return int(block)
+	dt = datetime.datetime.strptime(block, "%Y-%m-%d")
+	ts = int(dt.timestamp())
+	data = get_block_from_toncenter(local, workchain=-1, utime=ts)
+	return int(data['seqno'])
+
+
 def download_archive_from_ts(local):
-	archive_block = os.getenv('ARCHIVE_BLOCKS')
-	if archive_block is None:
+	archive_blocks = os.getenv('ARCHIVE_BLOCKS')
+	if archive_blocks is None:
 		return
-	archive_block = int(archive_block)
+	block_from, block_to = archive_blocks, None
+	if len(archive_blocks.split()) > 1:
+		block_from, block_to = archive_blocks.split()
+	block_from, block_to = parse_block_value(local, block_from), parse_block_value(local, block_to)
 
 	enable_ton_storage(local)
 	url = 'https://archival-dump.ton.org/index/mainnet.json'
@@ -175,13 +184,17 @@ def download_archive_from_ts(local):
 	block_bags = []
 
 	blocks_config = requests.get(url).json()
-	for block in blocks_config['blocks']:
-		if block['to'] >= archive_block:
-			block_bags.append(block)
 	for state in blocks_config['states']:
-		if state['at_block'] > archive_block:
+		if state['at_block'] > block_from:
 			break
 		state_bag = state
+	block_from = state_bag['at_block']
+	for block in blocks_config['blocks']:
+		if block['to'] >= block_from:
+			block_bags.append(block)
+		if block_to is not None and block['from'] > block_to:
+			break
+
 	if not state_bag or not block_bags:
 		local.add_log("Skip downloading archive blocks: No bags found for the specified block", "error")
 		return
@@ -226,6 +239,8 @@ def download_archive_from_ts(local):
 	from mytoninstaller.mytoninstaller import set_node_argument
 
 	set_node_argument(local, ['--skip-key-sync'])
+	if block_to is not None:
+		set_node_argument(local, ['--sync-shards-upto', str(block_to)])
 
 
 def DownloadDump(local):
