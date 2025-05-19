@@ -2,12 +2,11 @@ import datetime
 import os
 import subprocess
 import time
-import inquirer
+import questionary
 import requests
 
 
 def get_archive_ttl_message(answers: dict):
-    global default_archive_ttl
     archive_blocks = answers.get('archive-blocks')
     if not archive_blocks and answers['archive-blocks'] != 0:
         return 'Send the number of seconds to keep the block data in the node database. Default is 2592000 (30 days)'
@@ -24,7 +23,7 @@ def get_archive_ttl_message(answers: dict):
         utime = int(datetime.datetime.strptime(block_from, '%Y-%m-%d').timestamp())
     default_archive_ttl = int(time.time() - (utime - datetime.timedelta(days=30).total_seconds()))
     answers['archive-ttl-default'] = default_archive_ttl
-    return f'Send the number of seconds to keep the block data in the node database. Default is {default_archive_ttl} to keep archive blocks from {datetime.datetime.fromtimestamp(utime - datetime.timedelta(days=30).total_seconds())}\nOr send -1 to keep downloaded blocks always (recommended).'
+    return f'Send the number of seconds to keep the block data in the node database.\nSkip to use default: {default_archive_ttl} to keep blocks from provided date for 30 days ({datetime.datetime.fromtimestamp(utime - datetime.timedelta(days=30).total_seconds())})\nOr send -1 to keep downloaded blocks always (recommended).'
 
 
 def is_valid_date_format(date_str):
@@ -35,77 +34,114 @@ def is_valid_date_format(date_str):
         return False
 
 
-def validate_archive_blocks(_, value):
+def validate_archive_blocks(value):
     if not value:
         return True
     parts = value.split()
     if len(parts) > 2:
-        return False
+        return "Too many parameters provided"
 
     for part in parts:
         if part.isdigit() and int(part) < 0:
-            return False
-        elif not is_valid_date_format(part):
-            return False
+            return "Block number cannot be negative"
+        elif not part.isdigit() and not is_valid_date_format(part):
+            return "Incorrect date format, use YYYY-MM-DD"
+    return True
+
+
+def validate_http_url(value):
+    if not value.startswith("http"):
+        return "URL must start with http"
+    return True
+
+
+def validate_digits(value):
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return "Input must be a number"
+
+
+def validate_shard_format(value):
+    if not value:
+        return True
+    for shard in value.split():
+        if ":" not in shard:
+            return "Each shard must be in format <workchain>:<shard>"
     return True
 
 
 def run_cli():
-    questions = [
-        inquirer.List(
-            "mode",
-            message="Select installation mode (More on https://docs.ton.org/participate/nodes/node-types)",
-            choices=["validator", "liteserver"],
-        ),
-        inquirer.List(
-            "network",
-            message="Select network",
-            choices=["Mainnet", "Testnet", "Other"],
-        ),
-        inquirer.Text(
-            "config",
-            message="Provide network config uri",
-            ignore=lambda x: x["network"] != "Other",  # do not ask this question if network is not 'Other'
-            validate=lambda _, x: x.startswith("http"),
-        ),
-        inquirer.List(
-            "validator-mode",
-            message="Select mode for validator usage. You can skip and set up this later",
-            ignore=lambda x: x["mode"] != "validator",  # do not ask this question if mode is not validator
+    mode = questionary.select(
+        "Select installation mode (More on https://docs.ton.org/participate/nodes/node-types)",
+        choices=["validator", "liteserver"],
+    ).unsafe_ask()
+
+    network = questionary.select(
+        "Select network",
+        choices=["Mainnet", "Testnet", "Other"],
+    ).unsafe_ask()
+
+    config = None
+    if network == "Other":
+        config = questionary.text(
+            "Provide network config uri",
+            validate=validate_http_url
+        ).unsafe_ask()
+
+    validator_mode = None
+    if mode == "validator":
+        validator_mode = questionary.select(
+            "Select mode for validator usage. You can set up this later",
             choices=["Validator wallet", "Nominator pool", "Single pool", "Liquid Staking", "Skip"],
-        ),
-        inquirer.Text(
-            "archive-blocks",
-            message="Do you want to download archive blocks via TON Storage? Press Enter to skip.\n"
-                    "If yes, provide block seqno or date to start from and (optionally) block seqno or date to end with (send 0 to download all blocks and setup full archive node).\n"
-                    "Examples: `30850000`, `10000000 10200000`, `2025-01-01`, `2025-01-01 2025-01-30`",
-            ignore=lambda x: x["mode"] == "validator",
-            validate=validate_archive_blocks,
-        ),
-        inquirer.Text(
-            "archive-ttl",
-            message=get_archive_ttl_message,
-            ignore=lambda x: x["mode"] != "liteserver",  # do not ask this question if mode is not liteserver
-            validate=lambda _, x: not x or x.isdigit(),  # must be empty string or a number
-            # default=get_default_archive_ttl
-        ),
-        inquirer.Confirm(
-            "dump",
-            message="Do you want to download blockchain's dump? "
-                    "This reduces synchronization time but requires to download a large file",
-            ignore=lambda x: x["archive-blocks"],
-        ),
-        inquirer.Text(
-            "add-shard",
-            message="Set shards node will sync. Skip to sync all shards. "
-                    "Format: <workchain>:<shard>. Divide multiple shards with space. "
-                    "Example: `0:2000000000000000 0:6000000000000000`",
-            validate=lambda _, x: not x or all([":" in i for i in x.split()])
-        )
-    ]
+        ).unsafe_ask()
 
-    answers = inquirer.prompt(questions)
+    archive_blocks = None
+    if mode != "validator":
+        archive_blocks = questionary.text(
+            "Do you want to download archive blocks via TON Storage? Press Enter to skip.\n"
+            "If yes, provide block seqno or date to start from and (optionally) block seqno or date to end with (send 0 to download all blocks and setup full archive node).\n"
+            "Examples: `30850000`, `10000000 10200000`, `2025-01-01`, `2025-01-01 2025-01-30`",
+            validate=validate_archive_blocks
+        ).unsafe_ask()
 
+    archive_ttl = None
+    if mode == "liteserver":
+        temp_answers = {
+            'archive-blocks': archive_blocks,
+            'network': network
+        }
+        archive_ttl = questionary.text(
+            get_archive_ttl_message(temp_answers),
+            validate=validate_digits
+        ).unsafe_ask()
+
+    dump = None
+    if not archive_blocks:
+        dump = questionary.confirm(
+            "Do you want to download blockchain's dump? "
+            "This reduces synchronization time but requires to download a large file"
+        ).unsafe_ask()
+
+    add_shard = questionary.text(
+        "Set shards node will sync. Skip to sync all shards. "
+        "Format: <workchain>:<shard>. Divide multiple shards with space. "
+        "Example: `0:2000000000000000 0:6000000000000000`",
+        validate=validate_shard_format
+    ).unsafe_ask()
+
+    answers = {
+        "mode": mode,
+        "network": network,
+        "config": config,
+        "validator-mode": validator_mode,
+        "archive-blocks": archive_blocks,
+        "archive-ttl": archive_ttl,
+        "dump": dump,
+        "add-shard": add_shard
+    }
+    print(answers)
     return answers
 
 
@@ -149,7 +185,11 @@ def parse_args(answers: dict):
 
 
 def main():
-    answers = run_cli()
+    try:
+        answers = run_cli()
+    except KeyboardInterrupt:
+        print("\nInstallation cancelled by user")
+        return
     command = parse_args(answers)
     # subprocess.run('bash scripts/install.sh ' + command, shell=True)
     print('bash install.sh ' + command)
