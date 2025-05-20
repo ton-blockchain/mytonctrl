@@ -118,15 +118,37 @@ def download_blocks(local, bag: dict):
 		local.add_log("Error downloading archive bag", "error")
 		return
 
-def download_bag(local, bag_id: str):
+
+def download_master_blocks(local, bag: dict):
+	local.add_log(f"Downloading master blocks from {bag['from']} to {bag['to']}", "info")
+	if not download_bag(local, bag['bag'], download_all=False):
+		local.add_log("Error downloading master bag", "error")
+		return
+
+
+def download_bag(local, bag_id: str, download_all: bool = True):
+	indexes = []
 	local_ts_url = f"http://127.0.0.1:{local.buffer.ton_storage.api_port}"
 	downloads_path = '/tmp/ts-downloads/'
 
-	resp = requests.post(local_ts_url + '/api/v1/add', json={'bag_id': bag_id, 'download_all': True, 'path': downloads_path})
+	resp = requests.post(local_ts_url + '/api/v1/add', json={'bag_id': bag_id, 'download_all': download_all, 'path': downloads_path})
 	if not resp.json()['ok']:
 		local.add_log("Error adding bag: " + resp.json(), "error")
 		return False
 	resp = requests.get(local_ts_url + f'/api/v1/details?bag_id={bag_id}').json()
+	if not download_all:
+		while not resp['header_loaded']:
+			time.sleep(1)
+			resp = requests.get(local_ts_url + f'/api/v1/details?bag_id={bag_id}').json()
+		for f in resp['files']:
+			if ':' not in f['name']:  # do not download shardblock packs
+				indexes.append(f['index'])
+		resp = requests.post(local_ts_url + '/api/v1/add', json={'bag_id': bag_id, 'download_all': download_all, 'path': downloads_path, 'files': indexes})
+		if not resp.json()['ok']:
+			local.add_log("Error adding bag: " + resp.json(), "error")
+			return False
+		time.sleep(5)
+		resp = requests.get(local_ts_url + f'/api/v1/details?bag_id={bag_id}').json()
 	while not resp['completed']:
 		if resp['size'] == 0:
 			local.add_log(f"STARTING DOWNLOADING {bag_id}", "debug")
@@ -174,6 +196,7 @@ def download_archive_from_ts(local):
 	if len(archive_blocks.split()) > 1:
 		block_from, block_to = archive_blocks.split()
 	block_from, block_to = parse_block_value(local, block_from), parse_block_value(local, block_to)
+	block_from = max(0, block_from - 100)  # to download previous package as node may require some blocks from it
 
 	enable_ton_storage(local)
 	url = 'https://archival-dump.ton.org/index/mainnet.json'
@@ -182,6 +205,7 @@ def download_archive_from_ts(local):
 
 	state_bag = {}
 	block_bags = []
+	master_block_bags = []
 
 	blocks_config = requests.get(url).json()
 	for state in blocks_config['states']:
@@ -189,11 +213,17 @@ def download_archive_from_ts(local):
 			break
 		state_bag = state
 	block_from = state_bag['at_block']
+	completed = False
 	for block in blocks_config['blocks']:
+		if completed:
+			master_block_bags.append(block)
+			continue
+		if block_to is not None and block['from'] > block_to:
+			completed = True
+			master_block_bags.append(block)
+			continue
 		if block['to'] >= block_from:
 			block_bags.append(block)
-		if block_to is not None and block['from'] > block_to:
-			break
 
 	if not state_bag or not block_bags:
 		local.add_log("Skip downloading archive blocks: No bags found for the specified block", "error")
@@ -209,6 +239,7 @@ def download_archive_from_ts(local):
 	local.add_log("Downloading archive blocks", "info")
 	with ThreadPoolExecutor(max_workers=4) as executor:
 		futures = [executor.submit(download_blocks, local, bag) for bag in block_bags]
+		futures += [executor.submit(download_master_blocks, local, bag) for bag in master_block_bags]
 		for future in as_completed(futures):
 			try:
 				future.result()
@@ -224,6 +255,7 @@ def download_archive_from_ts(local):
 	downloads_path = '/tmp/ts-downloads/'
 
 	os.makedirs(states_dir, exist_ok=True)
+	os.makedirs(import_dir, exist_ok=True)
 
 	local.add_log("Copying data to node db", "info")
 	subprocess.run(f'cp -a {downloads_path}/{state_bag["bag"]}/state-*/* {states_dir}', shell=True)
