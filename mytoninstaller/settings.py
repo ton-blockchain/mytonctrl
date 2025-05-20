@@ -147,7 +147,7 @@ def download_bag(local, bag_id: str, download_all: bool = True):
 		if not resp.json()['ok']:
 			local.add_log("Error adding bag: " + resp.json(), "error")
 			return False
-		time.sleep(5)
+		time.sleep(3)
 		resp = requests.get(local_ts_url + f'/api/v1/details?bag_id={bag_id}').json()
 	while not resp['completed']:
 		if resp['size'] == 0:
@@ -251,17 +251,17 @@ def download_archive_from_ts(local):
 
 	archive_dir = local.buffer.ton_db_dir + 'archive/'
 	import_dir = local.buffer.ton_db_dir + 'import/'
+	os.makedirs(import_dir, exist_ok=True)
 	states_dir = archive_dir + '/states'
 	downloads_path = '/tmp/ts-downloads/'
 
 	os.makedirs(states_dir, exist_ok=True)
 	os.makedirs(import_dir, exist_ok=True)
 
-	local.add_log("Copying data to node db", "info")
-	subprocess.run(f'cp -a {downloads_path}/{state_bag["bag"]}/state-*/* {states_dir}', shell=True)
+	subprocess.run(f'mv {downloads_path}/{state_bag["bag"]}/state-*/* {states_dir}', shell=True)
 	# subprocess.run(['rm', '-rf', f"{downloads_path}/{state_bag['bag']}"])
-	for bag in block_bags:
-		subprocess.run(f'cp -a {downloads_path}/{bag["bag"]}/packages {import_dir}', shell=True)
+	for bag in block_bags + master_block_bags:
+		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/packages/*/* {import_dir}', shell=True)
 		# subprocess.run(['rm', '-rf', f"{downloads_path}/{bag['bag']}"])
 	subprocess.run(['rm', '-rf', downloads_path])
 
