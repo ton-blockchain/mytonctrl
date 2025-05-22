@@ -1320,9 +1320,9 @@ class MyTonCore():
 
 		if stake is None and usePool and not is_single_nominator:
 			stake = account.balance - 20
-		if stake is None and useController:
+		elif stake is None and useController:
 			stake = account.balance - 50
-		if stake is None:
+		elif stake is None:
 			sp = stakePercent / 100
 			if sp > 1 or sp < 0:
 				self.local.add_log("Wrong stakePercent value. Using default stake.", "warning")
