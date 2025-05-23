@@ -188,6 +188,12 @@ def parse_block_value(local, block: str):
 	return int(data['seqno'])
 
 
+def process_hardforks(local):
+
+	pass
+
+
+
 def download_archive_from_ts(local):
 	archive_blocks = os.getenv('ARCHIVE_BLOCKS')
 	if archive_blocks is None:
@@ -273,6 +279,33 @@ def download_archive_from_ts(local):
 	set_node_argument(local, ['--skip-key-sync'])
 	if block_to is not None:
 		set_node_argument(local, ['--sync-shards-upto', str(block_to)])
+
+	with open(local.buffer.global_config_path, 'r') as f:
+		c = json.loads(f.read())
+	if c['validator']['hardforks'] and c['validator']['hardforks'][-1]['seqno'] > block_from:
+		run_process_hardforks(local, block_from)
+
+
+def run_process_hardforks(local, from_seqno: int):
+	script_path = os.path.join(local.buffer.mtc_src_dir, 'mytoninstaller', 'scripts', 'process_hardforks.py')
+	log_path = "/tmp/process_hardforks_logs.txt"
+	log_file = open(log_path, "a")
+
+	p = subprocess.Popen([
+	        "python3", script_path,
+	        "--from-seqno", str(from_seqno),
+	        "--config-path", local.buffer.global_config_path,
+	        # "--bin", local.buffer.ton_bin_dir + "validator-engine-console/validator-engine-console",
+	        # "--client", local.buffer.keys_dir + "client",
+	        # "--server", local.buffer.keys_dir + "server.pub",
+	        # "--address", "127.0.0.1:"
+	    ],
+		stdout=log_file,
+		stderr=log_file,
+		stdin=subprocess.DEVNULL,
+		start_new_session=True  # run in background
+	)
+	local.add_log(f"process_hardforks process is running in background, PID: {p.pid}, log file: {log_path}", "info")
 
 
 def DownloadDump(local):

@@ -93,11 +93,13 @@ def Refresh(local):
 	ton_work_dir = "/var/ton-work/"
 	ton_bin_dir = bin_dir + "ton/"
 	ton_src_dir = src_dir + "ton/"
+	mtc_src_dir = src_dir + "mytonctrl/"
 	local.buffer.bin_dir = bin_dir
 	local.buffer.src_dir = src_dir
 	local.buffer.ton_work_dir = ton_work_dir
 	local.buffer.ton_bin_dir = ton_bin_dir
 	local.buffer.ton_src_dir = ton_src_dir
+	local.buffer.mtc_src_dir = mtc_src_dir
 	ton_db_dir = ton_work_dir + "db/"
 	keys_dir = ton_work_dir + "keys/"
 	local.buffer.ton_db_dir = ton_db_dir
