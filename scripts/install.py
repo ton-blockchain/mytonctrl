@@ -55,7 +55,9 @@ def validate_http_url(value):
     return True
 
 
-def validate_digits(value):
+def validate_digits_or_empty(value):
+    if value == "":
+        return True
     try:
         int(value)
         return True
@@ -114,7 +116,7 @@ def run_cli():
         }
         archive_ttl = questionary.text(
             get_archive_ttl_message(temp_answers),
-            validate=validate_digits
+            validate=validate_digits_or_empty
         ).unsafe_ask()
 
     dump = None
@@ -131,6 +133,10 @@ def run_cli():
         validate=validate_shard_format
     ).unsafe_ask()
 
+    background = questionary.confirm(
+        "Do you want to run MyTonCtrl installation in the background?"
+    ).unsafe_ask()
+
     answers = {
         "mode": mode,
         "network": network,
@@ -139,13 +145,14 @@ def run_cli():
         "archive-blocks": archive_blocks,
         "archive-ttl": archive_ttl,
         "dump": dump,
-        "add-shard": add_shard
+        "add-shard": add_shard,
+        "background": background
     }
     print(answers)
     return answers
 
 
-def parse_args(answers: dict):
+def run_install(answers: dict) -> list:
     mode = answers["mode"]
     network = answers["network"].lower()
     config = answers["config"]
@@ -154,18 +161,23 @@ def parse_args(answers: dict):
     validator_mode = answers["validator-mode"]
     archive_blocks = answers["archive-blocks"]
     dump = answers["dump"]
+    background = answers["background"]
 
-    res = f' -n {network}'
+    command = ['bash', 'install.sh']
+    args = f' -n {network}'
+
+    user = os.environ.get("SUDO_USER") or os.environ.get("USER")
+    args += f' -u {user}'
 
     if network not in ('mainnet', 'testnet'):
-        res += f' -c {config}'
+        args += f' -c {config}'
 
     if archive_ttl:
-        os.putenv('ARCHIVE_TTL', archive_ttl)  # set env variable
+        os.environ['ARCHIVE_TTL'] = archive_ttl  # set env variable
     if add_shard:
-        os.putenv('ADD_SHARD', add_shard)
+        os.environ['ADD_SHARD'] = add_shard
     if archive_blocks:
-        os.putenv('ARCHIVE_BLOCKS', archive_blocks)
+        os.environ['ARCHIVE_BLOCKS'] = archive_blocks
 
     if validator_mode and validator_mode not in ('Skip', 'Validator wallet'):
         if validator_mode == 'Nominator pool':
@@ -174,14 +186,34 @@ def parse_args(answers: dict):
             validator_mode = 'single-nominator'
         elif validator_mode == 'Liquid Staking':
             validator_mode = 'liquid-staking'
-        res += f' -m {validator_mode}'
+        args += f' -m {validator_mode}'
     else:
-        res += f' -m {mode}'
+        args += f' -m {mode}'
 
     if dump:
-        res += ' -d'
+        args += ' -d'
 
-    return res
+    log = None
+    stdin = None
+    if background:
+        os.environ['PYTHONUNBUFFERED'] = '1'
+        log = open("mytonctrl_installation.log", "a")
+        stdin=subprocess.DEVNULL
+        command = ['nohup'] + command
+    command += args.split()
+
+    print(command)
+
+    process = subprocess.Popen(
+        command,
+        stdout=log,
+        stderr=log,
+        stdin=stdin,
+    )
+    if not background:
+        process.wait()
+    if background:
+        print("="*100 + f"\nRunning installation in the background. Check './mytonctrl_installation.log' for progress. PID: {process.pid}\n" + "="*100)
 
 
 def main():
@@ -190,10 +222,7 @@ def main():
     except KeyboardInterrupt:
         print("\nInstallation cancelled by user")
         return
-    command = parse_args(answers)
-    # subprocess.run('bash scripts/install.sh ' + command, shell=True)
-    print('bash install.sh ' + command)
-    subprocess.run(['bash', 'install.sh'] + command.split())
+    run_install(answers)
 
 
 if __name__ == '__main__':

@@ -269,7 +269,7 @@ def download_archive_from_ts(local):
 	for bag in block_bags + master_block_bags:
 		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/packages/*/* {import_dir}', shell=True)
 		# subprocess.run(['rm', '-rf', f"{downloads_path}/{bag['bag']}"])
-	subprocess.run(['rm', '-rf', downloads_path])
+	subprocess.run(['rm', '-rf', downloads_path + '*'])
 
 	stop_service(local, "ton_storage")  # stop TS
 	disable_service(local, "ton_storage")
