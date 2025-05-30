@@ -602,6 +602,35 @@ def check_initial_sync(local, ton):
         return
 
 
+def gc_import(local, ton):
+    if not ton.local.db.get('importGc', False):
+        return
+    local.add_log("GC import is running", "debug")
+    import_path = '/var/ton-work/db/import'
+    files = os.listdir(import_path)
+    if not files:
+        local.add_log("No files left to import", "debug")
+        ton.local.db['importGc'] = False
+        return
+    try:
+        status = ton.GetValidatorStatus()
+        node_seqno = int(status.shardclientmasterchainseqno)
+    except Exception as e:
+        local.add_log(f"Failed to get shardclientmasterchainseqno: {e}", "warning")
+        return
+    removed = 0
+    for file in files:
+        file_seqno = int(file.split('.')[1])
+        if node_seqno > file_seqno + 101:
+            try:
+                os.remove(os.path.join(import_path, file))
+                removed += 1
+            except PermissionError:
+                local.add_log(f"Failed to remove file {file}: Permission denied", "error")
+                continue
+    local.add_log(f"Removed {removed} import files up to {node_seqno} seqno", "debug")
+
+
 def General(local):
     local.add_log("start General function", "debug")
     ton = MyTonCore(local)
@@ -641,6 +670,9 @@ def General(local):
 
     if ton.in_initial_sync():
         local.start_cycle(check_initial_sync, sec=120, args=(local, ton))
+
+    if ton.local.db.get('importGc'):
+        local.start_cycle(gc_import, sec=300, args=(local, ton))
 
     thr_sleep()
 # end define

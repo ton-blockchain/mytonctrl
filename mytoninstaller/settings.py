@@ -269,7 +269,7 @@ def download_archive_from_ts(local):
 	for bag in block_bags + master_block_bags:
 		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/packages/*/* {import_dir}', shell=True)
 		# subprocess.run(['rm', '-rf', f"{downloads_path}/{bag['bag']}"])
-	subprocess.run(['rm', '-rf', downloads_path + '*'])
+	subprocess.run(f'rm -rf {downloads_path}*', shell=True)
 
 	stop_service(local, "ton_storage")  # stop TS
 	disable_service(local, "ton_storage")
@@ -284,6 +284,13 @@ def download_archive_from_ts(local):
 		c = json.loads(f.read())
 	if c['validator']['hardforks'] and c['validator']['hardforks'][-1]['seqno'] > block_from:
 		run_process_hardforks(local, block_from)
+
+	local.add_log(f"Changing permissions on imported files", "info")
+	subprocess.run(["chmod", "o+w", import_dir])
+	mconfig_path = local.buffer.mconfig_path
+	mconfig = GetConfig(path=mconfig_path)
+	mconfig.importGc = True
+	SetConfig(path=mconfig_path, data=mconfig)
 
 
 def run_process_hardforks(local, from_seqno: int):

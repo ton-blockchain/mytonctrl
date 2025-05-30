@@ -46,6 +46,9 @@ def validate_archive_blocks(value):
             return "Block number cannot be negative"
         elif not part.isdigit() and not is_valid_date_format(part):
             return "Incorrect date format, use YYYY-MM-DD"
+    if len(parts) == 2 and parts[1].isdigit() and parts[0].isdigit():
+        if int(parts[1]) < int(parts[0]):
+            return "End block seqno cannot be less than start block seqno"
     return True
 
 
