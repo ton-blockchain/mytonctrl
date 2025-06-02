@@ -2,6 +2,7 @@ import datetime
 import os
 import os.path
 import time
+import typing
 
 import psutil
 import base64
@@ -121,12 +122,12 @@ def download_blocks(local, bag: dict):
 
 def download_master_blocks(local, bag: dict):
 	local.add_log(f"Downloading master blocks from {bag['from']} to {bag['to']}", "info")
-	if not download_bag(local, bag['bag'], download_all=False):
+	if not download_bag(local, bag['bag'], download_all=False, download_file=lambda f: ':' not in f['name']):
 		local.add_log("Error downloading master bag", "error")
 		return
 
 
-def download_bag(local, bag_id: str, download_all: bool = True):
+def download_bag(local, bag_id: str, download_all: bool = True, download_file: typing.Callable = None):
 	indexes = []
 	local_ts_url = f"http://127.0.0.1:{local.buffer.ton_storage.api_port}"
 	downloads_path = '/tmp/ts-downloads/'
@@ -141,7 +142,7 @@ def download_bag(local, bag_id: str, download_all: bool = True):
 			time.sleep(1)
 			resp = requests.get(local_ts_url + f'/api/v1/details?bag_id={bag_id}').json()
 		for f in resp['files']:
-			if ':' not in f['name']:  # do not download shardblock packs
+			if download_file(f):
 				indexes.append(f['index'])
 		resp = requests.post(local_ts_url + '/api/v1/add', json={'bag_id': bag_id, 'download_all': download_all, 'path': downloads_path, 'files': indexes})
 		if not resp.json()['ok']:
@@ -241,8 +242,9 @@ def download_archive_from_ts(local):
 		return
 
 	update_init_block(local, state_bag['at_block'])
+	estimated_size = len(block_bags) * 4 * 2**30 + len(master_block_bags) * 4 * 2**30 * 0.2  # 4 GB per bag, 20% for master blocks
 
-	local.add_log("Downloading archive blocks", "info")
+	local.add_log(f"Downloading archive blocks. Rough estimate total blocks size is {estimated_size / 2**30} GB", "info")
 	with ThreadPoolExecutor(max_workers=4) as executor:
 		futures = [executor.submit(download_blocks, local, bag) for bag in block_bags]
 		futures += [executor.submit(download_master_blocks, local, bag) for bag in master_block_bags]
