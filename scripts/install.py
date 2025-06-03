@@ -63,6 +63,8 @@ def validate_digits_or_empty(value):
         return True
     try:
         int(value)
+        if int(value) != -1 and int(value) <= 0:
+            return "Input must be a positive number"
         return True
     except ValueError:
         return "Input must be a number"
@@ -121,6 +123,8 @@ def run_cli():
             get_archive_ttl_message(temp_answers),
             validate=validate_digits_or_empty
         ).unsafe_ask()
+        if not archive_ttl and 'archive-ttl-default' in temp_answers:
+            archive_ttl = temp_answers['archive-ttl-default']
 
     dump = None
     if not archive_blocks:
@@ -159,7 +163,7 @@ def run_install(answers: dict) -> list:
     mode = answers["mode"]
     network = answers["network"].lower()
     config = answers["config"]
-    archive_ttl = answers["archive-ttl"] or answers.get("archive-ttl-default")
+    archive_ttl = answers["archive-ttl"]
     add_shard = answers["add-shard"]
     validator_mode = answers["validator-mode"]
     archive_blocks = answers["archive-blocks"]
