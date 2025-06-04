@@ -269,7 +269,7 @@ def download_archive_from_ts(local):
 	subprocess.run(f'mv {downloads_path}/{state_bag["bag"]}/state-*/* {states_dir}', shell=True)
 	# subprocess.run(['rm', '-rf', f"{downloads_path}/{state_bag['bag']}"])
 	for bag in block_bags + master_block_bags:
-		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/packages/*/* {import_dir}', shell=True)
+		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/*/*/* {import_dir}', shell=True)
 		# subprocess.run(['rm', '-rf', f"{downloads_path}/{bag['bag']}"])
 	subprocess.run(f'rm -rf {downloads_path}*', shell=True)
 
