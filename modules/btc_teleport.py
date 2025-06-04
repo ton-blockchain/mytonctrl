@@ -9,6 +9,9 @@ from mypylib.mypylib import run_as_root, color_print
 
 class BtcTeleportModule(MtcModule):
 
+    COORDINATOR_ADDRESS = 'EQD43RtdAQ_Y8nl86SqzxjlL_-rAvdZiBDk_s7OTF-oRxmwo'
+    CONFIGURATOR_ADDRESS = 'kQBV_cc8tD2lr2oogPOp1VCyP5m1xzdAZ77H3oM_Tix60dPP'
+
     def __init__(self, ton, local, *args, **kwargs):
         super().__init__(ton, local, *args, **kwargs)
         self.keystore_path = self.ton.local.buffer.my_work_dir + '/btc_oracle_keystore'
@@ -36,7 +39,7 @@ btc teleport service (`systemctl restart btc_teleport`) or contact validators su
             self.local.add_log(warning_text, 'warning')
         text = f"""
 COMMON_TON_CONFIG={config_path}
-COMMON_TON_CONTRACT_COORDINATOR=EQD43RtdAQ_Y8nl86SqzxjlL_-rAvdZiBDk_s7OTF-oRxmwo
+COMMON_TON_CONTRACT_COORDINATOR={self.COORDINATOR_ADDRESS}
 ORACLE_STANDALONE_MODE=false
 ORACLE_KEYSTORE_PATH={self.keystore_path}
 ORACLE_VALIDATOR_ENGINE_CONSOLE_PATH={self.ton.validatorConsole.appPath}

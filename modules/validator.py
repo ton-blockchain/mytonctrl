@@ -20,6 +20,28 @@ class ValidatorModule(MtcModule):
             self.ton.VoteOffer(offerHash)
         color_print("VoteOffer - {green}OK{endc}")
 
+    def vote_offer_btc_teleport(self, args):
+        if len(args) == 0:
+            color_print("{red}Bad args. Usage:{endc} vote_offer_btc_teleport <offer-hash> [offer-hash-2 offer-hash-3 ...]")
+            return
+        from modules.btc_teleport import BtcTeleportModule
+        coordinator_addr = BtcTeleportModule.CONFIGURATOR_ADDRESS
+        wallet = self.ton.GetValidatorWallet(mode="vote")
+        validator_key = self.ton.GetValidatorKey()
+        validator_pubkey_b64 = self.ton.GetPubKeyBase64(validator_key)
+        validator_index = self.ton.GetValidatorIndex()
+        for offer_hash in args:
+            # offer = self.GetOffer(offerHash)
+            # if validatorIndex in offer.get("votedValidators"):
+            #     self.local.add_log("Proposal already has been voted", "debug")
+            #     return
+            request_hash = self.ton.CreateConfigProposalRequest(offer_hash, validator_index)
+            validator_signature = self.ton.GetValidatorSignature(validator_key, request_hash)
+            path = self.ton.SignProposalVoteRequestWithValidator(offer_hash, validator_index, validator_pubkey_b64,
+                                                                 validator_signature)
+            path = self.ton.SignBocWithWallet(wallet, path, coordinator_addr, 1.5)
+            self.ton.SendFile(path, wallet)
+
     def vote_election_entry(self, args):
         from mytoncore.functions import Elections
         Elections(self.ton.local, self.ton)
@@ -104,6 +126,7 @@ class ValidatorModule(MtcModule):
 
     def add_console_commands(self, console):
         console.AddItem("vo", self.vote_offer, self.local.translate("vo_cmd"))
+        console.AddItem("vote_offer_btc_teleport", self.vote_offer_btc_teleport, self.local.translate("vote_offer_btc_teleport_cmd"))
         console.AddItem("ve", self.vote_election_entry, self.local.translate("ve_cmd"))
         console.AddItem("vc", self.vote_complaint, self.local.translate("vc_cmd"))
         console.AddItem("check_ef", self.check_efficiency, self.local.translate("check_ef_cmd"))
