@@ -49,6 +49,10 @@ def FirstNodeSettings(local):
 		archive_ttl = int(os.getenv('ARCHIVE_TTL'))
 	else:
 		archive_ttl = 2592000 if local.buffer.mode == 'liteserver' else 86400
+	state_ttl = None
+	if os.getenv('STATE_TTL'):
+		state_ttl = int(os.getenv('STATE_TTL'))
+		archive_ttl -= state_ttl
 
 	# Проверить конфигурацию
 	if os.path.isfile(vconfig_path):
@@ -74,12 +78,15 @@ def FirstNodeSettings(local):
 	cpus = psutil.cpu_count() - 1
 
 	ttl_cmd = ''
-	if archive_ttl == -1 and local.buffer.mode == 'liteserver':
+	if archive_ttl == -1:
 		archive_ttl = 10**9
-		ttl_cmd = f' --state-ttl {10**9} --permanent-celldb'
+		state_ttl = 10**9
+		ttl_cmd += f' --permanent-celldb'
+	if state_ttl is not None:
+		ttl_cmd += f' --state-ttl {state_ttl}'
+	ttl_cmd += f' --archive-ttl {archive_ttl}'
 
-
-	cmd = f"{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --archive-ttl {archive_ttl} --verbosity 1"
+	cmd = f"{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --verbosity 1"
 	cmd += ttl_cmd
 
 	if os.getenv('ADD_SHARD'):
@@ -189,12 +196,6 @@ def parse_block_value(local, block: str):
 	return int(data['seqno'])
 
 
-def process_hardforks(local):
-
-	pass
-
-
-
 def download_archive_from_ts(local):
 	archive_blocks = os.getenv('ARCHIVE_BLOCKS')
 	if archive_blocks is None:
@@ -203,7 +204,7 @@ def download_archive_from_ts(local):
 	if len(archive_blocks.split()) > 1:
 		block_from, block_to = archive_blocks.split()
 	block_from, block_to = parse_block_value(local, block_from), parse_block_value(local, block_to)
-	block_from = max(0, block_from - 100)  # to download previous package as node may require some blocks from it
+	block_from = max(1, block_from - 100)  # to download previous package as node may require some blocks from it
 
 	enable_ton_storage(local)
 	url = 'https://archival-dump.ton.org/index/mainnet.json'
@@ -244,7 +245,7 @@ def download_archive_from_ts(local):
 	update_init_block(local, state_bag['at_block'])
 	estimated_size = len(block_bags) * 4 * 2**30 + len(master_block_bags) * 4 * 2**30 * 0.2  # 4 GB per bag, 20% for master blocks
 
-	local.add_log(f"Downloading archive blocks. Rough estimate total blocks size is {estimated_size / 2**30} GB", "info")
+	local.add_log(f"Downloading archive blocks. Rough estimate total blocks size is {int(estimated_size / 2**30)} GB", "info")
 	with ThreadPoolExecutor(max_workers=4) as executor:
 		futures = [executor.submit(download_blocks, local, bag) for bag in block_bags]
 		futures += [executor.submit(download_master_blocks, local, bag) for bag in master_block_bags]
@@ -255,7 +256,7 @@ def download_archive_from_ts(local):
 				local.add_log(f"Error while downloading blocks: {e}", "error")
 				return
 
-	local.add_log(f"Downloading blocks is completed", "info")
+	local.add_log(f"Downloading blocks is completed, moving files", "info")
 
 	archive_dir = local.buffer.ton_db_dir + 'archive/'
 	import_dir = local.buffer.ton_db_dir + 'import/'
