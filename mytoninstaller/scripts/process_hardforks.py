@@ -61,7 +61,7 @@ args = parser.parse_args()
 config_path = args.config_path
 binary = args.bin
 client = args.client
-server = args.server,
+server = args.server
 address = args.address
 from_seqno = args.from_seqno
 
