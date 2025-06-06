@@ -53,8 +53,6 @@ def Event(local, event_name):
         EnableVcEvent(local)
     elif event_name == "validator down":
         ValidatorDownEvent(local)
-    elif event_name == "enable_ton_storage_provider":
-        enable_ton_storage_provider_event(local)
     elif event_name.startswith("enable_mode"):
         enable_mode(local, event_name)
     local.exit()
@@ -82,15 +80,6 @@ def ValidatorDownEvent(local):
     local.add_log("start ValidatorDownEvent function", "debug")
     local.add_log("Validator is down", "error")
 # end define
-
-
-def enable_ton_storage_provider_event(local):
-    config_path = local.db.ton_storage.provider.config_path
-    config = GetConfig(path=config_path)
-    key_bytes = base64.b64decode(config.ProviderKey)
-    ton = MyTonCore(local)
-    ton.import_wallet_with_version(key_bytes[:32], version="v3r2", wallet_name="provider_wallet_001")
-#end define
 
 
 def enable_mode(local, event_name):
@@ -613,6 +602,35 @@ def check_initial_sync(local, ton):
         return
 
 
+def gc_import(local, ton):
+    if not ton.local.db.get('importGc', False):
+        return
+    local.add_log("GC import is running", "debug")
+    import_path = '/var/ton-work/db/import'
+    files = os.listdir(import_path)
+    if not files:
+        local.add_log("No files left to import", "debug")
+        ton.local.db['importGc'] = False
+        return
+    try:
+        status = ton.GetValidatorStatus()
+        node_seqno = int(status.shardclientmasterchainseqno)
+    except Exception as e:
+        local.add_log(f"Failed to get shardclientmasterchainseqno: {e}", "warning")
+        return
+    removed = 0
+    for file in files:
+        file_seqno = int(file.split('.')[1])
+        if node_seqno > file_seqno + 101:
+            try:
+                os.remove(os.path.join(import_path, file))
+                removed += 1
+            except PermissionError:
+                local.add_log(f"Failed to remove file {file}: Permission denied", "error")
+                continue
+    local.add_log(f"Removed {removed} import files up to {node_seqno} seqno", "debug")
+
+
 def General(local):
     local.add_log("start General function", "debug")
     ton = MyTonCore(local)
@@ -652,6 +670,9 @@ def General(local):
 
     if ton.in_initial_sync():
         local.start_cycle(check_initial_sync, sec=120, args=(local, ton))
+
+    if ton.local.db.get('importGc'):
+        local.start_cycle(gc_import, sec=300, args=(local, ton))
 
     thr_sleep()
 # end define

@@ -62,7 +62,8 @@ SETTINGS = {
     'auto_backup': Setting('validator', None, 'Make validator backup every election'),
     'auto_backup_path': Setting('validator', '/tmp/mytoncore/auto_backups/', 'Path to store auto-backups'),
     'prometheus_url': Setting('prometheus', None, 'Prometheus pushgateway url'),
-    'onlyNode': Setting(None, None, 'MyTonCtrl will work only for collecting validator telemetry (if `sendTelemetry` is True), without participating in Elections and etc.')
+    'onlyNode': Setting(None, None, 'MyTonCtrl will work only for collecting validator telemetry (if `sendTelemetry` is True), without participating in Elections and etc.'),
+    'importGc': Setting(None, None, 'Delete imported archive blocks files. Restart mytoncore to apply this setting'),
 }
 
 

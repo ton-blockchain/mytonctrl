@@ -29,7 +29,6 @@ from mytoninstaller.settings import (
 	CreateSymlinks,
 	enable_ls_proxy,
 	enable_ton_storage,
-	enable_ton_storage_provider,
 	EnableMode, ConfigureFromBackup, ConfigureOnlyNode, SetInitialSync
 )
 from mytoninstaller.config import (
@@ -94,11 +93,13 @@ def Refresh(local):
 	ton_work_dir = "/var/ton-work/"
 	ton_bin_dir = bin_dir + "ton/"
 	ton_src_dir = src_dir + "ton/"
+	mtc_src_dir = src_dir + "mytonctrl/"
 	local.buffer.bin_dir = bin_dir
 	local.buffer.src_dir = src_dir
 	local.buffer.ton_work_dir = ton_work_dir
 	local.buffer.ton_bin_dir = ton_bin_dir
 	local.buffer.ton_src_dir = ton_src_dir
+	local.buffer.mtc_src_dir = mtc_src_dir
 	ton_db_dir = ton_work_dir + "db/"
 	keys_dir = ton_work_dir + "keys/"
 	local.buffer.ton_db_dir = ton_db_dir
@@ -162,7 +163,7 @@ def Enable(local, args):
 		print("'JR' - jsonrpc")
 		print("'THA' - ton-http-api")
 		print("'LSP' - ls-proxy")
-		print("'TSP' - ton-storage + ton-storage-provider")
+		print("'TS' - ton-storage")
 		print("Example: 'enable FN'")
 		return
 	if name == "THA":
@@ -227,9 +228,8 @@ def Event(local, name):
 		enable_ton_http_api(local)
 	if name == "enableLSP":
 		enable_ls_proxy(local)
-	if name == "enableTSP":
+	if name == "enableTS":
 		enable_ton_storage(local)
-		enable_ton_storage_provider(local)
 	if name == "clc":
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]
