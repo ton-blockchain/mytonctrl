@@ -174,9 +174,12 @@ def download_bag(local, bag_id: str, download_all: bool = True, download_file: t
 
 def update_init_block(local, seqno: int):
 	local.add_log(f"Editing init block in {local.buffer.global_config_path}", "info")
-	data = get_block_from_toncenter(local, workchain=-1, seqno=seqno)
 	with open(local.buffer.global_config_path, 'r') as f:
 		config = json.load(f)
+	if seqno != 0:
+		data = get_block_from_toncenter(local, workchain=-1, seqno=seqno)
+	else:
+		data = config['validator']['zero_state']
 	config['validator']['init_block']['seqno'] = seqno
 	config['validator']['init_block']['file_hash'] = data['file_hash']
 	config['validator']['init_block']['root_hash'] = data['root_hash']
