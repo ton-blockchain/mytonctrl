@@ -140,9 +140,14 @@
 		"zh_TW": "投票支持優惠"
 	},
 	"vote_offer_btc_teleport_cmd": {
-		"en": "Vote for BTC teleport offer",
+		"en": "Vote for BTC teleport proposal",
 		"ru": "Голосовать за предложение BTC Teleport",
 		"zh_TW": "投票支持 BTC Teleport 優惠"
+	},
+	"print_offers_btc_teleport_list_cmd": {
+		"en": "Show BTC teleport proposals list",
+		"ru": "Показать список предложений BTC Teleport",
+		"zh_TW": "顯示 BTC Teleport 優惠列表"
 	},
 	"od_cmd": {
 		"en": "Show offer diff",

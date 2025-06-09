@@ -1,10 +1,11 @@
+import json
 import os
 import subprocess
 
 import pkg_resources
 
 from modules.module import MtcModule
-from mypylib.mypylib import run_as_root, color_print
+from mypylib.mypylib import run_as_root, color_print, bcolors, print_table
 
 
 class BtcTeleportModule(MtcModule):
@@ -81,6 +82,83 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/remove_btc_teleport.sh')
         return run_as_root(["bash", script_path] + args)
 
+    def get_offers_btc_teleport(self):
+        self.local.add_log("start get_offers_btc_teleport function", "debug")
+        cmd = f"runmethodfull {self.CONFIGURATOR_ADDRESS} list_proposals"
+        result = self.ton.liteClient.Run(cmd)
+        raw_offers = self.ton.Result2List(result)
+        raw_offers = raw_offers[0]
+        config34 = self.ton.GetConfig34()
+        total_weight = config34.get("totalWeight")
+        offers = []
+        for offer in raw_offers:
+            if len(offer) == 0:
+                continue
+            item = {}
+            hash = str(offer[0])
+            item["hash"] = hash
+            item["price"] = offer[1]
+            item["proposal"] = offer[2]
+            item["votedValidators"] = offer[3]
+            weight_remaining = offer[4]
+            item["weightRemaining"] = weight_remaining
+            item["vset_id"] = offer[5]
+            item["creator"] = offer[6]
+            required_weight = total_weight * 3 / 4
+            if len(item["votedValidators"]) == 0:
+                weight_remaining = required_weight
+            available_weight = required_weight - weight_remaining
+            item["weightRemaining"] = weight_remaining
+            item["approvedPercent"] = round(available_weight / total_weight * 100, 3)
+            item["isPassed"] = (weight_remaining < 0)
+            offers.append(item)
+        return offers
+
+    def vote_offer_btc_teleport(self, args):
+        if len(args) == 0:
+            color_print("{red}Bad args. Usage:{endc} vote_offer_btc_teleport <offer-hash> [offer-hash-2 offer-hash-3 ...]")
+            return
+        wallet = self.ton.GetValidatorWallet(mode="vote")
+        validator_key = self.ton.GetValidatorKey()
+        validator_pubkey_b64 = self.ton.GetPubKeyBase64(validator_key)
+        validator_index = self.ton.GetValidatorIndex()
+        for offer_hash in args:
+            # offer = self.GetOffer(offerHash)
+            # if validatorIndex in offer.get("votedValidators"):
+            #     self.local.add_log("Proposal already has been voted", "debug")
+            #     return
+            request_hash = self.ton.CreateConfigProposalRequest(offer_hash, validator_index)
+            validator_signature = self.ton.GetValidatorSignature(validator_key, request_hash)
+            path = self.ton.SignProposalVoteRequestWithValidator(offer_hash, validator_index, validator_pubkey_b64,
+                                                                 validator_signature)
+            path = self.ton.SignBocWithWallet(wallet, path, self.CONFIGURATOR_ADDRESS, 1.5)
+            self.ton.SendFile(path, wallet)
+
+    def print_offers_btc_teleport_list(self, args):
+        data = self.get_offers_btc_teleport()
+        if not data:
+            print("No data")
+            return
+        if "--json" in args:
+            text = json.dumps(data, indent=2)
+            print(text)
+            return
+        table = [["Hash", "Votes", "Approved", "Is passed"]]
+        for item in data:
+            hash = item.get("hash")
+            voted_validators = len(item.get("votedValidators"))
+            approved_percent_text = f"{item.get('approvedPercent')}%"
+            is_passed = item.get("isPassed")
+            if "hash" not in args:
+                from modules.utilities import UtilitiesModule
+                hash = UtilitiesModule.reduct(hash)
+            if is_passed is True:
+                is_passed = bcolors.green_text("true")
+            if is_passed is False:
+                is_passed = bcolors.red_text("false")
+            table += [[hash, voted_validators, approved_percent_text, is_passed]]
+        print_table(table)
+
     def remove_btc_teleport(self, args: list):
         if len(args) > 1:
             color_print("{red}Bad args. Usage:{endc} remove_btc_teleport [--force]")
@@ -96,3 +174,5 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
 
     def add_console_commands(self, console):
         console.AddItem("remove_btc_teleport", self.remove_btc_teleport, self.local.translate("remove_btc_teleport_cmd"))
+        console.AddItem("vote_offer_btc_teleport", self.vote_offer_btc_teleport, self.local.translate("vote_offer_btc_teleport_cmd"))
+        console.AddItem("print_offers_btc_teleport_list", self.print_offers_btc_teleport_list, self.local.translate("print_offers_btc_teleport_list_cmd"))
