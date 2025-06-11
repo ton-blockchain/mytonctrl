@@ -11,7 +11,7 @@ from mypylib.mypylib import run_as_root, color_print, bcolors, print_table
 class BtcTeleportModule(MtcModule):
 
     COORDINATOR_ADDRESS = 'EQD43RtdAQ_Y8nl86SqzxjlL_-rAvdZiBDk_s7OTF-oRxmwo'
-    CONFIGURATOR_ADDRESS = 'kQBV_cc8tD2lr2oogPOp1VCyP5m1xzdAZ77H3oM_Tix60dPP'
+    CONFIGURATOR_ADDRESS = 'EQCPL1AFRXtvqIxaYK05EzSCnz5QQRb6UGXp6PAJurFeVQYC'
 
     def __init__(self, ton, local, *args, **kwargs):
         super().__init__(ton, local, *args, **kwargs)
@@ -82,7 +82,30 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/remove_btc_teleport.sh')
         return run_as_root(["bash", script_path] + args)
 
-    def get_offers_btc_teleport(self):
+    def get_save_offers(self):
+        bname = "saveOffersBtcTeleport"
+        save_offers = self.ton.local.db.get(bname)
+        if save_offers is None:
+            save_offers = dict()
+            self.ton.local.db[bname] = save_offers
+        return save_offers
+
+    def auto_vote_offers(self):
+        save_offers = self.get_save_offers()
+        if not save_offers:
+            return
+        current_offers = self.get_offers()
+        for save_offer in list(save_offers.values()):
+            offer_hash = save_offer['hash']
+            if offer_hash not in current_offers:
+                continue
+            offer = current_offers[save_offer['hash']]
+            if offer['isPassed']:
+                save_offers.pop(offer_hash)
+                continue
+            self.vote_offer_btc_teleport([offer['hash']])
+
+    def get_offers(self):
         self.local.add_log("start get_offers_btc_teleport function", "debug")
         cmd = f"runmethodfull {self.CONFIGURATOR_ADDRESS} list_proposals"
         result = self.ton.liteClient.Run(cmd)
@@ -90,13 +113,13 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         raw_offers = raw_offers[0]
         config34 = self.ton.GetConfig34()
         total_weight = config34.get("totalWeight")
-        offers = []
+        offers = {}
         for offer in raw_offers:
             if len(offer) == 0:
                 continue
             item = {}
-            hash = str(offer[0])
-            item["hash"] = hash
+            o_hash = str(offer[0])
+            item["hash"] = o_hash
             item["price"] = offer[1]
             item["proposal"] = offer[2]
             item["votedValidators"] = offer[3]
@@ -108,10 +131,9 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
             if len(item["votedValidators"]) == 0:
                 weight_remaining = required_weight
             available_weight = required_weight - weight_remaining
-            item["weightRemaining"] = weight_remaining
             item["approvedPercent"] = round(available_weight / total_weight * 100, 3)
             item["isPassed"] = (weight_remaining < 0)
-            offers.append(item)
+            offers[o_hash] = item
         return offers
 
     def vote_offer_btc_teleport(self, args):
@@ -123,10 +145,16 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         validator_pubkey_b64 = self.ton.GetPubKeyBase64(validator_key)
         validator_index = self.ton.GetValidatorIndex()
         for offer_hash in args:
-            # offer = self.GetOffer(offerHash)
-            # if validatorIndex in offer.get("votedValidators"):
-            #     self.local.add_log("Proposal already has been voted", "debug")
-            #     return
+            current_offers = self.get_offers()
+            if offer_hash not in current_offers:
+                self.local.add_log("Offer not found, skip", "warning")
+                return
+            offer = current_offers[offer_hash]
+            if validator_index in offer.get("votedValidators"):
+                self.local.add_log("Proposal already has been voted", "debug")
+                return
+            self.get_save_offers()[offer_hash] = offer
+            self.ton.local.save()
             request_hash = self.ton.CreateConfigProposalRequest(offer_hash, validator_index)
             validator_signature = self.ton.GetValidatorSignature(validator_key, request_hash)
             path = self.ton.SignProposalVoteRequestWithValidator(offer_hash, validator_index, validator_pubkey_b64,
@@ -135,7 +163,7 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
             self.ton.SendFile(path, wallet)
 
     def print_offers_btc_teleport_list(self, args):
-        data = self.get_offers_btc_teleport()
+        data = self.get_offers()
         if not data:
             print("No data")
             return
@@ -144,19 +172,19 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
             print(text)
             return
         table = [["Hash", "Votes", "Approved", "Is passed"]]
-        for item in data:
-            hash = item.get("hash")
+        for item in data.values():
+            o_hash = item.get("hash")
             voted_validators = len(item.get("votedValidators"))
             approved_percent_text = f"{item.get('approvedPercent')}%"
             is_passed = item.get("isPassed")
             if "hash" not in args:
                 from modules.utilities import UtilitiesModule
-                hash = UtilitiesModule.reduct(hash)
+                o_hash = UtilitiesModule.reduct(o_hash)
             if is_passed is True:
                 is_passed = bcolors.green_text("true")
             if is_passed is False:
                 is_passed = bcolors.red_text("false")
-            table += [[hash, voted_validators, approved_percent_text, is_passed]]
+            table += [[o_hash, voted_validators, approved_percent_text, is_passed]]
         print_table(table)
 
     def remove_btc_teleport(self, args: list):

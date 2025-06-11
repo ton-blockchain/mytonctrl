@@ -585,6 +585,10 @@ def General(local):
     from modules.prometheus import PrometheusModule
     local.start_cycle(PrometheusModule(ton, local).push_metrics, sec=30, args=())
 
+    from modules.btc_teleport import BtcTeleportModule
+    local.start_cycle(BtcTeleportModule(ton, local).auto_vote_offers, sec=600, args=())
+
+
     thr_sleep()
 # end define
 
