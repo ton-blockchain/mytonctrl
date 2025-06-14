@@ -345,11 +345,6 @@ def Update(local, args):
 #end define
 
 def Upgrade(ton, args):
-	force = False
-	if '--force' in args:
-		force = True
-		args.remove('--force')
-
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
 
@@ -372,13 +367,15 @@ def Upgrade(ton, args):
 	ton.SetSettings("validatorConsole", validatorConsole)
 
 	clang_version = get_clang_major_version()
-	if (clang_version is None or clang_version < 16) and not force:
-		text = "{red}Error: clang version 16 or higher is required for TON Node software upgrade.{endc}\n"
+	if clang_version is None or clang_version < 16:
+		text = "{yellow}Warning: clang version 16 or higher is required for TON Node software upgrade.{endc}\n"
 		if clang_version is None:
 			text += "Could not check clang version.\n If you are sure that clang version is 16 or higher, use --force option.\n"
-		text += "For clang update check the following instructions: https://gist.github.com/neodix42/e4b1b68d2d5dd3dec75b5221657f05d7"
+		text += "For clang update check the following instructions: https://gist.github.com/neodix42/e4b1b68d2d5dd3dec75b5221657f05d7\n"
 		color_print(text)
-		return
+		if input("Continue with upgrade anyway? [Y/n]\n").strip().lower() not in ('y', ''):
+			print('aborted.')
+			return
 
 	# Run script
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
@@ -417,7 +414,8 @@ def get_clang_major_version():
 			return None
 
 		return int(major_version)
-	except Exception:
+	except Exception as e:
+		print(f"Error checking clang version: {type(e)}: {e}")
 		return None
 
 def rollback_to_mtc1(local, ton,  args):
