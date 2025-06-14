@@ -279,6 +279,7 @@ Severity: <code>{alert.severity}</code>
             self.send_welcome_message()
             self.ton.local.db['BotToken'] = args[0]
             self.ton.local.db['ChatId'] = args[1]
+            self.ton.local.save()
             color_print("setup_alert_bot - {green}OK{endc}")
         except Exception as e:
             self.local.add_log(f"Error while sending welcome message: {e}", "error")

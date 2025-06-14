@@ -178,6 +178,7 @@ class MyTonCore():
 		seqno = seqno.replace(' ', '')
 		seqno = parse(seqno, '[', ']')
 		seqno = int(seqno)
+		self.local.add_log(f"GetSeqno: seqno is {seqno}", "debug")
 		return seqno
 	#end define
 

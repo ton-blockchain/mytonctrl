@@ -22,7 +22,7 @@ class LiteClient:
 		if index is not None:
 			index = str(index)
 			args += ["-i", index]
-		elif useLocalLiteServer and self.pubkeyPath and validator_status.out_of_sync and validator_status.out_of_sync < 20:
+		elif useLocalLiteServer and self.pubkeyPath and validator_status.out_of_sync is not None and validator_status.out_of_sync < 20:
 			args = [self.appPath, "--addr", self.addr, "--pub", self.pubkeyPath, "--verbosity", "0", "--cmd", cmd]
 		else:
 			liteServers = self.local.db.get("liteServers")
