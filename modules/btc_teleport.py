@@ -111,8 +111,13 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         result = self.ton.liteClient.Run(cmd)
         raw_offers = self.ton.Result2List(result)
         raw_offers = raw_offers[0]
-        config34 = self.ton.GetConfig34()
-        total_weight = config34.get("totalWeight")
+        validators = self.ton.GetValidatorsList(fast=True)
+        total_weight = 0
+        for v in validators:
+            if v['is_masterchain'] is False:
+                continue
+            total_weight += v['weight']
+
         offers = {}
         for offer in raw_offers:
             if len(offer) == 0:
