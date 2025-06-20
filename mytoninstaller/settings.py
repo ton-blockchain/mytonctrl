@@ -120,24 +120,23 @@ def FirstNodeSettings(local):
 	StartValidator(local)
 #end define
 
-def download_blocks(local, bag: dict):
+def download_blocks(local, bag: dict, downloads_path: str):
 	local.add_log(f"Downloading blocks from {bag['from']} to {bag['to']}", "info")
-	if not download_bag(local, bag['bag']):
+	if not download_bag(local, bag['bag'], downloads_path):
 		local.add_log("Error downloading archive bag", "error")
 		return
 
 
-def download_master_blocks(local, bag: dict):
+def download_master_blocks(local, bag: dict, downloads_path: str):
 	local.add_log(f"Downloading master blocks from {bag['from']} to {bag['to']}", "info")
-	if not download_bag(local, bag['bag'], download_all=False, download_file=lambda f: ':' not in f['name']):
+	if not download_bag(local, bag['bag'], downloads_path, download_all=False, download_file=lambda f: ':' not in f['name']):
 		local.add_log("Error downloading master bag", "error")
 		return
 
 
-def download_bag(local, bag_id: str, download_all: bool = True, download_file: typing.Callable = None):
+def download_bag(local, bag_id: str, downloads_path: str, download_all: bool = True, download_file: typing.Callable = None):
 	indexes = []
 	local_ts_url = f"http://127.0.0.1:{local.buffer.ton_storage.api_port}"
-	downloads_path = '/tmp/ts-downloads/'
 
 	resp = requests.post(local_ts_url + '/api/v1/add', json={'bag_id': bag_id, 'download_all': download_all, 'path': downloads_path})
 	if not resp.json()['ok']:
@@ -201,6 +200,10 @@ def parse_block_value(local, block: str):
 
 def download_archive_from_ts(local):
 	archive_blocks = os.getenv('ARCHIVE_BLOCKS')
+	downloads_path = '/var/ton-work/ts-downloads/'
+	os.makedirs(downloads_path, exist_ok=True)
+	subprocess.run(["chmod", "o+wx", downloads_path])
+
 	if archive_blocks is None:
 		return
 	block_from, block_to = archive_blocks, None
@@ -241,17 +244,18 @@ def download_archive_from_ts(local):
 		return
 
 	local.add_log(f"Downloading blockchain state for block {state_bag['at_block']}", "info")
-	if not download_bag(local, state_bag['bag']):
+	if not download_bag(local, state_bag['bag'], downloads_path):
 		local.add_log("Error downloading state bag", "error")
 		return
+
 
 	update_init_block(local, state_bag['at_block'])
 	estimated_size = len(block_bags) * 4 * 2**30 + len(master_block_bags) * 4 * 2**30 * 0.2  # 4 GB per bag, 20% for master blocks
 
 	local.add_log(f"Downloading archive blocks. Rough estimate total blocks size is {int(estimated_size / 2**30)} GB", "info")
 	with ThreadPoolExecutor(max_workers=4) as executor:
-		futures = [executor.submit(download_blocks, local, bag) for bag in block_bags]
-		futures += [executor.submit(download_master_blocks, local, bag) for bag in master_block_bags]
+		futures = [executor.submit(download_blocks, local, bag, downloads_path) for bag in block_bags]
+		futures += [executor.submit(download_master_blocks, local, bag, downloads_path) for bag in master_block_bags]
 		for future in as_completed(futures):
 			try:
 				future.result()
@@ -265,7 +269,6 @@ def download_archive_from_ts(local):
 	import_dir = local.buffer.ton_db_dir + 'import/'
 	os.makedirs(import_dir, exist_ok=True)
 	states_dir = archive_dir + '/states'
-	downloads_path = '/tmp/ts-downloads/'
 
 	os.makedirs(states_dir, exist_ok=True)
 	os.makedirs(import_dir, exist_ok=True)
@@ -275,7 +278,7 @@ def download_archive_from_ts(local):
 	for bag in block_bags + master_block_bags:
 		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/*/*/* {import_dir}', shell=True)
 		# subprocess.run(['rm', '-rf', f"{downloads_path}/{bag['bag']}"])
-	subprocess.run(f'rm -rf {downloads_path}*', shell=True)
+	subprocess.run(f'rm -rf {downloads_path}', shell=True)
 
 	stop_service(local, "ton_storage")  # stop TS
 	disable_service(local, "ton_storage")
