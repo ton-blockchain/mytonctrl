@@ -178,6 +178,7 @@ class MyTonCore():
 		seqno = seqno.replace(' ', '')
 		seqno = parse(seqno, '[', ']')
 		seqno = int(seqno)
+		self.local.add_log(f"GetSeqno: seqno is {seqno}", "debug")
 		return seqno
 	#end define
 
@@ -2384,9 +2385,8 @@ class MyTonCore():
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
 				continue
 
-			if (vload["id"] >= config32['mainValidators'] and
-				vload["masterBlocksCreated"] + vload["workBlocksCreated"] > 0):
-				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator that created more than zero blocks", "info")
+			if vload["id"] >= config32['mainValidators']:
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator", "info")
 				continue
 
 			# check complaint fine value
@@ -2587,7 +2587,7 @@ class MyTonCore():
 			pseudohash = pubkey + str(electionId)
 			if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create complaints that already created or voted by ourself
 				continue
-			if item['id'] >= config['mainValidators'] and item["masterBlocksCreated"] + item["workBlocksCreated"] > 0:  # create complaints for non-masterchain validators only if they created 0 blocks
+			if item['id'] >= config['mainValidators']:  # do not create complaints for non-masterchain validators
 				continue
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)

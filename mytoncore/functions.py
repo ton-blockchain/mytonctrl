@@ -458,6 +458,7 @@ def Telemetry(local, ton):
     data["vprocess"] = GetValidatorProcessInfo()
     data["dbStats"] = local.try_function(get_db_stats)
     data["nodeArgs"] = local.try_function(get_node_args)
+    data["modes"] = local.try_function(ton.get_modes)
     data["cpuInfo"] = {'cpuName': local.try_function(get_cpu_name), 'virtual': local.try_function(is_host_virtual)}
     data["validatorDiskName"] = local.try_function(get_validator_disk_name)
     data["pings"] = local.try_function(get_pings_values)
