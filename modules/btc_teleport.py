@@ -11,7 +11,7 @@ from mypylib.mypylib import run_as_root, color_print, bcolors, print_table
 class BtcTeleportModule(MtcModule):
 
     COORDINATOR_ADDRESS = 'EQD43RtdAQ_Y8nl86SqzxjlL_-rAvdZiBDk_s7OTF-oRxmwo'
-    CONFIGURATOR_ADDRESS = 'EQCPL1AFRXtvqIxaYK05EzSCnz5QQRb6UGXp6PAJurFeVQYC'
+    CONFIGURATOR_ADDRESS = 'EQAFmcPeyXxpBsX7Y-fuGyDz3tvIMeMr5EXi9WuvFzgGPZSz'
 
     def __init__(self, ton, local, *args, **kwargs):
         super().__init__(ton, local, *args, **kwargs)
