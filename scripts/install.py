@@ -206,7 +206,7 @@ def run_install(answers: dict):
         os.environ['ADD_SHARD'] = add_shard
     if archive_blocks:
         os.environ['ARCHIVE_BLOCKS'] = archive_blocks
-        command += ['-v', 'archive-sync']
+        command += ['-v', 'testnet']
 
     if validator_mode and validator_mode not in ('Skip', 'Validator wallet'):
         if validator_mode == 'Nominator pool':
