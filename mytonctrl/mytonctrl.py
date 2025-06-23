@@ -350,10 +350,7 @@ def Upgrade(ton, args):
 
 	clang_version = get_clang_major_version()
 	if clang_version is None or clang_version < 16:
-		text = "{yellow}Warning: clang version 16 or higher is required for TON Node software upgrade.{endc}\n"
-		if clang_version is None:
-			text += "Could not check clang version.\n If you are sure that clang version is 16 or higher, use --force option.\n"
-		text += "For clang update check the following instructions: https://gist.github.com/neodix42/e4b1b68d2d5dd3dec75b5221657f05d7\n"
+		text = f"{{red}}WARNING: THIS UPGRADE WILL MOST PROBABLY FAIL DUE TO A WRONG CLANG VERSION: {clang_version}, REQUIRED VERSION IS 16. RECOMMENDED TO EXIT NOW AND UPGRADE CLANG AS PER INSTRUCTIONS: https://gist.github.com/neodix42/e4b1b68d2d5dd3dec75b5221657f05d7{{endc}}\n"
 		color_print(text)
 		if input("Continue with upgrade anyway? [Y/n]\n").strip().lower() not in ('y', ''):
 			print('aborted.')
