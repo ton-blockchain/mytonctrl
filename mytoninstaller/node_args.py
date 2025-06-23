@@ -25,7 +25,8 @@ def get_node_args(start_command: str = None):
     for item in node_args:
         if item.startswith('-'):
             key = item
-            result[key] = list()
+            if key not in result:
+                result[key] = []
         else:
             result[key].append(item)
     return result
