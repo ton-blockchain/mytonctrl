@@ -589,7 +589,7 @@ def PrintStatus(local, ton, args):
 
 	if all_status:
 		network_name = ton.GetNetworkName()
-		rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
+		rootWorkchainEnabledTime_int = local.try_function(ton.GetRootWorkchainEnabledTime)
 		config34 = ton.GetConfig34()
 		config36 = ton.GetConfig36()
 		totalValidators = config34["totalValidators"]
