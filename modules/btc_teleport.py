@@ -151,6 +151,10 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         validator_key = self.ton.GetValidatorKey()
         validator_pubkey_b64 = self.ton.GetPubKeyBase64(validator_key)
         validator_index = self.ton.GetValidatorIndex()
+        config34 = self.ton.GetConfig34()
+        if validator_index == -1 or validator_index >= config34['mainValidators']:
+            self.local.add_log("Can not vote for BTC Teleport proposal from non-masterchain validator", "error")
+            return
         for offer_hash in args:
             current_offers = self.get_offers()
             if offer_hash not in current_offers:
