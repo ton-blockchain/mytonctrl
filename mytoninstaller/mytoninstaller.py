@@ -68,7 +68,7 @@ def Init(local, console):
 	console.AddItem("status", inject_globals(Status), "Print TON component status")
 	console.AddItem("set_node_argument", inject_globals(set_node_argument), "Set node argument")
 	console.AddItem("enable", inject_globals(Enable), "Enable some function")
-	console.AddItem("update", inject_globals(Enable), "Update some function: 'JR' - jsonrpc.  Example: 'update JR'") 
+	console.AddItem("update", inject_globals(Enable), "Update some function: 'JR' - jsonrpc.  Example: 'update JR'")
 	console.AddItem("plsc", inject_globals(PrintLiteServerConfig), "Print lite-server config")
 	console.AddItem("clcf", inject_globals(CreateLocalConfigFile), "Create lite-server config file")
 	console.AddItem("print_ls_proxy_config", inject_globals(print_ls_proxy_config), "Print ls-proxy config")
@@ -133,6 +133,8 @@ def Status(local, args):
 	node_args = get_node_args()
 	color_print("{cyan}===[ Node arguments ]==={endc}")
 	for key, value in node_args.items():
+		if len(value) == 0:
+			print(f"{key}")
 		for v in value:
 			print(f"{key}: {v}")
 #end define
