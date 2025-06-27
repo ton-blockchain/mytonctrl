@@ -95,14 +95,15 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         if not save_offers:
             return
         current_offers = self.get_offers()
+        config34 = self.ton.GetConfig34()
         for save_offer in list(save_offers.values()):
             offer_hash = save_offer['hash']
             if offer_hash not in current_offers:
+                if save_offer['ttl'] > config34['endWorkTime']:  # offer is not expired but not found in current offers, so we assume it has been accepted
+                    save_offers.pop(offer_hash)
+                    self.local.add_log(f'Removing offer {offer_hash} from saved offers', 'debug')
                 continue
             offer = current_offers[save_offer['hash']]
-            if offer['isPassed']:
-                save_offers.pop(offer_hash)
-                continue
             self.vote_offer_btc_teleport([offer['hash']])
 
     def get_offers(self):
@@ -143,6 +144,12 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
             offers[o_hash] = item
         return offers
 
+    def add_save_offer(self, offer: dict):
+        config15 = self.ton.GetConfig15()
+        offer['ttl'] = offer['created_at'] + config15['validatorsElectedFor'] * 3  # proposal lives 3 rounds
+        self.get_save_offers()[offer['hash']] = offer
+        self.ton.local.save()
+
     def vote_offer_btc_teleport(self, args):
         if len(args) == 0:
             color_print("{red}Bad args. Usage:{endc} vote_offer_btc_teleport <offer-hash> [offer-hash-2 offer-hash-3 ...]")
@@ -164,8 +171,7 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
             if validator_index in offer.get("votedValidators"):
                 self.local.add_log("Proposal already has been voted", "debug")
                 return
-            self.get_save_offers()[offer_hash] = offer
-            self.ton.local.save()
+            self.add_save_offer(offer)
             request_hash = self.ton.CreateConfigProposalRequest(offer_hash, validator_index)
             validator_signature = self.ton.GetValidatorSignature(validator_key, request_hash)
             path = self.ton.SignProposalVoteRequestWithValidator(offer_hash, validator_index, validator_pubkey_b64,
