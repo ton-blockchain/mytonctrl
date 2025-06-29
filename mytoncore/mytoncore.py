@@ -2495,7 +2495,7 @@ class MyTonCore():
 			end = timestamp - 60
 		if start is None:
 			if fast:
-				start = end - 1000
+				start = max(end - 1000, config.get("startWorkTime"))
 			else:
 				start = config.get("startWorkTime")
 		if past:
