@@ -5,6 +5,8 @@ from mypylib.mypylib import bcolors
 
 
 def timestamp2utcdatetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
+    if timestamp is None:
+        return "n/a"
     datetime = time.gmtime(timestamp)
     result = time.strftime(format, datetime) + ' UTC'
     return result

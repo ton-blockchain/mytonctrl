@@ -53,8 +53,6 @@ def Event(local, event_name):
         EnableVcEvent(local)
     elif event_name == "validator down":
         ValidatorDownEvent(local)
-    elif event_name == "enable_ton_storage_provider":
-        enable_ton_storage_provider_event(local)
     elif event_name.startswith("enable_mode"):
         enable_mode(local, event_name)
     elif event_name == "enable_btc_teleport":
@@ -84,15 +82,6 @@ def ValidatorDownEvent(local):
     local.add_log("start ValidatorDownEvent function", "debug")
     local.add_log("Validator is down", "error")
 # end define
-
-
-def enable_ton_storage_provider_event(local):
-    config_path = local.db.ton_storage.provider.config_path
-    config = GetConfig(path=config_path)
-    key_bytes = base64.b64decode(config.ProviderKey)
-    ton = MyTonCore(local)
-    ton.import_wallet_with_version(key_bytes[:32], version="v3r2", wallet_name="provider_wallet_001")
-#end define
 
 
 def enable_mode(local, event_name):
@@ -292,6 +281,64 @@ def CalculateNetworkStatistics(zerodata, data):
 # end define
 
 
+def save_node_statistics(local, ton):
+    status = ton.GetValidatorStatus(no_cache=True)
+    if status.unixtime is None:
+        return
+    data = {'timestamp': status.unixtime}
+
+    def get_ok_error(value: str):
+        ok, error = value.split()
+        return int(ok.split(':')[1]), int(error.split(':')[1])
+
+    if 'total.collated_blocks.master' in status:
+        master_ok, master_error = get_ok_error(status['total.collated_blocks.master'])
+        shard_ok, shard_error = get_ok_error(status['total.collated_blocks.shard'])
+        data['collated_blocks'] = {
+            'master': {'ok': master_ok, 'error': master_error},
+            'shard': {'ok': shard_ok, 'error': shard_error},
+        }
+    if 'total.validated_blocks.master' in status:
+        master_ok, master_error = get_ok_error(status['total.validated_blocks.master'])
+        shard_ok, shard_error = get_ok_error(status['total.validated_blocks.shard'])
+        data['validated_blocks'] = {
+            'master': {'ok': master_ok, 'error': master_error},
+            'shard': {'ok': shard_ok, 'error': shard_error},
+        }
+    if 'total.ext_msg_check' in status:
+        ok, error = get_ok_error(status['total.ext_msg_check'])
+        data['ext_msg_check'] = {'ok': ok, 'error': error}
+    if 'total.ls_queries_ok' in status and 'total.ls_queries_error' in status:
+        data['ls_queries'] = {}
+        for k in status['total.ls_queries_ok'].split():
+            if k.startswith('TOTAL'):
+                data['ls_queries']['ok'] = int(k.split(':')[1])
+        for k in status['total.ls_queries_error'].split():
+            if k.startswith('TOTAL'):
+                data['ls_queries']['error'] = int(k.split(':')[1])
+    statistics = local.db.get("statistics", dict())
+
+    if time.time() - int(status.start_time) <= 60:  # was node restart <60 sec ago, resetting node statistics
+        statistics['node'] = []
+
+    # statistics['node'] = [stats_from_election_id, stats_from_prev_min, stats_now]
+
+    election_id = ton.GetConfig34()['startWorkTime']
+    if 'node' not in statistics or len(statistics['node']) == 0:
+        statistics['node'] = [None, data]
+    elif len(statistics['node']) < 3:
+        statistics['node'].append(data)
+    if len(statistics['node']) == 3:
+        if statistics['node'][0] is None:
+            if 0 < data['timestamp'] - election_id < 90:
+                statistics['node'][0] = data
+        elif statistics['node'][0]['timestamp'] < election_id:
+            statistics['node'][0] = data
+        statistics['node'] = statistics.get('node', []) + [data]
+        statistics['node'].pop(1)
+    local.db["statistics"] = statistics
+
+
 def ReadTransData(local, scanner):
     transData = local.buffer.transData
     SetToTimeData(transData, scanner.transNum)
@@ -417,6 +464,7 @@ def Telemetry(local, ton):
     data["vprocess"] = GetValidatorProcessInfo()
     data["dbStats"] = local.try_function(get_db_stats)
     data["nodeArgs"] = local.try_function(get_node_args)
+    data["modes"] = local.try_function(ton.get_modes)
     data["cpuInfo"] = {'cpuName': local.try_function(get_cpu_name), 'virtual': local.try_function(is_host_virtual)}
     data["validatorDiskName"] = local.try_function(get_validator_disk_name)
     data["pings"] = local.try_function(get_pings_values)
@@ -550,6 +598,46 @@ def ScanLiteServers(local, ton):
 # end define
 
 
+def check_initial_sync(local, ton):
+    if not ton.in_initial_sync():
+        return
+    validator_status = ton.GetValidatorStatus()
+    if validator_status.initial_sync:
+        return
+    if validator_status.out_of_sync < 20:
+        ton.set_initial_sync_off()
+        return
+
+
+def gc_import(local, ton):
+    if not ton.local.db.get('importGc', False):
+        return
+    local.add_log("GC import is running", "debug")
+    import_path = '/var/ton-work/db/import'
+    files = os.listdir(import_path)
+    if not files:
+        local.add_log("No files left to import", "debug")
+        ton.local.db['importGc'] = False
+        return
+    try:
+        status = ton.GetValidatorStatus()
+        node_seqno = int(status.shardclientmasterchainseqno)
+    except Exception as e:
+        local.add_log(f"Failed to get shardclientmasterchainseqno: {e}", "warning")
+        return
+    removed = 0
+    for file in files:
+        file_seqno = int(file.split('.')[1])
+        if node_seqno > file_seqno + 101:
+            try:
+                os.remove(os.path.join(import_path, file))
+                removed += 1
+            except PermissionError:
+                local.add_log(f"Failed to remove file {file}: Permission denied", "error")
+                continue
+    local.add_log(f"Removed {removed} import files up to {node_seqno} seqno", "debug")
+
+
 def General(local):
     local.add_log("start General function", "debug")
     ton = MyTonCore(local)
@@ -576,6 +664,8 @@ def General(local):
 
     local.start_cycle(ScanLiteServers, sec=60, args=(local, ton,))
 
+    local.start_cycle(save_node_statistics, sec=60, args=(local, ton, ))
+
     from modules.custom_overlays import CustomOverlayModule
     local.start_cycle(CustomOverlayModule(ton, local).custom_overlays, sec=60, args=())
 
@@ -588,6 +678,11 @@ def General(local):
     from modules.btc_teleport import BtcTeleportModule
     local.start_cycle(BtcTeleportModule(ton, local).auto_vote_offers, sec=600, args=())
 
+    if ton.in_initial_sync():
+        local.start_cycle(check_initial_sync, sec=120, args=(local, ton))
+
+    if ton.local.db.get('importGc'):
+        local.start_cycle(gc_import, sec=300, args=(local, ton))
 
     thr_sleep()
 # end define

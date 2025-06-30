@@ -88,9 +88,13 @@ fi
 if [ "${mode}" = "none" ] && [ "$backup" = "none" ]; then  # no mode or backup was provided
     echo "Running cli installer"
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
-    python3 -m pip install --upgrade pip
-    pip3 install inquirer==3.4.0 --break-system-packages
+    if ! command -v pip3 &> /dev/null; then
+        echo "pip not found. Installing pip..."
+        python3 -m pip install --upgrade pip
+    fi
+    pip3 install questionary==2.1.0 --break-system-packages
     python3 install.py
+    pip3 uninstall questionary -y
     exit
 fi
 
@@ -124,7 +128,6 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
     mkdir -p ${SOURCES_DIR}
 fi
 
-
 if [ ! -f ~/.config/pip/pip.conf ]; then  # create pip config
     mkdir -p ~/.config/pip
 cat > ~/.config/pip/pip.conf <<EOF
@@ -132,7 +135,6 @@ cat > ~/.config/pip/pip.conf <<EOF
 break-system-packages = true
 EOF
 fi
-
 
 # check TON components
 file1=${BIN_DIR}/ton/crypto/fift

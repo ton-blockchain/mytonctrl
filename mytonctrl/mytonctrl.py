@@ -147,7 +147,6 @@ def Init(local, ton, console, argv):
 		module.add_console_commands(console)
 
 	console.AddItem("benchmark", inject_globals(run_benchmark), local.translate("benchmark_cmd"))
-	# console.AddItem("activate_ton_storage_provider", inject_globals(activate_ton_storage_provider), local.translate("activate_ton_storage_provider_cmd"))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -177,23 +176,6 @@ def Init(local, ton, console, argv):
 	local.db.config.logLevel = "debug" if console.debug else "info"
 	local.db.config.isLocaldbSaving = False
 	local.run()
-#end define
-
-
-def activate_ton_storage_provider(local, ton, args):
-	wallet_name = "provider_wallet_001"
-	wallet = ton.GetLocalWallet(wallet_name)
-	account = ton.GetAccount(wallet.addrB64)
-	if account.status == "active":
-		color_print("activate_ton_storage_provider - {green}Already activated{endc}")
-		#return
-	ton.ActivateWallet(wallet)
-	destination = "0:7777777777777777777777777777777777777777777777777777777777777777"
-	ton_storage = ton.GetSettings("ton_storage")
-	comment = f"tsp-{ton_storage.provider.pubkey}"
-	flags = ["-n", "-C", comment]
-	ton.MoveCoins(wallet, destination, 0.01, flags=flags)
-	color_print("activate_ton_storage_provider - {green}OK{endc}")
 #end define
 
 
@@ -374,6 +356,14 @@ def Upgrade(local, ton, args: list):
 		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
 	ton.SetSettings("validatorConsole", validatorConsole)
 
+	clang_version = get_clang_major_version()
+	if clang_version is None or clang_version < 16:
+		text = f"{{red}}WARNING: THIS UPGRADE WILL MOST PROBABLY FAIL DUE TO A WRONG CLANG VERSION: {clang_version}, REQUIRED VERSION IS 16. RECOMMENDED TO EXIT NOW AND UPGRADE CLANG AS PER INSTRUCTIONS: https://gist.github.com/neodix42/e4b1b68d2d5dd3dec75b5221657f05d7{{endc}}\n"
+		color_print(text)
+		if input("Continue with upgrade anyway? [Y/n]\n").strip().lower() not in ('y', ''):
+			print('aborted.')
+			return
+
 	# Run script
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
@@ -387,10 +377,43 @@ def Upgrade(local, ton, args: list):
 	color_print(text)
 #end define
 
+
 def upgrade_btc_teleport(local, ton, reinstall=False, branch: str = 'master'):
 	from modules.btc_teleport import BtcTeleportModule
 	module = BtcTeleportModule(ton, local)
 	local.try_function(module.init, args=[reinstall, branch])
+
+
+def get_clang_major_version():
+	try:
+		process = subprocess.run(["clang", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+								 text=True, timeout=3)
+		if process.returncode != 0:
+			return None
+
+		output = process.stdout
+
+		lines = output.strip().split('\n')
+		if not lines:
+			return None
+
+		first_line = lines[0]
+		if "clang version" not in first_line:
+			return None
+
+		version_part = first_line.split("clang version")[1].strip()
+		major_version = version_part.split('.')[0]
+
+		major_version = ''.join(c for c in major_version if c.isdigit())
+
+		if not major_version:
+			return None
+
+		return int(major_version)
+	except Exception as e:
+		print(f"Error checking clang version: {type(e)}: {e}")
+		return None
+
 
 def rollback_to_mtc1(local, ton,  args):
 	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
@@ -455,6 +478,9 @@ def check_disk_usage(local, ton):
 
 def check_sync(local, ton):
 	validator_status = ton.GetValidatorStatus()
+	if validator_status.initial_sync or ton.in_initial_sync():
+		print_warning(local, "initial_sync_warning")
+		return
 	if not validator_status.is_working or validator_status.out_of_sync >= 20:
 		print_warning(local, "sync_warning")
 #end define
@@ -582,7 +608,7 @@ def PrintStatus(local, ton, args):
 
 	if all_status:
 		network_name = ton.GetNetworkName()
-		rootWorkchainEnabledTime_int = ton.GetRootWorkchainEnabledTime()
+		rootWorkchainEnabledTime_int = local.try_function(ton.GetRootWorkchainEnabledTime)
 		config34 = ton.GetConfig34()
 		config36 = ton.GetConfig36()
 		totalValidators = config34["totalValidators"]
@@ -745,11 +771,45 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorStatus_color = GetColorStatus(validatorStatus_bool)
 	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus_color, mytoncoreUptime_text)
 	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus_color, validatorUptime_text)
-	validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less"))
-	master_out_of_sync_text = local.translate("local_status_master_out_of_sync").format(GetColorInt(validator_status.masterchain_out_of_sync, 20, logic="less", ending=" sec"))
-	shard_out_of_sync_text = local.translate("local_status_shard_out_of_sync").format(GetColorInt(validator_status.shardchain_out_of_sync, 5, logic="less", ending=" blocks"))
 
-	validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
+	validator_initial_sync_text = ''
+	validator_out_of_sync_text = ''
+
+	if validator_status.initial_sync:
+		validator_initial_sync_text = local.translate("local_status_validator_initial_sync").format(validator_status['process.initial_sync'])
+	elif ton.in_initial_sync():  # states have been downloaded, now downloading blocks
+		validator_initial_sync_text = local.translate("local_status_validator_initial_sync").format(
+			f'Syncing blocks, last known block was {validator_status.out_of_sync} s ago'
+		)
+	else:
+		validator_out_of_sync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validator_status.out_of_sync, 20, logic="less"))
+		master_out_of_sync_text = local.translate("local_status_master_out_of_sync").format(GetColorInt(validator_status.masterchain_out_of_sync, 20, logic="less", ending=" sec"))
+		shard_out_of_sync_text = local.translate("local_status_shard_out_of_sync").format(GetColorInt(validator_status.shardchain_out_of_sync, 5, logic="less", ending=" blocks"))
+
+	validator_out_of_ser_text = None
+
+	if validator_status.stateserializerenabled:
+		validator_out_of_ser_text = local.translate("local_status_validator_out_of_ser").format(f'{validator_status.out_of_ser} blocks ago')
+
+	active_validator_groups = None
+
+	if ton.using_validator() and validator_status.validator_groups_master and validator_status.validator_groups_shard:
+		active_validator_groups = local.translate("active_validator_groups").format(validator_status.validator_groups_master, validator_status.validator_groups_shard)
+
+	collated, validated = None, None
+	ls_queries = None
+	if ton.using_validator():
+		node_stats = ton.get_node_statistics()
+		if node_stats and 'collated' in node_stats and 'validated' in node_stats:
+			collated = local.translate('collated_blocks').format(node_stats['collated']['ok'], node_stats['collated']['error'])
+			validated = local.translate('validated_blocks').format(node_stats['validated']['ok'], node_stats['validated']['error'])
+		else:
+			collated = local.translate('collated_blocks').format('collecting data...', 'wait for the next validation round')
+			validated = local.translate('validated_blocks').format('collecting data...', 'wait for the next validation round')
+	if ton.using_liteserver():
+		node_stats = ton.get_node_statistics()
+		if node_stats and 'ls_queries' in node_stats:
+			ls_queries = local.translate('ls_queries').format(node_stats['ls_queries']['time'], node_stats['ls_queries']['ok'], node_stats['ls_queries']['error'])
 
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
@@ -809,10 +869,21 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	print(mytoncoreStatus_text)
 	if not is_node_remote:
 		print(validatorStatus_text)
-	print(validator_out_of_sync_text)
-	print(master_out_of_sync_text)
-	print(shard_out_of_sync_text)
-	print(validator_out_of_ser_text)
+	if validator_initial_sync_text:
+		print(validator_initial_sync_text)
+	if validator_out_of_sync_text:
+		print(validator_out_of_sync_text)
+		print(master_out_of_sync_text)
+		print(shard_out_of_sync_text)
+	if validator_out_of_ser_text:
+		print(validator_out_of_ser_text)
+	if active_validator_groups:
+		print(active_validator_groups)
+	if collated and validated:
+		print(collated)
+		print(validated)
+	if ls_queries:
+		print(ls_queries)
 	print(dbStatus_text)
 	print(mtcVersion_text)
 	print(validatorVersion_text)

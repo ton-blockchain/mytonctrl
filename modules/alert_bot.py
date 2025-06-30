@@ -116,6 +116,12 @@ def init_alerts():
             "Found proposals with hashes `{hashes}` that have significant amount of votes, but current validator didn't vote for them. Please check @tonstatus for more details.",
             VALIDATION_PERIOD
         ),
+        "initial_sync_completed": Alert(
+            "info",
+            "Initial sync has been completed (info alert with no sound)",
+            "Node initial sync has been completed",
+            0
+        )
     }
 
 
@@ -134,6 +140,7 @@ class AlertBotModule(MtcModule):
         self.token = None
         self.chat_id = None
         self.last_db_check = 0
+        self.initial_sync = None
 
     def send_message(self, text: str, silent: bool = False, disable_web_page_preview: bool = False):
         if self.token is None:
@@ -207,6 +214,7 @@ Severity: <code>{alert.severity}</code>
         self.wallet = self.ton.GetValidatorWallet().addrB64
         self.ip = self.ton.get_node_ip()
         self.set_global_vars()
+        self.initial_sync = self.ton.in_initial_sync()
         init_alerts()
         self.inited = True
 
@@ -271,6 +279,7 @@ Severity: <code>{alert.severity}</code>
             self.send_welcome_message()
             self.ton.local.db['BotToken'] = args[0]
             self.ton.local.db['ChatId'] = args[1]
+            self.ton.local.save()
             color_print("setup_alert_bot - {green}OK{endc}")
         except Exception as e:
             self.local.add_log(f"Error while sending welcome message: {e}", "error")
@@ -314,7 +323,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
             return
         validator_wallet = self.ton.GetValidatorWallet()
         validator_account = self.ton.GetAccount(validator_wallet.addrB64)
-        if validator_account.balance < 10:
+        if validator_account.status != "empty" and validator_account.balance < 10:
             self.send_alert("low_wallet_balance", wallet=validator_wallet.addrB64, balance=validator_account.balance)
 
     def check_efficiency(self):
@@ -334,12 +343,12 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
 
     def check_validator_working(self):
         validator_status = self.ton.GetValidatorStatus()
-        if not validator_status.is_working:
+        if not self.initial_sync and not validator_status.is_working:
             self.send_alert("service_down")
 
     def check_sync(self):
         validator_status = self.ton.GetValidatorStatus()
-        if validator_status.is_working and validator_status.out_of_sync >= 20:
+        if not self.initial_sync and validator_status.is_working and validator_status.out_of_sync >= 20:
             self.send_alert("out_of_sync", sync=validator_status.out_of_sync)
 
     def check_zero_blocks_created(self):
@@ -435,6 +444,13 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         if need_to_vote:
             self.send_alert("voting", hashes=' '.join(need_to_vote))
 
+    def check_initial_sync(self):
+        if not self.initial_sync:
+            return
+        if not self.ton.in_initial_sync():
+            self.initial_sync = False
+            self.send_alert("initial_sync_completed")
+
     def check_status(self):
         if not self.ton.using_alert_bot():
             return
@@ -453,6 +469,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         self.local.try_function(self.check_stake_sent)
         self.local.try_function(self.check_stake_returned)
         self.local.try_function(self.check_voting)
+        self.local.try_function(self.check_initial_sync)
 
     def add_console_commands(self, console):
         console.AddItem("enable_alert", self.enable_alert, self.local.translate("enable_alert_cmd"))
