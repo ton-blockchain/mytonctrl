@@ -774,7 +774,7 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 
 	active_validator_groups = None
 
-	if ton.using_validator() and validator_status.validator_groups_master and validator_status.validator_groups_shard:
+	if ton.using_validator() and validator_status.validator_groups_master is not None and validator_status.validator_groups_shard is not None:
 		active_validator_groups = local.translate("active_validator_groups").format(validator_status.validator_groups_master, validator_status.validator_groups_shard)
 
 	collated, validated = None, None
