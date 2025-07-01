@@ -3061,17 +3061,17 @@ class MyTonCore():
 		stats = self.local.db.get('statistics', {}).get('node')
 		result = {}
 		if stats is not None and len(stats) == 3 and stats[0] is not None:
-			for k in ['master', 'shard']:
-				result = {
-					'collated': {
-						'ok': 0,
-						'error': 0,
-					},
-					'validated': {
-						'ok': 0,
-						'error': 0,
-					}
+			result = {
+				'collated': {
+					'ok': 0,
+					'error': 0,
+				},
+				'validated': {
+					'ok': 0,
+					'error': 0,
 				}
+			}
+			for k in ['master', 'shard']:
 				collated_ok = stats[2]['collated_blocks'][k]['ok'] - stats[0]['collated_blocks'][k]['ok']
 				collated_error = stats[2]['collated_blocks'][k]['error'] - stats[0]['collated_blocks'][k]['error']
 				validated_ok = stats[2]['validated_blocks'][k]['ok'] - stats[0]['validated_blocks'][k]['ok']
@@ -3088,7 +3088,7 @@ class MyTonCore():
 				result['collated']['error'] += collated_error
 				result['validated']['ok'] += validated_ok
 				result['validated']['error'] += validated_error
-		if stats is not None and len(stats) >= 2 and stats[0] is not None:
+		if stats is not None and len(stats) >= 2 and stats[-2] is not None and stats[-1] is not None:
 			result['ls_queries'] = {
 				'ok': stats[-1]['ls_queries']['ok'] - stats[-2]['ls_queries']['ok'],
 				'error': stats[-1]['ls_queries']['error'] - stats[-2]['ls_queries']['error'],
