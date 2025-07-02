@@ -328,9 +328,11 @@ def save_node_statistics(local, ton):
                 statistics['node'][0] = data
         elif statistics['node'][0]['timestamp'] < election_id:
             statistics['node'][0] = data
-        statistics['node'] = statistics.get('node', []) + [data]
-        statistics['node'].pop(1)
+        temp = statistics.get('node', []) + [data]
+        temp.pop(1)
+        statistics['node'] = temp
     local.db["statistics"] = statistics
+    local.save()
 
 
 def ReadTransData(local, scanner):
