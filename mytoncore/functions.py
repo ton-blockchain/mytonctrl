@@ -317,7 +317,7 @@ def save_node_statistics(local, ton):
 
     # statistics['node'] = [stats_from_election_id, stats_from_prev_min, stats_now]
 
-    election_id = ton.GetConfig34()['startWorkTime']
+    election_id = ton.GetConfig34(no_cache=True)['startWorkTime']
     if 'node' not in statistics or len(statistics['node']) == 0:
         statistics['node'] = [None, data]
     elif len(statistics['node']) < 3:

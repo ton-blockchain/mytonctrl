@@ -930,11 +930,11 @@ class MyTonCore():
 		return config32
 	#end define
 
-	def GetConfig34(self):
+	def GetConfig34(self, no_cache: bool = False):
 		# Get buffer
 		bname = "config34"
-		buff = self.GetFunctionBuffer(bname, timeout=60)
-		if buff:
+		buff = self.GetFunctionBuffer(bname, timeout=10)
+		if buff and not no_cache:
 			return buff
 		#end if
 
