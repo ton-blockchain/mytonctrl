@@ -771,6 +771,14 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorStatus_color = GetColorStatus(validatorStatus_bool)
 	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus_color, mytoncoreUptime_text)
 	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus_color, validatorUptime_text)
+	btc_teleport_status_text = None
+	if ton.using_validator():
+		btc_teleport_status_bool = get_service_status("btc_teleport")
+		btc_teleport_status_uptime = get_service_uptime("btc_teleport")
+		btc_teleport_status_text = local.translate("local_status_btc_teleport_status").format(
+			GetColorStatus(btc_teleport_status_bool),
+			bcolors.green_text(time2human(btc_teleport_status_uptime)) if btc_teleport_status_bool else 'n/a'
+		)
 
 	validator_initial_sync_text = ''
 	validator_out_of_sync_text = ''
@@ -869,6 +877,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	print(mytoncoreStatus_text)
 	if not is_node_remote:
 		print(validatorStatus_text)
+	if btc_teleport_status_text:
+		print(btc_teleport_status_text)
 	if validator_initial_sync_text:
 		print(validator_initial_sync_text)
 	if validator_out_of_sync_text:

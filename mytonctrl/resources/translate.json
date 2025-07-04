@@ -329,6 +329,11 @@
 		"ru": "Статус локального валидатора: {0}, {1}",
 		"zh_TW": "本地驗證者狀態: {0}, {1}"
 	},
+	"local_status_btc_teleport_status": {
+		"en": "BTC Teleport status: {0}, {1}",
+		"ru": "Статус BTC Teleport: {0}, {1}",
+		"zh_TW": "BTC Teleport 狀態: {0}, {1}"
+	},
 	"local_status_validator_initial_sync": {
 		"en": "Local validator initial sync status: {0}",
 		"ru": "Статус начальной синхронизации локального валидатора: {0}",
