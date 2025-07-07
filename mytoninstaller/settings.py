@@ -53,6 +53,8 @@ def FirstNodeSettings(local):
 	if os.getenv('STATE_TTL'):
 		state_ttl = int(os.getenv('STATE_TTL'))
 		archive_ttl -= state_ttl
+	if archive_ttl == 0:
+		archive_ttl = 1  # todo: remove this when archive_ttl==0 will be allowed in node
 
 	# Проверить конфигурацию
 	if os.path.isfile(vconfig_path):
