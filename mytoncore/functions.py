@@ -317,7 +317,7 @@ def save_node_statistics(local, ton):
 
     # statistics['node'] = [stats_from_election_id, stats_from_prev_min, stats_now]
 
-    election_id = ton.GetConfig34()['startWorkTime']
+    election_id = ton.GetConfig34(no_cache=True)['startWorkTime']
     if 'node' not in statistics or len(statistics['node']) == 0:
         statistics['node'] = [None, data]
     elif len(statistics['node']) < 3:
@@ -328,9 +328,11 @@ def save_node_statistics(local, ton):
                 statistics['node'][0] = data
         elif statistics['node'][0]['timestamp'] < election_id:
             statistics['node'][0] = data
-        statistics['node'] = statistics.get('node', []) + [data]
-        statistics['node'].pop(1)
+        temp = statistics.get('node', []) + [data]
+        temp.pop(1)
+        statistics['node'] = temp
     local.db["statistics"] = statistics
+    local.save()
 
 
 def ReadTransData(local, scanner):
