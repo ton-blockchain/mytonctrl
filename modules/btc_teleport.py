@@ -11,7 +11,7 @@ from mypylib.mypylib import run_as_root, color_print, bcolors, print_table
 class BtcTeleportModule(MtcModule):
 
     COORDINATOR_ADDRESS = 'EQD43RtdAQ_Y8nl86SqzxjlL_-rAvdZiBDk_s7OTF-oRxmwo'
-    CONFIGURATOR_ADDRESS = 'EQAFmcPeyXxpBsX7Y-fuGyDz3tvIMeMr5EXi9WuvFzgGPZSz'
+    CONFIGURATOR_ADDRESS = 'EQCY-A1I-jvZF7JnXp9nTKfAnOwVSbFeCpZQ1TfB-BNXXgYp'
 
     def __init__(self, ton, local, *args, **kwargs):
         super().__init__(ton, local, *args, **kwargs)
@@ -135,7 +135,7 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
             item["vset_id"] = offer[6]
             item["creator"] = offer[7]
             item["created_at"] = offer[-1]  # todo: bug in parsing slice in get method output
-            required_weight = total_weight * 3 / 4
+            required_weight = total_weight * 2 / 3
             if len(item["votedValidators"]) == 0:
                 weight_remaining = required_weight
             available_weight = required_weight - weight_remaining
