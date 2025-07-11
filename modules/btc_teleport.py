@@ -104,7 +104,11 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
                     self.local.add_log(f'Removing offer {offer_hash} from saved offers', 'debug')
                 continue
             offer = current_offers[save_offer['hash']]
-            self.vote_offer_btc_teleport([offer['hash']])
+            if offer['created_at'] != save_offer['created_at'] and save_offer['ttl'] > config34['endWorkTime']:  # offer is not expired but has been changed, so it has been accepted and launched again
+                save_offers.pop(offer_hash)
+                self.local.add_log(f'Removing offer {offer_hash} from saved offers', 'debug')
+                continue
+            self.vote_offer_btc_teleport([offer_hash])
 
     def get_offers(self):
         self.local.add_log("start get_offers_btc_teleport function", "debug")
