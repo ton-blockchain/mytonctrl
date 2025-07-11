@@ -801,23 +801,25 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 
 	active_validator_groups = None
 
-	if ton.using_validator() and validator_status.validator_groups_master and validator_status.validator_groups_shard:
+	if ton.using_validator() and validator_status.validator_groups_master is not None and validator_status.validator_groups_shard is not None:
 		active_validator_groups = local.translate("active_validator_groups").format(validator_status.validator_groups_master, validator_status.validator_groups_shard)
 
 	collated, validated = None, None
 	ls_queries = None
-	if ton.using_validator():
-		node_stats = ton.get_node_statistics()
-		if node_stats and 'collated' in node_stats and 'validated' in node_stats:
-			collated = local.translate('collated_blocks').format(node_stats['collated']['ok'], node_stats['collated']['error'])
-			validated = local.translate('validated_blocks').format(node_stats['validated']['ok'], node_stats['validated']['error'])
-		else:
-			collated = local.translate('collated_blocks').format('collecting data...', 'wait for the next validation round')
-			validated = local.translate('validated_blocks').format('collecting data...', 'wait for the next validation round')
-	if ton.using_liteserver():
-		node_stats = ton.get_node_statistics()
-		if node_stats and 'ls_queries' in node_stats:
-			ls_queries = local.translate('ls_queries').format(node_stats['ls_queries']['time'], node_stats['ls_queries']['ok'], node_stats['ls_queries']['error'])
+	node_stats = local.try_function(ton.get_node_statistics)
+	if node_stats is not None:
+		if ton.using_validator():
+			if 'collated' in node_stats and 'validated' in node_stats:
+				collated = local.translate('collated_blocks').format(node_stats['collated']['ok'], node_stats['collated']['error'])
+				validated = local.translate('validated_blocks').format(node_stats['validated']['ok'], node_stats['validated']['error'])
+			else:
+				collated = local.translate('collated_blocks').format('collecting data...', 'wait for the next validation round')
+				validated = local.translate('validated_blocks').format('collecting data...', 'wait for the next validation round')
+		if ton.using_liteserver():
+			if 'ls_queries' in node_stats:
+				ls_queries = local.translate('ls_queries').format(node_stats['ls_queries']['time'], node_stats['ls_queries']['ok'], node_stats['ls_queries']['error'])
+	else:
+		local.add_log("Failed to get node statistics", "warning")
 
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")

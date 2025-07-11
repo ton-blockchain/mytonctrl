@@ -83,7 +83,7 @@ export CCACHE_DISABLE=1
 
 # Update binary
 cd ${bindir}/${repo}
-ls --hide=global.config.json | xargs -d '\n' rm -rf
+ls --hide="*.config.json" | xargs -d '\n' rm -rf
 rm -rf .ninja_*
 memory=$(cat /proc/meminfo | grep MemAvailable | awk '{print $2}')
 cpuNumber=$(cat /proc/cpuinfo | grep "processor" | wc -l)
