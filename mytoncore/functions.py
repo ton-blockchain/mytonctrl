@@ -312,17 +312,25 @@ def save_node_statistics(local, ton):
                 data['ls_queries']['error'] = int(k.split(':')[1])
     statistics = local.db.get("statistics", dict())
 
-    if time.time() - int(status.start_time) <= 60:  # was node restart <60 sec ago, resetting node statistics
+    # if time.time() - int(status.start_time) <= 60:  # was node restart <60 sec ago, resetting node statistics
+    #     statistics['node'] = []
+
+    if 'node' not in statistics:
         statistics['node'] = []
 
-    # statistics['node'] = [stats_from_election_id, stats_from_prev_min, stats_now]
+    if statistics['node']:
+        if int(status.start_time) > statistics['node'][-1]['timestamp']:
+            # node was restarted, reset node statistics
+            statistics['node'] = []
+
+    # statistics['node']: [stats_from_election_id, stats_from_prev_min, stats_now]
 
     election_id = ton.GetConfig34(no_cache=True)['startWorkTime']
-    if 'node' not in statistics or len(statistics['node']) == 0:
+    if len(statistics['node']) == 0:
         statistics['node'] = [None, data]
     elif len(statistics['node']) < 3:
         statistics['node'].append(data)
-    if len(statistics['node']) == 3:
+    elif len(statistics['node']) == 3:
         if statistics['node'][0] is None:
             if 0 < data['timestamp'] - election_id < 90:
                 statistics['node'][0] = data
