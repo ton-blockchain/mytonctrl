@@ -41,6 +41,7 @@ pip3 uninstall -y mytonctrl
 cd ${srcdir}
 cp -rf ${tmpdir}/${repo} ${srcdir}
 cd ${repo} && git checkout ${branch}
+git submodule update
 pip3 install -U .
 
 systemctl daemon-reload
