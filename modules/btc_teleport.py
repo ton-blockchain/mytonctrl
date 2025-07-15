@@ -10,8 +10,8 @@ from mypylib.mypylib import run_as_root, color_print, bcolors, print_table
 
 class BtcTeleportModule(MtcModule):
 
-    COORDINATOR_ADDRESS = 'EQD43RtdAQ_Y8nl86SqzxjlL_-rAvdZiBDk_s7OTF-oRxmwo'
-    CONFIGURATOR_ADDRESS = 'EQAeQjuHAnTEgrGZZPx9M9YXXEZejOD3yOMzF79uiFktorml'
+    COORDINATOR_ADDRESS = 'Ef_q19o4m94xfF-yhYB85Qe6rTHDX-VTSzxBh4XpAfZMaOvk'
+    CONFIGURATOR_ADDRESS = 'EQAR_I_lQm5wnEePggUKfioQUFs1vN1YYkK1Kl3WVAPiCzDZ'
 
     def __init__(self, ton, local, *args, **kwargs):
         super().__init__(ton, local, *args, **kwargs)
@@ -47,7 +47,10 @@ ORACLE_VALIDATOR_ENGINE_CONSOLE_PATH={self.ton.validatorConsole.appPath}
 ORACLE_SERVER_PUBLIC_KEY_PATH={self.ton.validatorConsole.pubKeyPath}
 ORACLE_CLIENT_PRIVATE_KEY_PATH={self.ton.validatorConsole.privKeyPath}
 ORACLE_VALIDATOR_SERVER_ADDR={self.ton.validatorConsole.addr}
-API_CALL_TIMEOUT=30
+ORACLE_DKG_FETCH_PERIOD=15
+ORACLE_EXECUTE_SIGN_PERIOD=15
+ORACLE_SEND_START_DKG_PERIOD=30
+API_CALL_TIMEOUT=15
 LOG_FILE=/var/log/btc_teleport/btc_teleport.log
 """
         with open(env_path, 'w') as f:
