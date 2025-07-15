@@ -173,11 +173,11 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
             current_offers = self.get_offers()
             if offer_hash not in current_offers:
                 self.local.add_log("Offer not found, skip", "warning")
-                return
+                continue
             offer = current_offers[offer_hash]
             if validator_index in offer.get("votedValidators"):
                 self.local.add_log("Proposal already has been voted", "debug")
-                return
+                continue
             self.add_save_offer(offer)
             request_hash = self.ton.CreateConfigProposalRequest(offer_hash, validator_index)
             validator_signature = self.ton.GetValidatorSignature(validator_key, request_hash)
