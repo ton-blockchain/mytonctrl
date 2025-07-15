@@ -139,6 +139,16 @@
 		"ru": "Голосовать за предложение",
 		"zh_TW": "投票支持優惠"
 	},
+	"vote_offer_btc_teleport_cmd": {
+		"en": "Vote for BTC teleport proposal",
+		"ru": "Голосовать за предложение BTC Teleport",
+		"zh_TW": "投票支持 BTC Teleport 優惠"
+	},
+	"print_offers_btc_teleport_list_cmd": {
+		"en": "Show BTC teleport proposals list",
+		"ru": "Показать список предложений BTC Teleport",
+		"zh_TW": "顯示 BTC Teleport 優惠列表"
+	},
 	"od_cmd": {
 		"en": "Show offer diff",
 		"ru": "Показать разницу предложений",
@@ -319,6 +329,11 @@
 		"ru": "Статус локального валидатора: {0}, {1}",
 		"zh_TW": "本地驗證者狀態: {0}, {1}"
 	},
+	"local_status_btc_teleport_status": {
+		"en": "BTC Teleport status: {0}, {1}",
+		"ru": "Статус BTC Teleport: {0}, {1}",
+		"zh_TW": "BTC Teleport 狀態: {0}, {1}"
+	},
 	"local_status_validator_initial_sync": {
 		"en": "Local validator initial sync status: {0}",
 		"ru": "Статус начальной синхронизации локального валидатора: {0}",
@@ -378,6 +393,11 @@
 		"en": "Version validator: {0} ({1})",
 		"ru": "Версия валидатора: {0} ({1})",
 		"zh_TW": "驗證者版本: {0} ({1})"
+	},
+	"local_status_version_teleport": {
+		"en": "Version BTC Teleport: {0} ({1})",
+		"ru": "Версия BTC Teleport: {0} ({1})",
+		"zh_TW": "BTC Teleport 版本: {0} ({1})"
 	},
 	"ton_config_head": {
 		"en": "{cyan}===[ TON network configuration ]==={endc}",
@@ -533,6 +553,11 @@
 		"en": "Setup Telegram Bot for alerts",
 		"ru": "Настроить Telegram Bot для оповещений",
 		"zh_TW": "設置 Telegram Bot 以接收警報"
+	},
+	"remove_btc_teleport_cmd": {
+		"en": "Remove BTC Teleport Oracle",
+		"ru": "Удалить BTC Teleport Oracle",
+		"zh_TW": "刪除 BTC Teleport Oracle"
 	},
 	"benchmark_cmd": {
 		"en": "Run benchmark",

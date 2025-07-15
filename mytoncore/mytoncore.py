@@ -12,6 +12,7 @@ import requests
 from fastcrc import crc16
 
 from modules import MODES
+from modules.btc_teleport import BtcTeleportModule
 from mytoncore.utils import xhex2hex, ng2g
 from mytoncore.liteclient import LiteClient
 from mytoncore.validator_console import ValidatorConsole
@@ -2511,7 +2512,7 @@ class MyTonCore():
 			end = timestamp - 60
 		if start is None:
 			if fast:
-				start = end - 1000
+				start = max(end - 1000, config.get("startWorkTime"))
 			else:
 				start = config.get("startWorkTime")
 		if past:
@@ -3150,6 +3151,7 @@ class MyTonCore():
 			if self.using_liteserver():
 				raise Exception(f'Cannot enable validator mode while liteserver mode is enabled. '
 								f'Use `disable_mode liteserver` first.')
+			BtcTeleportModule(self, self.local).init()
 		if name == 'liquid-staking':
 			from mytoninstaller.settings import enable_ton_http_api
 			enable_ton_http_api(self.local)

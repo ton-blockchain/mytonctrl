@@ -55,6 +55,8 @@ def Event(local, event_name):
         ValidatorDownEvent(local)
     elif event_name.startswith("enable_mode"):
         enable_mode(local, event_name)
+    elif event_name == "enable_btc_teleport":
+        enable_btc_teleport(local)
     local.exit()
 # end define
 
@@ -90,6 +92,10 @@ def enable_mode(local, event_name):
     ton.enable_mode(mode)
 #end define
 
+def enable_btc_teleport(local):
+    ton = MyTonCore(local)
+    from modules.btc_teleport import BtcTeleportModule
+    BtcTeleportModule(ton, local).init(reinstall=True)
 
 def Elections(local, ton):
     use_pool = ton.using_pool()
@@ -678,6 +684,9 @@ def General(local):
 
     from modules.prometheus import PrometheusModule
     local.start_cycle(PrometheusModule(ton, local).push_metrics, sec=30, args=())
+
+    from modules.btc_teleport import BtcTeleportModule
+    local.start_cycle(BtcTeleportModule(ton, local).auto_vote_offers, sec=180, args=())
 
     if ton.in_initial_sync():
         local.start_cycle(check_initial_sync, sec=120, args=(local, ton))

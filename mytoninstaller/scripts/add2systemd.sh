@@ -11,7 +11,7 @@ post="/bin/echo service down"
 user=root
 group=root
 
-while getopts n:s:p:u:g: flag
+while getopts n:s:p:u:g:w: flag
 do
 	case "${flag}" in
 		n) name=${OPTARG};;
@@ -19,6 +19,7 @@ do
     p) post=${OPTARG};;
     u) user=${OPTARG};;
     g) group=${OPTARG};;
+    w) workdir=${OPTARG};;
 	esac
 done
 
@@ -37,7 +38,7 @@ DAEMON_PATH="/etc/systemd/system/${name}.service"
 
 cat <<EOF > $DAEMON_PATH
 [Unit]
-Description = $name service. Created by https://github.com/igroman787/mypylib.
+Description = $name service.
 After = network.target
 
 [Service]
@@ -48,6 +49,7 @@ ExecStart = $start
 ExecStopPost = $post
 User = $user
 Group = $group
+WorkingDirectory = $workdir
 LimitNOFILE = infinity
 LimitNPROC = infinity
 LimitMEMLOCK = infinity
@@ -60,3 +62,4 @@ chmod 664 $DAEMON_PATH
 chmod +x $DAEMON_PATH
 systemctl daemon-reload
 systemctl enable ${name}
+systemctl restart ${name}

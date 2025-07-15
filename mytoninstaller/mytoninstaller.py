@@ -15,7 +15,7 @@ from mypyconsole.mypyconsole import MyPyConsole
 from mytoninstaller.config import GetLiteServerConfig, get_ls_proxy_config
 from mytoninstaller.node_args import get_node_args
 from mytoninstaller.utils import GetInitBlock
-from mytoncore.utils import dict2b64, str2bool, b642dict
+from mytoncore.utils import dict2b64, str2bool, b642dict, b642hex
 
 from mytoninstaller.settings import (
 	FirstNodeSettings,
@@ -196,10 +196,19 @@ def PrintLiteServerConfig(local, args):
 
 
 def CreateLocalConfigFile(local, args):
-	initBlock = GetInitBlock()
-	initBlock_b64 = dict2b64(initBlock)
+	init_block = GetInitBlock()
+	if init_block['rootHash'] is None:
+		local.add_log("Failed to get recent init block. Using init block from global config.", "warning")
+		with open('/usr/bin/ton/global.config.json', 'r') as f:
+			config = json.load(f)
+		config_init_block = config['validator']['init_block']
+		init_block = dict()
+		init_block["seqno"] = config_init_block['seqno']
+		init_block["rootHash"] = b642hex(config_init_block['root_hash'])
+		init_block["fileHash"] = b642hex(config_init_block['file_hash'])
+	init_block_b64 = dict2b64(init_block)
 	user = local.buffer.user or os.environ.get("USER", "root")
-	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "clc", "-i", initBlock_b64]
+	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "clc", "-i", init_block_b64]
 	run_as_root(args)
 #end define
 

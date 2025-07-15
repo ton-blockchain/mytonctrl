@@ -1099,7 +1099,7 @@ def CreateSymlinks(local):
 
 def EnableMode(local):
 	args = ["python3", "-m", "mytoncore", "-e"]
-	if local.buffer.mode and local.buffer.mode != "none":
+	if local.buffer.mode and local.buffer.mode != "none" and not local.buffer.backup:
 		args.append("enable_mode_" + local.buffer.mode)
 	else:
 		return
@@ -1145,6 +1145,10 @@ def ConfigureFromBackup(local):
 			local.add_log("Can't get ip from validator", "error")
 			return
 		set_external_ip(local, node_ip)
+
+	args = ["python3", "-m", "mytoncore", "-e", "enable_btc_teleport"]
+	args = ["su", "-l", local.buffer.user, "-c", ' '.join(args)]
+	subprocess.run(args)
 
 
 def ConfigureOnlyNode(local):
