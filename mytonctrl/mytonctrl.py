@@ -100,6 +100,10 @@ def Init(local, ton, console, argv):
 	module = CustomOverlayModule(ton, local)
 	module.add_console_commands(console)
 
+	from modules.btc_teleport import BtcTeleportModule
+	module = BtcTeleportModule(ton, local)
+	module.add_console_commands(console)
+
 	if ton.using_validator():
 		from modules.validator import ValidatorModule
 		module = ValidatorModule(ton, local)
@@ -326,7 +330,11 @@ def Update(local, args):
 	local.exit()
 #end define
 
-def Upgrade(ton, args):
+def Upgrade(local, ton, args: list):
+	if '--btc-teleport' in args:  # upgrade --btc-teleport [branch]
+		branch = args[args.index('--btc-teleport') + 1] if len(args) > args.index('--btc-teleport') + 1 else 'master'
+		upgrade_btc_teleport(local, ton, reinstall=True, branch=branch)
+		return
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
 
@@ -360,12 +368,21 @@ def Upgrade(ton, args):
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
 	exitCode = run_as_root(runArgs)
+	if ton.using_validator():
+		upgrade_btc_teleport(local, ton)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
 		text = "Upgrade - {red}Error{endc}"
 	color_print(text)
 #end define
+
+
+def upgrade_btc_teleport(local, ton, reinstall=False, branch: str = 'master'):
+	from modules.btc_teleport import BtcTeleportModule
+	module = BtcTeleportModule(ton, local)
+	local.try_function(module.init, args=[reinstall, branch])
+
 
 def get_clang_major_version():
 	try:
@@ -396,6 +413,7 @@ def get_clang_major_version():
 	except Exception as e:
 		print(f"Error checking clang version: {type(e)}: {e}")
 		return None
+
 
 def rollback_to_mtc1(local, ton,  args):
 	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
@@ -524,6 +542,7 @@ def warnings(local, ton):
 	local.try_function(check_tg_channel, args=[local, ton])
 	local.try_function(check_slashed, args=[local, ton])
 #end define
+
 
 def CheckTonUpdate(local):
 	git_path = "/usr/src/ton"
@@ -752,6 +771,14 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorStatus_color = GetColorStatus(validatorStatus_bool)
 	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus_color, mytoncoreUptime_text)
 	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus_color, validatorUptime_text)
+	btc_teleport_status_text = None
+	if ton.using_validator():
+		btc_teleport_status_bool = get_service_status("btc_teleport")
+		btc_teleport_status_uptime = get_service_uptime("btc_teleport")
+		btc_teleport_status_text = local.translate("local_status_btc_teleport_status").format(
+			GetColorStatus(btc_teleport_status_bool),
+			bcolors.green_text(time2human(btc_teleport_status_uptime)) if btc_teleport_status_bool else 'n/a'
+		)
 
 	validator_initial_sync_text = ''
 	validator_out_of_sync_text = ''
@@ -774,23 +801,25 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 
 	active_validator_groups = None
 
-	if ton.using_validator() and validator_status.validator_groups_master and validator_status.validator_groups_shard:
+	if ton.using_validator() and validator_status.validator_groups_master is not None and validator_status.validator_groups_shard is not None:
 		active_validator_groups = local.translate("active_validator_groups").format(validator_status.validator_groups_master, validator_status.validator_groups_shard)
 
 	collated, validated = None, None
 	ls_queries = None
-	if ton.using_validator():
-		node_stats = ton.get_node_statistics()
-		if node_stats and 'collated' in node_stats and 'validated' in node_stats:
-			collated = local.translate('collated_blocks').format(node_stats['collated']['ok'], node_stats['collated']['error'])
-			validated = local.translate('validated_blocks').format(node_stats['validated']['ok'], node_stats['validated']['error'])
-		else:
-			collated = local.translate('collated_blocks').format('collecting data...', 'wait for the next validation round')
-			validated = local.translate('validated_blocks').format('collecting data...', 'wait for the next validation round')
-	if ton.using_liteserver():
-		node_stats = ton.get_node_statistics()
-		if node_stats and 'ls_queries' in node_stats:
-			ls_queries = local.translate('ls_queries').format(node_stats['ls_queries']['time'], node_stats['ls_queries']['ok'], node_stats['ls_queries']['error'])
+	node_stats = local.try_function(ton.get_node_statistics)
+	if node_stats is not None:
+		if ton.using_validator():
+			if 'collated' in node_stats and 'validated' in node_stats:
+				collated = local.translate('collated_blocks').format(node_stats['collated']['ok'], node_stats['collated']['error'])
+				validated = local.translate('validated_blocks').format(node_stats['validated']['ok'], node_stats['validated']['error'])
+			else:
+				collated = local.translate('collated_blocks').format('collecting data...', 'wait for the next validation round')
+				validated = local.translate('validated_blocks').format('collecting data...', 'wait for the next validation round')
+		if ton.using_liteserver():
+			if 'ls_queries' in node_stats:
+				ls_queries = local.translate('ls_queries').format(node_stats['ls_queries']['time'], node_stats['ls_queries']['ok'], node_stats['ls_queries']['error'])
+	else:
+		local.add_log("Failed to get node statistics", "warning")
 
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
@@ -800,8 +829,18 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	mtcGitPath = "/usr/src/mytonctrl"
 	validatorGitPath = "/usr/src/ton"
 	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
+	btc_teleport_path = "/usr/src/ton-teleport-btc-periphery/"
 	mtcGitHash = get_git_hash(mtcGitPath, short=True)
 	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+	btc_teleport_git_hash = None
+	btc_teleport_git_branch = None
+	if ton.using_validator():
+		if os.path.exists(btc_teleport_path):
+			btc_teleport_git_hash = get_git_hash(btc_teleport_path, short=True)
+			btc_teleport_git_branch = get_git_branch(btc_teleport_path)
+		else:
+			btc_teleport_git_hash = "n/a"
+			btc_teleport_git_branch = "n/a"
 	fix_git_config(mtcGitPath)
 	fix_git_config(validatorGitPath)
 	mtcGitBranch = get_git_branch(mtcGitPath)
@@ -812,6 +851,11 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorGitBranch_text = bcolors.yellow_text(validatorGitBranch)
 	mtcVersion_text = local.translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
 	validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
+	btc_teleport_version_text = None
+	if btc_teleport_git_hash:
+		btc_teleport_git_hash_text = bcolors.yellow_text(btc_teleport_git_hash)
+		btc_teleport_git_branch_text = bcolors.yellow_text(btc_teleport_git_branch)
+		btc_teleport_version_text = local.translate("local_status_version_teleport").format(btc_teleport_git_hash_text, btc_teleport_git_branch_text)
 
 	color_print(local.translate("local_status_head"))
 	node_ip = ton.get_validator_engine_ip()
@@ -835,6 +879,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	print(mytoncoreStatus_text)
 	if not is_node_remote:
 		print(validatorStatus_text)
+	if btc_teleport_status_text:
+		print(btc_teleport_status_text)
 	if validator_initial_sync_text:
 		print(validator_initial_sync_text)
 	if validator_out_of_sync_text:
@@ -853,6 +899,8 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	print(dbStatus_text)
 	print(mtcVersion_text)
 	print(validatorVersion_text)
+	if btc_teleport_version_text:
+		print(btc_teleport_version_text)
 	print()
 #end define
 

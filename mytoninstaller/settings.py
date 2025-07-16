@@ -53,6 +53,8 @@ def FirstNodeSettings(local):
 	if os.getenv('STATE_TTL'):
 		state_ttl = int(os.getenv('STATE_TTL'))
 		archive_ttl -= state_ttl
+	if archive_ttl == 0:
+		archive_ttl = 1  # todo: remove this when archive_ttl==0 will be allowed in node
 
 	# Проверить конфигурацию
 	if os.path.isfile(vconfig_path):
@@ -1097,7 +1099,7 @@ def CreateSymlinks(local):
 
 def EnableMode(local):
 	args = ["python3", "-m", "mytoncore", "-e"]
-	if local.buffer.mode and local.buffer.mode != "none":
+	if local.buffer.mode and local.buffer.mode != "none" and not local.buffer.backup:
 		args.append("enable_mode_" + local.buffer.mode)
 	else:
 		return
@@ -1143,6 +1145,10 @@ def ConfigureFromBackup(local):
 			local.add_log("Can't get ip from validator", "error")
 			return
 		set_external_ip(local, node_ip)
+
+	args = ["python3", "-m", "mytoncore", "-e", "enable_btc_teleport"]
+	args = ["su", "-l", local.buffer.user, "-c", ' '.join(args)]
+	subprocess.run(args)
 
 
 def ConfigureOnlyNode(local):

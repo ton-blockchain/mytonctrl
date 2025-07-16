@@ -12,6 +12,7 @@ import requests
 from fastcrc import crc16
 
 from modules import MODES
+from modules.btc_teleport import BtcTeleportModule
 from mytoncore.utils import xhex2hex, ng2g
 from mytoncore.liteclient import LiteClient
 from mytoncore.validator_console import ValidatorConsole
@@ -818,7 +819,7 @@ class MyTonCore():
 			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
 			status.out_of_ser = status.masterchain_out_of_ser
 			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
-			status.stateserializerenabled = parse(result, "stateserializerenabled", '\n') == "true"
+			status.stateserializerenabled = parse(result, "stateserializerenabled", '\n').strip() == "true"
 			self.local.try_function(self.parse_stats_from_vc, args=[result, status])
 			if 'active_validator_groups' in status:
 				groups = status.active_validator_groups.split()  # master:1 shard:2
@@ -930,11 +931,11 @@ class MyTonCore():
 		return config32
 	#end define
 
-	def GetConfig34(self):
+	def GetConfig34(self, no_cache: bool = False):
 		# Get buffer
 		bname = "config34"
-		buff = self.GetFunctionBuffer(bname, timeout=60)
-		if buff:
+		buff = self.GetFunctionBuffer(bname, timeout=10)
+		if buff and not no_cache:
 			return buff
 		#end if
 
@@ -2511,7 +2512,7 @@ class MyTonCore():
 			end = timestamp - 60
 		if start is None:
 			if fast:
-				start = end - 1000
+				start = max(end - 1000, config.get("startWorkTime"))
 			else:
 				start = config.get("startWorkTime")
 		if past:
@@ -3061,17 +3062,17 @@ class MyTonCore():
 		stats = self.local.db.get('statistics', {}).get('node')
 		result = {}
 		if stats is not None and len(stats) == 3 and stats[0] is not None:
-			for k in ['master', 'shard']:
-				result = {
-					'collated': {
-						'ok': 0,
-						'error': 0,
-					},
-					'validated': {
-						'ok': 0,
-						'error': 0,
-					}
+			result = {
+				'collated': {
+					'ok': 0,
+					'error': 0,
+				},
+				'validated': {
+					'ok': 0,
+					'error': 0,
 				}
+			}
+			for k in ['master', 'shard']:
 				collated_ok = stats[2]['collated_blocks'][k]['ok'] - stats[0]['collated_blocks'][k]['ok']
 				collated_error = stats[2]['collated_blocks'][k]['error'] - stats[0]['collated_blocks'][k]['error']
 				validated_ok = stats[2]['validated_blocks'][k]['ok'] - stats[0]['validated_blocks'][k]['ok']
@@ -3088,7 +3089,7 @@ class MyTonCore():
 				result['collated']['error'] += collated_error
 				result['validated']['ok'] += validated_ok
 				result['validated']['error'] += validated_error
-		if stats is not None and len(stats) >= 2 and stats[0] is not None:
+		if stats is not None and len(stats) >= 2 and stats[-2] is not None and stats[-1] is not None:
 			result['ls_queries'] = {
 				'ok': stats[-1]['ls_queries']['ok'] - stats[-2]['ls_queries']['ok'],
 				'error': stats[-1]['ls_queries']['error'] - stats[-2]['ls_queries']['error'],
@@ -3150,6 +3151,7 @@ class MyTonCore():
 			if self.using_liteserver():
 				raise Exception(f'Cannot enable validator mode while liteserver mode is enabled. '
 								f'Use `disable_mode liteserver` first.')
+			BtcTeleportModule(self, self.local).init()
 		if name == 'liquid-staking':
 			from mytoninstaller.settings import enable_ton_http_api
 			enable_ton_http_api(self.local)

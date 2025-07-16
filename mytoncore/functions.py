@@ -55,6 +55,8 @@ def Event(local, event_name):
         ValidatorDownEvent(local)
     elif event_name.startswith("enable_mode"):
         enable_mode(local, event_name)
+    elif event_name == "enable_btc_teleport":
+        enable_btc_teleport(local)
     local.exit()
 # end define
 
@@ -90,6 +92,10 @@ def enable_mode(local, event_name):
     ton.enable_mode(mode)
 #end define
 
+def enable_btc_teleport(local):
+    ton = MyTonCore(local)
+    from modules.btc_teleport import BtcTeleportModule
+    BtcTeleportModule(ton, local).init(reinstall=True)
 
 def Elections(local, ton):
     use_pool = ton.using_pool()
@@ -312,25 +318,35 @@ def save_node_statistics(local, ton):
                 data['ls_queries']['error'] = int(k.split(':')[1])
     statistics = local.db.get("statistics", dict())
 
-    if time.time() - int(status.start_time) <= 60:  # was node restart <60 sec ago, resetting node statistics
+    # if time.time() - int(status.start_time) <= 60:  # was node restart <60 sec ago, resetting node statistics
+    #     statistics['node'] = []
+
+    if 'node' not in statistics:
         statistics['node'] = []
 
-    # statistics['node'] = [stats_from_election_id, stats_from_prev_min, stats_now]
+    if statistics['node']:
+        if int(status.start_time) > statistics['node'][-1]['timestamp']:
+            # node was restarted, reset node statistics
+            statistics['node'] = []
 
-    election_id = ton.GetConfig34()['startWorkTime']
-    if 'node' not in statistics or len(statistics['node']) == 0:
+    # statistics['node']: [stats_from_election_id, stats_from_prev_min, stats_now]
+
+    election_id = ton.GetConfig34(no_cache=True)['startWorkTime']
+    if len(statistics['node']) == 0:
         statistics['node'] = [None, data]
     elif len(statistics['node']) < 3:
         statistics['node'].append(data)
-    if len(statistics['node']) == 3:
+    elif len(statistics['node']) == 3:
         if statistics['node'][0] is None:
             if 0 < data['timestamp'] - election_id < 90:
                 statistics['node'][0] = data
         elif statistics['node'][0]['timestamp'] < election_id:
             statistics['node'][0] = data
-        statistics['node'] = statistics.get('node', []) + [data]
-        statistics['node'].pop(1)
+        temp = statistics.get('node', []) + [data]
+        temp.pop(1)
+        statistics['node'] = temp
     local.db["statistics"] = statistics
+    local.save()
 
 
 def ReadTransData(local, scanner):
@@ -668,6 +684,9 @@ def General(local):
 
     from modules.prometheus import PrometheusModule
     local.start_cycle(PrometheusModule(ton, local).push_metrics, sec=30, args=())
+
+    from modules.btc_teleport import BtcTeleportModule
+    local.start_cycle(BtcTeleportModule(ton, local).auto_vote_offers, sec=180, args=())
 
     if ton.in_initial_sync():
         local.start_cycle(check_initial_sync, sec=120, args=(local, ton))

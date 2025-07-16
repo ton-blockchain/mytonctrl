@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from mypylib.mypylib import MyPyClass
+
 
 class MtcModule(ABC):
 
@@ -9,7 +11,7 @@ class MtcModule(ABC):
     def __init__(self, ton, local, *args, **kwargs):
         from mytoncore.mytoncore import MyTonCore
         self.ton: MyTonCore = ton
-        self.local = local
+        self.local: MyPyClass = local
 
     @abstractmethod
     def add_console_commands(self, console):  ...
