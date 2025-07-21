@@ -435,6 +435,10 @@ def GetBlockTimeAvg(local, timediff):
 
 def Offers(local, ton):
     save_offers = ton.GetSaveOffers()
+    if save_offers:
+        ton.offers_gc(save_offers)
+    else:
+        return
     offers = ton.GetOffers()
     for offer in offers:
         offer_hash = offer.get("hash")
@@ -446,7 +450,7 @@ def Offers(local, ton):
             else:  # old version of save offers {"hash": "pseudohash"}
                 save_offer_pseudohash = save_offer
             if offer_pseudohash == save_offer_pseudohash and offer_pseudohash is not None:
-                ton.VoteOffer(offer_hash)
+                ton.VoteOffer(offer)
 # end define
 
 def Telemetry(local, ton):

@@ -16,8 +16,13 @@ class ValidatorModule(MtcModule):
         if len(args) == 0:
             color_print("{red}Bad args. Usage:{endc} vo <offer-hash>")
             return
-        for offerHash in args:
-            self.ton.VoteOffer(offerHash)
+        offers = self.ton.GetOffers()
+        for offer_hash in args:
+            offer = self.ton.GetOffer(offer_hash, offers)
+            self.ton.add_save_offer(offer)
+        for offer_hash in args:
+            offer = self.ton.GetOffer(offer_hash, offers)
+            self.ton.VoteOffer(offer)
         color_print("VoteOffer - {green}OK{endc}")
 
     def vote_election_entry(self, args):

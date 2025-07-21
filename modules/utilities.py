@@ -162,6 +162,9 @@ class UtilitiesModule(MtcModule):
         offer = self.ton.GetOffer(offer_hash)
         config_id = offer["config"]["id"]
         config_value = offer["config"]["value"]
+        if config_id < 0:
+            color_print("{red}Offer config id is negative. Cannot get diff.{endc}")
+            return
 
         if '{' in config_value or '}' in config_value:
             start = config_value.find('{') + 1
