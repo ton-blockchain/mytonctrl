@@ -438,8 +438,9 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
             return
         need_to_vote = []
         offers = self.ton.GetOffers()
+        saved_offers = self.ton.GetSaveOffers()
         for offer in offers:
-            if not offer['isPassed'] and offer['approvedPercent'] >= 50 and validator_index not in offer['votedValidators']:
+            if not offer['isPassed'] and offer['approvedPercent'] >= 50 and validator_index not in offer['votedValidators'] and offer['hash'] not in saved_offers:
                 need_to_vote.append(offer['hash'])
         if need_to_vote:
             self.send_alert("voting", hashes=' '.join(need_to_vote))
