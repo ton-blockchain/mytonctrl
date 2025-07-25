@@ -3216,12 +3216,15 @@ class MyTonCore():
 		self.local.db.pop('initialSync', None)
 		self.local.save()
 
-	def Tlb2Json(self, text):
+	def Tlb2Json(self, text: str):
 		# Заменить скобки
 		start = 0
 		end = len(text)
 		if '=' in text:
 			start = text.find('=')+1
+		if text[start:].startswith(' x{'):  # param has no tlb scheme, return cell value
+			end = text.rfind('}')+1
+			return {'_': text[start:end].strip()}
 		if "x{" in text:
 			end = text.find("x{")
 		text = text[start:end]

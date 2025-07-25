@@ -631,8 +631,8 @@ def PrintStatus(local, ton, args):
 		startWorkTime = ton.GetActiveElectionId(fullElectorAddr)
 		validator_index = ton.GetValidatorIndex()
 
-		offersNumber = ton.GetOffersNumber()
-		complaintsNumber = ton.GetComplaintsNumber()
+		offersNumber = local.try_function(ton.GetOffersNumber)
+		complaintsNumber = local.try_function(ton.GetComplaintsNumber)
 
 		tpsAvg = ton.GetStatistics("tpsAvg", statistics)
 
@@ -654,10 +654,10 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	#tps5 = tpsAvg[1]
 	#tps15 = tpsAvg[2]
 	allValidators = totalValidators
-	newOffers = offersNumber.get("new")
-	allOffers = offersNumber.get("all")
-	newComplaints = complaintsNumber.get("new")
-	allComplaints = complaintsNumber.get("all")
+	newOffers = offersNumber.get("new") if offersNumber else 'n/a'
+	allOffers = offersNumber.get("all") if offersNumber else 'n/a'
+	newComplaints = complaintsNumber.get("new") if complaintsNumber else 'n/a'
+	allComplaints = complaintsNumber.get("all") if complaintsNumber else 'n/a'
 	#tps1_text = bcolors.green_text(tps1)
 	#tps5_text = bcolors.green_text(tps5)
 	#tps15_text = bcolors.green_text(tps15)
