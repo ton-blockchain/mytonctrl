@@ -84,7 +84,7 @@ def init_alerts():
             "high",
             "Validator has been slashed in the previous validation round",
             "Validator has been slashed in previous round for {amount} TON",
-            FREEZE_PERIOD
+            VALIDATION_PERIOD
         ),
         "stake_not_accepted": Alert(
             "high",
