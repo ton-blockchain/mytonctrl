@@ -1223,11 +1223,17 @@ class MyTonCore():
 				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
 			except: pass
 		if duplicateApi:
-			self.send_boc_toncenter(filePath)
+			try:
+				self.send_boc_toncenter(filePath)
+			except Exception as e:
+				self.local.add_log(f'Failed to send file {filePath} to toncenter: {e}', 'warning')
 		if timeout and wallet:
 			self.WaitTransaction(wallet, timeout)
-		if remove == True:
-			os.remove(filePath)
+		if remove:
+			try:
+				os.remove(filePath)
+			except Exception as e:
+				self.local.add_log(f'Failed to remove file {filePath}: {e}', 'warning')
 	#end define
 
 	def send_boc_toncenter(self, file_path: str):
@@ -2274,23 +2280,23 @@ class MyTonCore():
 		return fileName
 	#end define
 
-	def VoteOffer(self, offerHash):
+	def VoteOffer(self, offer):
 		self.local.add_log("start VoteOffer function", "debug")
-		fullConfigAddr = self.GetFullConfigAddr()
+		full_config_addr = self.GetFullConfigAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
-		validatorKey = self.GetValidatorKey()
-		validatorPubkey_b64 = self.GetPubKeyBase64(validatorKey)
-		validatorIndex = self.GetValidatorIndex()
-		offer = self.GetOffer(offerHash)
-		if validatorIndex in offer.get("votedValidators"):
+		validator_key = self.GetValidatorKey()
+		validator_pubkey_b64 = self.GetPubKeyBase64(validator_key)
+		validator_index = self.GetValidatorIndex()
+		offer_hash = offer.get("hash")
+		if validator_index in offer.get("votedValidators"):
 			self.local.add_log("Proposal already has been voted", "debug")
 			return
 		self.add_save_offer(offer)
-		var1 = self.CreateConfigProposalRequest(offerHash, validatorIndex)
-		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-		resultFilePath = self.SignProposalVoteRequestWithValidator(offerHash, validatorIndex, validatorPubkey_b64, validatorSignature)
-		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, fullConfigAddr, 1.5)
-		self.SendFile(resultFilePath, wallet)
+		var1 = self.CreateConfigProposalRequest(offer_hash, validator_index)
+		validator_signature = self.GetValidatorSignature(validator_key, var1)
+		result_file_path = self.SignProposalVoteRequestWithValidator(offer_hash, validator_index, validator_pubkey_b64, validator_signature)
+		result_file_path = self.SignBocWithWallet(wallet, result_file_path, full_config_addr, 1.5)
+		self.SendFile(result_file_path, wallet, remove=False)
 	#end define
 
 	def VoteComplaint(self, electionId, complaintHash):
@@ -2598,11 +2604,12 @@ class MyTonCore():
 			self.local.add_log("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, electionId), "debug")
 	#end define
 
-	def GetOffer(self, offerHash):
+	def GetOffer(self, offer_hash: str, offers: list = None):
 		self.local.add_log("start GetOffer function", "debug")
-		offers = self.GetOffers()
+		if offers is None:
+			offers = self.GetOffers()
 		for offer in offers:
-			if offerHash == offer.get("hash"):
+			if offer_hash == offer.get("hash"):
 				return offer
 		raise Exception("GetOffer error: offer not found.")
 	#end define
@@ -2872,9 +2879,11 @@ class MyTonCore():
 			if offer_hash not in current_offers_hashes:
 				if isinstance(offer, list):
 					param_id = offer[1]
-					if param_id is not None and offer[0] != self.calculate_offer_pseudohash(offer_hash, param_id):
+					phash = self.calculate_offer_pseudohash(offer_hash, param_id)
+					if param_id is not None and offer[0] != phash:
 						# param has been changed so no need to keep anymore
 						save_offers.pop(offer_hash)
+						self.local.add_log(f"Removing offer {offer_hash} from save_offers. Saved phash: {offer[0]}, now phash: {phash}", "debug")
 				else:  # old version of offer in db
 					save_offers.pop(offer_hash)
 		return save_offers
@@ -2885,7 +2894,6 @@ class MyTonCore():
 		if save_offers is None or isinstance(save_offers, list):
 			save_offers = dict()
 			self.local.db[bname] = save_offers
-		self.offers_gc(save_offers)
 		return save_offers
 	#end define
 
@@ -3208,12 +3216,15 @@ class MyTonCore():
 		self.local.db.pop('initialSync', None)
 		self.local.save()
 
-	def Tlb2Json(self, text):
+	def Tlb2Json(self, text: str):
 		# Заменить скобки
 		start = 0
 		end = len(text)
 		if '=' in text:
 			start = text.find('=')+1
+		if text[start:].startswith(' x{'):  # param has no tlb scheme, return cell value
+			end = text.rfind('}')+1
+			return {'_': text[start:end].strip()}
 		if "x{" in text:
 			end = text.find("x{")
 		text = text[start:end]
