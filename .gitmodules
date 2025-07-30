@@ -1,6 +1,6 @@
 [submodule "mypylib"]
 	path = mypylib
-	url = https://github.com/igroman787/mypylib
+	url = https://github.com/yungwine/mypylib
 [submodule "mypyconsole"]
 	path = mypyconsole
 	url = https://github.com/igroman787/mypyconsole
