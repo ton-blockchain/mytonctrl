@@ -103,7 +103,7 @@ rm -rf $BIN_DIR/openssl_3
 git clone https://github.com/openssl/openssl $BIN_DIR/openssl_3
 cd $BIN_DIR/openssl_3
 opensslPath=`pwd`
-git checkout openssl-3.1.4
+git checkout openssl-3.5
 ./config
 make build_libs -j$(nproc)
 
@@ -153,7 +153,7 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
 		cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton
 	fi
 else
-	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DTON_USE_JEMALLOC=ON -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
+	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DTON_USE_JEMALLOC=ON -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_USE_STATIC_LIBS=TRUE -DOPENSSL_ROOT_DIR=$opensslPath -DOPENSSL_SSL_LIBRARY=$opensslPath/libssl.a -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a
 fi
 
 # Расчитываем количество процессоров для сборки

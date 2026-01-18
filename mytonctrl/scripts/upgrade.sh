@@ -59,7 +59,7 @@ fi
 if [ ! -d "${bindir}/openssl_3" ]; then
   git clone https://github.com/openssl/openssl ${bindir}/openssl_3
   cd ${bindir}/openssl_3
-  git checkout openssl-3.1.4
+  git checkout openssl-3.5
   ./config
   make build_libs -j$(nproc)
   opensslPath=`pwd`
@@ -94,7 +94,7 @@ mkdir -p ${tmp_bin_dir}/${repo}
 cd ${tmp_bin_dir}/${repo}
 cpuNumber=$(cat /proc/cpuinfo | grep "processor" | wc -l)
 
-cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DTON_USE_JEMALLOC=ON -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a || exit 1
+cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DTON_USE_JEMALLOC=ON -DOPENSSL_FOUND=1 -DOPENSSL_INCLUDE_DIR=$opensslPath/include -DOPENSSL_USE_STATIC_LIBS=TRUE -DOPENSSL_ROOT_DIR=$opensslPath -DOPENSSL_SSL_LIBRARY=$opensslPath/libssl.a -DOPENSSL_CRYPTO_LIBRARY=$opensslPath/libcrypto.a || exit 1
 ninja -j ${cpuNumber} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy || exit 1
 cd ${bindir}/${repo}
 ls --hide="*.config.json" | xargs -d '\n' rm -rf
