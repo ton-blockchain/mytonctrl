@@ -1046,8 +1046,7 @@ def disable_mode(local, ton, args):
 
 
 def download_archive_blocks(local, args: list):
-	if len(args) < 2:
-		color_print("{red}Bad args. Usage:{endc} download_archive_blocks [ton_storage_api_port] <download_path> <from_block_seqno> [to_block_seqno] [--only-master]")
+	if not check_usage_args_min_max_len('download_archive_blocks', args, 2, 5):
 		return
 
 	only_master = '--only-master' in args
