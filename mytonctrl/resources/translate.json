@@ -39,11 +39,6 @@
 		"ru": "Выключить режим",
 		"zh_TW": "禁用模式"
 	},
-	"rollback_cmd" : {
-		"en": "Rollback to mytonctrl 1.0",
-		"ru": "Откатиться к mytonctrl 1.0",
-		"zh_TW": "回滾到 mytonctrl 1.0"
-	},
 	"create_backup_cmd": {
 		"en": "Create backup of MyTonCtrl",
 		"ru": "Создать резервную копию MyTonCtrl",

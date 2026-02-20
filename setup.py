@@ -25,7 +25,6 @@ setup(
 		'mytonctrl': [
 			'resources/*', 
 			'scripts/*', 
-			'migrations/*.sh'
 		],
 		'': ['requirements.txt'],
 	},
