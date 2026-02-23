@@ -245,14 +245,6 @@ fi
 echo "User: $user"
 python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode} --only-mtc ${only_mtc} --backup ${backup} --only-node ${only_node}
 
-# set migrate version
-migrate_version=1
-version_dir="/home/${user}/.local/share/mytonctrl"
-version_path="${version_dir}/VERSION"
-mkdir -p ${version_dir}
-echo ${migrate_version} > ${version_path}
-chown ${user}:${user} ${version_dir} ${version_path}
-
 # create symbolic link if branch not eq mytonctrl
 if [ "${repo}" != "mytonctrl" ]; then
     ln -sf ${SOURCES_DIR}/${repo} ${SOURCES_DIR}/mytonctrl
