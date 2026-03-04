@@ -213,6 +213,8 @@ file3=${BIN_DIR}/ton/validator-engine-console/validator-engine-console
 
 if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
     echo "TON does not exists, building"
+    wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install_clang.sh -O /tmp/install_clang.sh
+    bash /tmp/install_clang.sh
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
     bash /tmp/ton_installer.sh -c ${config} -g ${ton_node_git_url} -v ${ton_node_version}
 fi
