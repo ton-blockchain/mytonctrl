@@ -1373,10 +1373,9 @@ class MyTonCore():
 		usePool = self.using_pool()
 		useController = self.using_liquid_staking()
 		wallet = self.GetValidatorWallet()
-		addrB64 = wallet.addrB64
 		if wallet is None:
 			raise Exception("Validator wallet not found")
-		#end if
+		addrB64 = wallet.addrB64
 
 		self.local.add_log("start ElectionEntry function", "debug")
 		# Check if validator is not synchronized
