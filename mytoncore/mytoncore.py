@@ -3610,7 +3610,8 @@ class MyTonCore():
 	#end define
 
 	def GetControllerRequiredBalanceForLoan(self, controllerAddr, credit, interest):
-		cmd = f"runmethodfull {controllerAddr} required_balance_for_loan {credit} {interest}"
+		credit_nano_tons = credit * 10**9
+		cmd = f"runmethodfull {controllerAddr} required_balance_for_loan {credit_nano_tons} {interest}"
 		result = self.liteClient.Run(cmd)
 		data = self.Result2List(result)
 		if data is None:
