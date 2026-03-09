@@ -17,8 +17,8 @@ class Fift:
 		includePath = self.libsPath + ':' + self.smartcontsPath
 		args = [self.appPath, "-I", includePath, "-s"] + args
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
-		output = process.stdout.decode("utf-8", errors='surrogateescape')
-		err = process.stderr.decode("utf-8", errors='surrogateescape')
+		output = process.stdout.decode("utf-8", errors='backslashreplace')
+		err = process.stderr.decode("utf-8", errors='backslashreplace')
 		if process.returncode != 0 and len(err) > 0:
 			self.local.add_log("args: {args}".format(args=args), "error")
 			raise Exception("Fift error: {err}".format(err=err))

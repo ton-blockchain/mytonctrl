@@ -32,7 +32,7 @@ mkdir -p ${tmpdir}
 cd ${tmpdir}
 rm -rf ${tmpdir}/${repo}
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
-git clone --recursive https://github.com/${author}/${repo}.git || exit 1
+git clone https://github.com/${author}/${repo}.git || exit 1
 
 rm -rf ${srcdir}/${repo}
 pip3 uninstall -y mytonctrl
@@ -41,7 +41,7 @@ pip3 uninstall -y mytonctrl
 cd ${srcdir}
 cp -rf ${tmpdir}/${repo} ${srcdir}
 cd ${repo} && git checkout ${branch}
-git submodule update
+git submodule update --init --recursive
 pip3 install -U .
 
 systemctl daemon-reload

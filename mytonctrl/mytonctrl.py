@@ -43,7 +43,6 @@ from mytoncore.functions import (
 from mytoncore.utils import get_package_resource_path
 from mytoncore.telemetry import is_host_virtual
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_args_min_max_len
-from mytonctrl.migrate import run_migrations
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt, \
 	pop_user_from_args, pop_arg_from_args, get_clang_major_version, get_os_version
 from mytoninstaller.archive_blocks import download_blocks
@@ -85,7 +84,6 @@ def Init(local, ton, console, argv):
 	add_command(local, console, "about", inject_globals(about))
 	add_command(local, console, "get", inject_globals(GetSettings))
 	add_command(local, console, "set", inject_globals(SetSettings))
-	add_command(local, console, "rollback", inject_globals(rollback_to_mtc1))
 	add_command(local, console, "download_archive_blocks", inject_globals(download_archive_blocks))
 
 	from modules.backups import BackupModule
@@ -403,25 +401,6 @@ def upgrade_btc_teleport(local, ton, reinstall=False, branch: str = 'master', us
 	module = BtcTeleportModule(ton, local)
 	local.try_function(module.init, args=[reinstall, branch, user])
 
-
-def rollback_to_mtc1(local, ton,  args):
-	color_print("{red}Warning: this is dangerous, please make sure you've backed up mytoncore's db.{endc}")
-	a = input("Do you want to continue? [Y/n]\n")
-	if a.lower() != 'y':
-		print('aborted.')
-		return
-	ton.rollback_modes()
-
-	workdir = local.buffer.my_work_dir
-	version_file_path = os.path.join(workdir, 'VERSION')
-	if os.path.exists(version_file_path):
-		os.remove(version_file_path)
-
-	with get_package_resource_path('mytonctrl', 'migrations/roll_back_001.sh') as rollback_script_path:
-		run_args = ["bash", rollback_script_path]
-		run_as_root(run_args)
-	local.exit()
-#end define
 
 def run_benchmark(ton, args):
 	timeout = 200
@@ -1046,8 +1025,7 @@ def disable_mode(local, ton, args):
 
 
 def download_archive_blocks(local, args: list):
-	if len(args) < 2:
-		color_print("{red}Bad args. Usage:{endc} download_archive_blocks [ton_storage_api_port] <download_path> <from_block_seqno> [to_block_seqno] [--only-master]")
+	if not check_usage_args_min_max_len('download_archive_blocks', args, 2, 5):
 		return
 
 	only_master = '--only-master' in args
@@ -1091,11 +1069,5 @@ def mytonctrl():
 	mytoncore_local = MyPyClass('mytoncore.py')
 	ton = MyTonCore(mytoncore_local)
 	console = MyPyConsole()
-
-	# migrations
-	restart = run_migrations(local, ton)
-
-	if not restart:
-		Init(local, ton, console, sys.argv[1:])
-		console.Run()
-#end define
+	Init(local, ton, console, sys.argv[1:])
+	console.Run()
