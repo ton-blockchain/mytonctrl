@@ -44,10 +44,10 @@ class UtilitiesModule(MtcModule):
         typeText = color_text("{red}{bold}{endc}")
         table += [["Time", typeText, "Coins", "From/To"]]
         for message in history:
-            if message.srcAddr is None:
+            if message.src_addr is None:
                 continue
-            srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
-            destAddFull = f"{message.destWorkchain}:{message.destAddr}"
+            srcAddrFull = f"{message.src_workchain}:{message.src_addr}"
+            destAddFull = f"{message.dest_workchain}:{message.dest_addr}"
             if srcAddrFull == account.addrFull:
                 type = color_text("{red}{bold}>>>{endc}")
                 fromto = destAddFull

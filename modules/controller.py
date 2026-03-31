@@ -190,10 +190,10 @@ class ControllerModule(MtcModule):
         history = self.ton.GetAccountHistory(account, 5000)
         addrs_list = list()
         for message in history:
-            if message.srcAddr is None or message.value is None:
+            if message.src_addr is None or message.value is None:
                 continue
-            src_addr_full = f"{message.srcWorkchain}:{message.srcAddr}"
-            dest_add_full = f"{message.destWorkchain}:{message.destAddr}"
+            src_addr_full = f"{message.src_workchain}:{message.src_addr}"
+            dest_add_full = f"{message.dest_workchain}:{message.dest_addr}"
             if src_addr_full == account.addrFull:
                 fromto = dest_add_full
             else:

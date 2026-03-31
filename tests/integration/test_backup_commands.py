@@ -38,18 +38,18 @@ def test_create_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     output = cli.execute("create_backup", no_color=True)
     assert "create_backup - OK" in output
     assert fun_user is None
-    assert fun_args == ["-m", ton.local.buffer.my_work_dir, "-t", str(tmp_dir)]
+    assert fun_args == ["-m", ton.local.my_work_dir, "-t", str(tmp_dir)]
 
     output = cli.execute("create_backup /to_dir/", no_color=True)
     assert "create_backup - OK" in output
     assert fun_user is None
-    assert fun_args == ["-m", ton.local.buffer.my_work_dir, "-t", str(tmp_dir), "-d", "/to_dir/"]
+    assert fun_args == ["-m", ton.local.my_work_dir, "-t", str(tmp_dir), "-d", "/to_dir/"]
     assert not Path(tmp_dir).exists()
 
     output = cli.execute("create_backup /to_dir/ -u yungwine", no_color=True)
     assert "create_backup - OK" in output
     assert fun_user == 'yungwine'
-    assert fun_args == ["-m", ton.local.buffer.my_work_dir, "-t", str(tmp_dir), "-d", "/to_dir/"]
+    assert fun_args == ["-m", ton.local.my_work_dir, "-t", str(tmp_dir), "-d", "/to_dir/"]
     assert not Path(tmp_dir).exists()
 
     return_code = 1
@@ -79,7 +79,7 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
 
     def fake_run_restore_backup(*args, **kwargs):
         # really do update db after restore
-        with open(ton.local.buffer.db_path, 'w') as f:
+        with open(ton.local.db_path, 'w') as f:
             new_db = ton.local.db.copy()
             new_db.update({"abc": 123})
             f.write(json.dumps(new_db))
@@ -94,7 +94,7 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     def assert_happy_run_args(outp: str, user: str):
         assert 'restore_backup - OK' in outp
         exit_mock.assert_called_once()  # exited after restore_backup
-        assert run_args == ['bash', backup_path, '-u', user, '-m', ton.local.buffer.my_work_dir, '-n',
+        assert run_args == ['bash', backup_path, '-u', user, '-m', ton.local.my_work_dir, '-n',
                             'backup.tar.gz', '-i', '2130706433']
         assert ton.local.db.get('abc') == 123  # db updated after restore_backup
 

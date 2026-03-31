@@ -84,7 +84,7 @@ cd ${tmp_bin_dir}/${repo}
 cpuNumber=$(cat /proc/cpuinfo | grep "processor" | wc -l)
 
 cmake -DCMAKE_BUILD_TYPE=Release ${srcdir}/${repo} -GNinja -DTON_USE_JEMALLOC=ON || exit 1
-ninja -j ${cpuNumber} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy || exit 1
+ninja -j ${cpuNumber} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy create-state || exit 1
 cd ${bindir}/${repo}
 ls --hide="*.config.json" | xargs -d '\n' rm -rf
 rm -rf .ninja_*

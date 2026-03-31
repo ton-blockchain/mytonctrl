@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 import subprocess
 
@@ -5,7 +7,7 @@ import subprocess
 class LiteClient:
 	def __init__(self, local):
 		self.local = local
-		self.appPath = None
+		self.appPath: str | None = None
 		self.configPath = None
 		self.pubkeyPath = None
 		self.addr = None

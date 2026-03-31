@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import base64
 import time
@@ -18,25 +20,25 @@ from mytoncore.liteclient import LiteClient
 from mytoncore.validator_console import ValidatorConsole
 from mytoncore.fift import Fift
 from mytoncore.models import (
-    Wallet,
-    Account,
-    Block,
-    Trans,
-    Message,
-    Pool,
+	Wallet,
+	Account,
+	Block,
+	Transaction,
+	Message,
+	Pool,
 )
 
 from mypylib.mypylib import (
 	parse,
 	get_timestamp,
 	dec2hex,
-	Dict, int2ip
+	Dict, int2ip, MyPyClass
 )
 
 
 class MyTonCore():
-	def __init__(self, local):
-		self.local = local
+	def __init__(self, local: MyPyClass):
+		self.local: MyPyClass = local
 		self.walletsDir: Optional[str] = None
 		self.dbFile: Optional[str] = None
 		self.contractsDir: str
@@ -59,10 +61,10 @@ class MyTonCore():
 			self.local.load_db(self.dbFile)
 
 		if not self.walletsDir:
-			self.walletsDir = self.local.buffer.my_work_dir + "wallets/"
-		self.contractsDir = self.local.buffer.my_work_dir + "contracts/"
-		self.poolsDir = self.local.buffer.my_work_dir + "pools/"
-		self.tempDir = self.local.buffer.my_temp_dir
+			self.walletsDir = self.local.my_work_dir + "wallets/"
+		self.contractsDir = self.local.my_work_dir + "contracts/"
+		self.poolsDir = self.local.my_work_dir + "pools/"
+		self.tempDir = self.local.my_temp_dir
 
 		self.nodeName = self.local.db.get("nodeName")
 		if self.nodeName is None:
@@ -101,7 +103,7 @@ class MyTonCore():
 	#end define
 
 	def CheckConfigFile(self, fift, liteClient):
-		mconfig_path = self.local.buffer.db_path
+		mconfig_path = self.local.db_path
 		backup_path = mconfig_path + ".backup"
 		if fift is None or liteClient is None:
 			self.local.add_log("The config file is broken", "warning")
@@ -118,7 +120,7 @@ class MyTonCore():
 
 	def create_self_db_backup(self):
 		self.local.add_log("Create backup config file", "info")
-		mconfig_path = self.local.buffer.db_path
+		mconfig_path = self.local.db_path
 		backup_path = mconfig_path + ".backup"
 		backup_tmp_path = backup_path + '.tmp'
 		subprocess.run(["cp", mconfig_path, backup_tmp_path])
@@ -206,8 +208,10 @@ class MyTonCore():
 		account.addr = xhex2hex(address)
 		account.addrB64 = self.AddrFull2AddrB64(addrFull)
 		account.addrFull = addrFull
-		account.status = status
-		account.balance = ng2g(value)
+		if status is not None:
+			account.status = status
+		if value is not None:
+			account.balance = ng2g(value)
 		account.lt = parse(result, "lt = ", ' ')
 		account.hash = parse(result, "hash = ", '\n')
 		account.codeHash = codeHash
@@ -222,7 +226,7 @@ class MyTonCore():
 		return codeHash
 	#end define
 
-	def GetAccountHistory(self, account, limit):
+	def GetAccountHistory(self, account, limit) -> list[Message]:
 		self.local.add_log("start GetAccountHistory function", "debug")
 		addr = f"{account.workchain}:{account.addr}"
 		lt = account.lt
@@ -253,78 +257,47 @@ class MyTonCore():
 			#outmsg = self.GetVarFromDict(item, "outmsg_cnt")
 			total_fees = self.GetVarFromDict(item, "total_fees.grams.value")
 			messages = self.GetMessagesFromTransaction(item)
-			transData = dict()
-			transData["type"] = type
-			transData["trans"] = Trans(Block(block_str))
-			transData["time"] = time
-			#transData["outmsg"] = outmsg
-			transData["total_fees"] = total_fees
-			history += self.ParsMessages(messages, transData)
+			tr = Transaction(block=Block.from_str(block_str), type=type, time=time, total_fees=ng2g(total_fees))
+			history += self.parse_messages(messages, tr)
 		return history, prevTransLt, prevTransHash
 	#end define
 
-	def ParsMessages(self, messages, transData):
+	def parse_messages(self, messages: list[dict], tr: Transaction):
 		history = list()
-		#for item in messages:
 		for data in messages:
 			ihr_disabled = self.GetVarFromDict(data, "message.ihr_disabled")
-			bounce = self.GetVarFromDict(data, "message.bounce")
-			bounced = self.GetVarFromDict(data, "message.bounced")
 
-			srcWorkchain = self.GetVarFromDict(data, "message.info.src.workchain_id")
+			src_workchain = self.GetVarFromDict(data, "message.info.src.workchain_id")
 			address = self.GetVarFromDict(data, "message.info.src.address")
-			srcAddr = xhex2hex(address)
-			#if address:
-			#	src = "{}:{}".format(workchain, xhex2hex(address))
-			#end if
+			src_addr = xhex2hex(address)
 
-			destWorkchain = self.GetVarFromDict(data, "message.info.dest.workchain_id")
+			dest_workchain = self.GetVarFromDict(data, "message.info.dest.workchain_id")
 			address = self.GetVarFromDict(data, "message.info.dest.address")
-			destAddr = xhex2hex(address)
-			#if address:
-			#	dest = "{}:{}".format(workchain, xhex2hex(address))
-			#end if
+			dest_addr = xhex2hex(address)
 
 			grams = self.GetVarFromDict(data, "message.info.value.grams.value")
 			ihr_fee = self.GetVarFromDict(data, "message.info.ihr_fee.value")
 			fwd_fee = self.GetVarFromDict(data, "message.info.fwd_fee.value")
-			# import_fee = self.GetVarFromDict(data, "message.info.import_fee.value")
 
-			#body = self.GetVarFromDict(data, "message.body.value")
 			message = self.GetItemFromDict(data, "message")
 			body = self.GetItemFromDict(message, "body")
 			value = self.GetItemFromDict(body, "value")
 			body = self.GetBodyFromDict(value)
 			comment = self.GetComment(body)
 
-			#storage_ph
-			#credit_ph
-			#compute_ph.gas_fees
-			#compute_ph.gas_used
-			#compute_ph.gas_limit
-
-			message = Message()
-			message.type = transData.get("type")
-			message.block = transData.get("block")
-			message.trans = transData.get("trans")
-			message.time = transData.get("time")
-			#message.outmsg = transData.get("outmsg")
-			message.total_fees = ng2g(transData.get("total_fees"))
-			message.ihr_disabled = ihr_disabled
-			message.bounce = bounce
-			message.bounced = bounced
-			message.srcWorkchain = srcWorkchain
-			message.destWorkchain = destWorkchain
-			message.srcAddr = srcAddr
-			message.destAddr = destAddr
-			message.value = ng2g(grams)
-			message.body = body
-			message.comment = comment
-			message.ihr_fee = ng2g(ihr_fee)
-			message.fwd_fee = ng2g(fwd_fee)
-			#message.storage_ph = storage_ph
-			#message.credit_ph = credit_ph
-			#message.compute_ph = compute_ph
+			message = Message(
+				transaction=tr,
+				ihr_disabled=ihr_disabled,
+				src_workchain=src_workchain,
+				dest_workchain=dest_workchain,
+				src_addr=src_addr,
+				dest_addr=dest_addr,
+				value=ng2g(grams),
+				body=body,
+				comment=comment,
+				ihr_fee=ng2g(ihr_fee),
+				fwd_fee=ng2g(fwd_fee)
+			)
 			history.append(message)
 		#end for
 		return history
@@ -652,7 +625,7 @@ class MyTonCore():
 		for line in lines:
 			if "latest masterchain block" in line:
 				buff = line.split(' ')
-				block = Block(buff[7])
+				block = Block.from_str(buff[7])
 				break
 		return block
 	#end define
@@ -701,52 +674,8 @@ class MyTonCore():
 		cmd = cmd.format(workchain=workchain, shardchain=shardchain, seqno=seqno)
 		result = self.liteClient.Run(cmd)
 		block_str =  parse(result, "block header of ", ' ')
-		block = Block(block_str)
+		block = Block.from_str(block_str)
 		return block
-	#end define
-
-	def GetTransactions(self, block):
-		transactions = list()
-		cmd = "listblocktrans {block} 999999".format(block=block)
-		result = self.liteClient.Run(cmd)
-		lines = result.split('\n')
-		for line in lines:
-			if "transaction #" in line:
-				buff = line.split(' ')
-				trans_id = buff[1]
-				trans_id = trans_id.replace('#', '')
-				trans_id = trans_id.replace(':', '')
-				trans_addr = buff[3]
-				trans_lt = buff[5]
-				trans_hash = buff[7]
-				trans = Trans(block, trans_addr, trans_lt, trans_hash)
-				transactions.append(trans)
-		return transactions
-	#end define
-
-	def GetTrans(self, trans):
-		addr = f"{trans.block.workchain}:{trans.addr}"
-		messageList = list()
-		cmd = f"dumptrans {trans.block} {addr} {trans.lt}"
-		result = self.liteClient.Run(cmd)
-		data = self.Result2Dict(result)
-		for key, item in data.items():
-			if "transaction is" not in key:
-				continue
-			description = self.GetKeyFromDict(item, "description")
-			type = self.GetVar(description, "trans_")
-			time = self.GetVarFromDict(item, "time")
-			#outmsg = self.GetVarFromDict(item, "outmsg_cnt")
-			total_fees = self.GetVarFromDict(item, "total_fees.grams.value")
-			messages = self.GetMessagesFromTransaction(item)
-			transData = dict()
-			transData["type"] = type
-			transData["trans"] = trans
-			transData["time"] = time
-			#transData["outmsg"] = outmsg
-			transData["total_fees"] = total_fees
-			messageList += self.ParsMessages(messages, transData)
-		return messageList
 	#end define
 
 	def GetShards(self, block=None):
@@ -762,7 +691,7 @@ class MyTonCore():
 				buff = line.split(' ')
 				shard_id = buff[1]
 				shard_id = shard_id.replace('#', '')
-				shard_block = Block(buff[3])
+				shard_block = Block.from_str(buff[3])
 				shard = {"id": shard_id, "block": shard_block}
 				shards.append(shard)
 		return shards
@@ -1046,7 +975,7 @@ class MyTonCore():
 		return output
 	#end define
 
-	def AddAdnlAddrToValidator(self, adnlAddr):
+	def AddAdnlAddrToValidator(self, adnlAddr: str):
 		self.local.add_log("start AddAdnlAddrToValidator function", "debug")
 		output = False
 		result = self.validatorConsole.Run("addadnl {adnlAddr} 0".format(adnlAddr=adnlAddr))
@@ -1676,7 +1605,7 @@ class MyTonCore():
 		file.close()
 	#ned define
 
-	def CreateWallet(self, name, workchain=0, version="v1", **kwargs):
+	def CreateWallet(self, name: str, workchain=0, version="v1", **kwargs):
 		self.local.add_log("start CreateWallet function", "debug")
 		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
 		subwallet = kwargs.get("subwallet", subwallet_default)
@@ -1824,7 +1753,7 @@ class MyTonCore():
 
 	def GetOverlaysStats(self):
 		self.local.add_log("start GetOverlaysStats function", "debug")
-		resultFilePath = self.local.buffer.my_temp_dir + "getoverlaysstats.json"
+		resultFilePath = self.local.my_temp_dir + "getoverlaysstats.json"
 		result = self.validatorConsole.Run(f"getoverlaysstatsjson {resultFilePath}")
 		if "wrote stats" not in result:
 			raise Exception(f"GetOverlaysStats error: {result}")
@@ -1901,7 +1830,7 @@ class MyTonCore():
 		#end if
 
 		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.local.buffer.my_temp_dir + wallet.name + "_wallet-query"
+		resultFilePath = self.local.my_temp_dir + wallet.name + "_wallet-query"
 		if "v1" in wallet.version:
 			fiftScript = "wallet.fif"
 			args = [fiftScript, wallet.path, dest, seqno, coins, "-m", mode, resultFilePath]
@@ -1932,7 +1861,7 @@ class MyTonCore():
 			return
 		#end if
 
-		orderFilePath = self.local.buffer.my_temp_dir + wallet.name + "_order.txt"
+		orderFilePath = self.local.my_temp_dir + wallet.name + "_order.txt"
 		lines = list()
 		for dest, coins in destList:
 			lines.append("SEND {dest} {coins}".format(dest=dest, coins=coins))
@@ -1946,7 +1875,7 @@ class MyTonCore():
 		elif "v2" in wallet.version:
 			fiftScript = "highload-wallet-v2.fif"
 		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.local.buffer.my_temp_dir + wallet.name + "_wallet-query"
+		resultFilePath = self.local.my_temp_dir + wallet.name + "_wallet-query"
 		args = [fiftScript, wallet.path, wallet.subwallet, seqno, orderFilePath, resultFilePath]
 		if flags:
 			args += flags
@@ -2349,7 +2278,7 @@ class MyTonCore():
 		start = config32.get("startWorkTime")
 		assert start == election_id, 'provided election_id != election_id from config32'
 		end = config32.get("endWorkTime")
-		validators_load = self.GetValidatorsLoad(start, end - 60, saveCompFiles=True)
+		validators_load = self.GetValidatorsLoad(start, end - 60, save_comp_files=True, v2=True)
 		voted_complaints = self.GetVotedComplaints(complaints)
 		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
 		result = {}
@@ -2412,21 +2341,24 @@ class MyTonCore():
 		return onlineValidators
 	#end define
 
-	def GetValidatorsLoad(self, start, end, saveCompFiles=False) -> dict:
-		# Get buffer
-		bname = f"validatorsLoad{start}{end}{saveCompFiles}"
-		buff = self.GetFunctionBuffer(bname, timeout=60)
+	def GetValidatorsLoad(self, start: int, end: int, save_comp_files: bool = False, v2: bool = False) -> dict:
+		bname = f"validatorsLoad{start}{end}{save_comp_files}{v2}"
+		timeout = 60
+		cmd_suf = ""
+		if v2:
+			cmd_suf = "-v2"
+			timeout = 3600
+		buff = self.GetFunctionBuffer(bname, timeout=timeout)
 		if buff:
 			return buff
-		#end if
 		text = "start GetValidatorsLoad function ({}, {})".format(start, end)
 		self.local.add_log(text, "debug")
-		if saveCompFiles is True:
+		if save_comp_files:
 			filePrefix = self.tempDir + f"checkload_{start}_{end}"
 		else:
 			filePrefix = ""
-		cmd = f"checkloadall {start} {end} {filePrefix}"
-		result = self.liteClient.Run(cmd, timeout=30)
+		cmd = f"checkloadall{cmd_suf} {start} {end} {filePrefix}"
+		result = self.liteClient.Run(cmd, timeout=180 if v2 else 30)
 		lines = result.split('\n')
 		data = dict()
 		for line in lines:
@@ -2559,14 +2491,14 @@ class MyTonCore():
 		return validators
 	#end define
 
-	def CheckValidators(self, start, end):
+	def CheckValidators(self, start: int, end: int):
 		self.local.add_log("start CheckValidators function", "debug")
 		electionId = start
 		complaints = self.GetComplaints(electionId)
 		valid_complaints = self.get_valid_complaints(complaints, electionId)
 		voted_complaints = self.GetVotedComplaints(complaints)
 		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
-		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
+		data = self.GetValidatorsLoad(start, end, save_comp_files=True, v2=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
 		config = self.GetConfig32()
@@ -2790,11 +2722,11 @@ class MyTonCore():
 		return result
 	#end define
 
-	def GetVar(self, text, search):
+	def GetVar(self, text, search) -> str | None:
 		if search is None or text is None:
-			return
+			return None
 		if search not in text:
-			return
+			return None
 		text = text[text.find(search) + len(search):]
 		if text[0] in [':', '=', ' ']:
 			text = text[1:]
@@ -3154,7 +3086,7 @@ class MyTonCore():
 			from mytoninstaller.settings import enable_ton_http_api
 			enable_ton_http_api(self.local)
 
-	def enable_mode(self, name):
+	def enable_mode(self, name: str):
 		if name not in MODES:
 			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
 		MODES[name].check_enable(self)
@@ -3162,7 +3094,7 @@ class MyTonCore():
 		current_modes[name] = True
 		self.local.save()
 
-	def disable_mode(self, name):
+	def disable_mode(self, name: str):
 		current_modes = self.get_modes()
 		if name not in current_modes:
 			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
@@ -3327,7 +3259,7 @@ class MyTonCore():
 		history = self.GetAccountHistory(account, 10)
 		vwl = self.GetValidatorsWalletsList()
 		for message in history:
-			srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
+			srcAddrFull = f"{message.src_workchain}:{message.src_addr}"
 			srcAddrFull = self.AddrFull2AddrB64(srcAddrFull)
 			if srcAddrFull not in vwl:
 				continue
@@ -3401,7 +3333,7 @@ class MyTonCore():
 	def WithdrawFromPoolProcess(self, poolAddr, amount):
 		self.local.add_log("start WithdrawFromPoolProcess function", "debug")
 		wallet = self.GetValidatorWallet()
-		bocPath = self.local.buffer.my_temp_dir + wallet.name + "validator-withdraw-query.boc"
+		bocPath = self.local.my_temp_dir + wallet.name + "validator-withdraw-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-withdraw.fif"
 		args = [fiftScript, amount, bocPath]
 		self.fift.Run(args)
@@ -3609,12 +3541,12 @@ class MyTonCore():
 		raise Exception("Validator controller not found or not ready")
 	#end define
 
-	def GetControllerRequiredBalanceForLoan(self, controllerAddr, credit, interest):
-		cmd = f"runmethodfull {controllerAddr} required_balance_for_loan {credit} {interest}"
+	def GetControllerRequiredBalanceForLoan(self, controller_addr: str, credit: int, interest: int):
+		cmd = f"runmethodfull {controller_addr} required_balance_for_loan {credit * 10 ** 9} {interest}"
 		result = self.liteClient.Run(cmd)
 		data = self.Result2List(result)
 		if data is None:
-			return
+			raise Exception(f"Failed to get GetControllerRequiredBalanceForLoan result: {result}")
 		min_amount = data[0]
 		validator_amount = data[1]
 		return min_amount, validator_amount
@@ -3677,8 +3609,7 @@ class MyTonCore():
 		# Проверить хватает ли ставки валидатора
 		min_amount, validator_amount = self.GetControllerRequiredBalanceForLoan(controllerAddr, max_loan, max_interest)
 		if min_amount > validator_amount:
-			raise Exception("CreateLoanRequest error: Validator stake is too low. Use deposit_to_controller")
-		#end if
+			self.local.add_log("CreateLoanRequest warning: Validator stake is too low. Use deposit_to_controller", "warning")
 
 		wallet = self.GetValidatorWallet()
 		fiftScript = self.contractsDir + "jetton_pool/fift-scripts/generate-loan-request.fif"
@@ -3898,7 +3829,7 @@ class MyTonCore():
 	def get_validator_engine_ip(self):
 		return self.validatorConsole.addr.split(':')[0]
 
-	def GetFunctionBuffer(self, name, timeout=10):
+	def GetFunctionBuffer(self, name: str, timeout: int | float = 10):
 		timestamp = get_timestamp()
 		buff = self.local.buffer.get(name)
 		if buff is None:

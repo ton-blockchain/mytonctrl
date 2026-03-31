@@ -7,7 +7,7 @@ from typing import Protocol
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore.mytoncore import MyTonCore
 from mytonctrl.mytonctrl import Init
-from mypylib.mypylib import MyPyClass, dir as ensure_dir, Dict
+from mypylib.mypylib import MyPyClass
 from tests.helpers import remove_colors
 
 
@@ -18,10 +18,10 @@ class TestLocal(MyPyClass):
         super().__init__(file_path)
 
     def get_my_work_dir(self):
-        return ensure_dir(self._work_dir)
+        return self._work_dir
 
     def get_my_temp_dir(self):
-        return ensure_dir(self._temp_dir)
+        return self._temp_dir
 
     def self_test(self):
         pass
@@ -39,8 +39,8 @@ class TestLocal(MyPyClass):
 
 @pytest.fixture()
 def local(tmp_path):
-    work_dir = str(tmp_path / "work")
-    temp_dir = str(tmp_path / "tmp")
+    work_dir = str(tmp_path / "work") + '/'
+    temp_dir = str(tmp_path / "tmp") + '/'
     file_path = str(tmp_path / "tests_runner.py")
     os.makedirs(work_dir, exist_ok=True)
     os.makedirs(temp_dir, exist_ok=True)
@@ -108,7 +108,7 @@ class TestMyPyConsole(MyPyConsole):
 
 @pytest.fixture()
 def cli(local, ton) -> TestMyPyConsole:
-    console = TestMyPyConsole()
+    console = TestMyPyConsole(local)
     mp = pytest.MonkeyPatch()
     mp.setattr(MyTonCore, "using_pool", lambda self: True)
     mp.setattr(MyTonCore, "using_nominator_pool", lambda self: True)

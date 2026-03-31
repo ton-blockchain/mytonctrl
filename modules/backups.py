@@ -42,7 +42,7 @@ class BackupModule(MtcModule):
         if not check_usage_args_min_max_len("create_backup", args, 0, 3):
             return
         tmp_dir = self.create_tmp_ton_dir()
-        command_args = ["-m", self.ton.local.buffer.my_work_dir, "-t", tmp_dir]
+        command_args = ["-m", self.ton.local.my_work_dir, "-t", tmp_dir]
         user = pop_user_from_args(args)
         if len(args) == 1:
             command_args += ["-d", args[0]]
@@ -84,7 +84,7 @@ class BackupModule(MtcModule):
                 color_print(f"{{red}}Could not create backup: {e}{{endc}}")
 
         ip = str(ip2int(get_own_ip()))
-        command_args = ["-m", self.ton.local.buffer.my_work_dir, "-n", args[0], "-i", ip]
+        command_args = ["-m", self.ton.local.my_work_dir, "-n", args[0], "-i", ip]
 
         if self.run_restore_backup(command_args, user=user) == 0:
             self.ton.local.load_db()

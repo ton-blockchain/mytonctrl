@@ -8,6 +8,9 @@ import socket
 import sys
 import getopt
 import os
+import shutil
+import tempfile
+from pathlib import Path
 
 from functools import partial
 
@@ -85,6 +88,7 @@ def Init(local, ton, console, argv):
 	add_command(local, console, "get", inject_globals(GetSettings))
 	add_command(local, console, "set", inject_globals(SetSettings))
 	add_command(local, console, "download_archive_blocks", inject_globals(download_archive_blocks))
+	add_command(local, console, "benchmark", inject_globals(run_benchmark))
 
 	from modules.backups import BackupModule
 	module = BackupModule(ton, local)
@@ -145,8 +149,6 @@ def Init(local, ton, console, argv):
 		from modules.alert_bot import AlertBotModule
 		module = AlertBotModule(ton, local)
 		module.add_console_commands(console)
-
-	add_command(local, console, "benchmark", inject_globals(run_benchmark))
 
 	# Process input parameters
 	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
@@ -212,9 +214,9 @@ def check_installer_user(local):
 
 def pre_up(local: MyPyClass, ton: MyTonCore):
 	try:
-		check_mytonctrl_update(local)
-		check_installer_user(local)
-		check_vport(local, ton)
+		local.try_function(check_mytonctrl_update, args=[local])
+		local.try_function(check_installer_user, args=[local])
+		local.try_function(check_vport, args=[local, ton])
 		warnings(local, ton)
 	except Exception as e:
 		local.add_log(f'PreUp error: {e}', 'error')
@@ -275,6 +277,8 @@ def check_git(input_args, default_repo, text, default_branch='master'):
 
 	if '--url' in input_args:
 		git_url = pop_arg_from_args(input_args, '--url')
+		if not git_url:
+			raise Exception("git url is empty after --url flag")
 		if branch is None:
 			if '#' in git_url:
 				ref_fragment = git_url.rsplit('#', 1)[1]
@@ -402,33 +406,59 @@ def upgrade_btc_teleport(local, ton, reinstall=False, branch: str = 'master', us
 	local.try_function(module.init, args=[reinstall, branch, user])
 
 
-def run_benchmark(ton, args):
-	timeout = 200
-	with get_package_resource_path('mytonctrl', 'scripts/benchmark.sh') as benchmark_script_path:
-		with get_package_resource_path('mytonctrl', 'scripts/etabar.py') as etabar_script_path:
-			benchmark_result_path = "/tmp/benchmark_result.json"
-			run_args = ["python3", etabar_script_path, str(timeout), benchmark_script_path, benchmark_result_path]
-			exit_code = run_as_root(run_args)
-	with open(benchmark_result_path, 'rt') as file:
-		text = file.read()
-	if exit_code != 0:
-		color_print("Benchmark - {red}Error:{endc} " + text)
+def run_benchmark(args: list):
+	if shutil.which("uv") is None:
+		answer = input("uv is not installed. Install it? [y/n] ").strip().lower()
+		if answer == "y":
+			subprocess.run(["curl", "-LsSf", "https://astral.sh/uv/install.sh", "-o", "/tmp/uv_install.sh"], check=True)
+			subprocess.run(["sh", "/tmp/uv_install.sh"], check=True)
+			uv_local_bin = os.path.expanduser("~/.local/bin")
+			if uv_local_bin not in os.environ.get("PATH", ""):
+				os.environ["PATH"] = uv_local_bin + os.pathsep + os.environ.get("PATH", "")
+			if shutil.which("uv") is None:
+				color_print("{red}Error: uv installation failed{endc}")
+				return
+		else:
+			return
+
+	if get_service_status("validator"):
+		color_print("{red}Error: validator service is running. Stop it before running benchmark: `sudo systemctl stop validator`{endc}")
 		return
-	#end if
 
-	data = Dict(json.loads(text))
-	table = list()
-	table += [["Test type", "Read speed", "Write speed", "Read iops", "Write iops", "Random ops"]]
-	table += [["Fio lite", data.lite.read_speed, data.lite.write_speed, data.lite.read_iops, data.lite.write_iops, None]] # RND-4K-QD64
-	table += [["Fio hard", data.hard.read_speed, data.hard.write_speed, data.hard.read_iops, data.hard.write_iops, None]] # RND-4K-QD1
-	table += [["RocksDB", None, None, None, None, data.full.random_ops]]
-	print_table(table)
-#end define
+	with tempfile.TemporaryDirectory() as tmp_dir:
+		tmp_dir = Path(tmp_dir)
+		with get_package_resource_path('mytonctrl', 'scripts/benchmark.py') as benchmark_path:
+			shutil.copy(benchmark_path, tmp_dir / "benchmark.py")
 
-def check_mytonctrl_update(local):
-	git_path = local.buffer.my_dir
+			subprocess.run(["uv", "init", "--python", "3.13", "--no-workspace", "--name", "benchmark"], cwd=tmp_dir, check=True)
+
+			src_dir = Path("/usr/src/ton")
+			test_dir = tmp_dir / "test"
+			tontester_dir = test_dir / "tontester"
+
+			shutil.copytree(src_dir / "test", test_dir)
+
+			tl_dest = tmp_dir / "tl" / "generate" / "scheme"
+			Path(tl_dest).mkdir(parents=True, exist_ok=True)
+
+			for f in (src_dir / "tl" / "generate" / "scheme").glob('*.tl'):
+				shutil.copy(f, tl_dest)
+
+			subprocess.run(["uv", "add", tontester_dir], cwd=tmp_dir, check=True)
+
+			subprocess.run(["uv", "run", tontester_dir / "generate_tl.py"], cwd=tmp_dir, check=True)
+
+			cmd = ["uv", "run", "benchmark.py",
+				"--build-dir", '/usr/bin/ton',
+				"--source-dir", '/usr/src/ton',
+				"--work-dir", str(tmp_dir / "test" / "integration" / ".network")] + args
+			subprocess.run(cmd, cwd=tmp_dir)
+
+
+def check_mytonctrl_update(local: MyPyClass):
+	git_path = '/usr/src/mytonctrl'
 	result = check_git_update(git_path)
-	if result is True:
+	if result:
 		color_print(local.translate("mytonctrl_update_available"))
 
 def print_warning(local, warning_name: str):
@@ -1068,6 +1098,6 @@ def mytonctrl():
 	local = MyPyClass('mytonctrl.py')
 	mytoncore_local = MyPyClass('mytoncore.py')
 	ton = MyTonCore(mytoncore_local)
-	console = MyPyConsole()
+	console = MyPyConsole(local)
 	Init(local, ton, console, sys.argv[1:])
 	console.Run()

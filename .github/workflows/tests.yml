@@ -41,6 +41,11 @@ jobs:
         run: |
           pip install -U .
 
+      - name: Run Pyright
+        run: |
+          pip install pyright
+          pyright mypylib mypyconsole mytoncore/models.py mytoncore/utils.py mytoncore/events.py mytoncore/functions.py # wip support whole project
+
       - name: Run pytest
         run: |
           pytest --import-mode=append  # to test built package

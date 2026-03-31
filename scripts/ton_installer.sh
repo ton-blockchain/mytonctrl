@@ -163,7 +163,7 @@ else
 fi
 
 echo -e "${COLOR}[4/6]${ENDC} Source compilation, use ${cpu_number} cpus"
-ninja -j ${cpu_number} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy
+ninja -j ${cpu_number} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy create-state
 
 # Скачиваем конфигурационные файлы lite-client
 echo -e "${COLOR}[5/6]${ENDC} Downloading config files"

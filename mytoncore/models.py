@@ -1,168 +1,128 @@
+# pyright: strict
+
+from __future__ import annotations
 import os
+from dataclasses import dataclass
 
 
+@dataclass
 class Wallet:
-	def __init__(self, name, path, version):
-		self.name = name
-		self.path = path
-		self.addrFilePath = f"{path}.addr"
-		self.privFilePath = f"{path}.pk"
-		self.bocFilePath = f"{path}-query.boc"
-		self.addrFull = None
-		self.workchain = None
-		self.addr = None
-		self.addrB64 = None
-		self.addrB64_init = None
-		self.oldseqno = None
-		self.account = None
-		self.subwallet = None
-		self.version = version
-	#end define
+    name: str
+    path: str
+    version: str
+    addrFull: str | None = None
+    workchain: int | None = None
+    addr: str | None = None
+    addrB64: str | None = None
+    addrB64_init: str | None = None
+    oldseqno: int | None = None
+    subwallet: int | None = None
 
-	def Delete(self):
-		os.remove(self.addrFilePath)
-		os.remove(self.privFilePath)
-	#end define
-#end class
+    def __post_init__(self):
+        self.addrFilePath: str = f"{self.path}.addr"
+        self.privFilePath: str = f"{self.path}.pk"
+        self.bocFilePath: str = f"{self.path}-query.boc"
+
+    def Delete(self):
+        os.remove(self.addrFilePath)
+        os.remove(self.privFilePath)
 
 
+@dataclass
 class Account:
-	def __init__(self, workchain, addr):
-		self.workchain = workchain
-		self.addr = addr
-		self.addrB64 = None
-		self.addrFull = None
-		self.status = "empty"
-		self.balance = 0
-		self.lt = None
-		self.hash = None
-		self.codeHash = None
-	#end define
-#end class
+    workchain: int
+    addr: str
+    addrB64: str | None = None
+    addrFull: str | None = None
+    status: str = "empty"
+    balance: float = 0
+    lt: str | None = None
+    hash: str | None = None
+    codeHash: str | None = None
 
 
-class Block():
-	def __init__(self, str=None):
-		self.workchain = None
-		self.shardchain = None
-		self.seqno = None
-		self.rootHash = None
-		self.fileHash = None
-		self.ParsBlock(str)
-	#end define
+@dataclass
+class Block:
+    workchain: int
+    shardchain: str
+    seqno: int
+    rootHash: str
+    fileHash: str
 
-	def ParsBlock(self, str):
-		if str is None:
-			return
-		buff = str.split(':')
-		self.rootHash = buff[1]
-		self.fileHash = buff[2]
-		buff = buff[0]
-		buff = buff.replace('(', '')
-		buff = buff.replace(')', '')
-		buff = buff.split(',')
-		self.workchain = int(buff[0])
-		self.shardchain = buff[1]
-		self.seqno = int(buff[2])
-	#end define
+    @classmethod
+    def from_str(cls, s: str):
+        buff = s.split(":")
+        root_hash = buff[1]
+        file_hash = buff[2]
+        buff = buff[0]
+        buff = buff.replace("(", "")
+        buff = buff.replace(")", "")
+        buff = buff.split(",")
+        workchain = int(buff[0])
+        shardchain = buff[1]
+        seqno = int(buff[2])
+        return cls(workchain, shardchain, seqno, root_hash, file_hash)
 
-	def __str__(self):
-		result = f"({self.workchain},{self.shardchain},{self.seqno}):{self.rootHash}:{self.fileHash}"
-		return result
-	#end define
+    def __str__(self):
+        result = f"({self.workchain},{self.shardchain},{self.seqno}):{self.rootHash}:{self.fileHash}"
+        return result
 
-	def __repr__(self):
-		return self.__str__()
-	#end define
-
-	def __eq__(self, other):
-		if other is None:
-			return False
-		return self.rootHash == other.rootHash and self.fileHash == other.fileHash
-	#end define
-#end class
+    def __repr__(self):
+        return self.__str__()
 
 
-class Trans():
-	def __init__(self, block, addr=None, lt=None, hash=None):
-		self.block = block
-		self.addr = addr
-		self.lt = lt
-		self.hash = hash
-	#end define
+@dataclass
+class Transaction:
+    block: Block
+    type: str | None
+    time: int | None
+    total_fees: float | None
 
-	def __str__(self):
-		return str(self.__dict__)
-	#end define
+    def __str__(self):
+        return str(self.__dict__)
 
-	def __repr__(self):
-		return self.__str__()
-	#end define
-
-	def __eq__(self, other):
-		if other is None:
-			return False
-		return self.hash == other.hash
-	#end define
-#end class
+    def __repr__(self):
+        return self.__str__()
 
 
-class Message():
-	def __init__(self):
-		self.trans = None
-		self.type = None
-		self.time = None
-		self.srcWorkchain = None
-		self.destWorkchain = None
-		self.srcAddr = None
-		self.destAddr = None
-		self.value = None
-		self.body = None
-		self.comment = None
-		self.ihr_fee = None
-		self.fwd_fee = None
-		self.total_fees = None
-		self.ihr_disabled = None
-		self.hash = None
-	#end define
+@dataclass
+class Message:
+    transaction: Transaction
+    src_workchain: int | None
+    dest_workchain: int | None
+    src_addr: str | None
+    dest_addr: str | None
+    value: float | None
+    body: str | None
+    comment: str | None
+    ihr_fee: float | None
+    fwd_fee: float | None
+    ihr_disabled: bool | None
 
-	def GetFullAddr(self, workchain, addr):
-		if addr is None:
-			return
-		return f"{workchain}:{addr}"
-	#end define
+    @property
+    def time(self):
+        return self.transaction.time
 
-	def __str__(self):
-		return str(self.__dict__)
-	#end define
+    def __str__(self):
+        return str(self.__dict__)
 
-	def __repr__(self):
-		return self.__str__()
-	#end define
-
-	def __eq__(self, other):
-		if other is None:
-			return False
-		return self.hash == other.hash
-	#end define
-#end class
+    def __repr__(self):
+        return self.__str__()
 
 
+@dataclass
 class Pool:
-	def __init__(self, name, path):
-		self.name = name
-		self.path = path
-		self.addrFilePath = f"{path}.addr"
-		self.bocFilePath = f"{path}-query.boc"
-		self.addrFull = None
-		self.workchain = None
-		self.addr = None
-		self.addrB64 = None
-		self.addrB64_init = None
-		self.account = None
-	#end define
+    name: str
+    path: str
+    addrFull: str | None = None
+    workchain: int | None = None
+    addr: str | None = None
+    addrB64: str | None = None
+    addrB64_init: str | None = None
 
-	def Delete(self):
-		os.remove(self.addrFilePath)
-	#end define
-#end class
+    def __post_init__(self):
+        self.addrFilePath: str = f"{self.path}.addr"
+        self.bocFilePath: str = f"{self.path}-query.boc"
+
+    def Delete(self):
+        os.remove(self.addrFilePath)

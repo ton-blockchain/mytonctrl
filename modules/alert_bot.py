@@ -1,5 +1,7 @@
 import dataclasses
 import time
+from typing import Optional
+
 import requests
 
 from modules.module import MtcModule
@@ -196,6 +198,7 @@ class AlertBotModule(MtcModule):
         self.chat_id = None
         self.last_db_check = 0
         self.initial_sync = None
+        self.wallet: Optional[str] = None
 
     def send_message(self, text: str, silent: bool = False, disable_web_page_preview: bool = False):
         if self.token is None:
@@ -237,7 +240,7 @@ Node IP: <code>{self.ip}</code>
 ADNL: <code>{self.adnl}</code>'''
 
         if self.ton.using_validator():
-            text += f"\nWallet: <code>{self.wallet}</code>"
+            text += f"\nWallet: <code>{self.wallet or 'n/a'}</code>"
 
         text += f'''
 Time: <code>{time_}</code> (<code>{int(time.time())}</code>)
@@ -250,7 +253,7 @@ Severity: <code>{alert.severity}</code>
             if track_active:
                 self._set_alert_active(alert_name, True)
 
-    def resolve_alert(self, alert_name: str, ok_alert_name: str = None, **kwargs):
+    def resolve_alert(self, alert_name: str, ok_alert_name: Optional[str] = None, **kwargs):
         if not self._is_alert_active(alert_name):
             return
         ok_alert_name = ok_alert_name or f"{alert_name}_ok"
@@ -292,7 +295,8 @@ Severity: <code>{alert.severity}</code>
         self.hostname = get_hostname()
         adnl = self.ton.GetAdnlAddr()
         self.adnl = adnl
-        self.wallet = self.ton.GetValidatorWallet().addrB64
+        w = self.ton.GetValidatorWallet()
+        self.wallet = w.addrB64 if w else None
         self.ip = self.ton.get_node_ip()
         self.set_global_vars()
         self.initial_sync = self.ton.in_initial_sync()
@@ -415,6 +419,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         if not validator_status.is_working or validator_status.out_of_sync >= 20:
             return
         validator_wallet = self.ton.GetValidatorWallet()
+        assert validator_wallet is not None, "Could not get validator wallet"
         validator_account = self.ton.GetAccount(validator_wallet.addrB64)
         if validator_account.status != "empty" and validator_account.balance < 10:
             self.send_alert("low_wallet_balance", wallet=validator_wallet.addrB64, balance=validator_account.balance)
@@ -424,6 +429,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
     def check_efficiency(self):
         if not self.ton.using_validator():
             return
+        assert self.validator_module is not None, "Validator module is not initialized"
         validator = self.validator_module.find_myself(self.ton.GetValidatorsList())
         if validator is None or validator.efficiency is None:
             return
@@ -526,7 +532,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         trs = self.ton.GetAccountHistory(self.ton.GetAccount(res["walletAddr"]), limit=10)
 
         for tr in trs:
-            if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.srcAddr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
+            if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.src_addr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
                 self.send_alert("stake_returned", stake=round(tr.value), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
                 return
         self.send_alert("stake_not_returned", address=res["walletAddr"])

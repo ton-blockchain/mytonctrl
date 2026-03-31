@@ -222,7 +222,6 @@ def run_install(answers: dict):
         CONFIG['COLLATE_SHARD'] = collate_shard
     if archive_blocks:
         CONFIG['ARCHIVE_BLOCKS'] = archive_blocks
-        command += ['-v', 'master']
 
     if validator_mode and validator_mode not in ('Skip', 'Validator wallet'):
         if validator_mode == 'Nominator pool':

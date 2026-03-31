@@ -85,7 +85,7 @@ class NominatorPoolModule(PoolModule):
 
     def do_deposit_to_pool(self, pool_addr, amount):
         wallet = self.ton.GetValidatorWallet()
-        bocPath = self.ton.local.buffer.my_temp_dir + wallet.name + "validator-deposit-query.boc"
+        bocPath = self.ton.local.my_temp_dir + wallet.name + "validator-deposit-query.boc"
         fiftScript = self.ton.contractsDir + "nominator-pool/func/validator-deposit.fif"
         args = [fiftScript, bocPath]
         self.ton.fift.Run(args)

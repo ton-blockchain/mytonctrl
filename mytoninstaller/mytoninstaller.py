@@ -348,7 +348,7 @@ def General(local, console):
 ###
 def mytoninstaller():
 	local = MyPyClass(__file__)
-	console = MyPyConsole()
+	console = MyPyConsole(local)
 
 	Init(local, console)
 	if len(sys.argv) > 1:

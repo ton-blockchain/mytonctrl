@@ -25,8 +25,17 @@ Please note that during the installation and upgrade procedures, MyTonCtrl will 
 
 
 ### Modes
-There are three main installation modes: `liteserver`, `validator` and `collator`. They all compile and install `TON` components and run node. Use `liteserver` mode if you want to use your node as Liteserver only.
-Use `validator` mode if you want to participate in the validator elections (you still can use that node as Liteserver). Use `collator` if you want your node to collate blocks for validators.
+MyTonCtrl supports these installation modes:
+
+- `liteserver` - run the node as a liteserver only
+- `collator` - run the node as a collator
+- `validator` - run a validator node using the validator wallet for staking
+- `single-nominator` - run a validator node with single-nominator staking (recommended for validators)
+- `nominator-pool` - run a validator node with nominator-pool staking
+- `liquid-staking` - run a validator node with liquid-staking enabled
+
+`single-nominator`, `nominator-pool`, and `liquid-staking` all install a validator node and enable `validator` mode automatically.
+You can change enabled modes later after installation.
 
 Learn more about node types: https://docs.ton.org/v3/documentation/nodes/overview
 
@@ -46,7 +55,12 @@ Learn more about node types: https://docs.ton.org/v3/documentation/nodes/overvie
 	su root -c 'bash install.sh -m <mode>'
 	```
 
-To view all available installation options use `sudo bash install.sh --help`
+To install a full archive liteserver, use:
+```shell
+sudo bash install.sh -m liteserver --archive
+```
+
+To view all available installation options use `bash install.sh --help`
 
 ### Installation configuration
 

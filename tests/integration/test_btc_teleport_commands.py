@@ -22,7 +22,7 @@ def test_remove_btc_teleport(cli, monkeypatch, ton):
 
     output = cli.execute("remove_btc_teleport", no_color=True)
     assert "Removed btc_teleport" in output
-    assert run_args == ['bash', script_path, '-s', '/usr/src/ton-teleport-btc-periphery', '-k', ton.local.buffer.my_work_dir + '/btc_oracle_keystore']
+    assert run_args == ['bash', script_path, '-s', '/usr/src/ton-teleport-btc-periphery', '-k', ton.local.my_work_dir + '/btc_oracle_keystore']
 
     # bad args
     run_args = []
@@ -42,11 +42,11 @@ def test_remove_btc_teleport(cli, monkeypatch, ton):
     monkeypatch.setattr(MyTonCore, "GetConfig34", lambda self: {"mainValidators": 10})
     output = cli.execute("remove_btc_teleport --force", no_color=True)
     assert "Removed btc_teleport" in output
-    assert run_args == ['bash', script_path, '-s', '/usr/src/ton-teleport-btc-periphery', '-k', ton.local.buffer.my_work_dir + '/btc_oracle_keystore']
+    assert run_args == ['bash', script_path, '-s', '/usr/src/ton-teleport-btc-periphery', '-k', ton.local.my_work_dir + '/btc_oracle_keystore']
 
     # non-masterchain validator
     monkeypatch.setattr(MyTonCore, "GetValidatorIndex", lambda self: 10)
     monkeypatch.setattr(MyTonCore, "GetConfig34", lambda self: {"mainValidators": 10})
     output = cli.execute("remove_btc_teleport", no_color=True)
     assert "Removed btc_teleport" in output
-    assert run_args == ['bash', script_path, '-s', '/usr/src/ton-teleport-btc-periphery', '-k', ton.local.buffer.my_work_dir + '/btc_oracle_keystore']
+    assert run_args == ['bash', script_path, '-s', '/usr/src/ton-teleport-btc-periphery', '-k', ton.local.my_work_dir + '/btc_oracle_keystore']

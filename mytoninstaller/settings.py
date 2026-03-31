@@ -99,7 +99,7 @@ def FirstNodeSettings(local):
 		for shard in add_shard.split():
 			cmd += f' --add-shard {shard}'
 
-	add2systemd(name="validator", user=vuser, start=cmd, pre='/bin/sleep 2') # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
+	add2systemd(name="validator", user=vuser, start=cmd, pre='/bin/sleep 2')
 
 	if local.buffer.public_ip is not None:
 		ip = local.buffer.public_ip

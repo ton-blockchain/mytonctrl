@@ -1,25 +1,6 @@
 #!/bin/bash
 set -e
 
-# colors
-COLOR='\033[92m'
-ENDC='\033[0m'
-mydir=`pwd`
-
-# check sudo permissions
-if [ "$(id -u)" != "0" ]; then
-    echo "Please run script as root"
-    exit 1
-fi
-
-author="ton-blockchain"
-repo="mytonctrl"
-branch="master"
-network="mainnet"
-ton_node_version="master"  # Default version
-ton_node_git_url="https://github.com/ton-blockchain/ton.git"
-config_overridden=false
-
 show_help_and_exit() {
     echo 'Supported arguments:'
     echo ' -c, --config  URL             Provide custom network config'
@@ -31,7 +12,8 @@ show_help_and_exit() {
     echo ' -a, --author                  Set MyTonCtrl git repo author'
     echo ' -r, --repo                    Set MyTonCtrl git repo name'
     echo ' -b, --branch                  Set MyTonCtrl git repo branch'
-    echo ' -m, --mode  MODE              Install MyTonCtrl with specified mode (validator or liteserver). Leave empty to launch interactive installer'
+    echo ' -m, --mode  MODE              Install MyTonCtrl with specified mode (validator, liteserver or collator). Leave empty to launch interactive installer'
+    echo ' --archive                     With -m liteserver, install full archive liteserver'
     echo ' -n, --network  NETWORK        Specify the network (mainnet or testnet)'
     echo ' -g, --node-repo  URL          TON node git repo URL (default: https://github.com/ton-blockchain/ton.git)'
     echo ' -v, --node-version  VERSION   Specify the TON node version (commit, branch, or tag)'
@@ -47,12 +29,32 @@ if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
     show_help_and_exit
 fi
 
+# colors
+COLOR='\033[92m'
+ENDC='\033[0m'
+
+# check sudo permissions
+if [ "$(id -u)" != "0" ]; then
+    echo "Please run script as root"
+    exit 1
+fi
+
 # node install parameters
+
+author="ton-blockchain"
+repo="mytonctrl"
+branch="master"
+network="mainnet"
+ton_node_version="master"  # Default version
+ton_node_git_url="https://github.com/ton-blockchain/ton.git"
+config_overridden=false
+
 config="https://ton-blockchain.github.io/global.config.json"
 env_file=""
 telemetry=true
 ignore=false
 dump=false
+archive=false
 only_mtc=false
 only_node=false
 backup=none
@@ -72,6 +74,7 @@ while (($#)); do
       ;;
 
     # no arg
+    --archive)      newargv+=(-A) ;;
     --dump)         newargv+=(-d) ;;
     --only-mtc)     newargv+=(-o) ;;
     --only-node)    newargv+=(-l) ;;
@@ -111,8 +114,9 @@ done
 #printf '\n'
 set -- "${newargv[@]}"
 
-while getopts ":c:tidola:r:b:m:n:v:u:p:g:e:h" flag; do
+while getopts ":Ac:tidola:r:b:m:n:v:u:p:g:e:h" flag; do
     case "${flag}" in
+        A) archive=true;;
         c) config=${OPTARG}; config_overridden=true;;
         t) telemetry=false;;
         i) ignore=true;;
@@ -149,6 +153,17 @@ fi
 if [ "$only_mtc" = true ] && [ "$backup" = "none" ]; then
     echo "Backup file must be provided if only mtc installation"
     exit 1
+fi
+
+if [ "$archive" = true ] && [ "$mode" != "liteserver" ]; then
+    echo "Flag --archive can only be used with -m liteserver"
+    exit 1
+fi
+
+if [ "$archive" = true ]; then
+    export ARCHIVE_BLOCKS=1
+    export ARCHIVE_TTL=-1
+    unset STATE_TTL
 fi
 
 

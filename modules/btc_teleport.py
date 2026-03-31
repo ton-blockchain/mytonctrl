@@ -16,7 +16,7 @@ class BtcTeleportModule(MtcModule):
 
     def __init__(self, ton, local, *args, **kwargs):
         super().__init__(ton, local, *args, **kwargs)
-        self.keystore_path = self.ton.local.buffer.my_work_dir + '/btc_oracle_keystore'
+        self.keystore_path = self.ton.local.my_work_dir + '/btc_oracle_keystore'
         self.repo_name = 'ton-teleport-btc-periphery'
         self.src_dir = f"/usr/src/{self.repo_name}"
         self.bin_dir = self.src_dir + '/out'

@@ -1,90 +1,83 @@
+from __future__ import annotations
+
 import base64
 import json
 import re
 import subprocess
+
 try:
     # Python 3.9+
     from importlib.resources import files, as_file
 except ImportError:
     # Python < 3.9
-    from importlib_resources import files, as_file
+    from importlib_resources import files, as_file  # pyright: ignore[reportMissingImports]
 
 
-def str2b64(s):
+def str2b64(s: str):
     b = s.encode("utf-8")
     b64 = base64.b64encode(b)
     b64 = b64.decode("utf-8")
     return b64
-# end define
 
 
-def b642str(b64):
-    b64 = b64.encode("utf-8")
-    b = base64.b64decode(b64)
-    s = b.decode("utf-8")
+def b642str(b64: str):
+    b = base64.b64decode(b64.encode())
+    s = b.decode()
     return s
-# end define
 
 
-def dict2b64(d):
+def dict2b64(d: dict):
     s = json.dumps(d)
     b64 = str2b64(s)
     return b64
-# end define
 
 
-def b642dict(b64):
+def b642dict(b64: str):
     s = b642str(b64)
     d = json.loads(s)
     return d
-# end define
 
 
-def hex2b64(input):  # TODO: remove duplicates
-    hexBytes = bytes.fromhex(input)
-    b64Bytes = base64.b64encode(hexBytes)
-    b64String = b64Bytes.decode()
-    return b64String
-# end define
+def hex2b64(inp: str):  # TODO: remove duplicates
+    hex_bytes = bytes.fromhex(inp)
+    b64_bytes = base64.b64encode(hex_bytes)
+    b64_string = b64_bytes.decode()
+    return b64_string
 
 
-def b642hex(input):
-    b64Bytes = input.encode()
-    hexBytes = base64.b64decode(b64Bytes)
-    hexString = hexBytes.hex()
-    return hexString
-# end define
+def b642hex(inp: str):
+    b64_bytes = inp.encode()
+    hex_bytes = base64.b64decode(b64_bytes)
+    hex_string = hex_bytes.hex()
+    return hex_string
 
 
-def xhex2hex(x):
+def xhex2hex(x: str) -> str | None:
     try:
         b = x[1:]
         h = b.lower()
         return h
     except Exception:
         return None
-#end define
 
-def hex2base64(h):  # TODO: remove duplicates
+
+def hex2base64(h: str):  # TODO: remove duplicates
     b = bytes.fromhex(h)
     b64 = base64.b64encode(b)
     s = b64.decode("utf-8")
     return s
-#end define
 
 
-def str2bool(str):
-    if str == "true":
+def str2bool(s: str):
+    if s == "true":
         return True
     return False
-# end define
 
 
-def ng2g(ng):
+def ng2g(ng: int | None) -> float | None:
     if ng is None:
-        return
-    return int(ng)/10**9
-#end define
+        return None
+    return int(ng) / 10**9
 
 
 def parse_db_stats(path: str):
@@ -103,23 +96,25 @@ def parse_db_stats(path: str):
                 result[s[0]] = {}
                 result[s[0]] = {k: float(v) for k, v in items}
     return result
-# end define
 
-def get_hostname():
+
+def get_hostname() -> str:
     return subprocess.run(["hostname"], stdout=subprocess.PIPE).stdout.decode().strip()
+
 
 def hex_shard_to_int(shard_id_str: str) -> dict:
     try:
-        wc, shard_hex = shard_id_str.split(':')
+        wc, shard_hex = shard_id_str.split(":")
         wc = int(wc)
         shard = int(shard_hex, 16)
-        if shard >= 2 ** 63:
-            shard -= 2 ** 64
+        if shard >= 2**63:
+            shard -= 2**64
         return {"workchain": wc, "shard": shard}
     except (ValueError, IndexError):
         raise Exception(f'Invalid shard ID "{shard_id_str}"')
 
-def signed_int_to_hex64(value):
+
+def signed_int_to_hex64(value: int):
     if value < 0:
         value = (1 << 64) + value
     return f"{value:016X}"
@@ -148,11 +143,11 @@ def shard_prefix_len(shard_id: int):
         if u == 0:
             return 64
         return ((u & -u).bit_length()) - 1
+
     return 63 - _count_trailing_zeroes64(_to_unsigned64(shard_id))
 
 
 def shard_prefix(shard_id: int, length_: int):
-
     def _to_signed64(v: int) -> int:
         return v - (1 << 64) if v >= (1 << 63) else v
 
@@ -162,7 +157,9 @@ def shard_prefix(shard_id: int, length_: int):
     x = _lower_bit64(u)
     y = 1 << (63 - length_)
     if y < x:
-        raise ValueError("requested prefix length is longer (more specific) than current shard id")
+        raise ValueError(
+            "requested prefix length is longer (more specific) than current shard id"
+        )
     mask_non_lower = (~(y - 1)) & _MASK64  # equals -y mod 2^64; clears bits below y
     res_u = (u & mask_non_lower) | y
     return _to_signed64(res_u)
