@@ -2335,18 +2335,6 @@ class MyTonCore():
 			result[complaint['pseudohash']] = complaint
 		return result
 
-	def GetOnlineValidators(self):
-		onlineValidators = list()
-		validators = self.GetValidatorsList(fast=True)
-		for validator in validators:
-			online = validator.get("online")
-			if online is True:
-				onlineValidators.append(validator)
-		if len(onlineValidators) == 0:
-			onlineValidators = None
-		return onlineValidators
-	#end define
-
 	def GetValidatorsLoad(self, start: int, end: int, save_comp_files: bool = False, v2: bool = False) -> dict:
 		bname = f"validatorsLoad{start}{end}{save_comp_files}{v2}"
 		timeout = 60

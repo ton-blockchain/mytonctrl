@@ -250,7 +250,6 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     status_mocker.out_of_sync = 10
 
     monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda *_: 'mainnet')
-    monkeypatch.setattr(MyTonCore, "GetOnlineValidators", lambda *_: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     monkeypatch.setattr(MyTonCore, "get_root_workchain_enabled_time", lambda *_: 1234, raising=False)
     monkeypatch.setattr(MyTonCore, "GetRootWorkchainEnabledTime", lambda *_: 1234, raising=False)
     monkeypatch.setattr(MyTonCore, "get_config_34", lambda _: {"totalValidators": 100, "startWorkTime": 0}, raising=False)
@@ -282,7 +281,7 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     assert 'Error' not in output
     assert 'TON network status' in output
     assert 'Network name: mainnet' in output
-    assert 'Number of validators: 10(100)' in output
+    assert 'Number of validators: 100' in output
     assert 'Number of shardchains: 3' in output
     assert 'Number of offers: n/a(n/a)' in output
     assert 'Election status: closed' in output
@@ -297,7 +296,9 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
 
     # test fast
     output = cli.execute("status fast", no_color=True)
-    assert 'Number of validators: n/a(100)' in output
+    assert 'Number of validators: ' not in output
+    assert "Validation period" not in output
+    assert "elections" not in output
 
     # test other mode
     monkeypatch.setattr(MyTonCore, "using_validator", lambda *_: False)

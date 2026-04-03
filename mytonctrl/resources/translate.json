@@ -375,9 +375,9 @@
 		"zh_TW": "網路名字: {0}"
 	},
 	"ton_status_validators": {
-		"en": "Number of validators: {0}({1})",
-		"ru": "Количество валидаторов: {0}({1})",
-		"zh_TW": "驗證者數量: {0}({1})"
+		"en": "Number of validators: {0}",
+		"ru": "Количество валидаторов: {0}",
+		"zh_TW": "驗證者數量: {0}"
 	},
 	"ton_status_shards": {
 		"en": "Number of shardchains: {0}",

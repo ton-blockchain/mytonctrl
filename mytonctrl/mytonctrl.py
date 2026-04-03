@@ -611,12 +611,12 @@ def PrintStatus(local, ton, args):
 	opt = None
 	if len(args) == 1:
 		opt = args[0]
+	fast = opt == "fast"
 
 	# Local status
 	validator_status = ton.GetValidatorStatus()
 	adnl_addr = ton.GetAdnlAddr()
 	validator_index = None
-	onlineValidators = None
 	validator_efficiency = None
 	validator_wallet = ton.GetValidatorWallet()
 	validator_account = Dict()
@@ -629,7 +629,7 @@ def PrintStatus(local, ton, args):
 	disks_load_avg = ton.GetStatistics("disksLoadAvg", statistics)
 	disks_load_percent_avg = ton.GetStatistics("disksLoadPercentAvg", statistics)
 
-	all_status = validator_status.is_working and validator_status.out_of_sync < 20
+	all_status = (validator_status.is_working and validator_status.out_of_sync < 20) and not fast
 
 	vconfig = None
 	try:
@@ -644,15 +644,6 @@ def PrintStatus(local, ton, args):
 		config34 = ton.GetConfig34()
 		config36 = ton.GetConfig36()
 		totalValidators = config34["totalValidators"]
-
-		if opt != "fast":
-			try:
-				onlineValidators = ton.GetOnlineValidators()
-			except Exception as e:
-				local.add_log(f"Failed to get online validators: {e}", "warning")
-			# validator_efficiency = ton.GetValidatorEfficiency()
-		if onlineValidators:
-			onlineValidators = len(onlineValidators)
 
 		oldStartWorkTime = config36.get("startWorkTime")
 		if oldStartWorkTime is None:
@@ -674,7 +665,7 @@ def PrintStatus(local, ton, args):
 	#end if
 
 	if all_status:
-		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber)
+		PrintTonStatus(local, network_name, startWorkTime, totalValidators, shardsNumber, offersNumber, complaintsNumber)
 	PrintLocalStatus(local, ton, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
 		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl, vconfig)
 	if all_status and ton.using_validator():
@@ -682,9 +673,7 @@ def PrintStatus(local, ton, args):
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
 
-def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber):
-
-	allValidators = totalValidators
+def PrintTonStatus(local, network_name, startWorkTime, totalValidators, shardsNumber, offersNumber, complaintsNumber):
 	newOffers = offersNumber.get("new") if offersNumber else 'n/a'
 	allOffers = offersNumber.get("all") if offersNumber else 'n/a'
 	newComplaints = complaintsNumber.get("new") if complaintsNumber else 'n/a'
@@ -692,9 +681,8 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 
 	color_network_name = bcolors.green_text(network_name) if network_name == "mainnet" else bcolors.yellow_text(network_name)
 	network_name_text = local.translate("ton_status_network_name").format(color_network_name)
-	onlineValidators_text = GetColorInt(onlineValidators, border=allValidators*2/3, logic="more")
-	allValidators_text = bcolors.yellow_text(allValidators)
-	validators_text = local.translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
+	allValidators_text = bcolors.yellow_text(totalValidators)
+	validators_text = local.translate("ton_status_validators").format(allValidators_text)
 	shards_text = local.translate("ton_status_shards").format(bcolors.green_text(shardsNumber))
 	newOffers_text = bcolors.green_text(newOffers)
 	allOffers_text = bcolors.yellow_text(allOffers)
