@@ -209,20 +209,25 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
 
     monkeypatch.setattr(MyTonCore, "GetSettings", fake_GetSettings)
     monkeypatch.setattr(MyTonCore, "GetStatistics", fake_GetStatistics)
-    vconfig_mock = mocker.Mock()
+    vconfig_mock = Dict()
     vconfig_mock.fullnode = base64.b64encode(b"\x01\x02\x03\x04").decode()
+    vconfig_mock["addrs"] = [
+            {"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]},
+            {"@type": "engine.quicAddr", "ip": 2130706433, "port": 9999},
+        ]
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda *_: vconfig_mock)
     monkeypatch.setattr(MyTonCore, "get_validator_engine_ip", lambda *_: '127.0.0.1')
 
     monkeypatch.setattr(mytonctrl_module, 'get_git_hash', lambda *_, **__: 'abcd')
     monkeypatch.setattr(mytonctrl_module, 'get_git_branch', lambda *_: 'master')
-    monkeypatch.setattr(mytonctrl_module, 'GetBinGitHash', lambda *_, **__: 'abcd')
+    monkeypatch.setattr(mytonctrl_module, 'get_bin_git_hash', lambda *_, **__: 'abcd')
     monkeypatch.setattr(mytonctrl_module, 'fix_git_config', lambda *_: None)
     monkeypatch.setattr(mytonctrl_module, 'get_service_status', lambda *_: True)
     monkeypatch.setattr(mytonctrl_module, 'get_service_uptime', lambda *_: 1000)
 
     output = cli.execute("status", no_color=True)
     assert 'Error' not in output
+    assert 'Node ports: 30000, 9999 (QUIC)' in output
     assert 'Node status' in output
     assert 'Node mode: VALIDATOR' in output
     assert 'ADNL address of local validator: 1234ABCD' in output
@@ -245,7 +250,6 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     status_mocker.out_of_sync = 10
 
     monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda *_: 'mainnet')
-    monkeypatch.setattr(MyTonCore, "GetOnlineValidators", lambda *_: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     monkeypatch.setattr(MyTonCore, "get_root_workchain_enabled_time", lambda *_: 1234, raising=False)
     monkeypatch.setattr(MyTonCore, "GetRootWorkchainEnabledTime", lambda *_: 1234, raising=False)
     monkeypatch.setattr(MyTonCore, "get_config_34", lambda _: {"totalValidators": 100, "startWorkTime": 0}, raising=False)
@@ -269,16 +273,15 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "GetComplaintsNumber", lambda *_: None)
     monkeypatch.setattr(MyTonCore, "GetAccount", lambda *_: Dict({"balance": 1000}))
 
-    from mytoncore import functions as core_funcs
-    monkeypatch.setattr(core_funcs, "GetMemoryInfo", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
-    monkeypatch.setattr(core_funcs, "GetSwapInfo", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
+    monkeypatch.setattr(mytonctrl_module, "get_memory_info", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
+    monkeypatch.setattr(mytonctrl_module, "get_swap_info", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
 
     output = cli.execute("status", no_color=True)
     assert "Traceback" not in output
     assert 'Error' not in output
     assert 'TON network status' in output
     assert 'Network name: mainnet' in output
-    assert 'Number of validators: 10(100)' in output
+    assert 'Number of validators: 100' in output
     assert 'Number of shardchains: 3' in output
     assert 'Number of offers: n/a(n/a)' in output
     assert 'Election status: closed' in output
@@ -293,7 +296,9 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
 
     # test fast
     output = cli.execute("status fast", no_color=True)
-    assert 'Number of validators: n/a(100)' in output
+    assert 'Number of validators: ' not in output
+    assert "Validation period" not in output
+    assert "elections" not in output
 
     # test other mode
     monkeypatch.setattr(MyTonCore, "using_validator", lambda *_: False)
@@ -479,3 +484,104 @@ def test_download_archive_blocks(cli, monkeypatch):
     assert 'Error' not in output
     assert calls[1:] == ('/test', 1, None, False)
     assert calls[0].buffer.ton_storage.api_port == 123
+
+
+def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
+    # Bad args - no args
+    output = cli.execute("set_quic_port", no_color=True)
+    assert "Bad args" in output
+
+    # Bad args - too many args
+    output = cli.execute("set_quic_port 1234 2 extra", no_color=True)
+    assert "Bad args" in output
+
+    # Bad args - port not integer
+    output = cli.execute("set_quic_port abc", no_color=True)
+    assert "Port must be an integer" in output
+
+    # Bad args - port out of range
+    output = cli.execute("set_quic_port -1", no_color=True)
+    assert "Port must be between 0 and 65535" in output
+    output = cli.execute("set_quic_port 65536", no_color=True)
+    assert "Port must be between 0 and 65535" in output
+
+    # Bad args - category not integer
+    output = cli.execute("set_quic_port 1234 abc", no_color=True)
+    assert "Category must be an integer" in output
+
+    # Happy path - set quic port with default category, no existing quic addrs, no collators
+    validator_console_mock = mocker.Mock()
+    validator_console_mock.Run.return_value = "success"
+    monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
+        "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]}],  # 127.0.0.1
+        "collators": [],
+    })
+    monkeypatch.setattr(MyTonCore, "GetAdnlAddr", lambda self: "TEST_ADNL_ADDR")
+    update_adnl_mock = mocker.Mock()
+    monkeypatch.setattr(MyTonCore, "update_adnl_category", update_adnl_mock)
+    ton.validatorConsole = validator_console_mock
+
+    output = cli.execute("set_quic_port 1234", no_color=True)
+    update_adnl_mock.assert_called_once_with(adnl_addr="TEST_ADNL_ADDR", category=2)
+    validator_console_mock.Run.assert_called_once_with("add-quic-addr 127.0.0.1:1234 [ 2 ] [ ]")
+
+    # Happy path - with custom category
+    update_adnl_mock.reset_mock()
+    validator_console_mock.Run.reset_mock()
+    monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
+        "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [3]}],
+        "collators": [],
+    })
+    output = cli.execute("set_quic_port 5555 3", no_color=True)
+    update_adnl_mock.assert_called_once_with(adnl_addr="TEST_ADNL_ADDR", category=3)
+    validator_console_mock.Run.assert_called_once_with("add-quic-addr 127.0.0.1:5555 [ 3 ] [ ]")
+
+    # Happy path - delete existing quic addr before adding new one
+    update_adnl_mock.reset_mock()
+    validator_console_mock.Run.reset_mock()
+    monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
+        "addrs": [
+            {"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]},
+            {"@type": "engine.quicAddr", "ip": 2130706433, "port": 9999, "categories": [1], "priority_categories": []},
+        ],
+        "collators": [],
+    })
+    output = cli.execute("set_quic_port 1234", no_color=True)
+    assert "Deleted quic addr 127.0.0.1:9999" in output
+    assert validator_console_mock.Run.call_count == 2
+    validator_console_mock.Run.assert_any_call("del-quic-addr 127.0.0.1:9999 [ 1 ] [  ]")
+    validator_console_mock.Run.assert_any_call("add-quic-addr 127.0.0.1:1234 [ 2 ] [ ]")
+
+    # Happy path - with collators, updates their adnl categories too
+    update_adnl_mock.reset_mock()
+    validator_console_mock.Run.reset_mock()
+    monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
+        "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]}],
+        "collators": [{"adnl_id": base64.b64encode(b"\xaa" * 32).decode()}],
+    })
+    output = cli.execute("set_quic_port 1234", no_color=True)
+    assert update_adnl_mock.call_count == 2
+    update_adnl_mock.assert_any_call(adnl_addr="TEST_ADNL_ADDR", category=2)
+
+    # Port 0 - should not call add-quic-addr
+    update_adnl_mock.reset_mock()
+    validator_console_mock.Run.reset_mock()
+    monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
+        "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]}, {"@type": "engine.quicAddr", "ip": 2130706433, "port": 9999, "categories": [1], "priority_categories": []}],
+        "collators": [],
+    })
+    output = cli.execute("set_quic_port 0", no_color=True)
+    update_adnl_mock.assert_not_called()
+    validator_console_mock.Run.assert_called_once_with("del-quic-addr 127.0.0.1:9999 [ 1 ] [  ]")
+
+    # Category not set for address - should raise
+    update_adnl_mock.reset_mock()
+    validator_console_mock.Run.reset_mock()
+    monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
+        "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [1, 3]}],
+        "collators": [],
+    })
+    output = cli.execute("set_quic_port 1234", no_color=True)
+    assert "Category 2 is not set for address" in output
+    validator_console_mock.Run.assert_not_called()
+    update_adnl_mock.assert_not_called()

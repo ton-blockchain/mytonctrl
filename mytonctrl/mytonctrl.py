@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import pathlib
 import subprocess
@@ -38,13 +40,12 @@ from mypylib.mypylib import (
 
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore.mytoncore import MyTonCore
-from mytoncore.functions import (
-	GetMemoryInfo,
-	GetSwapInfo,
-	GetBinGitHash,
+from mytoncore.telemetry import (
+	get_memory_info,
+	get_swap_info,
 )
-from mytoncore.utils import get_package_resource_path
-from mytoncore.telemetry import is_host_virtual
+from mytoncore.utils import get_package_resource_path, b642hex
+from mytoncore.telemetry import is_host_virtual, get_bin_git_hash
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_args_min_max_len
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt, \
 	pop_user_from_args, pop_arg_from_args, get_clang_major_version, get_os_version
@@ -72,7 +73,7 @@ def Init(local, ton, console, argv):
 
 	# Create user console
 	console.name = "MyTonCtrl"
-	console.startFunction = inject_globals(pre_up)
+	console.start_function = inject_globals(pre_up)
 	console.debug = ton.GetSettings("debug")
 	console.local = local
 
@@ -89,6 +90,7 @@ def Init(local, ton, console, argv):
 	add_command(local, console, "set", inject_globals(SetSettings))
 	add_command(local, console, "download_archive_blocks", inject_globals(download_archive_blocks))
 	add_command(local, console, "benchmark", inject_globals(run_benchmark))
+	add_command(local, console, "set_quic_port", inject_globals(set_quic_port))
 
 	from modules.backups import BackupModule
 	module = BackupModule(ton, local)
@@ -457,6 +459,8 @@ def run_benchmark(args: list):
 
 def check_mytonctrl_update(local: MyPyClass):
 	git_path = '/usr/src/mytonctrl'
+	if not os.path.exists(git_path):
+		return
 	result = check_git_update(git_path)
 	if result:
 		color_print(local.translate("mytonctrl_update_available"))
@@ -543,6 +547,23 @@ def check_ubuntu_version(local: MyPyClass):
 			warning = local.translate("ubuntu_version_warning").format(ver)
 			print_warning(local, warning)
 
+def check_node_port(local: MyPyClass, ton: MyTonCore):
+	if not ton.using_validator():
+		return
+	try:
+		vconfig = ton.GetValidatorConfig()
+	except Exception:
+		return
+	for addr in vconfig["addrs"]:
+		if addr.get("@type") == "engine.quicAddr":  # quic port exists
+			return
+	for addr in vconfig["addrs"]:
+		port = addr["port"]
+		if port > 64535:
+			warning = local.translate("node_port_warning").format(port)
+			print_warning(local, warning)
+			return
+
 def warnings(local: MyPyClass, ton: MyTonCore):
 	local.try_function(check_disk_usage, args=[local, ton])
 	local.try_function(check_sync, args=[local, ton])
@@ -552,6 +573,7 @@ def warnings(local: MyPyClass, ton: MyTonCore):
 	local.try_function(check_tg_channel, args=[local, ton])
 	local.try_function(check_slashed, args=[local, ton])
 	local.try_function(check_ubuntu_version, args=[local])
+	local.try_function(check_node_port, args=[local, ton])
 
 def CheckTonUpdate(local):
 	git_path = "/usr/src/ton"
@@ -589,26 +611,27 @@ def PrintStatus(local, ton, args):
 	opt = None
 	if len(args) == 1:
 		opt = args[0]
+	fast = opt == "fast"
 
 	# Local status
 	validator_status = ton.GetValidatorStatus()
 	adnl_addr = ton.GetAdnlAddr()
 	validator_index = None
-	onlineValidators = None
 	validator_efficiency = None
 	validator_wallet = ton.GetValidatorWallet()
 	validator_account = Dict()
 	db_size = ton.GetDbSize()
 	db_usage = ton.GetDbUsage()
-	memory_info = GetMemoryInfo()
-	swap_info = GetSwapInfo()
+	memory_info = get_memory_info()
+	swap_info = get_swap_info()
 	statistics = ton.GetSettings("statistics")
 	net_load_avg = ton.GetStatistics("netLoadAvg", statistics)
 	disks_load_avg = ton.GetStatistics("disksLoadAvg", statistics)
 	disks_load_percent_avg = ton.GetStatistics("disksLoadPercentAvg", statistics)
 
-	all_status = validator_status.is_working and validator_status.out_of_sync < 20
+	all_status = (validator_status.is_working and validator_status.out_of_sync < 20) and not fast
 
+	vconfig = None
 	try:
 		vconfig = ton.GetValidatorConfig()
 		fullnode_adnl = base64.b64decode(vconfig.fullnode).hex().upper()
@@ -621,15 +644,6 @@ def PrintStatus(local, ton, args):
 		config34 = ton.GetConfig34()
 		config36 = ton.GetConfig36()
 		totalValidators = config34["totalValidators"]
-
-		if opt != "fast":
-			try:
-				onlineValidators = ton.GetOnlineValidators()
-			except Exception as e:
-				local.add_log(f"Failed to get online validators: {e}", "warning")
-			# validator_efficiency = ton.GetValidatorEfficiency()
-		if onlineValidators:
-			onlineValidators = len(onlineValidators)
 
 		oldStartWorkTime = config36.get("startWorkTime")
 		if oldStartWorkTime is None:
@@ -646,40 +660,29 @@ def PrintStatus(local, ton, args):
 		offersNumber = local.try_function(ton.GetOffersNumber)
 		complaintsNumber = local.try_function(ton.GetComplaintsNumber)
 
-		tpsAvg = ton.GetStatistics("tpsAvg", statistics)
-
 		if validator_wallet is not None:
 			validator_account = ton.GetAccount(validator_wallet.addrB64)
 	#end if
 
 	if all_status:
-		PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg)
+		PrintTonStatus(local, network_name, startWorkTime, totalValidators, shardsNumber, offersNumber, complaintsNumber)
 	PrintLocalStatus(local, ton, adnl_addr, validator_index, validator_efficiency, validator_wallet, validator_account, validator_status,
-		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl)
+		db_size, db_usage, memory_info, swap_info, net_load_avg, disks_load_avg, disks_load_percent_avg, fullnode_adnl, vconfig)
 	if all_status and ton.using_validator():
 		PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17)
 		PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkTime, config15)
 #end define
 
-def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineValidators, shardsNumber, offersNumber, complaintsNumber, tpsAvg):
-	#tps1 = tpsAvg[0]
-	#tps5 = tpsAvg[1]
-	#tps15 = tpsAvg[2]
-	allValidators = totalValidators
+def PrintTonStatus(local, network_name, startWorkTime, totalValidators, shardsNumber, offersNumber, complaintsNumber):
 	newOffers = offersNumber.get("new") if offersNumber else 'n/a'
 	allOffers = offersNumber.get("all") if offersNumber else 'n/a'
 	newComplaints = complaintsNumber.get("new") if complaintsNumber else 'n/a'
 	allComplaints = complaintsNumber.get("all") if complaintsNumber else 'n/a'
-	#tps1_text = bcolors.green_text(tps1)
-	#tps5_text = bcolors.green_text(tps5)
-	#tps15_text = bcolors.green_text(tps15)
 
 	color_network_name = bcolors.green_text(network_name) if network_name == "mainnet" else bcolors.yellow_text(network_name)
 	network_name_text = local.translate("ton_status_network_name").format(color_network_name)
-	#tps_text = local.translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
-	onlineValidators_text = GetColorInt(onlineValidators, border=allValidators*2/3, logic="more")
-	allValidators_text = bcolors.yellow_text(allValidators)
-	validators_text = local.translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
+	allValidators_text = bcolors.yellow_text(totalValidators)
+	validators_text = local.translate("ton_status_validators").format(allValidators_text)
 	shards_text = local.translate("ton_status_shards").format(bcolors.green_text(shardsNumber))
 	newOffers_text = bcolors.green_text(newOffers)
 	allOffers_text = bcolors.yellow_text(allOffers)
@@ -705,10 +708,12 @@ def PrintTonStatus(local, network_name, startWorkTime, totalValidators, onlineVa
 	print()
 #end define
 
-def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl):
-	if validatorWallet is None:
-		return
-	walletAddr = validatorWallet.addrB64
+
+def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, validatorWallet, validatorAccount, validator_status, dbSize, dbUsage, memoryInfo, swapInfo, netLoadAvg, disksLoadAvg, disksLoadPercentAvg, fullnode_adnl, vconfig):
+	walletAddr = 'n/a'
+	if validatorWallet is not None:
+		walletAddr = validatorWallet.addrB64
+
 	walletBalance = validatorAccount.balance
 	cpuNumber = psutil.cpu_count()
 	loadavg = get_load_avg()
@@ -839,7 +844,7 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
 	btc_teleport_path = "/usr/src/ton-teleport-btc-periphery/"
 	mtcGitHash = get_git_hash(mtcGitPath, short=True)
-	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+	validatorGitHash = get_bin_git_hash(validatorBinGitPath, short=True)
 	btc_teleport_git_hash = None
 	btc_teleport_git_branch = None
 	if ton.using_validator():
@@ -873,6 +878,28 @@ def PrintLocalStatus(local, ton, adnlAddr, validatorIndex, validatorEfficiency, 
 	if is_node_remote:
 		nodeIpAddr_text = local.translate("node_ip_address").format(node_ip)
 		color_print(nodeIpAddr_text)
+	# Node ports
+	if vconfig is not None:
+		try:
+			main_port = None
+			quic_port = None
+			for addr in vconfig.get("addrs", []):
+				if addr.get("@type") == "engine.addr" and main_port is None:
+					main_port = addr.get("port")
+				elif addr.get("@type") == "engine.quicAddr" and quic_port is None:
+					quic_port = addr.get("port")
+			ports_parts = []
+			if main_port is not None:
+				ports_parts.append(bcolors.yellow_text(main_port))
+			if ton.using_validator():
+				if quic_port is not None:
+					ports_parts.append(bcolors.yellow_text(f"{quic_port} (QUIC)"))
+				elif main_port is not None:
+					ports_parts.append(bcolors.yellow_text(f"{main_port + 1000} (QUIC)"))
+			if ports_parts:
+				color_print(local.translate("node_ports").format(", ".join(ports_parts)))
+		except Exception:
+			pass
 	if ton.using_validator():
 		print(validatorIndex_text)
 		# print(validatorEfficiency_text)
@@ -1091,6 +1118,62 @@ def download_archive_blocks(local, args: list):
 	local.buffer.ton_storage.api_port = api_port
 	local.buffer.global_config_path = '/usr/bin/ton/global.config.json'
 	download_blocks(local, str(path.absolute()), from_block, to_block, only_master)
+
+
+def set_quic_port(local: MyPyClass, ton: MyTonCore, args: list[str]):
+	if not check_usage_args_min_max_len("set_quic_port", args, 1, 2):
+		return
+	try:
+		port = int(args[0])
+	except ValueError:
+		color_print("{red}Port must be an integer{endc}")
+		return
+	if port < 0 or port > 65535:
+		color_print("{red}Port must be between 0 and 65535{endc}")
+		return
+	category = 2
+	if len(args) > 1:
+		try:
+			category = int(args[1])
+		except ValueError:
+			color_print("{red}Category must be an integer{endc}")
+			return
+
+	vconfig = ton.GetValidatorConfig()
+	ip = int2ip(vconfig["addrs"][0]["ip"])
+	adnl_addr = ton.GetAdnlAddr()
+	if adnl_addr is None:
+		raise Exception("ADNL address is not set")
+
+	for addr in vconfig["addrs"]:
+		if addr.get("@type") == "engine.addr" and category not in addr.get("categories", []):
+			raise Exception(f"Category {category} is not set for address {addr}")
+
+
+	for addr in vconfig["addrs"]:
+		if addr.get("@type") == "engine.quicAddr":
+			addr_ip = int2ip(addr["ip"])
+			addr_port = addr["port"]
+			cat = addr["categories"]
+			priocat = addr["priority_categories"]
+			cat = f"[ {' '.join(map(str, cat))} ]"
+			priocat = f"[ {' '.join(map(str, priocat))} ]"
+			result = ton.validatorConsole.Run(f"del-quic-addr {addr_ip}:{addr_port} {cat} {priocat}")
+			color_print(f"Deleted quic addr {addr_ip}:{addr_port}: {result.splitlines()[-1].strip()}")
+
+	if port > 0:
+		ton.update_adnl_category(adnl_addr=adnl_addr, category=category)
+
+		from modules.collator import CollatorModule
+		collators = CollatorModule(ton, local).get_collators()
+		collator_adnls = []
+		for collator in collators:
+			collator_adnls.append(b642hex(collator['adnl_id']).upper())
+		for collator_adnl in set(collator_adnls):
+			ton.update_adnl_category(adnl_addr=collator_adnl, category=category)
+
+		result = ton.validatorConsole.Run(f"add-quic-addr {ip}:{port} [ {category} ] [ ]")
+		local.add_log(f"Added quic addr {ip}:{port}: {result.splitlines()[-1].strip()}", "info")
 
 
 ### Start of the program

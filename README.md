@@ -67,7 +67,7 @@ To view all available installation options use `bash install.sh --help`
 You can also configure some installation parameters using environment variables. For example:
 * `VALIDATOR_CONSOLE_PORT` - port for validator console (default: random port in range 2000-65000)
 * `LITESERVER_PORT` - port for liteserver (default: random port in range 2000-65000)
-* `VALIDATOR_PORT` - port for validator (default: random port in range 2000-65000)
+* `VALIDATOR_PORT` - port for validator (default: random port in range 2000-64000)
 
 You can provide `env` file with allowed variables to installation script:
 ```shell

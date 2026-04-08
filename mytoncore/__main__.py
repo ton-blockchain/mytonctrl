@@ -1,26 +1,5 @@
 import argparse
 from mypylib import MyPyClass
-from mytoncore.events import (
-    enable_vc_event,
-    enable_mode,
-    enable_btc_teleport,
-    setup_collator,
-)
-from mytoncore.functions import Init, General
-
-
-def run_event(local: MyPyClass, event_name: str):
-    if event_name == "enableVC":
-        enable_vc_event(local)
-    elif event_name.startswith("enable_mode"):
-        enable_mode(local, event_name)
-    elif event_name == "enable_btc_teleport":
-        enable_btc_teleport(local)
-    elif event_name.startswith("setup_collator"):
-        setup_collator(local, event_name)
-    else:
-        raise Exception("Unknown event name")
-    local.exit()
 
 
 def _main():
@@ -36,10 +15,14 @@ def _main():
     args = parser.parse_args()
 
     if args.e is not None:
+        from mytoncore.events import run_event
+
         run_event(local, args.e)
     else:
-        Init(local)
-        General(local)
+        local.run()
+        from mytoncore.background_runner import BackgroundRunner
+
+        BackgroundRunner(local).run()
 
 
 if __name__ == "__main__":

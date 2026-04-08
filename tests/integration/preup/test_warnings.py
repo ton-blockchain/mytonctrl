@@ -142,6 +142,36 @@ def test_check_slashed(cli, monkeypatch, mocker: MockerFixture):
     assert 'You were fined' not in output
 
 
+def test_check_node_port(cli, monkeypatch):
+    monkeypatch.setattr(MyTonCore, 'using_validator', lambda *_: True)
+
+    # Port > 64535, no quic addr -> warning
+    vconfig = {"addrs": [{"@type": "engine.addr", "port": 64536}]}
+    monkeypatch.setattr(MyTonCore, 'GetValidatorConfig', lambda *_: vconfig)
+    output = cli.run_pre_up()
+    assert 'Node port 64536 is greater than 64535' in output
+
+    # Port <= 64535 -> no warning
+    vconfig["addrs"] = [{"@type": "engine.addr", "port": 64535}]
+    output = cli.run_pre_up()
+    assert 'greater than 64535' not in output
+
+    vconfig["addrs"] = [{"@type": "engine.addr", "port": 30000}]
+    output = cli.run_pre_up()
+    assert 'greater than 64535' not in output
+
+    # Port > 64535 but quic addr exists -> no warning
+    vconfig["addrs"] = [{"@type": "engine.addr", "port": 64536}, {"@type": "engine.quicAddr", "port": 64536}]
+    output = cli.run_pre_up()
+    assert 'greater than 64535' not in output
+
+    # Not a validator -> no warning
+    monkeypatch.setattr(MyTonCore, 'using_validator', lambda *_: False)
+    vconfig["addrs"] = [{"@type": "engine.addr", "port": 64536}]
+    output = cli.run_pre_up()
+    assert 'greater than 64535' not in output
+
+
 def test_check_ubuntu_version(cli, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(mytonctrl.os.path, 'exists', lambda _: True)
     res = '''

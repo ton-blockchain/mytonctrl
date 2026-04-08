@@ -374,15 +374,10 @@
 		"ru": "Название сети: {0}",
 		"zh_TW": "網路名字: {0}"
 	},
-	"ton_status_tps": {
-		"en": "Transactions per second (TPS): {0}, {1}, {2}",
-		"ru": "Транзакций в секунду (TPS): {0}, {1}, {2}",
-		"zh_TW": "每秒交易數 (TPS): {0}, {1}, {2}"
-	},
 	"ton_status_validators": {
-		"en": "Number of validators: {0}({1})",
-		"ru": "Количество валидаторов: {0}({1})",
-		"zh_TW": "驗證者數量: {0}({1})"
+		"en": "Number of validators: {0}",
+		"ru": "Количество валидаторов: {0}",
+		"zh_TW": "驗證者數量: {0}"
 	},
 	"ton_status_shards": {
 		"en": "Number of shardchains: {0}",
@@ -418,6 +413,11 @@
 		"en": "Node IP address: {{bold}}{0}{{endc}}",
 		"ru": "IP адрес Ноды: {{bold}}{0}{{endc}}",
 		"zh_TW": "節點 IP 地址: {{bold}}{0}{{endc}}"
+	},
+	"node_ports": {
+		"en": "Node ports: {0}",
+		"ru": "Порты ноды: {0}",
+		"zh_TW": "節點端口: {0}"
 	},
 	"local_status_validator_index": {
 		"en": "Validator index: {0}",
@@ -674,6 +674,11 @@
 		"ru": "{{red}}Версия Ubuntu должна быть 22.04 или 24.04. Найдена {0}. {{endc}}",
 		"zh_TW": "{{red}}Ubuntu 版本必須是 22.04 或 24.04。找到 {0}。{{endc}}"
 	},
+	"node_port_warning": {
+		"en": "{{red}}Node port {0} is greater than 64535 but quic port is not set. {{endc}}",
+		"ru": "{{red}}Порт ноды {0} больше 64535, но quic порт не установлен. {{endc}}",
+		"zh_TW": "{{red}}節點端口 {0} 大於 64535，但 quic 端口未設置。{{endc}}"
+	},
 	"add_custom_overlay_cmd": {
 		"en": "Add custom overlay",
 		"ru": "Добавить пользовательский оверлей",
@@ -779,7 +784,11 @@
 		"ru": "Остановить работающий коллатор на этой ноде. Используйте без аргументов, чтобы остановить все коллаторы",
 		"zh_TW": "停止在此節點上運行的協作者。無參數使用以停止所有協作者"
 	},
-
+	"set_quic_port_cmd": {
+		"en": "Set QUIC port for node. Deletes existing QUIC addresses and sets new one with specified port (use port = 0 to delete). Changes ADNL addresses categories of validator and collator",
+		"ru": "Установить порт QUIC для узла. Удаляет существующие адреса QUIC и устанавливает новый с указанным портом (используйте port = 0 для удаления). Изменяет категории ADNL адресов для валидатора и коллатора",
+		"zh_TW": "設定節點的 QUIC 埠。刪除現有的 QUIC 位址並設定新的位址，帶有指定的埠 (使用 port = 0 刪除)。更改驗證者和協作者的 ADNL 位址類別"
+	},
 	"000a": {
 		"en": "001",
 		"ru": "002",

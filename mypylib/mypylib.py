@@ -712,9 +712,8 @@ class MyPyClass:
 		if name is None:
 			name = func.__name__
 		if args is None:
-			threading.Thread(target=func, name=name, daemon=True).start()
-		else:
-			threading.Thread(target=func, name=name, args=args, daemon=True).start()
+			args = ()
+		threading.Thread(target=func, name=name, args=args, daemon=True).start()
 		self.add_log("Thread {name} started".format(name=name), "debug")
 	#end define
 

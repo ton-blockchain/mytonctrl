@@ -1,16 +1,20 @@
+# pyright: strict
+
 from __future__ import annotations
 
 import base64
 import json
 import re
 import subprocess
+import sys
+from typing import TYPE_CHECKING, Any
 
-try:
-    # Python 3.9+
-    from importlib.resources import files, as_file
-except ImportError:
-    # Python < 3.9
-    from importlib_resources import files, as_file  # pyright: ignore[reportMissingImports]
+if TYPE_CHECKING:
+    from importlib.resources import as_file, files
+elif sys.version_info >= (3, 9):
+    from importlib.resources import as_file, files
+else:
+    from importlib_resources import as_file, files
 
 
 def str2b64(s: str):
@@ -26,7 +30,7 @@ def b642str(b64: str):
     return s
 
 
-def dict2b64(d: dict):
+def dict2b64(d: dict[Any, Any]):
     s = json.dumps(d)
     b64 = str2b64(s)
     return b64
@@ -83,7 +87,7 @@ def ng2g(ng: int | None) -> float | None:
 def parse_db_stats(path: str):
     with open(path) as f:
         lines = f.readlines()
-    result = {}
+    result: dict[str, float | dict[str, float]] = {}
     for line in lines:
         s = line.strip().split(maxsplit=1)
         items = re.findall(r"(\S+)\s:\s(\S+)", s[1])
@@ -92,7 +96,7 @@ def parse_db_stats(path: str):
             if float(item[1]) > 0:
                 result[s[0]] = float(item[1])
         else:
-            if any(float(v) > 0 for k, v in items):
+            if any(float(v) > 0 for _, v in items):
                 result[s[0]] = {}
                 result[s[0]] = {k: float(v) for k, v in items}
     return result
@@ -102,7 +106,7 @@ def get_hostname() -> str:
     return subprocess.run(["hostname"], stdout=subprocess.PIPE).stdout.decode().strip()
 
 
-def hex_shard_to_int(shard_id_str: str) -> dict:
+def hex_shard_to_int(shard_id_str: str) -> dict[str, int]:
     try:
         wc, shard_hex = shard_id_str.split(":")
         wc = int(wc)

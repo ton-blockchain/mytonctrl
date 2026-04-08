@@ -89,7 +89,7 @@ class TestMyPyConsole(MyPyConsole):
     def run_pre_up(self, no_color: bool = False):
         output = io.StringIO()
         with redirect_stderr(output), redirect_stdout(output):
-            self.startFunction()
+            self.start_function()
             output = output.getvalue()
             if no_color:
                 output = remove_colors(output)

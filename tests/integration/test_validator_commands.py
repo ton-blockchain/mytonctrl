@@ -37,7 +37,7 @@ def test_vote_offer(cli, monkeypatch, mocker: MockerFixture):
 
 def test_ve(cli, monkeypatch, mocker: MockerFixture):
     elections_mocker = mocker.Mock()
-    monkeypatch.setattr('mytoncore.functions.Elections', elections_mocker)
+    monkeypatch.setattr(ValidatorModule, 'run_elections', elections_mocker)
     output = cli.execute("ve", no_color=True)
     assert "VoteElectionEntry - OK" in output
     elections_mocker.assert_called_once()

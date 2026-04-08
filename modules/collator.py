@@ -66,7 +66,7 @@ class CollatorModule(MtcModule):
             self._check_input_shards(node_shards, shards_need_to_add, monitor_min_split)
         if adnl_addr is None:
             adnl_addr = self.ton.CreateNewKey()
-        self.ton.AddAdnlAddrToValidator(adnl_addr)
+        self.ton.add_adnl_addr(adnl_addr)
         for shard in shards:
             res = self.add_collator_to_vc(adnl_addr, shard)
             if 'successfully' not in res:

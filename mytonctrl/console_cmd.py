@@ -71,6 +71,7 @@ USAGES = {
     "setup_alert_bot": "<bot_token> <chat_id>",
     "download_archive_blocks": "[ton_storage_api_port] <download_path> <from_block_seqno> [to_block_seqno] [--only-master]",
     "benchmark": "[benchmark args ...]",
+    "set_quic_port": "<port> [category]",
 }
 
 

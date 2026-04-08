@@ -34,9 +34,19 @@ class ValidatorModule(MtcModule):
             self.ton.VoteOffer(offer)
         color_print("VoteOffer - {green}OK{endc}")
 
+    def run_elections(self):
+        use_pool = self.ton.using_pool()
+        use_liquid_staking = self.ton.using_liquid_staking()
+        if use_pool:
+            self.ton.PoolsUpdateValidatorSet()
+        if use_liquid_staking:
+            self.ton.ControllersUpdateValidatorSet()
+        self.ton.RecoverStake()
+        if self.ton.using_validator():
+            self.ton.ElectionEntry()
+
     def vote_election_entry(self, args):
-        from mytoncore.functions import Elections
-        Elections(self.ton.local, self.ton)
+        self.run_elections()
         color_print("VoteElectionEntry - {green}OK{endc}")
 
     def vote_complaint(self, args):
