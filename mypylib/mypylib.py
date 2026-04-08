@@ -981,6 +981,7 @@ def hex2dec(h: str) -> int:
 #end define
 
 def run_as_root(args: list[str]) -> int:
+	args = [str(a) for a in args]
 	psys = platform.system()
 	if os.geteuid() != 0:
 		if psys == "Linux":
