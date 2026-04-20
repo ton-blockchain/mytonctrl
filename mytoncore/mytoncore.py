@@ -11,7 +11,6 @@ import psutil
 import subprocess
 import requests
 from fastcrc import crc16
-from typing import Optional
 
 from modules import MODES
 from modules.btc_teleport import BtcTeleportModule
@@ -37,35 +36,37 @@ from mypylib.mypylib import (
 )
 
 
-class MyTonCore():
+class MyTonCore:
 	def __init__(self, local: MyPyClass):
 		self.local: MyPyClass = local
-		self.walletsDir: Optional[str] = None
-		self.dbFile: Optional[str] = None
-		self.contractsDir: str
-		self.poolsDir: str
-		self.tempDir: str
-		self.nodeName: str
+		self.nodeName: str = ""
 
-		self.liteClient = LiteClient(self.local)
-		self.validatorConsole = ValidatorConsole(self.local)
-		self.fift = Fift(self.local)
-
-		self.Refresh()
+		self.walletsDir = self.local.my_work_dir + "wallets/"
+		self.contractsDir = self.local.my_work_dir + "contracts/"
+		self.poolsDir = self.local.my_work_dir + "pools/"
+		self.tempDir = self.local.my_temp_dir
 
 		os.makedirs(self.walletsDir, exist_ok=True)
 		os.makedirs(self.contractsDir, exist_ok=True)
 		os.makedirs(self.poolsDir, exist_ok=True)
 
-	def Refresh(self):
-		if self.dbFile:
-			self.local.load_db(self.dbFile)
+		self.liteClient = LiteClient(self.local)
+		self.validatorConsole = ValidatorConsole(self.local)
+		self.fift = Fift(self.local)
 
-		if not self.walletsDir:
-			self.walletsDir = self.local.my_work_dir + "wallets/"
-		self.contractsDir = self.local.my_work_dir + "contracts/"
-		self.poolsDir = self.local.my_work_dir + "pools/"
-		self.tempDir = self.local.my_temp_dir
+		mconfig_path = self.local.db_path
+		backup_path = mconfig_path + ".backup"
+		if self.local.db.get("liteClient") is None or self.local.db.get("fift") is None:
+			self.restore_db_file(mconfig_path, backup_path)
+		else:
+			self.check_db_backup(backup_path)
+
+		self.apply_db_settings()
+
+	def apply_db_settings(self):
+		lite_client_config = self.local.db.get("liteClient")
+		fift_config = self.local.db.get("fift")
+		vc_config = self.local.db.get("validatorConsole")
 
 		self.nodeName = self.local.db.get("nodeName")
 		if self.nodeName is None:
@@ -73,51 +74,40 @@ class MyTonCore():
 		else:
 			self.nodeName = self.nodeName + "_"
 
-		liteClient = self.local.db.get("liteClient")
-		if liteClient is not None:
+		if lite_client_config is not None:
 			self.liteClient.ton = self # magic
-			self.liteClient.appPath = liteClient["appPath"]
-			self.liteClient.configPath = liteClient["configPath"]
-			liteServer = liteClient.get("liteServer")
+			self.liteClient.appPath = lite_client_config["appPath"]
+			self.liteClient.configPath = lite_client_config["configPath"]
+			liteServer = lite_client_config.get("liteServer")
 			if liteServer is not None:
 				self.liteClient.pubkeyPath = liteServer["pubkeyPath"]
 				self.liteClient.addr = "{0}:{1}".format(liteServer["ip"], liteServer["port"])
-		#end if
 
-		validatorConsole = self.local.db.get("validatorConsole")
-		if validatorConsole is not None:
-			self.validatorConsole.appPath = validatorConsole["appPath"]
-			self.validatorConsole.privKeyPath = validatorConsole["privKeyPath"]
-			self.validatorConsole.pubKeyPath = validatorConsole["pubKeyPath"]
-			self.validatorConsole.addr = validatorConsole["addr"]
-		#end if
+		if vc_config is not None:
+			self.validatorConsole.appPath = vc_config["appPath"]
+			self.validatorConsole.privKeyPath = vc_config["privKeyPath"]
+			self.validatorConsole.pubKeyPath = vc_config["pubKeyPath"]
+			self.validatorConsole.addr = vc_config["addr"]
 
-		fift = self.local.db.get("fift")
-		if fift is not None:
-			self.fift.appPath = fift["appPath"]
-			self.fift.libsPath = fift["libsPath"]
-			self.fift.smartcontsPath = fift["smartcontsPath"]
-		#end if
+		if fift_config is not None:
+			self.fift.appPath = fift_config["appPath"]
+			self.fift.libsPath = fift_config["libsPath"]
+			self.fift.smartcontsPath = fift_config["smartcontsPath"]
 
-		# Check config file
-		self.CheckConfigFile(fift, liteClient)
-	#end define
+	def restore_db_file(self, mconfig_path: str, backup_path: str):
+		self.local.add_log(f"Restoring db file {mconfig_path} from backup {backup_path}", "warning")
+		print(f"self.local.db: {self.local.db}")
+		if os.path.isfile(backup_path):
+			self.local.add_log("Restoring the configuration file", "info")
+			args = ["cp", backup_path, mconfig_path]
+			subprocess.run(args)
+			self.local.load_db(mconfig_path)
+		else:
+			self.local.add_log("Backup file not found", "error")
 
-	def CheckConfigFile(self, fift, liteClient):
-		mconfig_path = self.local.db_path
-		backup_path = mconfig_path + ".backup"
-		if fift is None or liteClient is None:
-			self.local.add_log("The config file is broken", "warning")
-			print(f"self.local.db: {self.local.db}")
-			if os.path.isfile(backup_path):
-				self.local.add_log("Restoring the configuration file", "info")
-				args = ["cp", backup_path, mconfig_path]
-				subprocess.run(args)
-				self.dbFile = mconfig_path
-				self.Refresh()
-		elif not os.path.isfile(backup_path) or time.time() - os.path.getmtime(backup_path) > 3600:
+	def check_db_backup(self, backup_path: str):
+		if not os.path.isfile(backup_path) or time.time() - os.path.getmtime(backup_path) > 3600:
 			self.local.try_function(self.create_self_db_backup)
-	#end define
 
 	def create_self_db_backup(self):
 		self.local.add_log("Create backup config file", "info")

@@ -7,8 +7,7 @@ import json
 import psutil
 import inspect
 import socket
-import sys
-import getopt
+import argparse
 import os
 import shutil
 import tempfile
@@ -56,10 +55,37 @@ from mytoninstaller.utils import get_ton_storage_port
 CLANG_VERSION_REQUIRED = 21
 
 
-def Init(local, ton, console, argv):
+def parse_init_args():
+	parser = argparse.ArgumentParser(
+		prog="mytonctrl.py",
+		usage="%(prog)s [-c <configfile>] [-w <wallets>]",
+	)
+	parser.add_argument("-c", "--config", dest="configfile")
+	parser.add_argument("-w", "--wallets", dest="wallets")
+	args = parser.parse_args()
+
+	if args.configfile is not None and not os.access(args.configfile, os.R_OK):
+		parser.error("Configuration file " + args.configfile + " could not be opened")
+	if args.wallets is not None:
+		if not os.access(args.wallets, os.R_OK):
+			parser.error("Wallets path " + args.wallets + " could not be opened")
+		if not os.path.isdir(args.wallets):
+			parser.error("Wallets path " + args.wallets + " is not a directory")
+	return args
+
+
+def Init(local: MyPyClass, mytoncore_local: MyPyClass, console: MyPyConsole):
 	# Load translate table
 	with get_package_resource_path('mytonctrl', 'resources/translate.json') as translate_path:
 		local.init_translator(translate_path)
+
+	args = parse_init_args()
+	if args.configfile is not None:
+		mytoncore_local.db_path = args.configfile
+		mytoncore_local.load_db()
+	ton = MyTonCore(mytoncore_local)
+	if args.wallets is not None:
+		ton.walletsDir = args.wallets
 
 	# this function substitutes local and ton instances if function has this args
 	def inject_globals(func):
@@ -151,30 +177,6 @@ def Init(local, ton, console, argv):
 		from modules.alert_bot import AlertBotModule
 		module = AlertBotModule(ton, local)
 		module.add_console_commands(console)
-
-	# Process input parameters
-	opts, args = getopt.getopt(argv,"hc:w:",["config=","wallets="])
-	for opt, arg in opts:
-		if opt == '-h':
-			print ('mytonctrl.py -c <configfile> -w <wallets>')
-			sys.exit()
-		elif opt in ("-c", "--config"):
-			configfile = arg
-			if not os.access(configfile, os.R_OK):
-				print ("Configuration file " + configfile + " could not be opened")
-				sys.exit()
-
-			ton.dbFile = configfile
-			ton.Refresh()
-		elif opt in ("-w", "--wallets"):
-			wallets = arg
-			if not os.access(wallets, os.R_OK):
-				print ("Wallets path " + wallets  + " could not be opened")
-				sys.exit()
-			elif not os.path.isdir(wallets):
-				print ("Wallets path " + wallets  + " is not a directory")
-				sys.exit()
-			ton.walletsDir = wallets
 
 	local.db.config.logLevel = "debug" if console.debug else "info"
 	local.db.config.isLocaldbSaving = False
@@ -1180,7 +1182,6 @@ def set_quic_port(local: MyPyClass, ton: MyTonCore, args: list[str]):
 def mytonctrl():
 	local = MyPyClass('mytonctrl.py')
 	mytoncore_local = MyPyClass('mytoncore.py')
-	ton = MyTonCore(mytoncore_local)
 	console = MyPyConsole(local)
-	Init(local, ton, console, sys.argv[1:])
+	Init(local, mytoncore_local, console)
 	console.Run()
