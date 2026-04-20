@@ -338,7 +338,7 @@ def Update(local, args):
 	author, repo, branch, _ = check_git(args, repo, "update")  # todo: implement --url for update
 	# Run script
 	with get_package_resource_path('mytonctrl', 'scripts/update.sh') as update_script_path:
-		runArgs = ["bash", update_script_path, "-a", author, "-r", repo, "-b", branch]
+		runArgs = ["bash", str(update_script_path), "-a", author, "-r", repo, "-b", branch]
 		exitCode = run_as_root(runArgs)
 	if exitCode == 0:
 		text = "Update - {green}OK{endc}"
@@ -388,9 +388,9 @@ def Upgrade(local, ton, args: list):
 	# Run script
 	with get_package_resource_path('mytonctrl', 'scripts/upgrade.sh') as upgrade_script_path:
 		if git_url:
-			runArgs = ["bash", upgrade_script_path, "-g", git_url, "-b", branch]
+			runArgs = ["bash", str(upgrade_script_path), "-g", git_url, "-b", branch]
 		else:
-			runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
+			runArgs = ["bash", str(upgrade_script_path), "-a", author, "-r", repo, "-b", branch]
 		exitCode = run_as_root(runArgs)
 	if ton.using_validator():
 		upgrade_btc_teleport(local, ton)

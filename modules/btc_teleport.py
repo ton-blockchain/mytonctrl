@@ -62,13 +62,13 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         if user is None:
             user = get_current_user()
         with get_package_resource_path('mytoninstaller', 'scripts/add2systemd.sh') as script_path:
-            run_as_root(['bash', script_path, '-n', 'btc_teleport', '-u', user, '-g', user, '-s', start, '-w', self.bin_dir])
+            run_as_root(['bash', str(script_path), '-n', 'btc_teleport', '-u', user, '-g', user, '-s', start, '-w', self.bin_dir])
 
     def install(self, branch: str, user: Optional[str] = None):
         if user is None:
             user = get_current_user()
         with get_package_resource_path('mytonctrl', 'scripts/btc_teleport1.sh') as script_path:
-            exit_code = run_as_root(["bash", script_path, "-s", '/usr/src', "-r", self.repo_name, "-b", branch, "-u", user])
+            exit_code = run_as_root(["bash", str(script_path), "-s", '/usr/src', "-r", self.repo_name, "-b", branch, "-u", user])
         if exit_code != 0:
             raise Exception('Failed to install btc_teleport')
         with get_package_resource_path('mytonctrl', 'scripts/btc_teleport2.sh') as script_path:
@@ -90,7 +90,7 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
     @staticmethod
     def run_remove_btc_teleport(args):
         with get_package_resource_path('mytonctrl', 'scripts/remove_btc_teleport.sh') as script_path:
-            return run_as_root(["bash", script_path] + args)
+            return run_as_root(["bash", str(script_path)] + args)
 
     def remove_btc_teleport(self, args: list):
         if not check_usage_args_min_max_len("remove_btc_teleport", args, min_len=0, max_len=1):
