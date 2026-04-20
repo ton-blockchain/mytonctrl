@@ -7,7 +7,7 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
-user=${SUDO_USER:-$(logname)}
+user=${SUDO_USER:-}
 
 while getopts u: flag
 do
@@ -16,6 +16,10 @@ do
     *) echo "Flag -${flag} is not recognized. Aborting"; exit 1 ;;
 	esac
 done
+
+if [ -z "${user}" ]; then
+	user=$(logname)
+fi
 
 # Цвета
 COLOR='\033[92m'
