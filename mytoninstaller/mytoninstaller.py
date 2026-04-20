@@ -162,7 +162,7 @@ def set_node_argument(local, args):
 	arg_name = args[0]
 	args = [arg_name, " ".join(args[1:])]
 	with get_package_resource_path('mytoninstaller.scripts', 'set_node_argument.py') as script_path:
-		run_as_root(['python3', script_path] + args)
+		run_as_root(['python3', str(script_path)] + args)
 	color_print("set_node_argument - {green}OK{endc}")
 #end define
 

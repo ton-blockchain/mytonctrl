@@ -610,7 +610,7 @@ def EnableJsonRpc(local):
 
 	with get_package_resource_path('mytoninstaller.scripts', 'jsonrpcinstaller.sh') as jsonrpcinstaller_path:
 		local.add_log(f"Running script: {jsonrpcinstaller_path}", "debug")
-		exit_code = run_as_root(["bash", jsonrpcinstaller_path, "-u", user])  # TODO: fix path
+		exit_code = run_as_root(["bash", str(jsonrpcinstaller_path), "-u", user])  # TODO: fix path
 	if exit_code == 0:
 		text = "EnableJsonRpc - {green}OK{endc}"
 	else:
@@ -644,7 +644,7 @@ def do_enable_ton_http_api(local):
 		CreateLocalConfigFile(local, [])
 	user = local.buffer.user or get_current_user()
 	with get_package_resource_path('mytoninstaller.scripts', 'ton_http_api_installer.sh') as ton_http_api_installer_path:
-		exit_code = run_as_root(["bash", ton_http_api_installer_path, "-u", user])
+		exit_code = run_as_root(["bash", str(ton_http_api_installer_path), "-u", user])
 	if exit_code == 0:
 		text = "do_enable_ton_http_api - {green}OK{endc}"
 	else:
@@ -664,7 +664,7 @@ def enable_ls_proxy(local):
 
 	with get_package_resource_path('mytoninstaller.scripts', 'ls_proxy_installer.sh') as installer_path:
 		local.add_log(f"Running script: {installer_path}", "debug")
-		exit_code = run_as_root(["bash", installer_path, "-u", user])
+		exit_code = run_as_root(["bash", str(installer_path), "-u", user])
 	if exit_code != 0:
 		color_print("enable_ls_proxy - {red}Error{endc}")
 		raise Exception("enable_ls_proxy - Error")
@@ -725,7 +725,7 @@ def enable_ton_storage(local):
 
 	with get_package_resource_path('mytoninstaller.scripts', 'ton_storage_installer.sh') as installer_path:
 		local.add_log(f"Running script: {installer_path}", "debug")
-		exit_code = run_as_root(["bash", installer_path, "-u", user])
+		exit_code = run_as_root(["bash", str(installer_path), "-u", user])
 	if exit_code != 0:
 		color_print("enable_ton_storage - {red}Error{endc}")
 		raise Exception("enable_ton_storage - Error")
