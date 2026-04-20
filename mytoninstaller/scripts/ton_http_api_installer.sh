@@ -32,7 +32,7 @@ virtualenv ${venv_path}
 # install python3 packages
 echo -e "${COLOR}[2/4]${ENDC} Installing required packages"
 venv_pip3="${venv_path}/bin/pip3"
-${venv_pip3} install ton-http-api
+${venv_pip3} install ton-http-api -U
 chown -R ${user}:${user} ${venv_path}
 
 # add to startup
