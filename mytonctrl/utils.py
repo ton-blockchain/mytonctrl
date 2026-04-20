@@ -109,6 +109,28 @@ def get_clang_major_version():
         return None
 
 
+def get_ton_http_api_version() -> typing.Optional[str]:
+    pip_path = "/opt/virtualenv/ton_http_api/bin/pip3"
+    if not os.path.exists(pip_path):
+        return None
+    try:
+        process = subprocess.run(
+            [pip_path, "show", "ton-http-api"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=3,
+        )
+        if process.returncode != 0:
+            return None
+        for line in process.stdout.splitlines():
+            if line.startswith("Version:"):
+                return line.split(":", 1)[1].strip()
+    except Exception as e:
+        print(f"Error checking ton-http-api version: {type(e)}: {e}")
+    return None
+
+
 def get_os_version() -> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
     os_release_path = "/etc/os-release"
 

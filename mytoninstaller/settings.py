@@ -11,7 +11,7 @@ import requests
 import random
 import json
 
-
+from mypylib import MyPyClass
 from mypylib.mypylib import (
 	add2systemd,
 	get_dir_from_path,
@@ -628,9 +628,9 @@ def tha_exists():
 	return False
 #end define
 
-def enable_ton_http_api(local):
+def enable_ton_http_api(local: MyPyClass, update: bool = False):
 	try:
-		if not tha_exists():
+		if update or not tha_exists():
 			do_enable_ton_http_api(local)
 	except Exception as e:
 		local.add_log(f"Error in enable_ton_http_api: {e}", "warning")

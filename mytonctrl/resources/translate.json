@@ -679,6 +679,11 @@
 		"ru": "{{red}}Порт ноды {0} больше 64535, но quic порт не установлен. {{endc}}",
 		"zh_TW": "{{red}}節點端口 {0} 大於 64535，但 quic 端口未設置。{{endc}}"
 	},
+	"ton_http_api_version_warning": {
+		"en": "{{red}}ton-http-api version {0} is less than required {1}. Please reinstall it via command `installer enable THA`.{{endc}}",
+		"ru": "{{red}}Версия ton-http-api {0} ниже требуемой {1}. Пожалуйста, переустановите его через команду `installer enable THA`.{{endc}}",
+		"zh_TW": "{{red}}ton-http-api 版本 {0} 低於所需的 {1}。請通過命令 `installer enable THA` 重新安裝。{{endc}}"
+	},
 	"add_custom_overlay_cmd": {
 		"en": "Add custom overlay",
 		"ru": "Добавить пользовательский оверлей",

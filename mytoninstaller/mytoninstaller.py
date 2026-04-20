@@ -263,7 +263,7 @@ def Event(local, name):
 	if name == "enableJR":
 		EnableJsonRpc(local)
 	if name == "enableTHA":
-		enable_ton_http_api(local)
+		enable_ton_http_api(local, update=True)
 	if name == "enableLSP":
 		enable_ls_proxy(local)
 	if name == "enableTS":
