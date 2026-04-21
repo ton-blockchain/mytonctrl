@@ -17,12 +17,12 @@ class CustomOverlayModule(MtcModule):
         :param vset: list of validators adnl addresses, can be None if `@validators` not in config
         :return:
         """
-        use_quic_default = self.ton.local.db.get('customOverlaysUseQuic', True)
         result = {
             "name": name,
             "nodes": [],
-            "use_quic": config.get('use_quic', use_quic_default),
         }
+        if config.get('use_quic') is not None:
+            result["use_quic"] = config['use_quic']
         for k, v in config.items():
             if k == 'use_quic':
                 continue

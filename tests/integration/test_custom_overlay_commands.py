@@ -67,14 +67,7 @@ def test_parse_config_validators_expands_vset(overlay_module):
 def test_parse_config_use_quic_default_true_when_absent(overlay_module):
     config = {STATIC_NODE_HEX: {"msg_sender": True, "msg_sender_priority": 1}}
     result = overlay_module.parse_config("o", config)
-    assert result["use_quic"] is True
-
-
-def test_parse_config_use_quic_default_false_when_absent(overlay_module, ton):
-    ton.local.db['customOverlaysUseQuic'] = False
-    config = {STATIC_NODE_HEX: {"msg_sender": True, "msg_sender_priority": 1}}
-    result = overlay_module.parse_config("o", config)
-    assert result["use_quic"] is False
+    assert "use_quic" not in result
 
 
 def test_parse_config_use_quic_from_config_wins_over_default(overlay_module, ton):
@@ -130,18 +123,7 @@ def test_add_custom_overlay_emits_use_quic_true_by_default(cli, ton, tmp_path, m
     _mock_validator_config(monkeypatch, [hex2base64(STATIC_NODE_HEX)])
 
     cli.execute(f"add_custom_overlay quic_def {path}", no_color=True)
-    assert _read_emitted_vc_config(ton, "quic_def")["use_quic"] is True
-
-
-def test_add_custom_overlay_global_setting_disables_use_quic(cli, ton, tmp_path, monkeypatch, mocker: MockerFixture):
-    ton.local.db['customOverlaysUseQuic'] = False
-    config = {STATIC_NODE_HEX: {"msg_sender": True, "msg_sender_priority": 1}}
-    path = _write_config(tmp_path, "quic_off_cfg", config)
-    _mock_validator_console(mocker, ton)
-    _mock_validator_config(monkeypatch, [hex2base64(STATIC_NODE_HEX)])
-
-    cli.execute(f"add_custom_overlay quic_off {path}", no_color=True)
-    assert _read_emitted_vc_config(ton, "quic_off")["use_quic"] is False
+    assert "use_quic" not in _read_emitted_vc_config(ton, "quic_def")
 
 
 def test_add_custom_overlay_per_overlay_use_quic_wins_over_global(cli, ton, tmp_path, monkeypatch, mocker: MockerFixture):

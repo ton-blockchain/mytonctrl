@@ -58,7 +58,6 @@ SETTINGS = {
     'fift_timeout': Setting(None, 3, 'Fift default timeout'),
     'useDefaultCustomOverlays': Setting(None, True, 'Participate in default custom overlays node eligible to'),
     'defaultCustomOverlaysUrl': Setting(None, 'https://ton-blockchain.github.io/fallback_custom_overlays.json', 'Default custom overlays config url'),
-    'customOverlaysUseQuic': Setting(None, True, 'Default for the `use_quic` field sent to validator-console for custom overlays that don\'t set it explicitly'),
     'debug': Setting(None, False, 'Debug mtc console mode. Prints Traceback on errors'),
     'subscribe_tg_channel': Setting('validator', False, 'Disables warning about subscribing to the `TON STATUS` channel'),
     'auto_backup': Setting('validator', None, 'Make validator backup every election'),
