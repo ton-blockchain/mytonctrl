@@ -1,8 +1,10 @@
 import os
 import os.path
+import shutil
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 import psutil
 import base64
@@ -213,13 +215,29 @@ def download_archive_from_ts(local):
 	os.makedirs(states_dir, exist_ok=True)
 	os.makedirs(import_dir, exist_ok=True)
 
-	assert is_hex(state_bag['bag']), f"Invalid bag {state_bag}"
+	if not is_hex(state_bag['bag']):
+		raise ValueError(f"Invalid bag {state_bag}")
 
-	subprocess.run(f'mv {downloads_path}/{state_bag["bag"]}/state-*/* {states_dir}', shell=True)
+	def _move_archive_item(src: Path, destination_dir: str):
+		destination = Path(destination_dir) / src.name
+		if destination.exists() or destination.is_symlink():
+			if src.is_dir() or destination.is_dir():
+				raise shutil.Error(f"Destination path '{destination}' already exists")
+			destination.unlink()
+		shutil.move(src, destination)
+
+	source = Path(downloads_path) / state_bag["bag"]
+	for state_dir in source.glob("state-*"):
+		for item in state_dir.iterdir():
+			_move_archive_item(item, states_dir)
+
 	for bag in block_bags + master_block_bags:
-		assert is_hex(bag['bag']), f"Invalid bag {bag}"
-		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/*/*/* {import_dir}', shell=True)
-	subprocess.run(f'rm -rf {downloads_path}', shell=True)
+		if not is_hex(bag['bag']):
+			raise ValueError(f"Invalid bag {bag}")
+		source = Path(downloads_path) / bag["bag"]
+		for item in source.glob("*/*/*"):
+			_move_archive_item(item, import_dir)
+	subprocess.run(['rm', '-rf', downloads_path])
 
 	stop_service(local, "ton_storage")  # stop TS
 	disable_service(local, "ton_storage")
