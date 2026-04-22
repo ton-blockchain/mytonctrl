@@ -433,7 +433,7 @@ def run_benchmark(args: list):
 		with get_package_resource_path('mytonctrl', 'scripts/benchmark.py') as benchmark_path:
 			shutil.copy(benchmark_path, tmp_dir / "benchmark.py")
 
-			subprocess.run(["uv", "init", "--python", "3.13", "--no-workspace", "--name", "benchmark"], cwd=tmp_dir, check=True)
+			subprocess.run(["uv", "init", "--python", "3.14", "--no-workspace", "--name", "benchmark"], cwd=tmp_dir, check=True)
 
 			src_dir = Path("/usr/src/ton")
 			test_dir = tmp_dir / "test"
