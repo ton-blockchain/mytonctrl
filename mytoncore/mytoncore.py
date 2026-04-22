@@ -1226,11 +1226,12 @@ class MyTonCore():
 		return resultFilePath
 	#end define
 
-	def GetStake(self, account, args=None):
+	def GetStake(self, account: Account, args: list[str] | None = None):
 		stake = self.local.db.get("stake")
 		usePool = self.using_pool()
 		useController = self.using_liquid_staking()
 		stakePercent = self.local.db.get("stakePercent", 100)
+		stake_no_split = self.local.db.get("stakeNoSplit", False)
 		vconfig = self.GetValidatorConfig()
 		config17 = self.GetConfig17()
 
@@ -1262,11 +1263,11 @@ class MyTonCore():
 			sp = stakePercent / 100
 			if sp > 1 or sp < 0:
 				self.local.add_log("Wrong stakePercent value. Using default stake.", "warning")
-			elif len(vconfig.validators) == 0:
+			elif len(vconfig.validators) == 0 and not stake_no_split:
 				stake = int(account.balance*sp/2)
 				if stake < config17["minStake"]:  # not enough funds to divide them by 2
 					stake = int(account.balance*sp)
-			elif len(vconfig.validators) > 0:
+			else:
 				stake = int(account.balance*sp)
 			if stakePercent == 100:
 				stake -= 20
