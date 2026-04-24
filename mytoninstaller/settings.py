@@ -445,9 +445,11 @@ def EnableValidatorConsole(local):
 	# write mconfig
 	SetConfig(path=mconfig_path, data=mconfig)
 
-	# Подтянуть событие в mytoncore.py
-	# cmd = "python3 {srcDir}mytonctrl/mytoncore.py -e \"enableVC\"".format(srcDir=srcDir)
-	cmd = 'python3 -m mytoncore -e "enableVC"'
+	event_name = "enableVC"
+	if local.buffer.quic_port is not None:
+		event_name += f'_{local.buffer.quic_port}'
+
+	cmd = f'python3 -m mytoncore -e "{event_name}"'
 	args = ["su", "-l", user, "-c", cmd]
 	subprocess.run(args)
 
