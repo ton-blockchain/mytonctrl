@@ -46,6 +46,7 @@ def init_envs(local):
 	local.buffer.cport = int(os.getenv('VALIDATOR_CONSOLE_PORT') if os.getenv('VALIDATOR_CONSOLE_PORT') else random.randint(2000, 65000))
 	local.buffer.lport = int(os.getenv('LITESERVER_PORT') if os.getenv('LITESERVER_PORT') else random.randint(2000, 65000))
 	local.buffer.vport = int(os.getenv('VALIDATOR_PORT') if os.getenv('VALIDATOR_PORT') else random.randint(2000, 64000))
+	local.buffer.quic_port = int(os.getenv('QUIC_PORT')) if os.getenv('QUIC_PORT') else None
 	local.buffer.archive_ttl = os.getenv('ARCHIVE_TTL')
 	local.buffer.state_ttl = os.getenv('STATE_TTL')
 	local.buffer.public_ip = os.getenv('PUBLIC_IP')
