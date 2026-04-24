@@ -27,13 +27,13 @@ if not name or not vc_address:
     exit(1)
 
 
-subprocess.run(f"rm -rf {tmp_dir}", shell=True)
-subprocess.run(f"mkdir -p {tmp_dir}", shell=True)
+subprocess.run(['rm', '-rf', tmp_dir])
+subprocess.run(['mkdir', '-p', tmp_dir])
 
-subprocess.run(f'tar -xzf {name} -C {tmp_dir}', shell=True)
+subprocess.run(['tar', '-xzf', name, '-C', tmp_dir])
 
-subprocess.run(f'cp -rf {tmp_dir}/db/keyring /var/ton-work/db/', shell=True)
-subprocess.run('chown -R validator:validator /var/ton-work/db/keyring', shell=True)
+subprocess.run(['cp', '-rf', f'{tmp_dir}/db/keyring', '/var/ton-work/db/'])
+subprocess.run(['chown', '-R', 'validator:validator', '/var/ton-work/db/keyring'])
 
 with open(f'{tmp_dir}/db/config.json', 'r') as f:
     config = json.load(f)
@@ -46,4 +46,4 @@ for v in config['validators']:
         run_vc(f'addadnl {b64tohex(adnl["id"])} 0')
         run_vc(f'addvalidatoraddr {b64tohex(v["id"])} {b64tohex(adnl["id"])} {v["expire_at"]}')
 
-subprocess.run('systemctl restart validator', shell=True)
+subprocess.run(['systemctl', 'restart', 'validator'])
