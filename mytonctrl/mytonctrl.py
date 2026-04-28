@@ -74,7 +74,7 @@ def parse_init_args():
 	return args
 
 
-def Init(local: MyPyClass, mytoncore_local: MyPyClass, console: MyPyConsole):
+def Init(local: MyPyClass, mytoncore_local: MyPyClass, console: MyPyConsole) -> MyTonCore:
 	# Load translate table
 	with get_package_resource_path('mytonctrl', 'resources/translate.json') as translate_path:
 		local.init_translator(translate_path)
@@ -181,6 +181,8 @@ def Init(local: MyPyClass, mytoncore_local: MyPyClass, console: MyPyConsole):
 	local.db.config.logLevel = "debug" if console.debug else "info"
 	local.db.config.isLocaldbSaving = False
 	local.run()
+
+	return ton
 
 
 def about(local, ton, args):
