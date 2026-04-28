@@ -13,7 +13,7 @@ from pytoniq_core import Address, InternalMsgInfo, MessageAny, Slice, StateInit,
 
 from contract import WalletV1, ton
 from tontester.install import Install
-from tontester.network import DHTNode, FullNode, Network
+from tontester.network import DHTNode, FullNode, Network, StartOptions
 from tontester.zerostate import SimplexConsensusConfig
 
 POLL_INTERVAL = 2
@@ -163,7 +163,7 @@ async def setup_network(
     install.tonlibjson.client_set_verbosity_level(3)
     network = Network(install, working_dir)
 
-    dht = network.create_dht_node(threads=1)
+    dht = network.create_dht_node()
     network.config.shard_consensus = SimplexConsensusConfig(target_block_rate_ms=block_rate)
     network.config.mc_consensus = SimplexConsensusConfig(target_block_rate_ms=master_block_rate)
     network.config.shard_validators = nodes_count
@@ -173,15 +173,15 @@ async def setup_network(
 
     nodes: list[FullNode] = []
     for _ in range(nodes_count):
-        node = network.create_full_node(threads=threads_per_node)
+        node = network.create_full_node()
         node.make_initial_validator()
         node.announce_to(dht)
         nodes.append(node)
 
-    await dht.run()
+    await dht.run(StartOptions(threads=1))
     print(f"Running each node with {threads_per_node} threads")
     for node in nodes:
-        await node.run()
+        await node.run(StartOptions(threads=threads_per_node))
         await asyncio.sleep(3)
 
     return network, nodes, dht
@@ -295,9 +295,9 @@ async def run_sync_test(network: Network, dht: DHTNode) -> None:
 
     print("Starting new node from scratch...")
     sync_threads = max(2, (os.cpu_count() or 4) // 2)
-    new_node = network.create_full_node(threads=sync_threads)
+    new_node = network.create_full_node()
     new_node.announce_to(dht)
-    await new_node.run()
+    await new_node.run(StartOptions(threads=sync_threads))
 
     new_client = await new_node.tonlib_client()
 
