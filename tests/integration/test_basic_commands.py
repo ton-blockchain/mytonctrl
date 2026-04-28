@@ -59,7 +59,7 @@ def test_update(cli, monkeypatch, mocker):
     with get_package_resource_path('mytonctrl', 'scripts/update.sh') as upd_path:
         assert upd_path.is_file()
     assert "Error" not in output
-    assert calls["run_args"] == ['bash', upd_path, '-a', 'author', '-r', 'repo', '-b', 'branch']
+    assert calls["run_args"] == ['bash', str(upd_path), '-a', 'author', '-r', 'repo', '-b', 'branch']
     exit_mock.assert_called_once()
 
 
@@ -96,7 +96,7 @@ def test_upgrade(cli, monkeypatch):
     assert "Error" not in output
     assert captured_settings["liteClient"]["configPath"] == "global.config.json"
     assert captured_settings["liteClient"]["liteServer"]["pubkeyPath"] == "/var/ton-work/keys/liteserver.pub"
-    assert calls["run_args"] == ["bash", upg_path, "-a", "author", "-r", "repo", "-b", "branch"]
+    assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch"]
 
     # clang version is < 21, abort
     calls = {}
@@ -112,7 +112,7 @@ def test_upgrade(cli, monkeypatch):
     output = cli.execute("upgrade")
     assert "Upgrade - \x1b[32mOK\x1b" in output
     assert "Error" not in output
-    assert calls["run_args"] == ["bash", upg_path, "-a", "author", "-r", "repo", "-b", "branch"]
+    assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch"]
 
     # call upgrade_btc_teleport if using validator
     monkeypatch.setattr(mytonctrl_module, "get_clang_major_version", lambda: 21)
@@ -130,7 +130,7 @@ def test_upgrade(cli, monkeypatch):
     assert teleport_calls.get("reinstall") is False
     assert "Upgrade - OK" in output
     assert "Error" not in output
-    assert calls["run_args"] == ["bash", upg_path, "-a", "author", "-r", "repo", "-b", "branch"]
+    assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch"]
 
     monkeypatch.setattr(mytonctrl_module, "run_as_root", lambda _: 1)
     output = cli.execute("upgrade", no_color=True)

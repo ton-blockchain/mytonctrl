@@ -226,3 +226,23 @@ ID=debian
     monkeypatch.setattr('builtins.open', mock)
     output = cli.run_pre_up()
     assert 'Ubuntu' not in output
+
+
+def test_check_ton_http_api_version(cli, monkeypatch):
+    monkeypatch.setattr(mytonctrl, 'THA_VERSION_REQUIRED', '2.4.0')
+
+    monkeypatch.setattr(mytonctrl, 'get_ton_http_api_version', lambda: None)
+    output = cli.run_pre_up()
+    assert 'ton-http-api version' not in output
+
+    monkeypatch.setattr(mytonctrl, 'get_ton_http_api_version', lambda: '2.3.1')
+    output = cli.run_pre_up()
+    assert 'ton-http-api version 2.3.1 is less than required 2.4.0' in output
+
+    monkeypatch.setattr(mytonctrl, 'get_ton_http_api_version', lambda: '2.4.0')
+    output = cli.run_pre_up()
+    assert 'ton-http-api version' not in output
+
+    monkeypatch.setattr(mytonctrl, 'get_ton_http_api_version', lambda: '3.0.0')
+    output = cli.run_pre_up()
+    assert 'ton-http-api version' not in output

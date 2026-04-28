@@ -4,8 +4,8 @@ from mytoncore.mytoncore import MyTonCore
 
 
 def run_event(local: MyPyClass, event_name: str):
-    if event_name == "enableVC":
-        enable_vc_event(local)
+    if event_name.startswith("enableVC"):
+        enable_vc_event(local, event_name)
     elif event_name.startswith("enable_mode"):
         enable_mode(local, event_name)
     elif event_name == "enable_btc_teleport":
@@ -17,7 +17,7 @@ def run_event(local: MyPyClass, event_name: str):
     local.exit()
 
 
-def enable_vc_event(local: MyPyClass):
+def enable_vc_event(local: MyPyClass, event_name: str):
     local.add_log("start EnableVcEvent function", "debug")
     ton = MyTonCore(local)
     wallet = ton.CreateWallet("validator_wallet_001", -1)
@@ -28,6 +28,11 @@ def enable_vc_event(local: MyPyClass):
     ton.add_adnl_addr(adnl_addr)
     local.db["adnlAddr"] = adnl_addr
     local.save()
+
+    from mytonctrl.mytonctrl import set_quic_port
+    args = event_name.split("_")[1:]
+    if args:
+        set_quic_port(local, ton, args)
 
 
 def enable_mode(local: MyPyClass, event_name: str):

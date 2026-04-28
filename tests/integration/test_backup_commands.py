@@ -94,7 +94,7 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     def assert_happy_run_args(outp: str, user: str):
         assert 'restore_backup - OK' in outp
         exit_mock.assert_called_once()  # exited after restore_backup
-        assert run_args == ['bash', backup_path, '-u', user, '-m', ton.local.my_work_dir, '-n',
+        assert run_args == ['bash', str(backup_path), '-u', user, '-m', ton.local.my_work_dir, '-n',
                             'backup.tar.gz', '-i', '2130706433']
         assert ton.local.db.get('abc') == 123  # db updated after restore_backup
 

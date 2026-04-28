@@ -46,6 +46,7 @@ def init_envs(local):
 	local.buffer.cport = int(os.getenv('VALIDATOR_CONSOLE_PORT') if os.getenv('VALIDATOR_CONSOLE_PORT') else random.randint(2000, 65000))
 	local.buffer.lport = int(os.getenv('LITESERVER_PORT') if os.getenv('LITESERVER_PORT') else random.randint(2000, 65000))
 	local.buffer.vport = int(os.getenv('VALIDATOR_PORT') if os.getenv('VALIDATOR_PORT') else random.randint(2000, 64000))
+	local.buffer.quic_port = int(os.getenv('QUIC_PORT')) if os.getenv('QUIC_PORT') else None
 	local.buffer.archive_ttl = os.getenv('ARCHIVE_TTL')
 	local.buffer.state_ttl = os.getenv('STATE_TTL')
 	local.buffer.public_ip = os.getenv('PUBLIC_IP')
@@ -162,7 +163,7 @@ def set_node_argument(local, args):
 	arg_name = args[0]
 	args = [arg_name, " ".join(args[1:])]
 	with get_package_resource_path('mytoninstaller.scripts', 'set_node_argument.py') as script_path:
-		run_as_root(['python3', script_path] + args)
+		run_as_root(['python3', str(script_path)] + args)
 	color_print("set_node_argument - {green}OK{endc}")
 #end define
 
@@ -263,7 +264,7 @@ def Event(local, name):
 	if name == "enableJR":
 		EnableJsonRpc(local)
 	if name == "enableTHA":
-		enable_ton_http_api(local)
+		enable_ton_http_api(local, update=True)
 	if name == "enableLSP":
 		enable_ls_proxy(local)
 	if name == "enableTS":

@@ -79,7 +79,7 @@ def test_benchmark_runs(cli, monkeypatch, tmp_path):
     assert len(calls) == 4
 
     # uv init
-    assert calls[0]["args"] == ["uv", "init", "--python", "3.13", "--no-workspace", "--name", "benchmark"]
+    assert calls[0]["args"] == ["uv", "init", "--python", "3.14", "--no-workspace", "--name", "benchmark"]
     assert "cwd" in calls[0]["kwargs"]
     tmp_dir = str(calls[0]["kwargs"]["cwd"])
 

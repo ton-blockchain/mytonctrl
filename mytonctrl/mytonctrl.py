@@ -48,12 +48,13 @@ from mytoncore.utils import get_package_resource_path, b642hex
 from mytoncore.telemetry import is_host_virtual, get_bin_git_hash
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_args_min_max_len
 from mytonctrl.utils import GetItemFromList, timestamp2utcdatetime, fix_git_config, is_hex, GetColorInt, \
-	pop_user_from_args, pop_arg_from_args, get_clang_major_version, get_os_version
+	pop_user_from_args, pop_arg_from_args, get_clang_major_version, get_os_version, get_ton_http_api_version
 from mytoninstaller.archive_blocks import download_blocks
 from mytoninstaller.utils import get_ton_storage_port
 
 
 CLANG_VERSION_REQUIRED = 21
+THA_VERSION_REQUIRED = "2.0.65"
 
 
 def Init(local, ton, console, argv):
@@ -338,7 +339,7 @@ def Update(local, args):
 	author, repo, branch, _ = check_git(args, repo, "update")  # todo: implement --url for update
 	# Run script
 	with get_package_resource_path('mytonctrl', 'scripts/update.sh') as update_script_path:
-		runArgs = ["bash", update_script_path, "-a", author, "-r", repo, "-b", branch]
+		runArgs = ["bash", str(update_script_path), "-a", author, "-r", repo, "-b", branch]
 		exitCode = run_as_root(runArgs)
 	if exitCode == 0:
 		text = "Update - {green}OK{endc}"
@@ -388,9 +389,9 @@ def Upgrade(local, ton, args: list):
 	# Run script
 	with get_package_resource_path('mytonctrl', 'scripts/upgrade.sh') as upgrade_script_path:
 		if git_url:
-			runArgs = ["bash", upgrade_script_path, "-g", git_url, "-b", branch]
+			runArgs = ["bash", str(upgrade_script_path), "-g", git_url, "-b", branch]
 		else:
-			runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
+			runArgs = ["bash", str(upgrade_script_path), "-a", author, "-r", repo, "-b", branch]
 		exitCode = run_as_root(runArgs)
 	if ton.using_validator():
 		upgrade_btc_teleport(local, ton)
@@ -432,7 +433,7 @@ def run_benchmark(args: list):
 		with get_package_resource_path('mytonctrl', 'scripts/benchmark.py') as benchmark_path:
 			shutil.copy(benchmark_path, tmp_dir / "benchmark.py")
 
-			subprocess.run(["uv", "init", "--python", "3.13", "--no-workspace", "--name", "benchmark"], cwd=tmp_dir, check=True)
+			subprocess.run(["uv", "init", "--python", "3.14", "--no-workspace", "--name", "benchmark"], cwd=tmp_dir, check=True)
 
 			src_dir = Path("/usr/src/ton")
 			test_dir = tmp_dir / "test"
@@ -547,6 +548,16 @@ def check_ubuntu_version(local: MyPyClass):
 			warning = local.translate("ubuntu_version_warning").format(ver)
 			print_warning(local, warning)
 
+def check_ton_http_api_version(local: MyPyClass):
+	version = get_ton_http_api_version()
+	if version is None:
+		return
+	current = tuple(int(x) for x in version.split('.')[:3])
+	required = tuple(int(x) for x in THA_VERSION_REQUIRED.split('.')[:3])
+	if current < required:
+		warning = local.translate("ton_http_api_version_warning").format(version, THA_VERSION_REQUIRED)
+		print_warning(local, warning)
+
 def check_node_port(local: MyPyClass, ton: MyTonCore):
 	if not ton.using_validator():
 		return
@@ -574,6 +585,7 @@ def warnings(local: MyPyClass, ton: MyTonCore):
 	local.try_function(check_slashed, args=[local, ton])
 	local.try_function(check_ubuntu_version, args=[local])
 	local.try_function(check_node_port, args=[local, ton])
+	local.try_function(check_ton_http_api_version, args=[local])
 
 def CheckTonUpdate(local):
 	git_path = "/usr/src/ton"

@@ -9,8 +9,7 @@ from mytonctrl.console_cmd import add_command, check_usage_two_args, check_usage
 
 class CustomOverlayModule(MtcModule):
 
-    @staticmethod
-    def parse_config(name: str, config: dict, vset: list = None):
+    def parse_config(self, name: str, config: dict, vset: list = None):
         """
         Converts config to validator-console friendly format
         :param name: custom overlay name
@@ -18,11 +17,15 @@ class CustomOverlayModule(MtcModule):
         :param vset: list of validators adnl addresses, can be None if `@validators` not in config
         :return:
         """
+        use_quic_default = self.ton.local.db.get('customOverlaysUseQuic', True)
         result = {
             "name": name,
-            "nodes": []
+            "nodes": [],
+            "use_quic": config.get('use_quic', use_quic_default),
         }
         for k, v in config.items():
+            if k == 'use_quic':
+                continue
             if k == '@validators' and v:
                 if vset is None:
                     raise Exception("Validators set is not defined but @validators is in config")

@@ -38,6 +38,7 @@ class Setting:
 SETTINGS = {
     'stake': Setting('validator', None, 'Stake amount'),
     'stakePercent': Setting('validator', 100, 'Stake percent if `stake` is null'),
+    'stakeNoSplit': Setting('validator', False, 'Do not split `stakePercent` stake in half'),
     'isSlashing': Setting('validator', None, 'Create complaints to validators'),
     'validatorWalletName': Setting('validator', 'wallet_001', 'Validator\'s wallet name'),
     'maxFactor': Setting('validator', None, 'Param send to Elector. if null will be taken from 17 config param'),
@@ -58,6 +59,7 @@ SETTINGS = {
     'fift_timeout': Setting(None, 3, 'Fift default timeout'),
     'useDefaultCustomOverlays': Setting(None, True, 'Participate in default custom overlays node eligible to'),
     'defaultCustomOverlaysUrl': Setting(None, 'https://ton-blockchain.github.io/fallback_custom_overlays.json', 'Default custom overlays config url'),
+    'customOverlaysUseQuic': Setting(None, True, 'Default for the `use_quic` field sent to validator-console for custom overlays that don\'t set it explicitly'),
     'debug': Setting(None, False, 'Debug mtc console mode. Prints Traceback on errors'),
     'subscribe_tg_channel': Setting('validator', False, 'Disables warning about subscribing to the `TON STATUS` channel'),
     'auto_backup': Setting('validator', None, 'Make validator backup every election'),
