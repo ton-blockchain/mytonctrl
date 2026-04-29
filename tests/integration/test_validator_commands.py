@@ -334,7 +334,7 @@ def test_print_collators(cli, ton, monkeypatch, mocker: MockerFixture):
     output = cli.execute("print_collators --json", no_color=True)
     assert json.dumps(collators_data, indent=2) in output
     get_collators_stats_mock.assert_not_called()
-    validator_console_mock.Run.assert_not_called()
+    validator_console_mock.run.assert_not_called()
 
     # happy path
     console_output = """some header
@@ -348,7 +348,7 @@ Shard (0,8000000000000000)
   Collator test_adnl2
   """
 
-    validator_console_mock.Run.return_value = console_output
+    validator_console_mock.run.return_value = console_output
     get_collators_stats_mock.return_value = {
         'adnl1': True,
         'adnl2': False
@@ -356,7 +356,7 @@ Shard (0,8000000000000000)
 
     output = cli.execute("print_collators", no_color=True)
 
-    validator_console_mock.Run.assert_called_once_with('show-collators-list')
+    validator_console_mock.run.assert_called_once_with('show-collators-list')
     get_collators_stats_mock.assert_called_once()
 
     assert """
@@ -369,11 +369,11 @@ Shard (0,8000000000000000)
 """ in output
 
     # collators list empty
-    validator_console_mock.Run.reset_mock()
+    validator_console_mock.run.reset_mock()
     get_collators_stats_mock.reset_mock()
-    validator_console_mock.Run.return_value = "some header\nconn ready\ncollators list is empty"
+    validator_console_mock.run.return_value = "some header\nconn ready\ncollators list is empty"
     output = cli.execute("print_collators", no_color=True)
-    validator_console_mock.Run.assert_called_once_with('show-collators-list')
+    validator_console_mock.run.assert_called_once_with('show-collators-list')
     assert "No collators found" in output
     get_collators_stats_mock.assert_not_called()
 
@@ -388,11 +388,11 @@ def test_reset_collators(cli, ton, monkeypatch, mocker: MockerFixture):
     get_collators_mock.return_value = {}
     output = cli.execute("reset_collators", no_color=True)
     assert "No collators to reset" in output
-    validator_console_mock.Run.assert_not_called()
+    validator_console_mock.run.assert_not_called()
 
     # happy path
     get_collators_mock.reset_mock()
-    validator_console_mock.Run.reset_mock()
+    validator_console_mock.run.reset_mock()
     get_collators_mock.return_value = {
         'shards': [{
             'shard_id': {'workchain': 0, 'shard': -9223372036854775808},
@@ -401,15 +401,15 @@ def test_reset_collators(cli, ton, monkeypatch, mocker: MockerFixture):
             'collators': [{'adnl_id': 'test_adnl'}]
         }]
     }
-    validator_console_mock.Run.return_value = "success"
+    validator_console_mock.run.return_value = "success"
     output = cli.execute("reset_collators", no_color=True)
     assert "reset_collators - OK" in output
-    validator_console_mock.Run.assert_called_once_with('clear-collators-list')
+    validator_console_mock.run.assert_called_once_with('clear-collators-list')
     get_collators_mock.assert_called_once()
 
     # fails
     get_collators_mock.reset_mock()
-    validator_console_mock.Run.reset_mock()
+    validator_console_mock.run.reset_mock()
     get_collators_mock.return_value = {
         'shards': [{
             'shard_id': {'workchain': 0, 'shard': -9223372036854775808},
@@ -418,9 +418,9 @@ def test_reset_collators(cli, ton, monkeypatch, mocker: MockerFixture):
             'collators': [{'adnl_id': 'test_adnl'}]
         }]
     }
-    validator_console_mock.Run.return_value = "error: failed to clear"
+    validator_console_mock.run.return_value = "error: failed to clear"
 
     output = cli.execute("reset_collators", no_color=True)
     assert "Failed to reset collators list" in output
-    validator_console_mock.Run.assert_called_once_with('clear-collators-list')
+    validator_console_mock.run.assert_called_once_with('clear-collators-list')
     get_collators_mock.assert_called_once()

@@ -1162,7 +1162,7 @@ def set_quic_port(local: MyPyClass, ton: MyTonCore, args: list[str]):
 			priocat = addr["priority_categories"]
 			cat = f"[ {' '.join(map(str, cat))} ]"
 			priocat = f"[ {' '.join(map(str, priocat))} ]"
-			result = ton.validatorConsole.Run(f"del-quic-addr {addr_ip}:{addr_port} {cat} {priocat}")
+			result = ton.validatorConsole.run(f"del-quic-addr {addr_ip}:{addr_port} {cat} {priocat}")
 			color_print(f"Deleted quic addr {addr_ip}:{addr_port}: {result.splitlines()[-1].strip()}")
 
 	if port > 0:
@@ -1176,7 +1176,7 @@ def set_quic_port(local: MyPyClass, ton: MyTonCore, args: list[str]):
 		for collator_adnl in set(collator_adnls):
 			ton.update_adnl_category(adnl_addr=collator_adnl, category=category)
 
-		result = ton.validatorConsole.Run(f"add-quic-addr {ip}:{port} [ {category} ] [ ]")
+		result = ton.validatorConsole.run(f"add-quic-addr {ip}:{port} [ {category} ] [ ]")
 		local.add_log(f"Added quic addr {ip}:{port}: {result.splitlines()[-1].strip()}", "info")
 
 
@@ -1186,4 +1186,4 @@ def mytonctrl():
 	mytoncore_local = MyPyClass('mytoncore.py')
 	console = MyPyConsole(local)
 	Init(local, mytoncore_local, console)
-	console.Run()
+	console.run()

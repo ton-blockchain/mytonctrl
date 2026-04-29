@@ -27,7 +27,7 @@ class NominatorPoolModule(PoolModule):
         wallet = self.ton.GetValidatorWallet()
         args = [fift_script, wallet.addrB64, validator_reward_share, max_nominators_count, min_validator_stake,
                 min_nominator_stake, file_path]
-        result = self.ton.fift.Run(args)
+        result = self.ton.fift.run(args)
         if "Saved pool" not in result:
             raise Exception("CreatePool error: " + result)
         # end if
@@ -88,7 +88,7 @@ class NominatorPoolModule(PoolModule):
         bocPath = self.ton.local.my_temp_dir + wallet.name + "validator-deposit-query.boc"
         fiftScript = self.ton.contractsDir + "nominator-pool/func/validator-deposit.fif"
         args = [fiftScript, bocPath]
-        self.ton.fift.Run(args)
+        self.ton.fift.run(args)
         resultFilePath = self.ton.SignBocWithWallet(wallet, bocPath, pool_addr, amount)
         self.ton.SendFile(resultFilePath, wallet)
 

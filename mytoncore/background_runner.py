@@ -121,7 +121,7 @@ class BackgroundRunner:
         liteservers = data.get("liteservers")
         for index in range(len(liteservers)):
             try:
-                self._ton.liteClient.Run("last", index=index)
+                self._ton.liteClient.run("last", index=index)
                 result.append(index)
             except Exception:
                 pass

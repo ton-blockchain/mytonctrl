@@ -31,7 +31,7 @@ def test_new_pool(cli, ton, monkeypatch, mocker: MockerFixture):
             f.write(b'\x00'*36)
         return "Saved pool"
 
-    monkeypatch.setattr(ton.fift, "Run", fake_fift_run)
+    monkeypatch.setattr(ton.fift, "run", fake_fift_run)
 
     pool_name = "test_new_pool"
     pool_path = ton.poolsDir + pool_name
@@ -171,7 +171,7 @@ def test_deposit_to_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     get_validator_wallet_mock.return_value.name = 'wallet_name'
     fift_run_mock = mocker.Mock(return_value="Success")
     monkeypatch.setattr(MyTonCore, "GetValidatorWallet", get_validator_wallet_mock)
-    monkeypatch.setattr(ton.fift, "Run", fift_run_mock)
+    monkeypatch.setattr(ton.fift, "run", fift_run_mock)
 
     result_file_path = "/tmp/signed.boc"
     sign_boc_mock = mocker.Mock(return_value=result_file_path)

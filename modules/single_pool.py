@@ -25,7 +25,7 @@ class SingleNominatorModule(PoolModule):
         with get_package_resource_path('mytoncore', 'contracts/single-nominator-pool/init.fif') as fift_script:
             with get_package_resource_path('mytoncore', 'contracts/single-nominator-pool/single-nominator-code.hex') as code_boc:
                 args = [fift_script, code_boc, owner_address, validator_wallet.addrB64, file_path]
-                result = self.ton.fift.Run(args)
+                result = self.ton.fift.run(args)
         if "Saved single nominator pool" not in result:
             raise Exception("create_single_pool error: " + result)
 

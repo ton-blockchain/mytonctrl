@@ -43,7 +43,7 @@ class Fift(CliTool):
     smartconts_path: str
     tool_name: ClassVar[str] = "fift"
 
-    def Run(self, args: list[str], timeout: int | None = None, **_):
+    def run(self, args: list[str], timeout: int | None = None, **_):
         args = list(map(str, args))
         include_path = self.libs_path + ':' + self.smartconts_path
         args = ["-I", include_path, "-s"] + args
@@ -57,7 +57,7 @@ class LiteClient(CliTool):
     get_validator_status: Callable[[], Dict]
     tool_name: ClassVar[str] = "liteclient"
 
-    def Run(self, cmd: str, timeout: int | None = None, index: int | None = None, use_local: bool = True, **_):
+    def run(self, cmd: str, timeout: int | None = None, index: int | None = None, use_local: bool = True, **_):
         out_of_sync = None
         if index is None and use_local:
             try:
@@ -84,6 +84,6 @@ class ValidatorConsole(CliTool):
     addr: str
     tool_name: ClassVar[str] = "console"
 
-    def Run(self, cmd: str, timeout: int | None = None, **_):
+    def run(self, cmd: str, timeout: int | None = None, **_):
         args = ["-k", self.priv_key_path, "-p", self.pub_key_path, "-a", self.addr, "-v", "0", "--cmd", cmd]
         return self._run(args, timeout)
