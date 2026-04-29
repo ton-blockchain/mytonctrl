@@ -108,9 +108,11 @@ class BackgroundRunner:
         )  # cache past vl
 
     def _scan_lite_servers(self):
-        file_path = self._ton.liteClient.configPath
+        if self._ton.liteClient is None:
+            return
+        file_path = self._ton.liteClient.config_path
         if file_path is None:
-            raise RuntimeError("liteClient.configPath is None")
+            raise RuntimeError("liteClient.config_path is None")
         with open(file_path, "rt") as f:
             text = f.read()
         data = json.loads(text)

@@ -161,7 +161,7 @@ class UtilitiesModule(MtcModule):
             config_value = config_value[start:end]
         # end if
 
-        args = [self.ton.liteClient.appPath, "--global-config", self.ton.liteClient.configPath, "--verbosity", "0"]
+        args = [self.ton.liteClient.app_path, "--global-config", self.ton.liteClient.config_path, "--verbosity", "0"]
         process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         time.sleep(1)
 

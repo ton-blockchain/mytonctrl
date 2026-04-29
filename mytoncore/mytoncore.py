@@ -16,9 +16,7 @@ from modules import MODES
 from modules.btc_teleport import BtcTeleportModule
 from mytoncore.stats_collector import StatsCollector
 from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path
-from mytoncore.liteclient import LiteClient
-from mytoncore.validator_console import ValidatorConsole
-from mytoncore.fift import Fift
+from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
 	Wallet,
 	Account,
@@ -50,9 +48,9 @@ class MyTonCore:
 		os.makedirs(self.contractsDir, exist_ok=True)
 		os.makedirs(self.poolsDir, exist_ok=True)
 
-		self.liteClient = LiteClient(self.local)
-		self.validatorConsole = ValidatorConsole(self.local)
-		self.fift = Fift(self.local)
+		self.liteClient: LiteClient | None = None
+		self.validatorConsole: ValidatorConsole | None = None
+		self.fift: Fift | None = None
 
 		mconfig_path = self.local.db_path
 		backup_path = mconfig_path + ".backup"
@@ -75,24 +73,28 @@ class MyTonCore:
 			self.nodeName = self.nodeName + "_"
 
 		if lite_client_config is not None:
-			self.liteClient.ton = self # magic
-			self.liteClient.appPath = lite_client_config["appPath"]
-			self.liteClient.configPath = lite_client_config["configPath"]
-			liteServer = lite_client_config.get("liteServer")
-			if liteServer is not None:
-				self.liteClient.pubkeyPath = liteServer["pubkeyPath"]
-				self.liteClient.addr = "{0}:{1}".format(liteServer["ip"], liteServer["port"])
+			ls_pubkey_path = None
+			ls_addr = None
+			ls_config = lite_client_config.get("liteServer")
+			if ls_config is not None:
+				ls_pubkey_path = ls_config["pubkeyPath"]
+				ls_addr = f"{ls_config['ip']}:{ls_config['port']}"
+			self.liteClient = LiteClient(
+				self.local,
+				lite_client_config["appPath"],
+				lite_client_config["configPath"],
+				ls_pubkey_path,
+				ls_addr,
+				self.GetValidatorStatus
+			)
 
 		if vc_config is not None:
-			self.validatorConsole.appPath = vc_config["appPath"]
-			self.validatorConsole.privKeyPath = vc_config["privKeyPath"]
-			self.validatorConsole.pubKeyPath = vc_config["pubKeyPath"]
-			self.validatorConsole.addr = vc_config["addr"]
+			self.validatorConsole = ValidatorConsole(
+				self.local, vc_config["appPath"], vc_config["privKeyPath"], vc_config["pubKeyPath"], vc_config["addr"]
+			)
 
 		if fift_config is not None:
-			self.fift.appPath = fift_config["appPath"]
-			self.fift.libsPath = fift_config["libsPath"]
-			self.fift.smartcontsPath = fift_config["smartcontsPath"]
+			self.fift = Fift(self.local, fift_config["appPath"], fift_config["libsPath"], fift_config["smartcontsPath"])
 
 	def restore_db_file(self, mconfig_path: str, backup_path: str):
 		self.local.add_log(f"Restoring db file {mconfig_path} from backup {backup_path}", "warning")
@@ -701,7 +703,7 @@ class MyTonCore:
 				if name not in result:
 					result[name] = value
 
-	def GetValidatorStatus(self, no_cache=False):
+	def GetValidatorStatus(self, no_cache: bool = False) -> Dict:
 		# Get buffer
 		bname = "validator_status"
 		buff = self.GetFunctionBuffer(bname)
@@ -1137,8 +1139,8 @@ class MyTonCore:
 		self.liteClient.Run("sendfile " + filePath)
 		if duplicateSendfile:
 			try:
-				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
-				self.liteClient.Run("sendfile " + filePath, useLocalLiteServer=False)
+				self.liteClient.Run("sendfile " + filePath, use_local=False)
+				self.liteClient.Run("sendfile " + filePath, use_local=False)
 			except Exception:
 				pass
 		if duplicateApi:
@@ -3736,7 +3738,7 @@ class MyTonCore:
 		return location
 
 	def GetNetworkName(self):
-		data = self.local.read_db(self.liteClient.configPath)
+		data = self.local.read_db(self.liteClient.config_path)
 		mainnet_zero_state_root_hash = "F6OpKZKqvqeFp6CQmFomXNMfMj2EnaUSOXN+Mh+wVWk="
 		testnet_zero_state_root_hash = "gj+B8wb/AmlPk1z1AhVI484rhrUpgSr2oSFIh56VoSg="
 		if data.validator.zero_state.root_hash == mainnet_zero_state_root_hash:
