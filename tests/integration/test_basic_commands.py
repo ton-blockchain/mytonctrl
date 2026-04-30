@@ -519,7 +519,7 @@ def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "GetAdnlAddr", lambda self: "TEST_ADNL_ADDR")
     update_adnl_mock = mocker.Mock()
     monkeypatch.setattr(MyTonCore, "update_adnl_category", update_adnl_mock)
-    ton.validatorConsole = validator_console_mock
+    ton._validator_console = validator_console_mock
 
     output = cli.execute("set_quic_port 1234", no_color=True)
     update_adnl_mock.assert_called_once_with(adnl_addr="TEST_ADNL_ADDR", category=2)

@@ -325,7 +325,7 @@ def test_print_collators(cli, ton, monkeypatch, mocker: MockerFixture):
 
     monkeypatch.setattr(ValidatorModule, 'get_collators_list', get_collators_mock)
     monkeypatch.setattr(ValidatorModule, 'get_collators_stats', get_collators_stats_mock)
-    ton.validatorConsole = validator_console_mock
+    ton._validator_console = validator_console_mock
 
     # --json flag
     collators_data = {"some_data": "some_value", 1: 2}
@@ -382,7 +382,7 @@ def test_reset_collators(cli, ton, monkeypatch, mocker: MockerFixture):
     get_collators_mock = mocker.Mock()
     validator_console_mock = mocker.Mock()
     monkeypatch.setattr(ValidatorModule, 'get_collators_list', get_collators_mock)
-    ton.validatorConsole = validator_console_mock
+    ton._validator_console = validator_console_mock
 
     # no collators
     get_collators_mock.return_value = {}

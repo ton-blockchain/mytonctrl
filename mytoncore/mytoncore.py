@@ -48,9 +48,9 @@ class MyTonCore:
 		os.makedirs(self.contractsDir, exist_ok=True)
 		os.makedirs(self.poolsDir, exist_ok=True)
 
-		self.liteClient: LiteClient | None = None
-		self.validatorConsole: ValidatorConsole | None = None
-		self.fift: Fift | None = None
+		self._lite_client: LiteClient | None = None
+		self._validator_console: ValidatorConsole | None = None
+		self._fift: Fift | None = None
 
 		mconfig_path = self.local.db_path
 		backup_path = mconfig_path + ".backup"
@@ -79,7 +79,7 @@ class MyTonCore:
 			if ls_config is not None:
 				ls_pubkey_path = ls_config["pubkeyPath"]
 				ls_addr = f"{ls_config['ip']}:{ls_config['port']}"
-			self.liteClient = LiteClient(
+			self._lite_client = LiteClient(
 				self.local,
 				lite_client_config["appPath"],
 				lite_client_config["configPath"],
@@ -89,12 +89,30 @@ class MyTonCore:
 			)
 
 		if vc_config is not None:
-			self.validatorConsole = ValidatorConsole(
+			self._validator_console = ValidatorConsole(
 				self.local, vc_config["appPath"], vc_config["privKeyPath"], vc_config["pubKeyPath"], vc_config["addr"]
 			)
 
 		if fift_config is not None:
-			self.fift = Fift(self.local, fift_config["appPath"], fift_config["libsPath"], fift_config["smartcontsPath"])
+			self._fift = Fift(self.local, fift_config["appPath"], fift_config["libsPath"], fift_config["smartcontsPath"])
+
+	@property
+	def liteClient(self) -> LiteClient:
+		if self._lite_client is None:
+			raise RuntimeError("LiteClient is not initialized")
+		return self._lite_client
+
+	@property
+	def validatorConsole(self) -> ValidatorConsole:
+		if self._validator_console is None:
+			raise RuntimeError("ValidatorConsole is not initialized")
+		return self._validator_console
+
+	@property
+	def fift(self) -> Fift:
+		if self._fift is None:
+			raise RuntimeError("Fift is not initialized")
+		return self._fift
 
 	def restore_db_file(self, mconfig_path: str, backup_path: str):
 		self.local.add_log(f"Restoring db file {mconfig_path} from backup {backup_path}", "warning")
