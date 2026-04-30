@@ -23,7 +23,7 @@ def test_nw(cli, ton, monkeypatch):
         created_wallet = wallet
         return wallet
 
-    monkeypatch.setattr(MyTonCore, "CreateWallet", fake_create_wallet)
+    monkeypatch.setattr(WalletModule, "create_wallet", fake_create_wallet)
 
     # happy path
     output = cli.execute("nw", no_color=True)
@@ -81,7 +81,7 @@ def test_aw(cli, ton, monkeypatch, mocker: MockerFixture):
     activate_wallet_mock = mocker.Mock()
     wallets_check_mock = mocker.Mock()
     monkeypatch.setattr(MyTonCore, "GetLocalWallet", get_local_wallet_mock)
-    monkeypatch.setattr(MyTonCore, "ActivateWallet", activate_wallet_mock)
+    monkeypatch.setattr(WalletModule, "do_activate_wallet", activate_wallet_mock)
     monkeypatch.setattr(WalletModule, '_wallets_check', wallets_check_mock)
 
     # happy path
@@ -328,7 +328,7 @@ def test_mg(cli, ton, monkeypatch, mocker: MockerFixture):
     move_coins_mock = mocker.Mock()
     monkeypatch.setattr(MyTonCore, "GetLocalWallet", get_local_wallet_mock)
     monkeypatch.setattr(MyTonCore, "get_destination_addr", get_destination_addr_mock)
-    monkeypatch.setattr(MyTonCore, "MoveCoins", move_coins_mock)
+    monkeypatch.setattr(WalletModule, "do_move_coins", move_coins_mock)
 
     # Bad args
     output = cli.execute("mg", no_color=True)

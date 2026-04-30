@@ -15,7 +15,7 @@ class Wallet:
     addr: str | None = None
     addrB64: str | None = None
     addrB64_init: str | None = None
-    oldseqno: int | None = None
+    seqno: int | None = None
     subwallet: int | None = None
 
     def __post_init__(self):

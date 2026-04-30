@@ -32,6 +32,7 @@ from mypylib.mypylib import (
 	dec2hex,
 	Dict, int2ip, MyPyClass
 )
+from mytoncore.vm_stack import parse_result_stack
 
 
 class MyTonCore:
@@ -172,23 +173,17 @@ class MyTonCore:
 		if count != 0 and bcount == 0:
 			result = result.replace(')', '')
 		return result
-	#end define
 
-	def GetSeqno(self, wallet):
-		self.local.add_log("start GetSeqno function", "debug")
-		cmd = "runmethodfull {addr} seqno".format(addr=wallet.addrB64)
+	def run_get_method(self, addr: str, method: str):
+		cmd = f"runmethodfull {addr} {method}"
 		result = self.liteClient.run(cmd)
-		if "cannot run any methods" in result:
-			return None
-		if "result" not in result:
-			return 0
-		seqno = self.GetVarFromWorkerOutput(result, "result")
-		seqno = seqno.replace(' ', '')
-		seqno = parse(seqno, '[', ']')
-		seqno = int(seqno)
-		self.local.add_log(f"GetSeqno: seqno is {seqno}", "debug")
+		return parse_result_stack(result)
+
+	def get_seqno(self, wallet: Wallet) -> int:
+		seqno = int(self.run_get_method(wallet.addrB64, "seqno")[0])
+		wallet.seqno = seqno
+		self.local.add_log(f"got seqno {seqno} for {wallet.addrB64}", "debug")
 		return seqno
-	#end define
 
 	def GetAccount(self, inputAddr):
 		#self.local.add_log("start GetAccount function", "debug")
@@ -1101,7 +1096,7 @@ class MyTonCore:
 		return pubkey, fileName
 	#end define
 
-	def SignBocWithWallet(self, wallet, boc_path, dest, coins, **kwargs):
+	def SignBocWithWallet(self, wallet: Wallet, boc_path, dest, coins, **kwargs):
 		self.local.add_log("start SignBocWithWallet function", "debug")
 		flags = kwargs.get("flags", list())
 		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
@@ -1123,7 +1118,7 @@ class MyTonCore:
 			raise Exception("Find bounceable flag, but destination account is not active. Use non-bounceable address or flag -n")
 		#end if
 
-		seqno = self.GetSeqno(wallet)
+		seqno = str(self.get_seqno(wallet))
 		result_file_path = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
 		if "v1" in wallet.version:
 			fift_script = "wallet.fif"
@@ -1143,7 +1138,7 @@ class MyTonCore:
 		return result_file_path
 	#end define
 
-	def SendFile(self, filePath, wallet=None, **kwargs):
+	def SendFile(self, filePath: str, wallet: Wallet | None = None, **kwargs):
 		self.local.add_log("start SendFile function: " + filePath, "debug")
 		timeout = kwargs.get("timeout", 30)
 		remove = kwargs.get("remove", True)
@@ -1152,8 +1147,9 @@ class MyTonCore:
 		duplicateApi = self.local.db.get("duplicateApi", telemetry)
 		if not os.path.isfile(filePath):
 			raise Exception("SendFile error: no such file '{filePath}'".format(filePath=filePath))
-		if timeout and wallet:
-			wallet.oldseqno = self.GetSeqno(wallet)
+		old_seqno = None
+		if wallet:
+			old_seqno = wallet.seqno
 		self.liteClient.run("sendfile " + filePath)
 		if duplicateSendfile:
 			try:
@@ -1166,8 +1162,8 @@ class MyTonCore:
 				self.send_boc_toncenter(filePath)
 			except Exception as e:
 				self.local.add_log(f'Failed to send file {filePath} to toncenter: {e}', 'warning')
-		if timeout and wallet:
-			self.WaitTransaction(wallet, timeout)
+		if timeout and wallet and old_seqno is not None:
+			self.WaitTransaction(wallet, old_seqno, timeout)
 		if remove:
 			try:
 				os.remove(filePath)
@@ -1198,18 +1194,18 @@ class MyTonCore:
 		self.local.add_log('Sent boc to toncenter', 'info')
 		return True
 
-	def WaitTransaction(self, wallet, timeout=30):
+	def WaitTransaction(self, wallet: Wallet, old_seqno: int, timeout: int = 30):
 		self.local.add_log("start WaitTransaction function", "debug")
 		timesleep = 3
 		steps = timeout // timesleep
 		for i in range(steps):
 			time.sleep(timesleep)
 			try:
-				seqno = self.GetSeqno(wallet)
+				seqno = self.get_seqno(wallet)
 			except Exception:
 				self.local.add_log("WaitTransaction error: Can't get seqno", "warning")
 				continue
-			if seqno != wallet.oldseqno:
+			if seqno != old_seqno:
 				self.local.add_log("WaitTransaction success", "info")
 				return
 		raise Exception("WaitTransaction error: time out")
@@ -1621,99 +1617,6 @@ class MyTonCore:
 		file.close()
 	#ned define
 
-	def CreateWallet(self, name: str, workchain=0, version="v1", **kwargs):
-		self.local.add_log("start CreateWallet function", "debug")
-		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwallet_default)
-		wallet_path = self.walletsDir + name
-		if os.path.isfile(wallet_path + ".pk") and "v3" not in version:
-			self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
-		else:
-			fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
-				wallet_path=wallet_path, subwallet=subwallet)
-			result = self.fift.run(fift_args)
-			if "Creating new" not in result:
-				print(result)
-				raise Exception("CreateWallet error")
-			#end if
-		wallet = self.GetLocalWallet(name, version)
-		self.SetWalletVersion(wallet.addrB64, version)
-		return wallet
-	#end define
-
-	def CreateHighWallet(self, name, **kwargs):
-		workchain = kwargs.get("workchain", 0)
-		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwallet_default)
-		version = kwargs.get("version", "hv1")
-		self.local.add_log("start CreateHighWallet function", "debug")
-		wallet_path = self.walletsDir + name
-		if os.path.isfile(wallet_path + ".pk") and os.path.isfile(wallet_path + str(subwallet) + ".addr"):
-			self.local.add_log("CreateHighWallet error: Wallet already exists: " + name + str(subwallet), "warning")
-		else:
-			args = ["new-highload-wallet.fif", workchain, subwallet, wallet_path]
-			result = self.fift.run(args)
-			if "Creating new high-load wallet" not in result:
-				raise Exception("CreateHighWallet error")
-			#end if
-		hwallet = self.GetLocalWallet(name, version, subwallet)
-		self.SetWalletVersion(hwallet.addrB64, version)
-		return hwallet
-	#end define
-
-	def ActivateWallet(self, wallet):
-		self.local.add_log("start ActivateWallet function", "debug")
-		account = self.GetAccount(wallet.addrB64)
-		if account.status == "empty":
-			raise Exception("ActivateWallet error: account status is empty")
-		elif account.status == "active":
-			self.local.add_log("ActivateWallet warning: account status is active", "warning")
-		else:
-			self.SendFile(wallet.bocFilePath, wallet, remove=False)
-	#end define
-
-	def import_wallet_with_version(self, key, version, **kwargs):
-		wallet_name = kwargs.get("wallet_name")
-		workchain = kwargs.get("workchain", 0)
-		subwallet_default = 698983191 + workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwallet_default)
-		if isinstance(key, bytes):
-			pk_bytes = key
-		else:
-			pk_bytes = base64.b64decode(key)
-		if wallet_name is None:
-			wallet_name = self.GenerateWalletName()
-		wallet_path = self.walletsDir + wallet_name
-		with open(wallet_path + ".pk", 'wb') as file:
-			file.write(pk_bytes)
-		fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
-			wallet_path=wallet_path, subwallet=subwallet)
-		result = self.fift.run(fift_args)
-		if "Creating new" not in result:
-			print(result)
-			raise Exception("import_wallet_with_version error")
-		wallet = self.GetLocalWallet(wallet_name, version)
-		self.SetWalletVersion(wallet.addrB64, version)
-		return wallet
-	#end define
-
-	def get_new_wallet_fift_args(self, version, **kwargs):
-		workchain = kwargs.get("workchain")
-		wallet_path = kwargs.get("wallet_path")
-		subwallet = kwargs.get("subwallet")
-		if "v1" in version:
-			fift_script = "new-wallet.fif"
-			args = [fift_script, workchain, wallet_path]
-		elif "v2" in version:
-			fift_script = "new-wallet-v2.fif"
-			args = [fift_script, workchain, wallet_path]
-		elif "v3" in version:
-			fift_script = "new-wallet-v3.fif"
-			args = [fift_script, workchain, subwallet, wallet_path]
-		else:
-			raise Exception(f"get_wallet_fift error: fift script for `{version}` not found")
-		return args
-	#end define
 
 	def addr_b64_to_bytes(self, addr_b64):
 		workchain, addr, bounceable = self.ParseAddrB64(addr_b64)
@@ -1734,29 +1637,6 @@ class MyTonCore:
 					walletsNameList.append(fileName)
 		walletsNameList.sort()
 		return walletsNameList
-	#end define
-
-	def GenerateWalletName(self):
-		self.local.add_log("start GenerateWalletName function", "debug")
-		index = 1
-		index_str = str(index).rjust(3, '0')
-		walletPrefix = "wallet_"
-		indexList = list()
-		walletName = walletPrefix + index_str
-		walletsNameList = self.GetWalletsNameList()
-		if walletName in walletsNameList:
-			for item in walletsNameList:
-				if item.startswith(walletPrefix):
-					try:
-						index = item[item.rfind('_')+1:]
-						index = int(index)
-						indexList.append(index)
-					except Exception:
-						pass
-			index = max(indexList) + 1
-			index_str = str(index).rjust(3, '0')
-			walletName = walletPrefix + index_str
-		return walletName
 	#end define
 
 	def GetValidatorConfig(self):
@@ -1780,18 +1660,6 @@ class MyTonCore:
 		return data
 	#end define
 
-	def GetWalletId(self, wallet):
-		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
-		cmd = f"runmethodfull {wallet.addrB64} wallet_id"
-		result = self.liteClient.run(cmd)
-		result = self.GetVarFromWorkerOutput(result, "result")
-		if result is None or "error" in result:
-			return subwalletDefault
-		subwallet = parse(result, '[', ']')
-		subwallet = int(subwallet)
-		return subwallet
-	#end define
-
 	def check_account_balance(self, account, coins):
 		if not isinstance(account, Account):
 			account = self.GetAccount(account)
@@ -1810,95 +1678,6 @@ class MyTonCore:
 			raise Exception(f"Account {address} account is uninitialized")
 		# end if
 	# end define
-
-	def MoveCoins(self, wallet, dest, coins, **kwargs):
-		self.local.add_log("start MoveCoins function", "debug")
-		flags = kwargs.get("flags", list())
-		timeout = kwargs.get("timeout", 30)
-		subwallet = kwargs.get("subwallet")
-		if "v3" in wallet.version and subwallet is None:
-			subwallet = self.GetWalletId(wallet)
-		if coins == "all":
-			mode = 130
-			coins = 0
-		elif coins == "alld":
-			mode = 160
-			coins = 0
-		else:
-			coins = float(coins)
-			mode = 3
-		#end if
-
-		# Balance checking
-		account = self.GetAccount(wallet.addrB64)
-		self.check_account_balance(account, coins + 0.1)
-		self.check_account_active(account)
-
-		# Bounceable checking
-		destAccount = self.GetAccount(dest)
-		bounceable = self.IsBounceableAddrB64(dest)
-		if not bounceable and destAccount.status == "active":
-			flags += ["-b"]
-			text = "Find non-bounceable flag, but destination account already active. Using bounceable flag"
-			self.local.add_log(text, "warning")
-		elif "-n" not in flags and bounceable and destAccount.status != "active":
-			raise Exception("Find bounceable flag, but destination account is not active. Use non-bounceable address or flag -n")
-		#end if
-
-		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.local.my_temp_dir + wallet.name + "_wallet-query"
-		if "v1" in wallet.version:
-			fiftScript = "wallet.fif"
-			args = [fiftScript, wallet.path, dest, seqno, coins, "-m", mode, resultFilePath]
-		elif "v2" in wallet.version:
-			fiftScript = "wallet-v2.fif"
-			args = [fiftScript, wallet.path, dest, seqno, coins, "-m", mode, resultFilePath]
-		elif "v3" in wallet.version:
-			fiftScript = "wallet-v3.fif"
-			args = [fiftScript, wallet.path, dest, subwallet, seqno, coins, "-m", mode, resultFilePath]
-		else:
-			raise Exception(f"MoveCoins error: Wallet version '{wallet.version}' is not supported")
-		if flags:
-			args += flags
-		result = self.fift.run(args)
-		savedFilePath = parse(result, "Saved to file ", ")")
-		self.SendFile(savedFilePath, wallet, timeout=timeout)
-	#end define
-
-
-
-	def MoveCoinsFromHW(self, wallet, destList, **kwargs):
-		self.local.add_log("start MoveCoinsFromHW function", "debug")
-		flags = kwargs.get("flags")
-		timeout = kwargs.get("timeout", 30)
-
-		if len(destList) == 0:
-			self.local.add_log("MoveCoinsFromHW warning: destList is empty, break function", "warning")
-			return
-		#end if
-
-		orderFilePath = self.local.my_temp_dir + wallet.name + "_order.txt"
-		lines = list()
-		for dest, coins in destList:
-			lines.append("SEND {dest} {coins}".format(dest=dest, coins=coins))
-		text = "\n".join(lines)
-		file = open(orderFilePath, 'wt')
-		file.write(text)
-		file.close()
-
-		if "v1" in wallet.version:
-			fiftScript = "highload-wallet.fif"
-		elif "v2" in wallet.version:
-			fiftScript = "highload-wallet-v2.fif"
-		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.local.my_temp_dir + wallet.name + "_wallet-query"
-		args = [fiftScript, wallet.path, wallet.subwallet, seqno, orderFilePath, resultFilePath]
-		if flags:
-			args += flags
-		result = self.fift.run(args)
-		savedFilePath = parse(result, "Saved to file ", ")")
-		self.SendFile(savedFilePath, wallet, timeout=timeout)
-	#end define
 
 	def GetValidatorKey(self):
 		vconfig = self.GetValidatorConfig()

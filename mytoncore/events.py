@@ -1,3 +1,4 @@
+from modules.wallet import WalletModule
 from mypylib import MyPyClass
 
 from mytoncore.mytoncore import MyTonCore
@@ -20,7 +21,8 @@ def run_event(local: MyPyClass, event_name: str):
 def enable_vc_event(local: MyPyClass):
     local.add_log("start EnableVcEvent function", "debug")
     ton = MyTonCore(local)
-    wallet = ton.CreateWallet("validator_wallet_001", -1)
+    module = WalletModule(ton, local)
+    wallet = module.create_wallet("validator_wallet_001", -1)
     assert wallet is not None
     local.db["validatorWalletName"] = wallet.name
     adnl_addr = ton.CreateNewKey()
