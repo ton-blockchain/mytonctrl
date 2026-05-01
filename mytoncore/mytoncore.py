@@ -15,7 +15,7 @@ from fastcrc import crc16
 from modules import MODES
 from modules.btc_teleport import BtcTeleportModule
 from mytoncore.stats_collector import StatsCollector
-from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path
+from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path, raw_addr_to_b64
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
 	Wallet,
@@ -185,7 +185,7 @@ class MyTonCore:
 		self.local.add_log(f"got seqno {seqno} for {wallet.addrB64}", "debug")
 		return seqno
 
-	def GetAccount(self, inputAddr):
+	def GetAccount(self, inputAddr: str):
 		#self.local.add_log("start GetAccount function", "debug")
 		workchain, addr = self.ParseInputAddr(inputAddr)
 		account = Account(workchain, addr)
@@ -195,9 +195,6 @@ class MyTonCore:
 		if storage is None:
 			return account
 		addr = self.GetVarFromWorkerOutput(result, "addr")
-		workchain = self.GetVar(addr, "workchain_id")
-		address = self.GetVar(addr, "address")
-		addrFull = "{}:{}".format(workchain, xhex2hex(address))
 		balance = self.GetVarFromWorkerOutput(storage, "balance")
 		grams = self.GetVarFromWorkerOutput(balance, "grams")
 		value = self.GetVarFromWorkerOutput(grams, "value")
@@ -210,10 +207,6 @@ class MyTonCore:
 		data = self.GetBody(data)
 		codeHash = self.GetCodeHash(code)
 		status = parse(state, "account_", '\n')
-		account.workchain = int(workchain)
-		account.addr = xhex2hex(address)
-		account.addrB64 = self.AddrFull2AddrB64(addrFull)
-		account.addrFull = addrFull
 		if status is not None:
 			account.status = status
 		if value is not None:
@@ -401,11 +394,9 @@ class MyTonCore:
 
 		# Create wallet object
 		walletName = filePath[filePath.rfind('/')+1:]
-		wallet = Wallet(walletName, filePath, version)
-		self.AddrFile2Object(wallet)
+		wallet = Wallet.from_file(walletName, filePath, version)
 		self.WalletVersion2Wallet(wallet)
 		return wallet
-	#end define
 
 	def GetHighWalletFromFile(self, filePath, subwallet, version):
 		self.local.add_log("start GetHighWalletFromFile function", "debug")
@@ -420,24 +411,9 @@ class MyTonCore:
 
 		# Create wallet object
 		walletName = filePath[filePath.rfind('/')+1:]
-		wallet = Wallet(walletName, filePath, version)
-		wallet.subwallet = subwallet
-		wallet.addrFilePath = f"{filePath}{subwallet}.addr"
-		wallet.bocFilePath = f"{filePath}{subwallet}-query.boc"
-		self.AddrFile2Object(wallet)
+		wallet = Wallet.from_file(walletName, filePath, version, subwallet)
 		self.WalletVersion2Wallet(wallet)
 		return wallet
-	#end define
-
-	def AddrFile2Object(self, object):
-		file = open(object.addrFilePath, "rb")
-		data = file.read()
-		object.addr = data[:32].hex()
-		object.workchain = struct.unpack("i", data[32:])[0]
-		object.addrFull = f"{object.workchain}:{object.addr}"
-		object.addrB64 = self.AddrFull2AddrB64(object.addrFull)
-		object.addrB64_init = self.AddrFull2AddrB64(object.addrFull, bounceable=False)
-		file.close()
 	#end define
 
 	def WalletVersion2Wallet(self, wallet):
@@ -1732,6 +1708,7 @@ class MyTonCore:
 		# minStake = rawElectionEntries[2]
 		# allStakes = rawElectionEntries[3]
 		electionEntries = rawElectionEntries[4]
+		is_testnet = self.IsTestnet()
 		for entry in electionEntries:
 			if len(entry) == 0:
 				continue
@@ -1744,7 +1721,7 @@ class MyTonCore:
 			item["stake"] = ng2g(entry[1][0])
 			item["maxFactor"] = round(entry[1][1] / 655.36) / 100.0
 			item["walletAddr_hex"] = Dec2HexAddr(entry[1][2])
-			item["walletAddr"] = self.AddrFull2AddrB64("-1:"+item["walletAddr_hex"])
+			item["walletAddr"] = raw_addr_to_b64("-1:" + item["walletAddr_hex"])
 			entries[adnlAddr] = item
 		#end for
 
@@ -1891,7 +1868,7 @@ class MyTonCore:
 			item["severity"] = buff[3] # *severity*
 			rewardAddr = buff[4]
 			rewardAddr = "-1:" + Dec2HexAddr(rewardAddr)
-			rewardAddr = self.AddrFull2AddrB64(rewardAddr)
+			rewardAddr = raw_addr_to_b64(rewardAddr)
 			item["rewardAddr"] = rewardAddr # *reward_addr*
 			item["paid"] = buff[5] # *paid*
 			suggestedFine = buff[6] # *suggested_fine*
@@ -2629,7 +2606,7 @@ class MyTonCore:
 		if self.IsAddrB64(destination):
 			pass
 		elif self.IsAddrFull(destination):
-			destination = self.AddrFull2AddrB64(destination)
+			destination = raw_addr_to_b64(destination)
 		else:
 			wallets_name_list = self.GetWalletsNameList()
 			if destination in wallets_name_list:
@@ -2637,33 +2614,6 @@ class MyTonCore:
 				destination = wallet.addrB64
 		return destination
 	# end define
-
-	def AddrFull2AddrB64(self, addrFull, bounceable=True):
-		if addrFull is None or "None" in addrFull:
-			return
-		testnet = self.IsTestnet()
-		buff = addrFull.split(':')
-		workchain = int(buff[0])
-		addr = buff[1]
-		if len(addr) != 64:
-			raise Exception("AddrFull2AddrB64 error: Invalid length of hexadecimal address")
-		#end if
-
-		# Create base64 address
-		b = bytearray(36)
-		b[0] = 0x51 - bounceable * 0x40 + testnet * 0x80
-		b[1] = workchain % 256
-		b[2:34] = bytearray.fromhex(addr)
-		buff = bytes(b[:34])
-		crc = crc16.xmodem(buff)
-		b[34] = crc >> 8
-		b[35] = crc & 0xff
-		result = base64.b64encode(b)
-		result = result.decode()
-		result = result.replace('+', '-')
-		result = result.replace('/', '_')
-		return result
-	#end define
 
 	def ParseAddrB64(self, addrB64):
 		# Get buffer
@@ -3051,12 +3001,11 @@ class MyTonCore:
 		filePath = self.poolsDir + poolName
 
 		# Create pool object
-		pool = Pool(poolName, filePath)
+		pool = Pool.from_file(poolName, filePath)
 		if not os.path.isfile(pool.addrFilePath):
 			raise Exception(f"GetLocalPool error: Address file not found: {pool.addrFilePath}")
 		#end if
 
-		self.AddrFile2Object(pool)
 		return pool
 	#end define
 
@@ -3168,7 +3117,7 @@ class MyTonCore:
 		wc = buff[0]
 		addr_hash = Dec2HexAddr(buff[1])
 		addrFull = f"{wc}:{addr_hash}"
-		controllerAddr = self.AddrFull2AddrB64(addrFull)
+		controllerAddr = raw_addr_to_b64(addrFull)
 		return controllerAddr
 	#end define
 

@@ -19,10 +19,11 @@ class PoolModule(MtcModule):
             return
         for pool in data:
             account = self.ton.GetAccount(pool.addrB64)
+            addr = pool.addrB64
             if account.status != "active":
-                pool.addrB64 = pool.addrB64_init
+                addr = pool.addrB64_init
             version = self.ton.GetVersionFromCodeHash(account.codeHash)
-            table += [[pool.name, account.status, account.balance, version, pool.addrB64]]
+            table += [[pool.name, account.status, account.balance, version, addr]]
         print_table(table)
 
     def delete_pool(self, args):
@@ -30,7 +31,7 @@ class PoolModule(MtcModule):
             return
         pool_name = args[0]
         pool = self.ton.GetLocalPool(pool_name)
-        pool.Delete()
+        pool.delete()
         color_print("DeletePool - {green}OK{endc}")
 
     def do_import_pool(self, pool_name, addr_b64):

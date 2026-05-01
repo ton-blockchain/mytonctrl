@@ -3,6 +3,7 @@ import os
 import time
 
 from mypylib.mypylib import color_print, print_table
+from mytoncore.utils import raw_addr_to_b64
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args, check_usage_args_min_max_len
 
 from mytonctrl.utils import GetItemFromList
@@ -192,13 +193,19 @@ class ControllerModule(MtcModule):
         for message in history:
             if message.src_addr is None or message.value is None:
                 continue
-            src_addr_full = f"{message.src_workchain}:{message.src_addr}"
-            dest_add_full = f"{message.dest_workchain}:{message.dest_addr}"
-            if src_addr_full == account.addrFull:
-                fromto = dest_add_full
+            src_addr_full = None
+            if message.src_workchain is not None and message.src_addr is not None:
+                src_addr_full = f"{message.src_workchain}:{message.src_addr}"
+            dest_addr_full = None
+            if message.dest_workchain is not None and message.dest_addr is not None:
+                dest_addr_full = f"{message.dest_workchain}:{message.dest_addr}"
+            if src_addr_full == account.addr_full:
+                fromto = dest_addr_full
             else:
                 fromto = src_addr_full
-            fromto = self.ton.AddrFull2AddrB64(fromto)
+            if fromto is None:
+                continue
+            fromto = raw_addr_to_b64(fromto)
             if fromto not in addrs_list:
                 addrs_list.append(fromto)
 

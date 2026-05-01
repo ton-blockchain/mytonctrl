@@ -7,6 +7,7 @@ import requests
 
 from mypylib.mypylib import color_print, print_table, color_text, timeago, bcolors
 from modules.module import MtcModule
+from mytoncore.utils import raw_addr_to_b64
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
 
 
@@ -48,13 +49,16 @@ class UtilitiesModule(MtcModule):
                 continue
             srcAddrFull = f"{message.src_workchain}:{message.src_addr}"
             destAddFull = f"{message.dest_workchain}:{message.dest_addr}"
-            if srcAddrFull == account.addrFull:
+            if srcAddrFull == account.addr_full:
                 type = color_text("{red}{bold}>>>{endc}")
                 fromto = destAddFull
             else:
                 type = color_text("{blue}{bold}<<<{endc}")
                 fromto = srcAddrFull
-            fromto = self.ton.AddrFull2AddrB64(fromto)
+            if 'None' in fromto:
+                fromto = 'None'
+            else:
+                fromto = raw_addr_to_b64(fromto, is_testnet=self.ton.IsTestnet())
             # datetime = timestamp2datetime(message.time, "%Y.%m.%d %H:%M:%S")
             datetime = timeago(message.time)
             table += [[datetime, type, message.value, fromto]]

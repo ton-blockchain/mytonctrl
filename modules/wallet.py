@@ -111,9 +111,10 @@ class WalletModule(MtcModule):
             return
         for wallet in data:
             account = self.ton.GetAccount(wallet.addrB64)
+            addr = wallet.addrB64
             if account.status != "active":
-                wallet.addrB64 = wallet.addrB64_init
-            table += [[wallet.name, account.status, account.balance, wallet.version, wallet.workchain, wallet.addrB64]]
+                addr = wallet.addrB64_init
+            table += [[wallet.name, account.status, account.balance, wallet.version, wallet.workchain, addr]]
         print_table(table)
 
     def do_import_wallet(self, addr_b64, key):
@@ -165,7 +166,7 @@ class WalletModule(MtcModule):
             print("Cancel wallet deletion")
             return
         wallet = self.ton.GetLocalWallet(wallet_name)
-        wallet.Delete()
+        wallet.delete()
         color_print("DeleteWallet - {green}OK{endc}")
 
     @staticmethod
@@ -277,8 +278,8 @@ class WalletModule(MtcModule):
         self.do_move_coins(wallet1, wallet2.addrB64_init, "alld")
         self.do_activate_wallet(wallet2)
         self.do_move_coins(wallet2, dest, "alld", flags=["-n"])
-        wallet1.Delete()
-        wallet2.Delete()
+        wallet1.delete()
+        wallet2.delete()
 
     def move_coins_through_proxy(self, args):
         if not check_usage_args_len("mgtp", args, 3):

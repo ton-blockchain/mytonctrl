@@ -96,14 +96,15 @@ def test_do_move_coins(ton: MyTonCore, module: WalletModule, monkeypatch, tmp_pa
     wallet = types.SimpleNamespace(version='v1r1', name='w_v1', path='/tmp/w_v1', addrB64='WALLET_V1')
     # accounts
     wallet_acc = Account(0, 'EE'*32)
-    wallet_acc.addrB64 = wallet.addrB64
     wallet_acc.status = 'active'
     wallet_acc.balance = 10.0
 
     dest = 'DEST_ADDR'
     dest_acc = Account(0, 'FF'*32)
-    dest_acc.addrB64 = dest
     dest_acc.status = 'active'
+
+    import mytoncore.utils
+    monkeypatch.setattr(mytoncore.utils, 'raw_addr_to_b64', lambda a: wallet.addrB64 if a == 'EE'*32 else dest)
 
     monkeypatch.setattr(ton, 'GetAccount', lambda arg: wallet_acc if arg == wallet.addrB64 else dest_acc)
     # non-bounceable + active dest -> should add -b
@@ -133,14 +134,14 @@ def test_do_move_coins(ton: MyTonCore, module: WalletModule, monkeypatch, tmp_pa
     # sent file
     assert sent['x'][0] == '/tmp/file_v1.boc' and sent['x'][1] == wallet.addrB64 and sent['x'][2] == 7
 
-    wallet_acc.addrB64 = 'WALLET_V1B'
     wallet_acc.status = 'active'
     wallet_acc.balance = 10.0
 
     dest = 'DEST2'
     dest_acc = Account(0, '22'*32)
-    dest_acc.addrB64 = dest
     dest_acc.status = 'uninitialized'
+
+    monkeypatch.setattr(mytoncore.utils, 'raw_addr_to_b64', lambda a: 'WALLET_V1B' if a == 'EE'*32 else dest)
 
     monkeypatch.setattr(ton, 'GetAccount', lambda arg: wallet_acc if arg == wallet.addrB64 else dest_acc)
     # bounceable + inactive dest + no -n flag -> should raise
@@ -154,9 +155,10 @@ def test_do_move_coins(ton: MyTonCore, module: WalletModule, monkeypatch, tmp_pa
     # v3
     wallet = types.SimpleNamespace(version='v3r2', name='w_v3', path='/tmp/w_v3', addrB64='WALLET_V3', workchain=0)
     wallet_acc = Account(0, '33'*32)
-    wallet_acc.addrB64 = wallet.addrB64
     wallet_acc.status = 'active'
     wallet_acc.balance = 10.0
+
+    monkeypatch.setattr(mytoncore.utils, 'raw_addr_to_b64', lambda _: wallet.addrB64)
 
     dest_acc.status = 'active'
 

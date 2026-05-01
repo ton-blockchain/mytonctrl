@@ -33,7 +33,7 @@ class SingleNominatorModule(PoolModule):
         new_pool = self.ton.GetLocalPool(pool_name)
         for pool in pools:
             if pool.name != new_pool.name and pool.addrB64 == new_pool.addrB64:
-                new_pool.Delete()
+                new_pool.delete()
                 raise Exception("create_single_pool error: Pool with the same parameters already exists.")
 
     def new_single_pool(self, args):
