@@ -143,7 +143,7 @@ class MyTonCore:
 			self.local.add_log("Could not update backup, backup_tmp file is broken", "warning")
 			os.remove(backup_tmp_path)
 
-	def GetVarFromWorkerOutput(self, text, search):
+	def GetVarFromWorkerOutput(self, text: str, search: str):
 		if ':' not in search:
 			search += ':'
 		if search is None or text is None:
@@ -987,12 +987,9 @@ class MyTonCore:
 		return pubkey, fileName
 	#end define
 
-	def SignBocWithWallet(self, wallet: Wallet, boc_path, dest, coins, **kwargs):
+	def SignBocWithWallet(self, wallet: Wallet, boc_path, dest, coins, boc_mode: str = "--body"):
 		self.local.add_log("start SignBocWithWallet function", "debug")
-		flags = kwargs.get("flags", list())
-		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
-		subwallet = kwargs.get("subwallet", subwalletDefault)
-		boc_mode = kwargs.get("boc_mode", "--body")
+		flags = []
 
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
@@ -1018,6 +1015,10 @@ class MyTonCore:
 			fift_script = "wallet-v2.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
 		elif "v3" in wallet.version:
+			if wallet.subwallet is None:
+				subwallet = str(698983191 + wallet.workchain)  # 0x29A9A317 + workchain
+			else:
+				subwallet = str(wallet.subwallet)
 			fift_script = "wallet-v3.fif"
 			args = [fift_script, wallet.path, dest, subwallet, seqno, coins, boc_mode, boc_path, result_file_path]
 		else:
@@ -1026,40 +1027,39 @@ class MyTonCore:
 			args += flags
 		result = self.fift.run(args)
 		result_file_path = parse(result, "Saved to file ", ")")
+		if not result_file_path:
+			raise Exception(f"Failed to get file with boc: {result}")
 		return result_file_path
-	#end define
 
-	def SendFile(self, filePath: str, wallet: Wallet | None = None, **kwargs):
-		self.local.add_log("start SendFile function: " + filePath, "debug")
-		timeout = kwargs.get("timeout", 30)
-		remove = kwargs.get("remove", True)
+	def SendFile(self, file_path: str, wallet: Wallet | None = None, timeout: int = 30, remove: bool = True):
+		self.local.add_log("start SendFile function: " + file_path, "debug")
 		duplicateSendfile = self.local.db.get("duplicateSendfile", True)
 		telemetry = self.local.db.get("sendTelemetry", False)
 		duplicateApi = self.local.db.get("duplicateApi", telemetry)
-		if not os.path.isfile(filePath):
-			raise Exception("SendFile error: no such file '{filePath}'".format(filePath=filePath))
+		if not os.path.isfile(file_path):
+			raise Exception("SendFile error: no such file '{filePath}'".format(filePath=file_path))
 		old_seqno = None
 		if wallet:
 			old_seqno = wallet.seqno
-		self.liteClient.run("sendfile " + filePath)
+		self.liteClient.run("sendfile " + file_path)
 		if duplicateSendfile:
 			try:
-				self.liteClient.run("sendfile " + filePath, use_local=False)
-				self.liteClient.run("sendfile " + filePath, use_local=False)
+				self.liteClient.run("sendfile " + file_path, use_local=False)
+				self.liteClient.run("sendfile " + file_path, use_local=False)
 			except Exception:
 				pass
 		if duplicateApi:
 			try:
-				self.send_boc_toncenter(filePath)
+				self.send_boc_toncenter(file_path)
 			except Exception as e:
-				self.local.add_log(f'Failed to send file {filePath} to toncenter: {e}', 'warning')
+				self.local.add_log(f'Failed to send file {file_path} to toncenter: {e}', 'warning')
 		if timeout and wallet and old_seqno is not None:
 			self.WaitTransaction(wallet, old_seqno, timeout)
 		if remove:
 			try:
-				os.remove(filePath)
+				os.remove(file_path)
 			except Exception as e:
-				self.local.add_log(f'Failed to remove file {filePath}: {e}', 'warning')
+				self.local.add_log(f'Failed to remove file {file_path}: {e}', 'warning')
 	#end define
 
 	def send_boc_toncenter(self, file_path: str):
