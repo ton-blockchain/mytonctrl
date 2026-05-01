@@ -13,7 +13,6 @@ import requests
 from fastcrc import crc16
 
 from modules import MODES
-from modules.btc_teleport import BtcTeleportModule
 from mytoncore.stats_collector import StatsCollector
 from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path, raw_addr_to_b64
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
@@ -510,42 +509,6 @@ class MyTonCore:
 		return fullElectorAddr
 	#end define
 
-	def GetFullMinterAddr(self):
-		# Get buffer
-		bname = "fullMinterAddr"
-		buff = self.GetFunctionBuffer(bname, timeout=60)
-		if buff:
-			return buff
-		#end if
-
-		self.local.add_log("start GetFullMinterAddr function", "debug")
-		result = self.liteClient.run("getconfig 2")
-		minterAddr_hex = self.GetVarFromWorkerOutput(result, "minter_addr:x")
-		fullMinterAddr = "-1:{minterAddr_hex}".format(minterAddr_hex=minterAddr_hex)
-
-		# Set buffer
-		self.SetFunctionBuffer(bname, fullMinterAddr)
-		return fullMinterAddr
-	#end define
-
-	def GetFullDnsRootAddr(self):
-		# Get buffer
-		bname = "fullDnsRootAddr"
-		buff = self.GetFunctionBuffer(bname, timeout=60)
-		if buff:
-			return buff
-		#end if
-
-		self.local.add_log("start GetFullDnsRootAddr function", "debug")
-		result = self.liteClient.run("getconfig 4")
-		dnsRootAddr_hex = self.GetVarFromWorkerOutput(result, "dns_root_addr:x")
-		fullDnsRootAddr = "-1:{dnsRootAddr_hex}".format(dnsRootAddr_hex=dnsRootAddr_hex)
-
-		# Set buffer
-		self.SetFunctionBuffer(bname, fullDnsRootAddr)
-		return fullDnsRootAddr
-	#end define
-
 	def GetActiveElectionId(self, fullElectorAddr):
 		# Get buffer
 		bname = "activeElectionId"
@@ -573,12 +536,6 @@ class MyTonCore:
 		return config15["validatorsElectedFor"]
 	#end define
 
-	def GetMinStake(self):
-		self.local.add_log("start GetMinStake function", "debug")
-		config17 = self.GetConfig17()
-		return config17["minStake"]
-	#end define
-
 	def GetRootWorkchainEnabledTime(self):
 		self.local.add_log("start GetRootWorkchainEnabledTime function", "debug")
 		enabledTime = self.get_basechain_config()["enabled_since"]
@@ -588,13 +545,6 @@ class MyTonCore:
 	def get_basechain_config(self):
 		config12 = self.GetConfig(12)
 		return config12["workchains"]["root"]["node"]["value"]
-
-	def GetTotalValidators(self):
-		self.local.add_log("start GetTotalValidators function", "debug")
-		config34 = self.GetConfig34()
-		result = config34["totalValidators"]
-		return result
-	#end define
 
 	def GetLastBlock(self):
 		block = None
@@ -607,27 +557,6 @@ class MyTonCore:
 				block = Block.from_str(buff[7])
 				break
 		return block
-	#end define
-
-	def GetInitBlock_new(self):
-		#block = self.GetLastBlock()
-		#cmd = f"gethead {block}"
-		#result = self.liteClient.run(cmd)
-		#seqno =  parse(result, "prev_key_block_seqno=", '\n')
-		statesDir = "/var/ton-work/db/archive/states"
-		os.chdir(statesDir)
-		files = filter(os.path.isfile, os.listdir(statesDir))
-		files = [os.path.join(statesDir, f) for f in files] # add path to each file
-		files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-		for fileName in files:
-			buff = fileName.split('_')
-			seqno = int(buff[1])
-			workchain = int(buff[2])
-			if workchain != -1:
-				continue
-			shardchain = int(buff[3])
-			data = self.GetBlockHead(workchain, shardchain, seqno)
-			return data
 	#end define
 
 	def GetInitBlock(self):
@@ -922,17 +851,6 @@ class MyTonCore:
 		result = self.validatorConsole.run("exportpub " + key)
 		validatorPubkey_b64 = parse(result, "got public key: ", '\n')
 		return validatorPubkey_b64
-	#end define
-
-	def GetPubKey(self, key):
-		self.local.add_log("start GetPubKey function", "debug")
-		pubkey_b64 = self.GetPubKeyBase64(key)
-		buff = pubkey_b64.encode("utf-8")
-		buff = base64.b64decode(buff)
-		buff = buff[4:]
-		pubkey_hex = buff.hex()
-		pubkey_hex = pubkey_hex.upper()
-		return pubkey_hex
 	#end define
 
 	def AddKeyToValidator(self, key, startWorkTime, endWorkTime):
@@ -2007,26 +1925,6 @@ class MyTonCore:
 		self.SendFile(resultFilePath, wallet)
 	#end define
 
-	def SaveComplaints(self, electionId):
-		self.local.add_log("start SaveComplaints function", "debug")
-		filePrefix = self.tempDir + "scheck_"
-		cmd = "savecomplaints {electionId} {filePrefix}".format(electionId=electionId, filePrefix=filePrefix)
-		result = self.liteClient.run(cmd)
-		lines = result.split('\n')
-		complaintsHashes = list()
-		for line in lines:
-			if "SAVE_COMPLAINT" in line:
-				buff = line.split('\t')
-				chash = buff[2]
-				# validatorPubkey = buff[3]
-				# createdTime = buff[4]
-				filePath = buff[5]
-				ok = self.CheckComplaint(filePath)
-				if ok is True:
-					complaintsHashes.append(chash)
-		return complaintsHashes
-	#end define
-
 	def CheckComplaint(self, file_path: str):
 		self.local.add_log("start CheckComplaint function", "debug")
 		cmd = "loadproofcheck {filePath}".format(filePath=file_path)
@@ -2326,19 +2224,6 @@ class MyTonCore:
 			index += 1
 		self.local.add_log("GetValidatorIndex warning: index not found.", "warning")
 		return -1
-	#end define
-
-	def GetValidatorEfficiency(self, adnlAddr=None):
-		self.local.add_log("start GetValidatorEfficiency function", "debug")
-		validators = self.GetValidatorsList()
-		if adnlAddr is None:
-			adnlAddr = self.GetAdnlAddr()
-		for validator in validators:
-			searchAdnlAddr = validator.get("adnlAddr")
-			if adnlAddr == searchAdnlAddr:
-				efficiency = validator.get("efficiency")
-				return efficiency
-		self.local.add_log("GetValidatorEfficiency warning: efficiency not found.", "warning")
 	#end define
 
 	def GetDbUsage(self):
@@ -2747,20 +2632,6 @@ class MyTonCore:
 				current_modes[name] = mode.default_value  # assign default mode value
 		return current_modes
 
-	def check_enable_mode(self, name):
-		if name == 'liteserver':
-			if self.using_validator():
-				raise Exception('Cannot enable liteserver mode while validator mode is enabled. '
-								'Use `disable_mode validator` first.')
-		if name == 'validator':
-			if self.using_liteserver():
-				raise Exception('Cannot enable validator mode while liteserver mode is enabled. '
-								'Use `disable_mode liteserver` first.')
-			BtcTeleportModule(self, self.local).init()
-		if name == 'liquid-staking':
-			from mytoninstaller.settings import enable_ton_http_api
-			enable_ton_http_api(self.local)
-
 	def enable_mode(self, name: str):
 		if name not in MODES:
 			raise Exception(f'Unknown module name: {name}. Available modes: {", ".join(MODES)}')
@@ -3107,7 +2978,7 @@ class MyTonCore:
 
 	def GetControllerAddress(self, controller_id):
 		wallet = self.GetValidatorWallet()
-		addr_hash = HexAddr2Dec(wallet.addr)
+		addr_hash = int(wallet.addr, 16)
 		liquid_pool_addr = self.GetLiquidPoolAddr()
 		cmd = f"runmethodfull {liquid_pool_addr} get_controller_address_legacy {controller_id} {wallet.workchain} {addr_hash}"
 		result = self.liteClient.run(cmd)
@@ -3488,23 +3359,9 @@ class MyTonCore:
 		return False
 	#end define
 
-	def IsHash(self, inputHash):
-		hashBytes = bytes.fromhex(inputHash)
-		if len(hashBytes) != 32:
-			return False
-		return True
-	#end define
-#end class
-
 
 def Dec2HexAddr(dec):
 	h = dec2hex(dec)
 	hu = h.upper()
 	h64 = hu.rjust(64, "0")
 	return h64
-#end define
-
-def HexAddr2Dec(h):
-	d = int(h, 16)
-	return d
-#end define
