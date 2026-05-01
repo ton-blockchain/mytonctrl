@@ -369,17 +369,14 @@ class MyTonCore:
 		return result
 	#end define
 
-	def GetLocalWallet(self, walletName, version=None, subwallet=None):
+	def GetLocalWallet(self, wallet_name: str, version=None, subwallet=None) -> Wallet:
 		self.local.add_log("start GetLocalWallet function", "debug")
-		if walletName is None:
-			return None
-		walletPath = self.walletsDir + walletName
+		walletPath = self.walletsDir + wallet_name
 		if version and "h" in version:
 			wallet = self.GetHighWalletFromFile(walletPath, subwallet, version)
 		else:
 			wallet = self.GetWalletFromFile(walletPath, version)
 		return wallet
-	#end define
 
 	def GetWalletFromFile(self, filePath, version):
 		self.local.add_log("start GetWalletFromFile function", "debug")
@@ -1279,10 +1276,12 @@ class MyTonCore:
 		return maxFactor
 	#end define
 
-	def GetValidatorWallet(self, mode="stake"):
+	def GetValidatorWallet(self):
 		self.local.add_log("start GetValidatorWallet function", "debug")
-		walletName = self.local.db.get("validatorWalletName")
-		wallet = self.GetLocalWallet(walletName)
+		wallet_name = self.local.db.get("validatorWalletName")
+		if wallet_name is None:
+			raise Exception("Validator wallet not configured: validatorWalletName not set")
+		wallet = self.GetLocalWallet(wallet_name)
 		return wallet
 	#end define
 
@@ -1604,7 +1603,7 @@ class MyTonCore:
 
 	def GetWalletsNameList(self):
 		self.local.add_log("start GetWalletsNameList function", "debug")
-		walletsNameList = list()
+		walletsNameList: list[str] = []
 		for fileName in os.listdir(self.walletsDir):
 			if fileName.endswith(".addr"):
 				fileName = fileName[:fileName.rfind('.')]
@@ -1977,7 +1976,7 @@ class MyTonCore:
 	def VoteOffer(self, offer):
 		self.local.add_log("start VoteOffer function", "debug")
 		full_config_addr = self.GetFullConfigAddr()
-		wallet = self.GetValidatorWallet(mode="vote")
+		wallet = self.GetValidatorWallet()
 		validator_key = self.GetValidatorKey()
 		validator_pubkey_b64 = self.GetPubKeyBase64(validator_key)
 		validator_index = self.GetValidatorIndex()
@@ -1997,7 +1996,7 @@ class MyTonCore:
 		self.local.add_log("start VoteComplaint function", "debug")
 		complaintHash = int(complaintHash)
 		fullElectorAddr = self.GetFullElectorAddr()
-		wallet = self.GetValidatorWallet(mode="vote")
+		wallet = self.GetValidatorWallet()
 		validatorKey = self.GetValidatorKey()
 		validatorPubkey_b64 = self.GetPubKeyBase64(validatorKey)
 		validatorIndex = self.GetValidatorIndex()
@@ -2259,7 +2258,7 @@ class MyTonCore:
 		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
 		data = self.GetValidatorsLoad(start, end, save_comp_files=True, v2=True)
 		fullElectorAddr = self.GetFullElectorAddr()
-		wallet = self.GetValidatorWallet(mode="vote")
+		wallet = self.GetValidatorWallet()
 		config = self.GetConfig32()
 
 		# Check wallet and balance
