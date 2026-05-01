@@ -1708,7 +1708,6 @@ class MyTonCore:
 		# minStake = rawElectionEntries[2]
 		# allStakes = rawElectionEntries[3]
 		electionEntries = rawElectionEntries[4]
-		is_testnet = self.IsTestnet()
 		for entry in electionEntries:
 			if len(entry) == 0:
 				continue
@@ -3125,8 +3124,6 @@ class MyTonCore:
 		self.local.add_log("start CheckController function", "debug")
 		controllerData = self.GetControllerData(controllerAddr)
 		using_controllers = self.local.db.get("using_controllers", list())
-		if controllerData is None:
-			raise Exception("CheckController error: controller not initialized. Use new_controllers")
 		if controllerData["approved"] != -1:
 			raise Exception(f"CheckController error: controller not approved: {controllerAddr}")
 		if controllerAddr not in using_controllers:
@@ -3169,8 +3166,6 @@ class MyTonCore:
 		now = get_timestamp()
 		config15 = self.GetConfig15()
 		controllerData = self.GetControllerData(addrB64)
-		if controllerData is None:
-			raise Exception("IsControllerReadyToStake error: controller not initialized. Use new_controllers")
 		lastSentStakeTime = controllerData["stake_at"]
 		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
 		result = lastSentStakeTime + stakeFreezeDelay < now
@@ -3184,12 +3179,12 @@ class MyTonCore:
 		return result
 	#end define
 
-	def GetControllerData(self, controllerAddr):
+	def GetControllerData(self, controllerAddr: str):
 		cmd = f"runmethodfull {controllerAddr} get_validator_controller_data"
 		result = self.liteClient.run(cmd)
 		data = self.Result2List(result)
 		if data is None:
-			return
+			raise Exception(f"Failed to get controller data {controllerAddr}: {result}")
 		result_vars = ["state", "halted", "approved", "stake_amount_sent", "stake_at", "saved_validator_set_hash", "validator_set_changes_count", "validator_set_change_time", "stake_held_for", "borrowed_amount", "borrowing_time"]
 		controllerData = dict()
 		for name in result_vars:
@@ -3340,14 +3335,15 @@ class MyTonCore:
 			self.ControllerUpdateValidatorSet(controller)
 	#end define
 
-	def ControllerUpdateValidatorSet(self, controllerAddr):
+	def ControllerUpdateValidatorSet(self, controllerAddr: str):
 		self.local.add_log("start ControllerUpdateValidatorSet function", "debug")
 		wallet = self.GetValidatorWallet()
 		controllers = self.GetControllers()
-		controllerData = self.GetControllerData(controllerAddr)
-		if controllerData is None:
+
+		try:
+			controllerData = self.GetControllerData(controllerAddr)
+		except Exception:
 			return
-		#end if
 
 		timeNow = int(time.time())
 		config34 = self.GetConfig34()

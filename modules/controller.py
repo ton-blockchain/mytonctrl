@@ -74,9 +74,12 @@ class ControllerModule(MtcModule):
         table += [["Address", "Status", "Balance", "Approved", "State"]]
         for controllerAddr in controllers:
             account = self.ton.GetAccount(controllerAddr)
-            controllerData = self.ton.GetControllerData(controllerAddr)
-            approved = True if controllerData and controllerData["approved"] == -1 else False
-            state = controllerData["state"] if controllerData else None
+            try:
+                controller_data = self.ton.GetControllerData(controllerAddr)
+            except Exception:
+                controller_data = None
+            approved = True if controller_data and controller_data["approved"] == -1 else False
+            state = controller_data["state"] if controller_data else None
             table += [[controllerAddr, account.status, account.balance, approved, state]]
         print_table(table)
 
