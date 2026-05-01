@@ -1503,15 +1503,15 @@ class MyTonCore:
 		wallet = self.GetValidatorWallet()
 		pools = self.GetPools()
 		for pool in pools:
-			self.PoolUpdateValidatorSet(pool.addrB64, wallet)
-	#end define
+			try:
+				self.PoolUpdateValidatorSet(pool.addrB64, wallet)
+			except Exception as e:
+				self.local.add_log(f"Error updating validator set for pool {pool.addrB64}: {e}", "error")
+				continue
 
 	def PoolUpdateValidatorSet(self, poolAddr, wallet):
 		self.local.add_log("start PoolUpdateValidatorSet function", "debug")
 		poolData = self.GetPoolData(poolAddr)
-		if poolData is None:
-			return
-		#end if
 
 		timeNow = int(time.time())
 		config34 = self.GetConfig34()
@@ -3068,13 +3068,13 @@ class MyTonCore:
 		return account_version is not None and 'spool' in account_version
 	#end define
 
-	def GetPoolData(self, addrB64):
+	def GetPoolData(self, addrB64: str):
 		self.local.add_log("start GetPoolData function", "debug")
 		cmd = f"runmethodfull {addrB64} get_pool_data"
 		result = self.liteClient.run(cmd)
 		data = self.Result2List(result)
 		if data is None:
-			return
+			raise Exception(f"Failed to get pool data {addrB64}: {result}")
 		poolConfig = dict()
 		poolConfig["validatorAddress"] = data[4]
 		poolConfig["validatorRewardShare"] = data[5]
