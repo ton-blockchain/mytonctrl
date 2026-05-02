@@ -2,8 +2,8 @@ import json
 import os
 import time
 
-from mypylib.mypylib import color_print, print_table
-from mytoncore.utils import raw_addr_to_b64
+from mypylib.mypylib import color_print, print_table, parse
+from mytoncore.utils import raw_addr_to_b64, get_package_resource_path
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args, check_usage_args_min_max_len
 
 from mytonctrl.utils import GetItemFromList
@@ -19,6 +19,50 @@ class ControllerModule(MtcModule):
     description = 'Liquid staking controllers.'
     default_value = False
 
+    def _build_liquid_staking_controller_state_init(self, controller_id: int):
+        wallet = self.ton.GetValidatorWallet()
+        liquid_pool_addr = self.ton.GetLiquidPoolAddr()
+        deploy_data = self.ton.get_liquid_pool_deploy_data(liquid_pool_addr)
+        file_base = self.ton.tempDir + self.ton.nodeName + wallet.name + f"_controller{controller_id}"
+        with get_package_resource_path('mytoncore',
+                                       'contracts/lst-restricted-wallet/build-controller-init.fif') as fift_script:
+            args = [
+                fift_script,
+                deploy_data["controller_code_path"],
+                controller_id,
+                wallet.addrB64,
+                liquid_pool_addr,
+                deploy_data["governor"],
+                deploy_data["approver"],
+                deploy_data["halter"],
+                wallet.workchain,
+                file_base,
+            ]
+            result = self.ton.fift.run(args)
+        controller_addr = parse(result, "Bounceable address (for later access): ", "\n")
+        if controller_addr is None:
+            raise Exception(
+                f"BuildLiquidStakingControllerStateInit error: failed to parse controller address: {result}")
+        init_boc_path = file_base + "-init.boc"
+        if not os.path.isfile(init_boc_path):
+            raise Exception(f"BuildLiquidStakingControllerStateInit error: init boc not found: {init_boc_path}")
+        return controller_addr.strip(), init_boc_path
+
+    def _direct_deploy_liquid_staking_controller(self, controller_id: int, body_boc_path: str, value: float = 1):
+        wallet = self.ton.GetValidatorWallet()
+        expected_controller_addr = self.ton.GetControllerAddress(controller_id)
+        computed_controller_addr, init_boc_path = self._build_liquid_staking_controller_state_init(controller_id)
+        if computed_controller_addr != expected_controller_addr:
+            raise Exception(
+                f"DirectDeployLiquidStakingController error: computed address {computed_controller_addr} does not match pool address {expected_controller_addr}"
+            )
+        result_file_path = self.ton.SignBocWithWallet(
+            wallet, body_boc_path, expected_controller_addr, value,
+            init_boc_path=init_boc_path, extra_flags=["-n"],
+        )
+        self.ton.SendFile(result_file_path, wallet)
+        return expected_controller_addr
+
     def do_create_controllers(self):
         new_controllers = self.ton.GetControllers()
         old_controllers = self.ton.local.db.get("using_controllers", list())
@@ -32,13 +76,19 @@ class ControllerModule(MtcModule):
         if not os.path.isdir(contract_path):
             self.ton.DownloadContract("https://github.com/igroman787/jetton_pool")
 
-        file_name0 = contract_path + "fift-scripts/deploy_controller0.boc"
-        file_name1 = contract_path + "fift-scripts/deploy_controller1.boc"
-        result_file_path0 = self.ton.SignBocWithWallet(wallet, file_name0, liquid_pool_addr, 1)
-        self.ton.SendFile(result_file_path0, wallet)
-        time.sleep(10)
-        result_file_path1 = self.ton.SignBocWithWallet(wallet, file_name1, liquid_pool_addr, 1)
-        self.ton.SendFile(result_file_path1, wallet)
+        if wallet.version == "lst_restricted":
+            body_boc_path = contract_path + "fift-scripts/top-up.boc"
+            self._direct_deploy_liquid_staking_controller(0, body_boc_path, value=1)
+            time.sleep(10)
+            self._direct_deploy_liquid_staking_controller(1, body_boc_path, value=1)
+        else:
+            file_name0 = contract_path + "fift-scripts/deploy_controller0.boc"
+            file_name1 = contract_path + "fift-scripts/deploy_controller1.boc"
+            result_file_path0 = self.ton.SignBocWithWallet(wallet, file_name0, liquid_pool_addr, 1)
+            self.ton.SendFile(result_file_path0, wallet)
+            time.sleep(10)
+            result_file_path1 = self.ton.SignBocWithWallet(wallet, file_name1, liquid_pool_addr, 1)
+            self.ton.SendFile(result_file_path1, wallet)
 
         self.ton.local.db["old_controllers"] = old_controllers
         self.ton.local.db["using_controllers"] = new_controllers

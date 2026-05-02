@@ -1,0 +1,69 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <code-boc> <controller-id> <validator-addr-boc> <pool-addr-boc> <governor-addr-boc> <approver-addr-boc> <halter-addr-boc> <workchain> <file-base>" cr
+  ."Builds StateInit for a liquid-staking controller and saves it to <file-base>-init.boc." cr
+  1 halt
+} : usage
+
+$# 9 = { } { usage } cond
+
+{ dup $len 8 < { drop false } {
+  8 $| drop dup "b5ee9c72" $= swap "B5EE9C72" $= or
+  } cond
+} : boc-hex-string?
+
+{ dup boc-hex-string? { x>B } { base64url>B } cond } : boc-string>B
+
+{ boc-string>B B>boc <s dup sbitrefs 0= swap 267 = and
+  over 3 u@ 4 = and
+  not abort"address BoC root must contain exactly a 267-bit std address and no refs"
+} : parse-addr-boc
+
+$1 =: filename
+$2 parse-int =: controller_id
+$3 parse-smc-addr drop 2=: validator_addr
+$4 parse-smc-addr drop 2=: pool_addr
+$5 parse-addr-boc =: governor_addr
+$6 parse-addr-boc =: approver_addr
+$7 parse-addr-boc =: halter_addr
+$8 parse-int =: wc
+$9 =: file_base
+
+filename file>B dup
+8 B| drop B>$ "b5ee9c72" $= { B>$ x>B? drop } if
+B>boc =: controller_code
+
+<b controller_id 32 u,
+   validator_addr Addr,
+   pool_addr Addr,
+   governor_addr s,
+   <b approver_addr s, halter_addr s, b> ref,
+b> =: static_data
+
+<b 0 8 u,
+   0 1 u,
+   0 1 u,
+   0 Gram,
+   0 48 u,
+   0 256 u,
+   0 8 u,
+   0 48 u,
+   0 48 u,
+   0 Gram,
+   0 48 u,
+   0 2 u,
+   0 48 u,
+   0 24 u,
+   static_data ref,
+b> =: controller_data
+
+<b b{00110} s, controller_code ref, controller_data ref, b> dup =: init_boc
+2 boc+>B file_base +"-init.boc" tuck B>file
+."(Saved controller init into " type .")" cr
+
+init_boc hashu wc swap 2dup 2=: dest_addr
+."Controller address raw = " 2dup .addr cr
+2dup file_base +".addr" save-address-verbose cr
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr

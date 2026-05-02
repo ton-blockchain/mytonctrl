@@ -457,6 +457,7 @@ class MyTonCore:
 		arr["controller_r2"] = "01118b9553151fb9bc81704a4b3e0fc7b899871a527d44435a51574806863e2c"
 		arr["controller_r3"] = "e4d8ce8ff7b4b60c76b135eb8702ce3c86dc133fcee7d19c7aa18f71d9d91438"
 		arr["controller_r4"] = "dec125a4850c4ba24668d84252b04c6ad40abf5c9d413a429b56bfff09ea25d4"
+		arr["lst_restricted"] = "07904e171f8170fdecc85412f6b8fe046a455aee70c7b32f5c47127eaa8eae20"
 		for version, hash in arr.items():
 			if hash == inputHash:
 				return version
@@ -987,9 +988,9 @@ class MyTonCore:
 		return pubkey, fileName
 	#end define
 
-	def SignBocWithWallet(self, wallet: Wallet, boc_path, dest, coins, boc_mode: str = "--body"):
+	def SignBocWithWallet(self, wallet: Wallet, boc_path, dest, coins, boc_mode: str = "--body", init_boc_path: str | None = None, extra_flags: list[str] | None = None):
 		self.local.add_log("start SignBocWithWallet function", "debug")
-		flags = []
+		flags = list(extra_flags or [])
 
 		# Balance checking
 		account = self.GetAccount(wallet.addrB64)
@@ -1008,7 +1009,7 @@ class MyTonCore:
 
 		seqno = str(self.get_seqno(wallet))
 		result_file_path = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
-		if "v1" in wallet.version:
+		if wallet.version == "lst_restricted" or "v1" in wallet.version:
 			fift_script = "wallet.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
 		elif "v2" in wallet.version:
@@ -1023,6 +1024,8 @@ class MyTonCore:
 			args = [fift_script, wallet.path, dest, subwallet, seqno, coins, boc_mode, boc_path, result_file_path]
 		else:
 			raise Exception(f"SignBocWithWallet error: Wallet version '{wallet.version}' is not supported")
+		if init_boc_path:
+			args += ["-I", init_boc_path]
 		if flags:
 			args += flags
 		result = self.fift.run(args)
@@ -2977,6 +2980,45 @@ class MyTonCore:
 		return liquid_pool_addr
 	#end define
 
+	def run_ton_http_get_method(self, address: str, method: str, stack: list | None = None) -> list[list[str | dict]]:
+		if stack is None:
+			stack = []
+		url = self.local.db.get("tonHttpApiUrl", "http://127.0.0.1:8801")
+		if not url.endswith("/runGetMethod"):
+			url = url.rstrip("/") + "/runGetMethod"
+		data = {
+			"address": address,
+			"method": method,
+			"stack": stack,
+		}
+		res = requests.post(url, json=data, timeout=5)
+		res_data = res.json()
+		if res_data.get("ok") is False:
+			error = res_data.get("error") or res_data.get("message") or res_data
+			raise Exception(f"Failed to run get method: {error}. Make sure ton-http-api is enabled (installer -> enable THA)")
+		result = res_data.get("result")
+		if result is None or "stack" not in result:
+			raise Exception(f"Failed to run get method: malformed response: {res_data}")
+		return result["stack"]
+
+	def get_liquid_pool_deploy_data(self, liquid_pool_addr: str):
+		stack = self.run_ton_http_get_method(liquid_pool_addr, "get_pool_full_data_raw")
+		if len(stack) < 26:
+			raise Exception(f"Unexpected stack size: {len(stack)}")
+		governor = base64.b64decode(stack[20][1]["bytes"]).hex()
+		halter = base64.b64decode(stack[23][1]["bytes"]).hex()
+		approver = base64.b64decode(stack[24][1]["bytes"]).hex()
+		controller_code_bytes = base64.b64decode(stack[25][1]["bytes"])
+		controller_code_path = self.tempDir + self.nodeName + "controller-code.boc"
+		with open(controller_code_path, "wb") as file:
+			file.write(controller_code_bytes)
+		return {
+			"governor": governor,
+			"halter": halter,
+			"approver": approver,
+			"controller_code_path": controller_code_path,
+		}
+
 	def GetControllerAddress(self, controller_id):
 		wallet = self.GetValidatorWallet()
 		addr_hash = int(wallet.addr, 16)
@@ -3098,25 +3140,16 @@ class MyTonCore:
 	#end define
 
 	def CalculateLoanAmount(self, min_loan, max_loan, max_interest):
-		data = dict()
-		data["address"] = self.GetLiquidPoolAddr()
-		data["method"] = "calculate_loan_amount"
-		data["stack"] = [
-			["num", min_loan*10**9],
-			["num", max_loan*10**9],
-			["num", max_interest],
-		]
-		print(f"CalculateLoanAmount data: {data}")
-
-		url = "http://127.0.0.1:8801/runGetMethod"
-		res = requests.post(url, json=data, timeout=3)
-		res_data = res.json()
-		if res_data.get("ok") is False:
-			error = res_data.get("error")
-			raise Exception(error)
-		result = res_data.get("result").get("stack").pop().pop()
-		return result
-	#end define
+		stack = self.run_ton_http_get_method(
+			self.GetLiquidPoolAddr(),
+			"calculate_loan_amount",
+			stack=[
+				["num", min_loan * 10**9],
+				["num", max_loan * 10**9],
+				["num", max_interest],
+			],
+		)
+		return stack[-1][1]
 
 	def WaitLoan(self, controllerAddr):
 		self.local.add_log("start WaitLoan function", "debug")

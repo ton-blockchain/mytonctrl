@@ -11,7 +11,7 @@ from pytest_mock import MockerFixture
 def test_nw(cli, ton, monkeypatch):
     created_wallet = Dict()
 
-    def fake_create_wallet(self, wallet_name, workchain, version, subwallet):
+    def fake_create_wallet(self, wallet_name, workchain, version, subwallet, treasury_addr=None, liquid_pool_addr=None):
         nonlocal created_wallet
         wallet = Dict()
         wallet.name = wallet_name
@@ -20,6 +20,8 @@ def test_nw(cli, ton, monkeypatch):
         wallet.subwallet = subwallet
         wallet.addrB64 = "test"
         wallet.addrB64_init = "test_init"
+        wallet.treasury_addr = treasury_addr
+        wallet.liquid_pool_addr = liquid_pool_addr
         created_wallet = wallet
         return wallet
 
@@ -54,6 +56,18 @@ def test_nw(cli, ton, monkeypatch):
     assert created_wallet.version == "v3"
     assert created_wallet.subwallet == 698983191
     assert output.splitlines()[1].split() == ["test_wallet", "0", "test_init"]
+
+    # provide workchain, wallet name, lst restricted version, treasury address, liquid pool address
+    created_wallet = Dict()
+    output = cli.execute("nw 0 restricted_wallet lst_restricted treasury_addr liquid_pool_addr", no_color=True)
+
+    assert created_wallet.name == "restricted_wallet"
+    assert created_wallet.workchain == 0
+    assert created_wallet.version == "lst_restricted"
+    assert created_wallet.subwallet == 698983191
+    assert created_wallet.treasury_addr == "treasury_addr"
+    assert created_wallet.liquid_pool_addr == "liquid_pool_addr"
+    assert output.splitlines()[1].split() == ["restricted_wallet", "0", "test_init"]
 
     # provide workchain, wallet name, version, subwallet
     created_wallet = Dict()
