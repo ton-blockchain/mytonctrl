@@ -17,6 +17,7 @@ import hashlib
 import platform
 import requests
 import threading
+import traceback
 import subprocess
 import datetime as date_time_library
 from types import FrameType
@@ -650,7 +651,7 @@ class MyPyClass:
 		return python3_path
 	#end define
 
-	def try_function(self, func: Callback, args: Sequence[Any] | None = None) -> Any:
+	def try_function(self, func: Callback, args: Sequence[Any] | None = None, log_traceback: bool = False) -> Any:
 		result = None
 		try:
 			if args is None:
@@ -659,6 +660,8 @@ class MyPyClass:
 				result = func(*args)
 		except Exception as err:
 			self.add_log(f"{func.__name__} error: {err}", ERROR)
+			if log_traceback:
+				self.add_log(traceback.format_exc(), ERROR)
 		return result
 	#end define
 
@@ -673,7 +676,7 @@ class MyPyClass:
 
 	def cycle(self, func: Callback, sec: float, args: Sequence[Any] | None) -> None:
 		while self.working:
-			self.try_function(func, args=args)
+			self.try_function(func, args=args, log_traceback=True)
 			time.sleep(sec)
 	#end define
 
