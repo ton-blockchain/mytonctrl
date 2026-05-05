@@ -1,8 +1,10 @@
 import os
 import os.path
+import shutil
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 import psutil
 import base64
@@ -11,7 +13,7 @@ import requests
 import random
 import json
 
-
+from mypylib import MyPyClass
 from mypylib.mypylib import (
 	add2systemd,
 	get_dir_from_path,
@@ -213,13 +215,29 @@ def download_archive_from_ts(local):
 	os.makedirs(states_dir, exist_ok=True)
 	os.makedirs(import_dir, exist_ok=True)
 
-	assert is_hex(state_bag['bag']), f"Invalid bag {state_bag}"
+	if not is_hex(state_bag['bag']):
+		raise ValueError(f"Invalid bag {state_bag}")
 
-	subprocess.run(f'mv {downloads_path}/{state_bag["bag"]}/state-*/* {states_dir}', shell=True)
+	def _move_archive_item(src: Path, destination_dir: str):
+		destination = Path(destination_dir) / src.name
+		if destination.exists() or destination.is_symlink():
+			if src.is_dir() or destination.is_dir():
+				raise shutil.Error(f"Destination path '{destination}' already exists")
+			destination.unlink()
+		shutil.move(src, destination)
+
+	source = Path(downloads_path) / state_bag["bag"]
+	for state_dir in source.glob("state-*"):
+		for item in state_dir.iterdir():
+			_move_archive_item(item, states_dir)
+
 	for bag in block_bags + master_block_bags:
-		assert is_hex(bag['bag']), f"Invalid bag {bag}"
-		subprocess.run(f'mv {downloads_path}/{bag["bag"]}/*/*/* {import_dir}', shell=True)
-	subprocess.run(f'rm -rf {downloads_path}', shell=True)
+		if not is_hex(bag['bag']):
+			raise ValueError(f"Invalid bag {bag}")
+		source = Path(downloads_path) / bag["bag"]
+		for item in source.glob("*/*/*"):
+			_move_archive_item(item, import_dir)
+	subprocess.run(['rm', '-rf', downloads_path])
 
 	stop_service(local, "ton_storage")  # stop TS
 	disable_service(local, "ton_storage")
@@ -445,9 +463,11 @@ def EnableValidatorConsole(local):
 	# write mconfig
 	SetConfig(path=mconfig_path, data=mconfig)
 
-	# Подтянуть событие в mytoncore.py
-	# cmd = "python3 {srcDir}mytonctrl/mytoncore.py -e \"enableVC\"".format(srcDir=srcDir)
-	cmd = 'python3 -m mytoncore -e "enableVC"'
+	event_name = "enableVC"
+	if local.buffer.quic_port is not None:
+		event_name += f'_{local.buffer.quic_port}'
+
+	cmd = f'python3 -m mytoncore -e "{event_name}"'
 	args = ["su", "-l", user, "-c", cmd]
 	subprocess.run(args)
 
@@ -610,7 +630,7 @@ def EnableJsonRpc(local):
 
 	with get_package_resource_path('mytoninstaller.scripts', 'jsonrpcinstaller.sh') as jsonrpcinstaller_path:
 		local.add_log(f"Running script: {jsonrpcinstaller_path}", "debug")
-		exit_code = run_as_root(["bash", jsonrpcinstaller_path, "-u", user])  # TODO: fix path
+		exit_code = run_as_root(["bash", str(jsonrpcinstaller_path), "-u", user])  # TODO: fix path
 	if exit_code == 0:
 		text = "EnableJsonRpc - {green}OK{endc}"
 	else:
@@ -628,9 +648,9 @@ def tha_exists():
 	return False
 #end define
 
-def enable_ton_http_api(local):
+def enable_ton_http_api(local: MyPyClass, update: bool = False):
 	try:
-		if not tha_exists():
+		if update or not tha_exists():
 			do_enable_ton_http_api(local)
 	except Exception as e:
 		local.add_log(f"Error in enable_ton_http_api: {e}", "warning")
@@ -644,7 +664,7 @@ def do_enable_ton_http_api(local):
 		CreateLocalConfigFile(local, [])
 	user = local.buffer.user or get_current_user()
 	with get_package_resource_path('mytoninstaller.scripts', 'ton_http_api_installer.sh') as ton_http_api_installer_path:
-		exit_code = run_as_root(["bash", ton_http_api_installer_path, "-u", user])
+		exit_code = run_as_root(["bash", str(ton_http_api_installer_path), "-u", user])
 	if exit_code == 0:
 		text = "do_enable_ton_http_api - {green}OK{endc}"
 	else:
@@ -664,7 +684,7 @@ def enable_ls_proxy(local):
 
 	with get_package_resource_path('mytoninstaller.scripts', 'ls_proxy_installer.sh') as installer_path:
 		local.add_log(f"Running script: {installer_path}", "debug")
-		exit_code = run_as_root(["bash", installer_path, "-u", user])
+		exit_code = run_as_root(["bash", str(installer_path), "-u", user])
 	if exit_code != 0:
 		color_print("enable_ls_proxy - {red}Error{endc}")
 		raise Exception("enable_ls_proxy - Error")
@@ -725,7 +745,7 @@ def enable_ton_storage(local):
 
 	with get_package_resource_path('mytoninstaller.scripts', 'ton_storage_installer.sh') as installer_path:
 		local.add_log(f"Running script: {installer_path}", "debug")
-		exit_code = run_as_root(["bash", installer_path, "-u", user])
+		exit_code = run_as_root(["bash", str(installer_path), "-u", user])
 	if exit_code != 0:
 		color_print("enable_ton_storage - {red}Error{endc}")
 		raise Exception("enable_ton_storage - Error")

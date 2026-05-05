@@ -60,7 +60,7 @@ class BackupModule(MtcModule):
         if user is None:
             user = get_current_user()
         with get_package_resource_path('mytonctrl', 'scripts/restore_backup.sh') as restore_script_path:
-            return run_as_root(["bash", restore_script_path, "-u", user] + args)
+            return run_as_root(["bash", str(restore_script_path), "-u", user] + args)
 
     def restore_backup(self, args):
         if not check_usage_args_min_max_len('restore_backup', args, 1, 5):
