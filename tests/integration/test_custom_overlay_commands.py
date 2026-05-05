@@ -25,8 +25,8 @@ def _write_config(tmp_path, name, config):
 
 def _mock_validator_console(mocker, ton, run_return="success"):
     vc = mocker.Mock()
-    vc.Run.return_value = run_return
-    ton.validatorConsole = vc
+    vc.run.return_value = run_return
+    ton._validator_console = vc
     return vc
 
 
@@ -114,8 +114,8 @@ def test_add_custom_overlay_static(cli, ton, tmp_path, monkeypatch, mocker: Mock
     output = cli.execute(f"add_custom_overlay myoverlay {path}", no_color=True)
     assert "add_custom_overlay - OK" in output
     assert ton.get_custom_overlays()["myoverlay"] == config
-    vc.Run.assert_called_once()
-    assert vc.Run.call_args[0][0].startswith("addcustomoverlay ")
+    vc.run.assert_called_once()
+    assert vc.run.call_args[0][0].startswith("addcustomoverlay ")
 
 
 def _read_emitted_vc_config(ton, name):
@@ -167,7 +167,7 @@ def test_add_custom_overlay_dynamic_validators(cli, ton, tmp_path, mocker: Mocke
     assert "Dynamic overlay will be added within 1 minute" in output
     assert "add_custom_overlay - OK" in output
     assert ton.get_custom_overlays()["dyn"] == config
-    vc.Run.assert_not_called()
+    vc.run.assert_not_called()
 
 
 def test_list_custom_overlays(cli, ton):
@@ -191,11 +191,11 @@ def test_delete_custom_overlay(cli, ton, monkeypatch, mocker: MockerFixture):
     output = cli.execute("delete_custom_overlay static_one", no_color=True)
     assert "delete_custom_overlay - OK" in output
     assert "static_one" not in ton.get_custom_overlays()
-    vc.Run.assert_called_once_with("delcustomoverlay static_one")
+    vc.run.assert_called_once_with("delcustomoverlay static_one")
 
-    vc.Run.reset_mock()
+    vc.run.reset_mock()
     output = cli.execute("delete_custom_overlay dyn_one", no_color=True)
     assert "Dynamic overlay will be deleted within 1 minute" in output
     assert "delete_custom_overlay - OK" in output
     assert "dyn_one" not in ton.get_custom_overlays()
-    vc.Run.assert_not_called()
+    vc.run.assert_not_called()
