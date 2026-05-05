@@ -44,7 +44,7 @@ class CollatorConfigModule(MtcModule):
         path = self.ton.tempDir + '/collator_config.json'
         with open(path, 'w') as f:
             json.dump(config, f)
-        result = self.ton.validatorConsole.Run(f"setcollatoroptionsjson {path}")
+        result = self.ton.validatorConsole.run(f"setcollatoroptionsjson {path}")
         return 'success' in result, result
 
     def set_collator_config(self, args):
@@ -64,7 +64,7 @@ class CollatorConfigModule(MtcModule):
         location = self.ton.get_collator_config_location()
         print(f'Collator config location: {location}')
         path = self.ton.tempDir + '/current_collator_config.json'
-        output = self.ton.validatorConsole.Run(f'getcollatoroptionsjson {path}')
+        output = self.ton.validatorConsole.run(f'getcollatoroptionsjson {path}')
         if 'saved config to' not in output:
             print(f'Failed to get collator config: {output}')
             color_print("get_collator_config - {red}ERROR{endc}")

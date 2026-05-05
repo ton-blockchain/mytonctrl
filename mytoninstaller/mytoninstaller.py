@@ -355,5 +355,5 @@ def mytoninstaller():
 	if len(sys.argv) > 1:
 		General(local, console)
 	else:
-		console.Run()
+		console.run()
 	local.exit()

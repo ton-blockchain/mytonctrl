@@ -16,10 +16,10 @@ class BackupModule(MtcModule):
 
     def create_keyring(self, dir_name: str):
         keyring_dir = dir_name + '/keyring'
-        self.ton.validatorConsole.Run(f'exportallprivatekeys {keyring_dir}')
+        self.ton.validatorConsole.run(f'exportallprivatekeys {keyring_dir}')
 
     def create_tmp_ton_dir(self):
-        result = self.ton.validatorConsole.Run("getconfig")
+        result = self.ton.validatorConsole.run("getconfig")
         text = parse(result, "---------", "--------")
         if text is None:
             raise Exception("Could not get config from validator-console")

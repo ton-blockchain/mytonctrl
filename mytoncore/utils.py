@@ -9,6 +9,8 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, Any
 
+from fastcrc import crc16
+
 if TYPE_CHECKING:
     from importlib.resources import as_file, files
 elif sys.version_info >= (3, 9):
@@ -189,3 +191,26 @@ def shard_is_ancestor(parent: int, child: int) -> bool:
 def get_package_resource_path(package: str, resource: str):
     ref = files(package) / resource
     return as_file(ref)
+
+
+def raw_addr_to_b64(addr_full: str, bounceable: bool = True, is_testnet: bool = False):
+    buff = addr_full.split(':')
+    workchain = int(buff[0])
+    addr = buff[1]
+    if len(addr) != 64:
+        raise Exception("Invalid length of hexadecimal address")
+
+    # Create base64 address
+    b = bytearray(36)
+    b[0] = 0x51 - bounceable * 0x40 + is_testnet * 0x80
+    b[1] = workchain % 256
+    b[2:34] = bytearray.fromhex(addr)
+    buff = bytes(b[:34])
+    crc = crc16.xmodem(buff)
+    b[34] = crc >> 8
+    b[35] = crc & 0xff
+    result = base64.b64encode(b)
+    result = result.decode()
+    result = result.replace('+', '-')
+    result = result.replace('/', '_')
+    return result

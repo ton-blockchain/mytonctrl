@@ -159,7 +159,7 @@ class ValidatorModule(MtcModule):
         return result
 
     def get_collators_list(self):
-        result = self.ton.validatorConsole.Run('show-collators-list')
+        result = self.ton.validatorConsole.run('show-collators-list')
         if 'collators list is empty' in result:
             return {}
         return self._parse_collators_list(result)
@@ -168,7 +168,7 @@ class ValidatorModule(MtcModule):
         fname = self.ton.tempDir + '/collators_list.json'
         with open(fname, 'w') as f:
             f.write(json.dumps(collators_list))
-        result = self.ton.validatorConsole.Run(f'set-collators-list {fname}')
+        result = self.ton.validatorConsole.run(f'set-collators-list {fname}')
         if 'success' not in result:
             raise Exception(f'Failed to set collators list: {result}')
 
@@ -247,7 +247,7 @@ class ValidatorModule(MtcModule):
         color_print("delete_collator - {green}OK{endc}")
 
     def get_collators_stats(self):
-        output = self.ton.validatorConsole.Run('collation-manager-stats')
+        output = self.ton.validatorConsole.run('collation-manager-stats')
         if 'No stats' in output:
             return {}
         result = {}
@@ -264,7 +264,7 @@ class ValidatorModule(MtcModule):
         if '--json' in args:
             print(json.dumps(self.get_collators_list(), indent=2))
         else:
-            result = self.ton.validatorConsole.Run('show-collators-list')
+            result = self.ton.validatorConsole.run('show-collators-list')
             result = result.split('conn ready')[1].strip()
             if 'collators list is empty' in result:
                 print("No collators found")
@@ -280,7 +280,7 @@ class ValidatorModule(MtcModule):
         if not self.get_collators_list():
             color_print("{red}No collators to reset.{endc}")
             return
-        result = self.ton.validatorConsole.Run('clear-collators-list')
+        result = self.ton.validatorConsole.run('clear-collators-list')
         if 'success' not in result:
             raise Exception(f'Failed to reset collators list: {result}')
         color_print("reset_collators - {green}OK{endc}")

@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import io
+import sys
 from contextlib import redirect_stdout, redirect_stderr
 import os
 import pytest
@@ -12,6 +15,8 @@ from tests.helpers import remove_colors
 
 
 class TestLocal(MyPyClass):
+    __test__ = False
+
     def __init__(self, file_path: str, work_dir: str, temp_dir: str):
         self._work_dir = work_dir
         self._temp_dir = temp_dir
@@ -70,14 +75,6 @@ def local(tmp_path):
     return local
 
 
-@pytest.fixture()
-def ton(local, monkeypatch):
-    monkeypatch.setattr(MyTonCore, "create_self_db_backup", lambda self: None)
-    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
-    monkeypatch.setattr(TestLocal, 'save', lambda *args, **kwargs: None)
-    return MyTonCore(local)
-
-
 class ConsoleProtocol(Protocol):
 
     def execute(self, command: str, no_color: bool = False) -> str:
@@ -85,6 +82,7 @@ class ConsoleProtocol(Protocol):
 
 
 class TestMyPyConsole(MyPyConsole):
+    __test__ = False
 
     def run_pre_up(self, no_color: bool = False):
         output = io.StringIO()
@@ -107,13 +105,24 @@ class TestMyPyConsole(MyPyConsole):
 
 
 @pytest.fixture()
-def cli(local, ton) -> TestMyPyConsole:
+def _cli_setup(local, monkeypatch) -> tuple[TestMyPyConsole, MyTonCore]:
+    monkeypatch.setattr(MyTonCore, "create_self_db_backup", lambda self: None)
+    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
+    monkeypatch.setattr(TestLocal, "save", lambda *args, **kwargs: None)
+    monkeypatch.setattr(MyTonCore, "using_pool", lambda self: True)
+    monkeypatch.setattr(MyTonCore, "using_nominator_pool", lambda self: True)
+    monkeypatch.setattr(MyTonCore, "using_single_nominator", lambda self: True)
+    monkeypatch.setattr(sys, "argv", ["mytonctrl.py"])
     console = TestMyPyConsole(local)
-    mp = pytest.MonkeyPatch()
-    mp.setattr(MyTonCore, "using_pool", lambda self: True)
-    mp.setattr(MyTonCore, "using_nominator_pool", lambda self: True)
-    mp.setattr(MyTonCore, "using_single_nominator", lambda self: True)
-    Init(local, ton, console, argv=[])
-    mp.undo()
-    # console.debug = True
-    return console
+    ton = Init(local, local, console)
+    return console, ton
+
+
+@pytest.fixture()
+def cli(_cli_setup) -> TestMyPyConsole:
+    return _cli_setup[0]
+
+
+@pytest.fixture()
+def ton(_cli_setup) -> MyTonCore:
+    return _cli_setup[1]

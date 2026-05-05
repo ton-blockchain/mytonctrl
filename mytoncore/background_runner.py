@@ -108,9 +108,9 @@ class BackgroundRunner:
         )  # cache past vl
 
     def _scan_lite_servers(self):
-        file_path = self._ton.liteClient.configPath
+        file_path = self._ton.liteClient.config_path
         if file_path is None:
-            raise RuntimeError("liteClient.configPath is None")
+            raise RuntimeError("liteClient.config_path is None")
         with open(file_path, "rt") as f:
             text = f.read()
         data = json.loads(text)
@@ -119,7 +119,7 @@ class BackgroundRunner:
         liteservers = data.get("liteservers")
         for index in range(len(liteservers)):
             try:
-                self._ton.liteClient.Run("last", index=index)
+                self._ton.liteClient.run("last", index=index)
                 result.append(index)
             except Exception:
                 pass
@@ -216,9 +216,10 @@ class BackgroundRunner:
         requests.post(overlay_url, data=output, timeout=3)
 
     def _check_mytoncore_db(self):
+        mconfig = self._local.db_path
+        backup_path = mconfig + ".backup"
         try:
-            self._local.read_db(self._local.db_path)
-            backup_path = self._local.db_path + ".backup"
+            self._local.read_db(mconfig)
             if (
                 not os.path.isfile(backup_path)
                 or time.time() - os.path.getmtime(backup_path) > 3600 * 6
@@ -228,7 +229,8 @@ class BackgroundRunner:
         except Exception as e:
             print(f"Failed to read mytoncore db: {e}")
             self._local.add_log(f"Failed to read mytoncore db: {e}", "error")
-        self._ton.CheckConfigFile(None, None)  # get mytoncore db from backup
+        self._ton.restore_db_file(mconfig, backup_path)  # get mytoncore db from backup
+        self._ton.apply_db_settings()
 
     def run(self):
         self._local.add_log("start background tasks running", "info")

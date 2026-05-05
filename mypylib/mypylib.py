@@ -17,6 +17,7 @@ import hashlib
 import platform
 import requests
 import threading
+import traceback
 import subprocess
 import datetime as date_time_library
 from types import FrameType
@@ -211,20 +212,6 @@ class MyPyClass:
 	# end define
 
 	def run(self) -> None:
-		# Check args
-		if "-ef" in sys.argv:
-			file = open(os.devnull, 'w')
-			sys.stdout = file
-			sys.stderr = file
-		if "-d" in sys.argv:
-			self.fork_daemon()
-		if "-s" in sys.argv:
-			x = sys.argv.index("-s")
-			file_path = sys.argv[x + 1]
-			self.get_settings(file_path)
-		if "--add2cron" in sys.argv:
-			self.add_to_crone()
-
 		# Start only one process (exit if process exist)
 		if self.db.config.isStartOnlyOneProcess:
 			self.start_only_one_process()
@@ -657,18 +644,6 @@ class MyPyClass:
 		return result
 	#end define
 
-	def get_settings(self, file_path: str) -> None:
-		try:
-			with open(file_path) as file:
-				text = file.read()
-			self.db = Dict(json.loads(text))
-			self.save_db()
-			print("get setting successful: " + file_path)
-			self.exit()
-		except Exception as err:
-			self.add_log(f"get_settings error: {err}", WARNING)
-	#end define
-
 	def get_python3_path(self) -> str:
 		python3_path = "/usr/bin/python3"
 		if platform.system() == "OpenBSD":
@@ -676,27 +651,7 @@ class MyPyClass:
 		return python3_path
 	#end define
 
-	def fork_daemon(self) -> None:
-		my_path = self.my_path
-		python3_path = self.get_python3_path()
-		cmd = " ".join([python3_path, my_path, "-ef", '&'])
-		os.system(cmd)
-		print("daemon start: " + my_path)
-		self.exit()
-	#end define
-
-	def add_to_crone(self) -> None:
-		python3_path = self.get_python3_path()
-		cron_text = f"@reboot {python3_path} \"{self.my_path}\" -d\n"
-		os.system("crontab -l > mycron")
-		with open("mycron", 'a') as file:
-			file.write(cron_text)
-		os.system("crontab mycron && rm mycron")
-		print("add to cron successful: " + cron_text)
-		self.exit()
-	#end define
-
-	def try_function(self, func: Callback, args: Sequence[Any] | None = None) -> Any:
+	def try_function(self, func: Callback, args: Sequence[Any] | None = None, log_traceback: bool = False) -> Any:
 		result = None
 		try:
 			if args is None:
@@ -705,6 +660,8 @@ class MyPyClass:
 				result = func(*args)
 		except Exception as err:
 			self.add_log(f"{func.__name__} error: {err}", ERROR)
+			if log_traceback:
+				self.add_log(traceback.format_exc(), ERROR)
 		return result
 	#end define
 
@@ -719,7 +676,7 @@ class MyPyClass:
 
 	def cycle(self, func: Callback, sec: float, args: Sequence[Any] | None) -> None:
 		while self.working:
-			self.try_function(func, args=args)
+			self.try_function(func, args=args, log_traceback=True)
 			time.sleep(sec)
 	#end define
 
