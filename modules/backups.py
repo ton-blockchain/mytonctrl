@@ -36,7 +36,7 @@ class BackupModule(MtcModule):
         if user is None:
             user = get_current_user()
         with get_package_resource_path('mytonctrl', 'scripts/create_backup.sh') as backup_script_path:
-            return subprocess.run(["bash", backup_script_path, "-u", user] + args, timeout=5)
+            return subprocess.run(["bash", backup_script_path, "-u", user] + args, timeout=30)
 
     def create_backup(self, args):
         if not check_usage_args_min_max_len("create_backup", args, 0, 3):
