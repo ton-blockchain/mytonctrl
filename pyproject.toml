@@ -1,6 +1,8 @@
 [build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
+requires = ["setuptools>=64"]
+build-backend = "_build_backend"
+backend-path = ["."]
+
 
 [project]
 name = "mytonctrl"

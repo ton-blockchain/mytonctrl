@@ -1194,8 +1194,11 @@ def set_quic_port(local: MyPyClass, ton: MyTonCore, args: list[str]):
 
 ### Start of the program
 def mytonctrl():
+	from mytonctrl import __commit__
+
 	local = MyPyClass('mytonctrl.py')
 	mytoncore_local = MyPyClass('mytoncore.py')
 	console = MyPyConsole(local)
 	Init(local, mytoncore_local, console)
+	console.hello_text += ' MyTonCtrl version: ' + __commit__
 	console.run()

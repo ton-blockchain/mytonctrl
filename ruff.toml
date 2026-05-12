@@ -4,3 +4,5 @@ exclude = [
 ]
 [lint]
 ignore = ["E741"]
+[lint.per-file-ignores]
+"_build_backend.py" = ["F403"]
