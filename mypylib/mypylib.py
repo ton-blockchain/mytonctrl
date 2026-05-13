@@ -6,13 +6,10 @@ import shutil
 import sys
 import time
 import json
-import zlib
 import signal
-import base64
 import psutil
 import struct
 import socket
-import hashlib
 import platform
 import threading
 import traceback
@@ -194,21 +191,6 @@ class MyPyClass:
 		signal.signal(signal.SIGINT, self.exit)
 		signal.signal(signal.SIGTERM, self.exit)
 
-	def start_service(self, service_name: str, sleep: int = 1) -> None:
-		self.add_log(f"Start/restart {service_name} service", "debug")
-		args = ["systemctl", "restart", service_name]
-		subprocess.run(args)
-
-		self.add_log(f"sleep {sleep} sec", "debug")
-		time.sleep(sleep)
-	# end define
-
-	def stop_service(self, service_name: str) -> None:
-		self.add_log(f"Stop {service_name} service", "debug")
-		args = ["systemctl", "stop", service_name]
-		subprocess.run(args)
-	# end define
-
 	def run(self) -> None:
 		# Start only one process (exit if process exist)
 		if self.db.config.isStartOnlyOneProcess:
@@ -286,16 +268,6 @@ class MyPyClass:
 		if memory_using > self.db.config.memoryUsinglimit:
 			self.db.config.memoryUsinglimit += 50
 			self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb", WARNING)
-	#end define
-
-	def print_self_testing_result(self):
-		thread_count_old = self.thread_count_old
-		thread_count_new = self.thread_count
-		memory_using = self.memory_using
-		free_space_memory = self.free_space_memory
-		self.add_log(color_text("{blue}Self testing informatinon:{endc}"))
-		self.add_log(f"Threads: {thread_count_new} -> {thread_count_old}")
-		self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb")
 	#end define
 
 	def get_thread_name(self):
@@ -430,24 +402,6 @@ class MyPyClass:
 		with open(filename) as file:
 			return sum(chunk.count('\n')
 				for chunk in iter(lambda: file.read(chunk_size), ''))
-	#end define
-
-	def dict_to_base64_with_compress(self, item):
-		string = json.dumps(item)
-		original = string.encode("utf-8")
-		compressed = zlib.compress(original)
-		b64 = base64.b64encode(compressed)
-		data = b64.decode("utf-8")
-		return data
-	#end define
-
-	def base64_to_dict_with_decompress(self, item):
-		data = item.encode("utf-8")
-		b64 = base64.b64decode(data)
-		decompress = zlib.decompress(b64)
-		original = decompress.decode("utf-8")
-		data = json.loads(original)
-		return data
 	#end define
 
 	def exit(self, signum: int | None = None, frame: FrameType | None = None) -> None:
@@ -642,13 +596,6 @@ class MyPyClass:
 		return result
 	#end define
 
-	def get_python3_path(self) -> str:
-		python3_path = "/usr/bin/python3"
-		if platform.system() == "OpenBSD":
-			python3_path = "/usr/local/bin/python3"
-		return python3_path
-	#end define
-
 	def try_function(self, func: Callback, args: Sequence[Any] | None = None, log_traceback: bool = False) -> Any:
 		result = None
 		try:
@@ -708,17 +655,6 @@ class MyPyClass:
 		return text
 	#end define
 #end class
-
-def get_hash_md5(file_name: str) -> str:
-	blocksize = 65536
-	hasher = hashlib.md5()
-	with open(file_name, 'rb') as file:
-		buf = file.read(blocksize)
-		while len(buf) > 0:
-			hasher.update(buf)
-			buf = file.read(blocksize)
-	return hasher.hexdigest()
-#end define
 
 def parse(text: str | None, search: str | None, search2: str | None = None) -> str | None:
 	if search is None or text is None:
@@ -858,17 +794,6 @@ def get_internet_interface_name() -> str:
 	return interface_name
 #end define
 
-def thr_sleep() -> None:
-	while True:
-		time.sleep(10)
-#end define
-
-def timestamp2datetime(timestamp: int | float, format: str = "%d.%m.%Y %H:%M:%S") -> str:
-	datetime = time.localtime(timestamp)
-	result = time.strftime(format, datetime)
-	return result
-#end define
-
 def timeago(timestamp: int | date_time_library.datetime | Literal[False] = False) -> str:
 	"""
 	Get a datetime object or a int() Epoch timestamp and return a
@@ -931,10 +856,6 @@ def dec2hex(dec: int) -> str:
 	return h
 #end define
 
-def hex2dec(h: str) -> int:
-	return int(h, base=16)
-#end define
-
 def run_as_root(args: list[str]) -> int:
 	psys = platform.system()
 	if os.geteuid() != 0:
@@ -950,11 +871,6 @@ def run_as_root(args: list[str]) -> int:
 			raise Exception(f"run_as_root error: the system is not supported: {psys}")
 	exit_code = subprocess.call(args)
 	return exit_code
-#end define
-
-def get_username() -> str | None:
-	user = os.getenv("USER")
-	return user
 #end define
 
 def add2systemd(**kwargs):
@@ -1190,20 +1106,4 @@ def check_git_update(git_path: str) -> bool | None:
 	if old_hash is None or new_hash is None:
 		result = None
 	return result
-#end define
-
-def read_config_from_file(config_path: str) -> Dict:
-	file = open(config_path, 'rt')
-	text = file.read()
-	file.close()
-	config = Dict(json.loads(text))
-	return config
-#end define
-
-
-def write_config_to_file(config_path: str, data: Mapping[str, Any]) -> None:
-	text = json.dumps(data, indent=4)
-	file = open(config_path, 'wt')
-	file.write(text)
-	file.close()
 #end define
