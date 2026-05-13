@@ -1160,7 +1160,9 @@ class MyTonCore:
 			sp = stakePercent / 100
 			if sp > 1 or sp < 0:
 				self.local.add_log("Wrong stakePercent value. Using default stake.", "warning")
-			elif len(vconfig.validators) == 0 and not stake_no_split:
+				stakePercent = 100
+				sp = 1
+			if len(vconfig.validators) == 0 and not stake_no_split:
 				stake = int(account.balance*sp/2)
 				if stake < config17["minStake"]:  # not enough funds to divide them by 2
 					stake = int(account.balance*sp)
