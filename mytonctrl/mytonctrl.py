@@ -432,7 +432,12 @@ def run_benchmark(args: list):
 		color_print("{red}Error: validator service is running. Stop it before running benchmark: `sudo systemctl stop validator`{endc}")
 		return
 
-	with tempfile.TemporaryDirectory() as tmp_dir:
+	tmp_parent_dir = pop_arg_from_args(args, "--tmp-dir")
+	if tmp_parent_dir is not None:
+		tmp_parent_dir = os.path.expanduser(tmp_parent_dir)
+		os.makedirs(tmp_parent_dir, exist_ok=True)
+
+	with tempfile.TemporaryDirectory(dir=tmp_parent_dir) as tmp_dir:
 		tmp_dir = Path(tmp_dir)
 		with get_package_resource_path('mytonctrl', 'scripts/benchmark.py') as benchmark_path:
 			shutil.copy(benchmark_path, tmp_dir / "benchmark.py")
