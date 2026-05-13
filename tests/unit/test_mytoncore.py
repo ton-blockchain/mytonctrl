@@ -452,3 +452,12 @@ def test_wait_transaction(ton: MyTonCore, monkeypatch):
     with pytest.raises(Exception) as e:
         ton.WaitTransaction(wallet2, old_seqno=7, timeout=6)
     assert 'time out' in str(e.value)
+
+
+def test_get_returned_stake(ton: MyTonCore, monkeypatch):
+    full_elector = '-1:' + 'AA'*32
+    monkeypatch.setattr(ton, 'ParseInputAddr', lambda a: (0, 'BBBB'))
+    output = '\nstarting VM to run method `compute_returned_stake` (130944) of smart contract -1:3333333333333333333333333333333333333333333333333333333333333333\narguments:  [ 1234 130944 ] \nresult:  [ 1234500000000 ] \n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: output)
+    stake = ton.get_returned_stake(full_elector, 'ignored')
+    assert stake == 1234.5

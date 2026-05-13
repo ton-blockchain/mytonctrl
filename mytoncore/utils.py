@@ -7,9 +7,11 @@ import json
 import re
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, List, Union
 
 from fastcrc import crc16
+
+from mypylib.mypylib import parse
 
 if TYPE_CHECKING:
     from importlib.resources import as_file, files
@@ -79,6 +81,9 @@ def str2bool(s: str):
         return True
     return False
 
+
+def nano_ton_to_ton(nano: int) -> float:
+    return nano / 10**9
 
 def ng2g(ng: int | None) -> float | None:
     if ng is None:
@@ -214,3 +219,41 @@ def raw_addr_to_b64(addr_full: str, bounceable: bool = True, is_testnet: bool = 
     result = result.replace('+', '-')
     result = result.replace('/', '_')
     return result
+
+T = List[Union[str, int, "T"]]
+
+def lc_result_to_list(text: str) -> T:
+    buff = parse(text, "result:", "\n")
+    if buff is None or "error" in buff:
+        raise Exception(f'Failed to parse liteclient result: {text}')
+    buff = buff.replace(')', ']')
+    buff = buff.replace('(', '[')
+    buff = buff.replace(']', ' ] ')
+    buff = buff.replace('[', ' [ ')
+    buff = buff.replace('bits:', '')
+    buff = buff.replace('refs:', '')
+    buff = buff.replace('.', '')
+    buff = buff.replace(';', '')
+    arr = buff.split()
+
+    output = ""
+    arrLen = len(arr)
+    for i in range(arrLen):
+        item = arr[i]
+        if '{' in item or '}' in item:
+            item = f"\"{item}\""
+        if i + 1 < arrLen:
+            nextItem = arr[i + 1]
+        else:
+            nextItem = None
+        if item == '[':
+            output += item
+        elif nextItem == ']':
+            output += item
+        elif i + 1 == arrLen:
+            output += item
+        else:
+            output += item + ', '
+
+    data = json.loads(output)
+    return data
