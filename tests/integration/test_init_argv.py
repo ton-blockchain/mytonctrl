@@ -5,6 +5,7 @@ import sys
 import pytest
 
 from mytoncore.mytoncore import MyTonCore
+from mytonctrl import mytonctrl as mytonctrl_module
 from mytonctrl.mytonctrl import Init
 from tests.conftest import TestLocal, TestMyPyConsole
 
@@ -122,3 +123,21 @@ def test_init_with_wallets_path_not_dir_exits(
 
     err = capsys.readouterr().err
     assert f"Wallets path {not_dir} is not a directory" in err
+
+
+def test_mytonctrl_prints_version_on_startup(monkeypatch, capsys):
+    from mytonctrl import __commit__
+    monkeypatch.setattr(mytonctrl_module, "MyPyClass", lambda *_: None)
+    monkeypatch.setattr(mytonctrl_module, "Init", lambda *_: None)
+    class _StubConsole:
+        def __init__(self, local):
+            self.hello_text = (
+                "Welcome to the console. Enter 'help' to display the help menu."
+            )
+        def run(self):
+            print(self.hello_text)
+    monkeypatch.setattr(mytonctrl_module, "MyPyConsole", _StubConsole)
+    mytonctrl_module.mytonctrl()
+    out = capsys.readouterr().out
+    assert "Welcome to the console" in out
+    assert f"MyTonCtrl version: {__commit__}" in out
