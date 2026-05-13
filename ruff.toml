@@ -1,5 +1,4 @@
 exclude = [
-    "mypylib",
     "tests",
 ]
 [lint]

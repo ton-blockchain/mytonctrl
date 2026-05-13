@@ -4,7 +4,6 @@ import os
 import re
 import shutil
 import sys
-import grp
 import time
 import json
 import zlib
@@ -15,7 +14,6 @@ import struct
 import socket
 import hashlib
 import platform
-import requests
 import threading
 import traceback
 import subprocess
@@ -44,7 +42,7 @@ class Dict(dict):
 		for key, value in d.items():
 			if type(value) in [dict, Dict]:
 				value = Dict(value)
-			if type(value) == list:
+			if isinstance(value, list):
 				value = self._parse_list(value)
 			self[key] = value
 
@@ -260,7 +258,7 @@ class MyPyClass:
 				pid = int(pid_str)
 				process = psutil.Process(pid)
 				full_process_name = " ".join(process.cmdline())
-			except:
+			except Exception:
 				full_process_name = ""
 			if full_process_name.find(self.my_full_name) > -1:
 				print("The process is already running")
@@ -526,7 +524,7 @@ class MyPyClass:
 		pid_path = path + ".lock"
 		try:
 			os.remove(pid_path)
-		except:
+		except Exception:
 			print("Wow. You are faster than me")
 	#end define
 
@@ -536,7 +534,7 @@ class MyPyClass:
 			id(local_data) == id(old_file_data)):
 			print(local_data.keys())
 			print(file_data.keys())
-			raise Exception(f"merge_three_dicts error: merge the same object")
+			raise Exception("merge_three_dicts error: merge the same object")
 		#end if
 
 		need_write_local_data = False
@@ -852,7 +850,7 @@ def get_internet_interface_name() -> str:
 		try:
 			arr = json.loads(text)
 			interface_name = arr[0]["dev"]
-		except:
+		except Exception:
 			lines = text.split('\n')
 			items = lines[0].split(' ')
 			buff = items.index("dev")
@@ -977,7 +975,7 @@ def add2systemd(**kwargs):
 	if name is None or start is None:
 		raise Exception("Bad args. Need 'name' and 'start'.")
 	if os.path.isfile(path):
-		if force == True:
+		if force:
 			print("Unit exist, force rewrite")
 		else:
 			print("Unit exist.")
