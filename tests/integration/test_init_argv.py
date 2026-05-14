@@ -5,8 +5,7 @@ import sys
 import pytest
 
 from mytoncore.mytoncore import MyTonCore
-from mytonctrl import mytonctrl as mytonctrl_module
-from mytonctrl.mytonctrl import Init
+from mytonctrl import __main__ as main_module
 from tests.conftest import TestLocal, TestMyPyConsole
 
 
@@ -67,15 +66,33 @@ def _capture_ton(monkeypatch):
     return captured
 
 
+def _stub_app(monkeypatch, mtc_local=None, mtcore_local=None):
+    queue = iter([mtc_local, mtcore_local])
+    monkeypatch.setattr(main_module, "MyPyClass", lambda *_: next(queue))
+
+    class _StubMtc:
+        def __init__(self, *a, **kw): pass
+        def _add_console_commands(self, *a, **kw): pass
+        def _pre_up(self, *a, **kw): pass
+        def run(self, *a, **kw):
+            pass
+    monkeypatch.setattr(main_module, "MyTonCtrl", _StubMtc)
+
+    monkeypatch.setattr(TestMyPyConsole, "run", lambda self: None, raising=False)
+    monkeypatch.setattr(main_module, "MyPyConsole", TestMyPyConsole)
+
+    monkeypatch.setattr(TestLocal, "run", lambda *a, **kw: None, raising=False)
+
+
 def test_init_with_config_arg_loads_file_into_local(
     patched_local, mytonctrl_local, monkeypatch, tmp_path
 ):
     config_path = tmp_path / "custom.db"
     config_path.write_text(json.dumps(_custom_db_contents()))
     monkeypatch.setattr(sys, "argv", ["mytonctrl.py", "-c", str(config_path)])
+    _stub_app(monkeypatch, mytonctrl_local, patched_local)
 
-    console = TestMyPyConsole(mytonctrl_local)
-    Init(mytonctrl_local, patched_local, console)
+    main_module._main()
 
     assert patched_local.db_path == str(config_path)
     assert patched_local.db.get("test_marker") == "from_file"
@@ -88,9 +105,9 @@ def test_init_with_wallets_arg_sets_ton_walletsdir(
     os.makedirs(wallets_dir)
     monkeypatch.setattr(sys, "argv", ["mytonctrl.py", "-w", wallets_dir])
     captured = _capture_ton(monkeypatch)
+    _stub_app(monkeypatch, mytonctrl_local, patched_local)
 
-    console = TestMyPyConsole(mytonctrl_local)
-    Init(mytonctrl_local, patched_local, console)
+    main_module._main()
 
     assert len(captured) == 1
     assert captured[0].walletsDir == wallets_dir
@@ -101,10 +118,10 @@ def test_init_with_unreadable_config_exits(
 ):
     bad = str(tmp_path / "missing.db")
     monkeypatch.setattr(sys, "argv", ["mytonctrl.py", "-c", bad])
+    _stub_app(monkeypatch, mytonctrl_local, patched_local)
 
-    console = TestMyPyConsole(mytonctrl_local)
     with pytest.raises(SystemExit):
-        Init(mytonctrl_local, patched_local, console)
+        main_module._main()
 
     err = capsys.readouterr().err
     assert f"Configuration file {bad} could not be opened" in err
@@ -116,26 +133,20 @@ def test_init_with_wallets_path_not_dir_exits(
     not_dir = tmp_path / "afile"
     not_dir.write_text("x")
     monkeypatch.setattr(sys, "argv", ["mytonctrl.py", "-w", str(not_dir)])
+    _stub_app(monkeypatch, mytonctrl_local, patched_local)
 
-    console = TestMyPyConsole(mytonctrl_local)
     with pytest.raises(SystemExit):
-        Init(mytonctrl_local, patched_local, console)
+        main_module._main()
 
     err = capsys.readouterr().err
     assert f"Wallets path {not_dir} is not a directory" in err
 
 
-def test_mytonctrl_prints_version_on_startup(monkeypatch, capsys):
+def test_mytonctrl_prints_version_on_startup(patched_local, mytonctrl_local, monkeypatch, capsys):
     from mytonctrl import __commit__, __version__
-    monkeypatch.setattr(mytonctrl_module, "MyPyClass", lambda *_: None)
-    monkeypatch.setattr(mytonctrl_module, "Init", lambda *_: None)
-    class _StubConsole:
-        def __init__(self, local):
-            pass
-        def run(self):
-            return
-    monkeypatch.setattr(mytonctrl_module, "MyPyConsole", _StubConsole)
-    mytonctrl_module.mytonctrl()
+    monkeypatch.setattr(sys, "argv", ["mytonctrl.py"])
+    _stub_app(monkeypatch, mytonctrl_local, patched_local)
+    main_module._main()
     out = capsys.readouterr().out
     assert "MyTonCtrl" in out
     assert __commit__ in out

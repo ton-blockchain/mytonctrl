@@ -30,24 +30,10 @@ def is_hex(s):
         return False
 
 
-def fix_git_config(git_path: str):
-    args = ["git", "status"]
-    try:
-        process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path, timeout=3)
-        err = process.stderr.decode("utf-8")
-    except Exception as e:
-        err = str(e)
-    if err:
-        if 'git config --global --add safe.directory' in err:
-            args = ["git", "config", "--global", "--add", "safe.directory", git_path]
-            subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
-        else:
-            raise Exception(f'Failed to check git status: {err}')
-# end define
-
 def GetColorInt(data, border, logic, ending=None):
+    result = "n/a"
     if data is None:
-        result = "n/a"
+        return result
     elif logic == "more":
         if data >= border:
             result = bcolors.green_text(data, ending)

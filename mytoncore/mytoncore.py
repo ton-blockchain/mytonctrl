@@ -2232,7 +2232,6 @@ class MyTonCore:
 	#end define
 
 	def GetDbSize(self, exceptions="log"):
-		self.local.add_log("start GetDbSize function", "debug")
 		exceptions = exceptions.split()
 		totalSize = 0
 		path = "/var/ton-work/"
@@ -2536,7 +2535,7 @@ class MyTonCore:
 		return bounceable
 	#en define
 
-	def GetStatistics(self, name: str, statistics: dict[str, list[int]] | None = None) -> list[int] | None:
+	def GetStatistics(self, name: str, statistics: dict[str, list[int]] | None = None) -> list[int] | dict[str, list[int]] | None:
 		if statistics is None:
 			statistics = self.local.db.get("statistics")
 		if statistics:

@@ -3,14 +3,15 @@ from pytest_mock import MockerFixture
 
 import modules
 from mytoncore import MyTonCore
-from mytonctrl import mytonctrl
+from mytonctrl.warnings import WarningChecker
+from mytonctrl import warnings
 
 
 @pytest.fixture(autouse=True)
 def before_test(monkeypatch):
-    monkeypatch.setattr(mytonctrl, 'check_mytonctrl_update', lambda *_: None)
-    monkeypatch.setattr(mytonctrl, 'check_installer_user', lambda *_: None)
-    monkeypatch.setattr(mytonctrl, 'check_vport', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'check_mytonctrl_update', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'check_installer_user', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'check_vport', lambda *_: None)
 
 def test_check_disk_usage(cli, monkeypatch):
     monkeypatch.setattr(MyTonCore, 'GetDbUsage', lambda *_: 95)
@@ -96,11 +97,11 @@ def test_check_validator_balance(cli, monkeypatch, mocker: MockerFixture):
 
 
 def test_check_vps(cli, monkeypatch):
-    monkeypatch.setattr('mytonctrl.mytonctrl.is_host_virtual', lambda : {'virtual': True, 'product_name': 'VirtualBox'})
+    monkeypatch.setattr('mytonctrl.warnings.is_host_virtual', lambda : {'virtual': True, 'product_name': 'VirtualBox'})
     output = cli.run_pre_up()
     assert 'Virtualization detected' in output
 
-    monkeypatch.setattr('mytonctrl.mytonctrl.is_host_virtual', lambda : {'virtual': False})
+    monkeypatch.setattr('mytonctrl.warnings.is_host_virtual', lambda : {'virtual': False})
     output = cli.run_pre_up()
     assert 'Virtualization detected' not in output
 
@@ -173,7 +174,7 @@ def test_check_node_port(cli, monkeypatch):
 
 
 def test_check_ubuntu_version(cli, monkeypatch, mocker: MockerFixture):
-    monkeypatch.setattr(mytonctrl.os.path, 'exists', lambda _: True)
+    monkeypatch.setattr(warnings.os.path, 'exists', lambda _: True)
     res = '''
 PRETTY_NAME="Ubuntu 22.04.4 LTS"
 NAME="Ubuntu"
@@ -187,7 +188,7 @@ ID=ubuntu
     output = cli.run_pre_up()
     assert 'Ubuntu' not in output
 
-    monkeypatch.setattr(mytonctrl.os.path, 'exists', lambda _: True)
+    monkeypatch.setattr(warnings.os.path, 'exists', lambda _: True)
     res = '''
     PRETTY_NAME="Ubuntu 24.04.4 LTS"
     NAME="Ubuntu"
@@ -229,20 +230,20 @@ ID=debian
 
 
 def test_check_ton_http_api_version(cli, monkeypatch):
-    monkeypatch.setattr(mytonctrl, 'THA_VERSION_REQUIRED', '2.4.0')
+    monkeypatch.setattr(WarningChecker, 'THA_VERSION_REQUIRED', '2.4.0')
 
-    monkeypatch.setattr(mytonctrl, 'get_ton_http_api_version', lambda: None)
+    monkeypatch.setattr(warnings, 'get_ton_http_api_version', lambda: None)
     output = cli.run_pre_up()
     assert 'ton-http-api version' not in output
 
-    monkeypatch.setattr(mytonctrl, 'get_ton_http_api_version', lambda: '2.3.1')
+    monkeypatch.setattr(warnings, 'get_ton_http_api_version', lambda: '2.3.1')
     output = cli.run_pre_up()
     assert 'ton-http-api version 2.3.1 is less than required 2.4.0' in output
 
-    monkeypatch.setattr(mytonctrl, 'get_ton_http_api_version', lambda: '2.4.0')
+    monkeypatch.setattr(warnings, 'get_ton_http_api_version', lambda: '2.4.0')
     output = cli.run_pre_up()
     assert 'ton-http-api version' not in output
 
-    monkeypatch.setattr(mytonctrl, 'get_ton_http_api_version', lambda: '3.0.0')
+    monkeypatch.setattr(warnings, 'get_ton_http_api_version', lambda: '3.0.0')
     output = cli.run_pre_up()
     assert 'ton-http-api version' not in output

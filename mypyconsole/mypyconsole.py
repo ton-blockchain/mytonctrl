@@ -27,12 +27,11 @@ class MyPyConsole:
     GREEN = "\033[92m"
     ENDC = "\033[0m"
 
-    def __init__(self, local: MyPyClass, welcome_text: str = ""):
-        self.debug: bool = False
-        self.name: str = "console"
+    def __init__(self, local: MyPyClass, name: str = "console", debug: bool = False):
+        self.debug: bool = debug
+        self.name: str = name
         self.color: str = self.GREEN
         self.unknown_cmd: str = "Unknown command"
-        self.start_function: Callable[[], None] | None = None
         self.menu_items: list[MyPyConsoleItem] = []
         self.history: deque[str] = deque(maxlen=100)
         self.local: MyPyClass = local
@@ -127,8 +126,6 @@ class MyPyConsole:
         self.run()
 
     def run(self):
-        if self.start_function:
-            self.start_function()
         try:
             self.history.extend(
                 self.local.db.get("console_history", [])

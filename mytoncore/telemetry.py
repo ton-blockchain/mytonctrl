@@ -10,8 +10,8 @@ import psutil
 from mytoncore import MyTonCore
 from mytoncore.utils import parse_db_stats
 from mytoninstaller.node_args import get_node_args
-from mypylib.mypylib import get_service_pid, MyPyClass, get_git_hash, get_load_avg
-from mytonctrl.utils import fix_git_config
+from mypylib.mypylib import get_service_pid, MyPyClass, get_load_avg
+from mytonctrl.git import fix_git_config, get_git_hash
 
 
 def build_overlay_telemetry_payload(ton: MyTonCore) -> dict[str, Any]:

@@ -1,5 +1,7 @@
 from modules.wallet import WalletModule
-from mypylib import MyPyClass
+from modules.general import GeneralModule
+
+from mypylib.mypylib import MyPyClass
 
 from mytoncore.mytoncore import MyTonCore
 
@@ -30,10 +32,10 @@ def enable_vc_event(local: MyPyClass, event_name: str):
     local.db["adnlAddr"] = adnl_addr
     local.save()
 
-    from mytonctrl.mytonctrl import set_quic_port
     args = event_name.split("_")[1:]
     if args:
-        set_quic_port(local, ton, args)
+        module = GeneralModule(ton, local)
+        module.set_quic_port(args)
 
 
 def enable_mode(local: MyPyClass, event_name: str):
