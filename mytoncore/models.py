@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import struct
 from dataclasses import dataclass
+from typing import TypedDict
 
 from mytoncore.utils import raw_addr_to_b64
 
@@ -152,3 +153,23 @@ class Message:
 
     def __repr__(self):
         return self.__str__()
+
+
+class Config12(TypedDict):
+    enabled_since: int
+    monitor_min_split: int
+    min_split: int
+    max_split: int
+    basic: int
+    active: int
+    accept_msgs: int
+    flags: int
+    zerostate_root_hash: str
+    zerostate_file_hash: str
+
+
+class Config15(TypedDict):
+    validatorsElectedFor: int
+    electionsStartBefore: int
+    electionsEndBefore: int
+    stakeHeldFor: int

@@ -6,6 +6,9 @@ import time
 import json
 import hashlib
 import struct
+import typing
+from typing import Union
+
 import psutil
 import subprocess
 import requests
@@ -22,7 +25,7 @@ from mytoncore.models import (
 	Block,
 	Transaction,
 	Message,
-	Pool,
+	Pool, Config12, Config15,
 )
 
 from mypylib.mypylib import (
@@ -542,7 +545,7 @@ class MyTonCore:
 		return enabledTime
 	#end define
 
-	def get_basechain_config(self):
+	def get_basechain_config(self) -> Config12:
 		config12 = self.GetConfig(12)
 		return config12["workchains"]["root"]["node"]["value"]
 
@@ -689,7 +692,9 @@ class MyTonCore:
 		return item
 	#end define
 
-	def GetConfig(self, configId):
+	_Nested = typing.Dict[str, Union[str, int, "_Nested"]]
+
+	def GetConfig(self, configId) -> _Nested:
 		# Get buffer
 		bname = "config" + str(configId)
 		buff = self.GetFunctionBuffer(bname, timeout=60)
@@ -710,7 +715,7 @@ class MyTonCore:
 		return data
 	#end define
 
-	def GetConfig15(self):
+	def GetConfig15(self) -> Config15:
 		config = self.GetConfig(15)
 		config15 = dict()
 		config15["validatorsElectedFor"] = config["validators_elected_for"]
@@ -845,6 +850,8 @@ class MyTonCore:
 		self.local.add_log("start CreateNewKey function", "debug")
 		result = self.validatorConsole.run("newkey")
 		key = parse(result, "created new key ", '\n')
+		if key is None:
+			raise Exception(f"Failed to get new ket: {result}")
 		return key
 	#end define
 

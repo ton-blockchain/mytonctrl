@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import requests
 
@@ -9,7 +11,7 @@ from mytonctrl.console_cmd import add_command, check_usage_two_args, check_usage
 
 class CustomOverlayModule(MtcModule):
 
-    def parse_config(self, name: str, config: dict, vset: list = None):
+    def parse_config(self, name: str, config: dict, vset: list | None = None):
         """
         Converts config to validator-console friendly format
         :param name: custom overlay name

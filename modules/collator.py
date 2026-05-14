@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from modules.module import MtcModule
 from mypylib import color_print, print_table
 from mytoncore.utils import b642hex, signed_int_to_hex64, shard_prefix_len, hex_shard_to_int, shard_prefix, shard_is_ancestor
@@ -124,7 +126,7 @@ class CollatorModule(MtcModule):
     def get_collators(self):
         return self.ton.GetValidatorConfig()['collators']
 
-    def print_collators(self, args: list = None):
+    def print_collators(self, args: list[str]):
         collators = self.get_collators()
         if not collators:
             print("No collators found")
@@ -163,7 +165,7 @@ class CollatorModule(MtcModule):
             raise Exception(f'Failed to disable collation validator whitelist: {result}')
         color_print("disable_collation_validator_wl - {green}OK{endc}")
 
-    def print_collation_validators_whitelist(self, args: list = None):
+    def print_collation_validators_whitelist(self, args: list[str]):
         result = self.ton.validatorConsole.run('collator-whitelist-show')
         result = result.split('conn ready')[1].strip()
         print(result)

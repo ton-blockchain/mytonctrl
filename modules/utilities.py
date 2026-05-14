@@ -60,7 +60,9 @@ class UtilitiesModule(MtcModule):
             else:
                 fromto = raw_addr_to_b64(fromto, is_testnet=self.ton.IsTestnet())
             # datetime = timestamp2datetime(message.time, "%Y.%m.%d %H:%M:%S")
-            datetime = timeago(message.time)
+            datetime = 'n/a'
+            if message.time is not None:
+                datetime = timeago(message.time)
             table += [[datetime, type, message.value, fromto]]
         return table
 
@@ -171,6 +173,8 @@ class UtilitiesModule(MtcModule):
 
         fullConfigAddr = self.ton.GetFullConfigAddr()
         cmd = "runmethodfull {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
+        if process.stdin is None:
+            raise RuntimeError("stdin pipe not available")
         process.stdin.write(cmd.encode() + b'\n')
         process.stdin.flush()
         time.sleep(1)
@@ -181,10 +185,13 @@ class UtilitiesModule(MtcModule):
         time.sleep(1)
 
         process.terminate()
+        if process.stdout is None:
+            raise RuntimeError("stdout pipe not available")
         text = process.stdout.read().decode()
 
         lines = text.split('\n')
         b = len(lines)
+        a = None
         for i in range(b):
             line = lines[i]
             if "dumping cells as values of TLB type" in line:
@@ -192,6 +199,10 @@ class UtilitiesModule(MtcModule):
                 break
         # end for
 
+        if a is None:
+            raise Exception("Cannot find dumping cells as values of TLB type")
+
+        start, end = None, None
         for i in range(a, b):
             line = lines[i]
             if '(' in line:
@@ -205,6 +216,9 @@ class UtilitiesModule(MtcModule):
                 end = i
                 break
         # end for
+
+        if start is None or end is None:
+            raise Exception("Cannot find start and end of dumping cells as values of TLB type")
 
         buff = lines[start:end]
         text = "".join(buff)
