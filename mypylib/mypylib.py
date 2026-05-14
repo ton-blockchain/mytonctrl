@@ -76,6 +76,7 @@ class bcolors:
 	bold = "\033[1m"
 	underline = "\033[4m"
 	default = "\033[39m"
+	dim = "\033[2m"
 
 	DEBUG = magenta
 	INFO = blue
@@ -138,7 +139,7 @@ class bcolors:
 		return text
 
 	colors = {"red": red, "green": green, "yellow": yellow, "blue": blue, "magenta": magenta, "cyan": cyan,
-			  "endc": endc, "bold": bold, "underline": underline}
+			  "endc": endc, "bold": bold, "underline": underline, "dim": dim}
 
 
 class MyPyClass:
@@ -196,7 +197,7 @@ class MyPyClass:
 		self.thread_count_old = threading.active_count()
 
 		# Logging the start of the program
-		self.add_log(f"Start program `{self.my_path}`")
+		self.add_log(f"Start program `{self.my_path}`", "debug")
 
 	def set_default_config(self):
 		if self.db.config.logLevel is None:

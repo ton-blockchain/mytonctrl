@@ -27,14 +27,11 @@ class MyPyConsole:
     GREEN = "\033[92m"
     ENDC = "\033[0m"
 
-    def __init__(self, local: MyPyClass):
+    def __init__(self, local: MyPyClass, welcome_text: str = ""):
         self.debug: bool = False
         self.name: str = "console"
         self.color: str = self.GREEN
         self.unknown_cmd: str = "Unknown command"
-        self.hello_text: str = (
-            "Welcome to the console. Enter 'help' to display the help menu."
-        )
         self.start_function: Callable[[], None] | None = None
         self.menu_items: list[MyPyConsoleItem] = []
         self.history: deque[str] = deque(maxlen=100)
@@ -130,7 +127,6 @@ class MyPyConsole:
         self.run()
 
     def run(self):
-        print(self.hello_text)
         if self.start_function:
             self.start_function()
         try:

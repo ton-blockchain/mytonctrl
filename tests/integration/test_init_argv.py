@@ -126,18 +126,17 @@ def test_init_with_wallets_path_not_dir_exits(
 
 
 def test_mytonctrl_prints_version_on_startup(monkeypatch, capsys):
-    from mytonctrl import __commit__
+    from mytonctrl import __commit__, __version__
     monkeypatch.setattr(mytonctrl_module, "MyPyClass", lambda *_: None)
     monkeypatch.setattr(mytonctrl_module, "Init", lambda *_: None)
     class _StubConsole:
         def __init__(self, local):
-            self.hello_text = (
-                "Welcome to the console. Enter 'help' to display the help menu."
-            )
+            pass
         def run(self):
-            print(self.hello_text)
+            return
     monkeypatch.setattr(mytonctrl_module, "MyPyConsole", _StubConsole)
     mytonctrl_module.mytonctrl()
     out = capsys.readouterr().out
-    assert "Welcome to the console" in out
-    assert f"MyTonCtrl version: {__commit__}" in out
+    assert "MyTonCtrl" in out
+    assert __commit__ in out
+    assert __version__ in out

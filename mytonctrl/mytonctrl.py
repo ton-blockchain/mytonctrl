@@ -1192,13 +1192,40 @@ def set_quic_port(local: MyPyClass, ton: MyTonCore, args: list[str]):
 		local.add_log(f"Added quic addr {ip}:{port}: {result.splitlines()[-1].strip()}", "info")
 
 
+def get_welcome_banner(version: str, commit: str) -> str:
+	lines = [
+		"{bold}{cyan}MyTonCtrl{endc}",
+		f"{{dim}}version {version} ({commit}){{endc}}",
+		"",
+		"Welcome! Type `help` to see available commands.",
+	]
+	lines = [color_text(line) for line in lines]
+	def visible_len(s: str):
+		return len(s) - sum(len(x) for x in [bcolors.endc, bcolors.bold, bcolors.cyan, bcolors.dim] if x and x in s)
+	width = max(visible_len(line) for line in lines) + 2
+	width = min(width, shutil.get_terminal_size().columns - 2)
+	top = f"╭{'─' * width}╮"
+	bottom = f"╰{'─' * width}╯"
+	res = [top]
+	for line in lines:
+		padding = width - visible_len(line) - 1
+		res.append(f"│ {line}{' ' * padding}│")
+	res.append(bottom)
+	return "\n".join(res)
+
+
 ### Start of the program
 def mytonctrl():
-	from mytonctrl import __commit__
+	from mytonctrl import __version__, __commit__
 
 	local = MyPyClass('mytonctrl.py')
 	mytoncore_local = MyPyClass('mytoncore.py')
+	try:
+		welcome_text = get_welcome_banner(__version__, __commit__)
+		print(welcome_text)
+	except Exception:
+		welcome_text = 'Welcome to the console. Enter `help` to display the help menu. MyTonCtrl version: ' + __commit__
+		print(welcome_text)
 	console = MyPyConsole(local)
 	Init(local, mytoncore_local, console)
-	console.hello_text += ' MyTonCtrl version: ' + __commit__
 	console.run()
