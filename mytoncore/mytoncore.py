@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import base64
 import time
-import re
 import json
 import hashlib
 import struct
@@ -14,7 +13,8 @@ from fastcrc import crc16
 
 from modules import MODES
 from mytoncore.stats_collector import StatsCollector
-from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path, raw_addr_to_b64
+from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path, raw_addr_to_b64, lc_result_to_list, \
+	nano_ton_to_ton
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
 	Wallet,
@@ -209,7 +209,7 @@ class MyTonCore:
 		if status is not None:
 			account.status = status
 		if value is not None:
-			account.balance = ng2g(value)
+			account.balance = nano_ton_to_ton(int(value))
 		account.lt = parse(result, "lt = ", ' ')
 		account.hash = parse(result, "hash = ", '\n')
 		account.codeHash = codeHash
@@ -509,7 +509,7 @@ class MyTonCore:
 		return fullElectorAddr
 	#end define
 
-	def GetActiveElectionId(self, fullElectorAddr):
+	def GetActiveElectionId(self, fullElectorAddr) -> int:
 		# Get buffer
 		bname = "activeElectionId"
 		buff = self.GetFunctionBuffer(bname)
@@ -652,7 +652,9 @@ class MyTonCore:
 			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
 			status.out_of_ser = status.masterchain_out_of_ser
 			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
-			status.stateserializerenabled = parse(result, "stateserializerenabled", '\n').strip() == "true"
+			state_serializer_enabled = parse(result, "stateserializerenabled", '\n')
+			if state_serializer_enabled is not None:
+				status.stateserializerenabled = state_serializer_enabled.strip() == "true"
 			self.local.try_function(self.parse_stats_from_vc, args=[result, status])
 			if 'active_validator_groups' in status:
 				groups = status.active_validator_groups.split()  # master:1 shard:2
@@ -1102,17 +1104,15 @@ class MyTonCore:
 		raise Exception("WaitTransaction error: time out")
 	#end define
 
-	def GetReturnedStake(self, fullElectorAddr, inputAddr):
-		self.local.add_log("start GetReturnedStake function", "debug")
-		workchain, addr = self.ParseInputAddr(inputAddr)
-		cmd = f"runmethodfull {fullElectorAddr} compute_returned_stake 0x{addr}"
+	def get_returned_stake(self, full_elector_addr: str, input_addr: str) -> float:
+		workchain, addr = self.ParseInputAddr(input_addr)
+		cmd = f"runmethodfull {full_elector_addr} compute_returned_stake 0x{addr}"
 		result = self.liteClient.run(cmd)
-		returnedStake = self.GetVarFromWorkerOutput(result, "result")
-		returnedStake = returnedStake.replace(' ', '')
-		returnedStake = parse(returnedStake, '[', ']')
-		returnedStake = ng2g(returnedStake)
-		return returnedStake
-	#end define
+		stack = lc_result_to_list(result)
+		if not isinstance(stack[0], int):
+			raise TypeError(f'Got incorrect type: {stack}')
+		returned_stake = nano_ton_to_ton(stack[0])
+		return returned_stake
 
 	def ProcessRecoverStake(self):
 		self.local.add_log("start ProcessRecoverStake function", "debug")
@@ -1123,7 +1123,7 @@ class MyTonCore:
 		return resultFilePath
 	#end define
 
-	def GetStake(self, account: Account, args: list[str] | None = None):
+	def GetStake(self, account: Account):
 		stake = self.local.db.get("stake")
 		usePool = self.using_pool()
 		useController = self.using_liquid_staking()
@@ -1131,24 +1131,6 @@ class MyTonCore:
 		stake_no_split = self.local.db.get("stakeNoSplit", False)
 		vconfig = self.GetValidatorConfig()
 		config17 = self.GetConfig17()
-
-		# Check if optional arguments have been passed to us
-		if args:
-			desiredStake = args[0]
-			m = re.match(r"(\d+\.?\d?)\%", desiredStake)
-			if m:
-				# Stake was in percent
-				stake = round((account.balance / 100) * float(m.group(1)))
-			elif desiredStake.isnumeric():
-				# Stake was a number
-				stake = int(desiredStake)
-			else:
-				self.local.add_log("Specified stake must be a percentage or whole number", "error")
-				return
-
-			# Limit stake to maximum available amount minus 10 (for transaction fees)
-			if stake > account.balance - 10:
-				stake = account.balance - 10
 
 		is_single_nominator = self.is_account_single_nominator(account)
 
@@ -1160,7 +1142,9 @@ class MyTonCore:
 			sp = stakePercent / 100
 			if sp > 1 or sp < 0:
 				self.local.add_log("Wrong stakePercent value. Using default stake.", "warning")
-			elif len(vconfig.validators) == 0 and not stake_no_split:
+				stakePercent = 100
+				sp = 1
+			if len(vconfig.validators) == 0 and not stake_no_split:
 				stake = int(account.balance*sp/2)
 				if stake < config17["minStake"]:  # not enough funds to divide them by 2
 					stake = int(account.balance*sp)
@@ -1168,6 +1152,9 @@ class MyTonCore:
 				stake = int(account.balance*sp)
 			if stakePercent == 100:
 				stake -= 20
+
+		if stake is None:
+			raise Exception("Failed to get stake")
 
 		# Check if we have enough coins
 		if stake > config17["maxStake"]:
@@ -1204,7 +1191,7 @@ class MyTonCore:
 		return wallet
 	#end define
 
-	def ElectionEntry(self, args=None):
+	def ElectionEntry(self):
 		usePool = self.using_pool()
 		useController = self.using_liquid_staking()
 		wallet = self.GetValidatorWallet()
@@ -1263,8 +1250,12 @@ class MyTonCore:
 			return
 		#end if
 
+		pool = None
+		controllerAddr = None
 		if usePool:
 			pool = self.get_pool()
+			if pool is None:
+				raise Exception("Could not get pool with pool mode on")
 			addrB64 = pool.addrB64
 		elif useController:
 			controllerAddr = self.GetController(mode="stake")
@@ -1274,7 +1265,7 @@ class MyTonCore:
 
 		# Calculate stake
 		account = self.GetAccount(addrB64)
-		stake = self.GetStake(account, args)
+		stake = self.GetStake(account)
 
 		# Calculate endWorkTime
 		validatorsElectedFor = self.GetValidatorsElectedFor()
@@ -1293,6 +1284,8 @@ class MyTonCore:
 
 		# Create fift's. Continue with pool or walet
 		if usePool:
+			if pool is None:
+				raise Exception("Could not get pool with pool mode on")
 			var1 = self.CreateElectionRequest(pool.addrB64, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 			validatorPubkey, resultFilePath = self.SignElectionRequestWithPoolWithValidator(pool, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
@@ -1301,6 +1294,8 @@ class MyTonCore:
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, pool.addrB64, 1.3)
 			self.SendFile(resultFilePath, wallet)
 		elif useController:
+			if controllerAddr is None:
+				raise Exception("Could not get controller with controller mode on")
 			var1 = self.CreateElectionRequest(controllerAddr, startWorkTime, adnl_addr, maxFactor)
 			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
 			validatorPubkey, resultFilePath = self.SignElectionRequestWithController(controllerAddr, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
@@ -1392,7 +1387,7 @@ class MyTonCore:
 
 		self.local.add_log("start RecoverStake function", "debug")
 		fullElectorAddr = self.GetFullElectorAddr()
-		returnedStake = self.GetReturnedStake(fullElectorAddr, wallet.addrB64)
+		returnedStake = self.get_returned_stake(fullElectorAddr, wallet.addrB64)
 		if returnedStake == 0:
 			self.local.add_log("You have nothing on the return stake", "debug")
 			return
@@ -1435,7 +1430,7 @@ class MyTonCore:
 		timeNow = int(time.time())
 		config34 = self.GetConfig34()
 		fullElectorAddr = self.GetFullElectorAddr()
-		returnedStake = self.GetReturnedStake(fullElectorAddr, poolAddr)
+		returnedStake = self.get_returned_stake(fullElectorAddr, poolAddr)
 		pendingWithdraws = self.GetPendingWithdraws()
 		if (poolData["state"] == 2 and
 			poolData["validatorSetChangesCount"] < 2 and
@@ -1488,7 +1483,7 @@ class MyTonCore:
 	def HasPoolWithdrawRequests(self, poolAddr):
 		cmd = f"runmethodfull {poolAddr} has_withdraw_requests"
 		result = self.liteClient.run(cmd)
-		buff = self.Result2List(result)
+		buff = lc_result_to_list(result)
 		data = int(buff[0])
 		if data == -1:
 			return True
@@ -1617,16 +1612,9 @@ class MyTonCore:
 		self.local.add_log("start GetElectionEntries function", "debug")
 		cmd = "runmethodfull {fullElectorAddr} participant_list_extended".format(fullElectorAddr=fullElectorAddr)
 		result = self.liteClient.run(cmd)
-		rawElectionEntries = self.Result2List(result)
-
-		# Get json
-		# Parser by @skydev (https://github.com/skydev0h)
-		# startWorkTime = rawElectionEntries[0]
-		# endElectionsTime = rawElectionEntries[1]
-		# minStake = rawElectionEntries[2]
-		# allStakes = rawElectionEntries[3]
-		electionEntries = rawElectionEntries[4]
-		for entry in electionEntries:
+		raw_election_entries = lc_result_to_list(result)
+		election_entries = raw_election_entries[4]
+		for entry in election_entries:
 			if len(entry) == 0:
 				continue
 
@@ -1684,7 +1672,7 @@ class MyTonCore:
 		# Get raw data
 		cmd = "runmethodfull {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
 		result = self.liteClient.run(cmd)
-		rawOffers = self.Result2List(result)
+		rawOffers = lc_result_to_list(result)
 		rawOffers = rawOffers[0]
 		config34 = self.GetConfig34()
 		totalWeight = config34.get("totalWeight")
@@ -1755,9 +1743,7 @@ class MyTonCore:
 		self.local.add_log("start GetComplaints function", "debug")
 		cmd = "runmethodfull {fullElectorAddr} list_complaints {electionId}".format(fullElectorAddr=fullElectorAddr, electionId=electionId)
 		result = self.liteClient.run(cmd)
-		rawComplaints = self.Result2List(result)
-		if rawComplaints is None:
-			return complaints
+		rawComplaints = lc_result_to_list(result)
 		rawComplaints = rawComplaints[0]
 		config34 = self.GetConfig34()
 		totalWeight = config34.get("totalWeight")
@@ -1863,6 +1849,8 @@ class MyTonCore:
 		self.local.add_log("start GetComplaintsNumber function", "debug")
 		result = dict()
 		complaints = self.GetComplaints()
+		if complaints is None:
+			raise Exception("Failed to get complaints")
 		voted_complaints = self.GetVotedComplaints(complaints)
 		buff = 0
 		for chash in complaints:
@@ -1978,6 +1966,9 @@ class MyTonCore:
 					exists = True
 					vload = item
 					break
+			if vload is None:
+				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found: {validators_load}", "info")
+				continue
 
 			if not exists:
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
@@ -2186,7 +2177,7 @@ class MyTonCore:
 			self.local.add_log("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, electionId), "debug")
 	#end define
 
-	def GetOffer(self, offer_hash: str, offers: list = None):
+	def GetOffer(self, offer_hash: str, offers: list | None = None):
 		self.local.add_log("start GetOffer function", "debug")
 		if offers is None:
 			offers = self.GetOffers()
@@ -2265,48 +2256,8 @@ class MyTonCore:
 
 		result = self.validatorConsole.run(f"exportpub {dht_id_hex}")
 		pubkey = parse(result, "got public key: ", "\n")
-		data["pubkey"] = base64.b64encode(base64.b64decode(pubkey)[4:]).decode()
-		return data
-	#end define
-
-	def Result2List(self, text):
-		buff = parse(text, "result:", "\n")
-		if buff is None or "error" in buff:
-			return
-		buff = buff.replace(')', ']')
-		buff = buff.replace('(', '[')
-		buff = buff.replace(']', ' ] ')
-		buff = buff.replace('[', ' [ ')
-		buff = buff.replace('bits:', '')
-		buff = buff.replace('refs:', '')
-		buff = buff.replace('.', '')
-		buff = buff.replace(';', '')
-		arr = buff.split()
-
-		# Get good raw data
-		output = ""
-		arrLen = len(arr)
-		for i in range(arrLen):
-			item = arr[i]
-			if '{' in item or '}' in item:
-				item = f"\"{item}\""
-			# get next item
-			if i+1 < arrLen:
-				nextItem = arr[i+1]
-			else:
-				nextItem = None
-			# add item to output
-			if item == '[':
-				output += item
-			elif nextItem == ']':
-				output += item
-			elif i+1 == arrLen:
-				output += item
-			else:
-				output += item + ', '
-		#end for
-
-		data = json.loads(output)
+		if pubkey is not None:
+			data["pubkey"] = base64.b64encode(base64.b64decode(pubkey)[4:]).decode()
 		return data
 	#end define
 
@@ -2359,10 +2310,11 @@ class MyTonCore:
 			data = self.GetItemFromDict(data, search)
 		text = self.GetKeyFromDict(data, search2)
 		result = self.GetVar(text, search2)
-		try:
-			result = int(result)
-		except Exception:
-			pass
+		if result is not None:
+			try:
+				result = int(result)
+			except ValueError:
+				pass
 		return result
 	#end define
 
@@ -2577,7 +2529,7 @@ class MyTonCore:
 		return bounceable
 	#en define
 
-	def GetStatistics(self, name: str, statistics: dict[str, list[int]] = None) -> list[int]:
+	def GetStatistics(self, name: str, statistics: dict[str, list[int]] | None = None) -> list[int] | None:
 		if statistics is None:
 			statistics = self.local.db.get("statistics")
 		if statistics:
@@ -2864,22 +2816,15 @@ class MyTonCore:
 		return resultFilePath
 	#end define
 
-	def GetLocalPool(self, poolName):
+	def GetLocalPool(self, pool_name: str) -> Pool:
 		self.local.add_log("start GetLocalPool function", "debug")
-		if poolName is None:
-			return None
-		filePath = self.poolsDir + poolName
-
-		# Create pool object
-		pool = Pool.from_file(poolName, filePath)
+		file_path = self.poolsDir + pool_name
+		pool = Pool.from_file(pool_name, file_path)
 		if not os.path.isfile(pool.addrFilePath):
 			raise Exception(f"GetLocalPool error: Address file not found: {pool.addrFilePath}")
-		#end if
-
 		return pool
-	#end define
 
-	def GetPoolsNameList(self):
+	def GetPoolsNameList(self) -> list[str]:
 		self.local.add_log("start GetPoolsNameList function", "debug")
 		poolsNameList = list()
 		for fileName in os.listdir(self.poolsDir):
@@ -2890,7 +2835,7 @@ class MyTonCore:
 		return poolsNameList
 	#end define
 
-	def GetPools(self):
+	def GetPools(self) -> list[Pool]:
 		self.local.add_log("start GetPools function", "debug")
 		pools = list()
 		poolsNameList = self.GetPoolsNameList()
@@ -2944,9 +2889,7 @@ class MyTonCore:
 		self.local.add_log("start GetPoolData function", "debug")
 		cmd = f"runmethodfull {addrB64} get_pool_data"
 		result = self.liteClient.run(cmd)
-		data = self.Result2List(result)
-		if data is None:
-			raise Exception(f"Failed to get pool data {addrB64}: {result}")
+		data = lc_result_to_list(result)
 		poolConfig = dict()
 		poolConfig["validatorAddress"] = data[4]
 		poolConfig["validatorRewardShare"] = data[5]
@@ -2983,7 +2926,7 @@ class MyTonCore:
 		liquid_pool_addr = self.GetLiquidPoolAddr()
 		cmd = f"runmethodfull {liquid_pool_addr} get_controller_address_legacy {controller_id} {wallet.workchain} {addr_hash}"
 		result = self.liteClient.run(cmd)
-		buff = self.Result2List(result)
+		buff = lc_result_to_list(result)
 		wc = buff[0]
 		addr_hash = Dec2HexAddr(buff[1])
 		addrFull = f"{wc}:{addr_hash}"
@@ -3019,12 +2962,12 @@ class MyTonCore:
 		raise Exception("Validator controller not found or not ready")
 	#end define
 
-	def GetControllerRequiredBalanceForLoan(self, controller_addr: str, credit: int, interest: int):
+	def GetControllerRequiredBalanceForLoan(self, controller_addr: str, credit: int, interest: int) -> tuple[int, int]:
 		cmd = f"runmethodfull {controller_addr} required_balance_for_loan {credit * 10 ** 9} {interest}"
 		result = self.liteClient.run(cmd)
-		data = self.Result2List(result)
-		if data is None:
-			raise Exception(f"Failed to get GetControllerRequiredBalanceForLoan result: {result}")
+		data = lc_result_to_list(result)
+		if not isinstance(data[0], int) or not isinstance(data[1], int):
+			raise ValueError(f"Got incorrect value: {data}")
 		min_amount = data[0]
 		validator_amount = data[1]
 		return min_amount, validator_amount
@@ -3053,9 +2996,7 @@ class MyTonCore:
 	def GetControllerData(self, controllerAddr: str):
 		cmd = f"runmethodfull {controllerAddr} get_validator_controller_data"
 		result = self.liteClient.run(cmd)
-		data = self.Result2List(result)
-		if data is None:
-			raise Exception(f"Failed to get controller data {controllerAddr}: {result}")
+		data = lc_result_to_list(result)
 		result_vars = ["state", "halted", "approved", "stake_amount_sent", "stake_at", "saved_validator_set_hash", "validator_set_changes_count", "validator_set_change_time", "stake_held_for", "borrowed_amount", "borrowing_time"]
 		controllerData = dict()
 		for name in result_vars:
@@ -3219,7 +3160,7 @@ class MyTonCore:
 		timeNow = int(time.time())
 		config34 = self.GetConfig34()
 		fullElectorAddr = self.GetFullElectorAddr()
-		returnedStake = self.GetReturnedStake(fullElectorAddr, controllerAddr)
+		returnedStake = self.get_returned_stake(fullElectorAddr, controllerAddr)
 		controllerPendingWithdraws = self.GetControllerPendingWithdraws()
 		if (controllerData["state"] == 3 and
 			controllerData["validator_set_changes_count"] < 2 and

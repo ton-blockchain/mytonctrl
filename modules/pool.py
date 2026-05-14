@@ -14,7 +14,7 @@ class PoolModule(MtcModule):
         table = list()
         table += [["Name", "Status", "Balance", "Version", "Address"]]
         data = self.ton.GetPools()
-        if data is None or len(data) == 0:
+        if len(data) == 0:
             print("No data")
             return
         for pool in data:

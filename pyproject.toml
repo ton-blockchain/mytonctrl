@@ -14,7 +14,6 @@ license = { file = "LICENSE" }
 authors = [{ name = "TON Core" }]
 
 dependencies = [
-    "crc16==0.1.1",
     "requests==2.32.4",
     "psutil==6.1.0",
     "fastcrc==0.3.2",
