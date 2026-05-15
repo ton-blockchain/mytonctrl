@@ -1,6 +1,7 @@
 # pyright: strict
 
 from __future__ import annotations
+import traceback
 import os
 import sys
 import readline
@@ -77,6 +78,9 @@ class MyPyConsole:
     def get_cmd_from_user(self):
         result = self.user_worker()
         self.add_history_item(result)
+        self.run_cmd(result)
+
+    def run_cmd(self, result: str) -> bool:
         result_list = result.split(" ")
         result_list = list(filter(None, result_list))
         cmd = None
@@ -84,22 +88,27 @@ class MyPyConsole:
             cmd = result_list[0]
         args = result_list[1:]
         for item in self.menu_items:
+            suc = True
             if cmd == item.cmd:
                 if self.debug:
                     item.func(args)
                 else:
-                    self._try(item.func, args)
+                    suc = self._try(item.func, args)
                 print()
-                return
+                return suc
         print(self.unknown_cmd)
+        return False
 
-    def _try(self, func: CallableFunc, args: list[str]):
+    def _try(self, func: CallableFunc, args: list[str]) -> bool:
         try:
             func(args)
+            return True
         except Exception as err:
+            traceback.print_exc()
             print(
                 "{RED}Error: {err}{ENDC}".format(RED=self.RED, ENDC=self.ENDC, err=err)
             )
+            return False
 
     def help(self, _: list[str]):
         index_list: list[int] = []

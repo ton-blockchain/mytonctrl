@@ -9,7 +9,6 @@ from mytonctrl.warnings import WarningChecker
 
 
 class MyTonCtrl:
-
     def __init__(self, local: MyPyClass, ton: MyTonCore, console_engine: MyPyConsole):
         self.local = local
         self.ton = ton
@@ -106,9 +105,14 @@ class MyTonCtrl:
         except Exception as e:
             self.local.add_log(f"PreUp error: {e}", "error")
 
-    def run(self, debug: bool = False, skip_startup_checks: bool = False):
+    def run(
+        self,
+        debug: bool = False,
+        skip_startup_checks: bool = False,
+        cmd: str | None = None,
+    ):
         with get_package_resource_path(
-                "mytonctrl", "resources/translate.json"
+            "mytonctrl", "resources/translate.json"
         ) as translate_path:
             self.local.init_translator(str(translate_path))
 
@@ -121,5 +125,9 @@ class MyTonCtrl:
         if not skip_startup_checks:
             self._pre_up()
 
-        self._console_engine.run()
+        if cmd is not None:
+            if not self._console_engine.run_cmd(cmd):
+                raise SystemExit(1)
+            return
 
+        self._console_engine.run()

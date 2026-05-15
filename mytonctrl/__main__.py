@@ -11,7 +11,9 @@ from mytonctrl.mytonctrl import MyTonCtrl
 
 def _parse_init_args():
     parser = argparse.ArgumentParser(prog="mytonctrl.py")
-    parser.add_argument("-c", "--config", dest="configfile", help="Custom `mytoncore.db` config file")
+    parser.add_argument(
+        "-c", "--config", dest="configfile", help="Custom `mytoncore.db` config file"
+    )
     parser.add_argument("-w", "--wallets", dest="wallets", help="Custom wallets dir")
     parser.add_argument(
         "-s",
@@ -19,6 +21,11 @@ def _parse_init_args():
         dest="no_startup_checks",
         action="store_true",
         help="Skip startup checks (mytonctrl update, installer user, vport, warnings)",
+    )
+    parser.add_argument(
+        "--cmd",
+        dest="cmd",
+        help="Run a single console command and exit (implies --no-startup-checks)",
     )
     args = parser.parse_args()
 
@@ -65,16 +72,6 @@ def _main():
 
     local = MyPyClass("mytonctrl.py")
     mytoncore_local = MyPyClass("mytoncore.py")
-    try:
-        welcome_text = _get_welcome_banner(__version__, __commit__)
-        print(welcome_text)
-    except Exception:
-        welcome_text = (
-            "Welcome to the console. Enter `help` to display the help menu. MyTonCtrl version: "
-            + __commit__
-        )
-        print(welcome_text)
-
     args = _parse_init_args()
     if args.configfile is not None:
         mytoncore_local.db_path = args.configfile
@@ -83,12 +80,27 @@ def _main():
     if args.wallets is not None:
         ton.walletsDir = args.wallets
 
+    if args.cmd is None:
+        try:
+            welcome_text = _get_welcome_banner(__version__, __commit__)
+            print(welcome_text)
+        except Exception:
+            welcome_text = (
+                "Welcome to the console. Enter `help` to display the help menu. MyTonCtrl version: "
+                + __commit__
+            )
+            print(welcome_text)
+
     debug = ton.GetSettings("debug")
     console = MyPyConsole(local, "MyTonCtrl", debug)
 
     mtc = MyTonCtrl(local, ton, console)
 
-    mtc.run(debug, skip_startup_checks=args.no_startup_checks)
+    mtc.run(
+        debug,
+        skip_startup_checks=args.no_startup_checks or args.cmd is not None,
+        cmd=args.cmd,
+    )
 
 
 if __name__ == "__main__":

@@ -215,3 +215,96 @@ def test_mytonctrl_run_skips_pre_up_when_flag_set(local, monkeypatch):
 
     mtc.run(skip_startup_checks=False)
     assert pre_up_calls == [1]
+
+
+def test_init_with_cmd_flag_passes_through_and_skips_startup_checks(
+    patched_local, mytonctrl_local, monkeypatch
+):
+    monkeypatch.setattr(sys, "argv", ["mytonctrl.py", "--cmd", "status"])
+    record = {}
+    _stub_app(monkeypatch, mytonctrl_local, patched_local, record=record)
+
+    main_module._main()
+
+    assert record["run_kwargs"].get("cmd") == "status"
+    assert record["run_kwargs"].get("skip_startup_checks") is True
+
+
+def test_mytonctrl_run_executes_single_cmd_and_exits(local, monkeypatch):
+    from mytonctrl.mytonctrl import MyTonCtrl
+
+    monkeypatch.setattr(MyTonCore, "create_self_db_backup", lambda self: None)
+    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
+    monkeypatch.setattr(TestLocal, "save", lambda *a, **kw: None)
+    monkeypatch.setattr(MyTonCore, "using_validator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_collator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_alert_bot", lambda self: False)
+    monkeypatch.setattr(TestLocal, "run", lambda *a, **kw: None, raising=False)
+
+    ton = MyTonCore(local)
+    console = TestMyPyConsole(local)
+    mtc = MyTonCtrl(local, ton, console)
+
+    run_loop_calls = []
+    monkeypatch.setattr(console, "run", lambda: run_loop_calls.append(1))
+
+    invoked = []
+    console.add_item("foo", lambda args: invoked.append(args), "test cmd")
+
+    mtc.run(skip_startup_checks=True, cmd="foo bar baz")
+
+    assert invoked == [["bar", "baz"]]
+    assert run_loop_calls == []
+
+
+def test_mytonctrl_run_exits_nonzero_when_cmd_unknown(local, monkeypatch):
+    from mytonctrl.mytonctrl import MyTonCtrl
+
+    monkeypatch.setattr(MyTonCore, "create_self_db_backup", lambda self: None)
+    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
+    monkeypatch.setattr(TestLocal, "save", lambda *a, **kw: None)
+    monkeypatch.setattr(MyTonCore, "using_validator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_collator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_alert_bot", lambda self: False)
+    monkeypatch.setattr(TestLocal, "run", lambda *a, **kw: None, raising=False)
+
+    ton = MyTonCore(local)
+    console = TestMyPyConsole(local)
+    mtc = MyTonCtrl(local, ton, console)
+
+    run_loop_calls = []
+    monkeypatch.setattr(console, "run", lambda: run_loop_calls.append(1))
+
+    with pytest.raises(SystemExit) as ei:
+        mtc.run(skip_startup_checks=True, cmd="not_a_real_cmd")
+    assert ei.value.code == 1
+    assert run_loop_calls == []
+
+
+def test_mytonctrl_run_exits_nonzero_when_cmd_raises(local, monkeypatch):
+    from mytonctrl.mytonctrl import MyTonCtrl
+
+    monkeypatch.setattr(MyTonCore, "create_self_db_backup", lambda self: None)
+    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
+    monkeypatch.setattr(TestLocal, "save", lambda *a, **kw: None)
+    monkeypatch.setattr(MyTonCore, "using_validator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_collator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_alert_bot", lambda self: False)
+    monkeypatch.setattr(TestLocal, "run", lambda *a, **kw: None, raising=False)
+
+    ton = MyTonCore(local)
+    console = TestMyPyConsole(local)
+    mtc = MyTonCtrl(local, ton, console)
+
+    run_loop_calls = []
+    monkeypatch.setattr(console, "run", lambda: run_loop_calls.append(1))
+
+    def boom(_args):
+        raise RuntimeError("kaboom")
+
+    console.add_item("boom", boom, "raises")
+
+    with pytest.raises(SystemExit) as ei:
+        mtc.run(skip_startup_checks=True, cmd="boom")
+    assert ei.value.code == 1
+    assert run_loop_calls == []
