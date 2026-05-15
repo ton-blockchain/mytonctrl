@@ -99,7 +99,9 @@ def check_usage_args_min_len(name: str, args: list, min_len: int) -> bool:
     return check_usage(name, args, lambda x: len(x) >= min_len)
 
 
-def check_usage_args_min_max_len(name: str, args: list, min_len: int, max_len: int) -> bool:
+def check_usage_args_min_max_len(
+    name: str, args: list, min_len: int, max_len: int
+) -> bool:
     return check_usage(name, args, lambda x: min_len <= len(x) <= max_len)
 
 
@@ -113,10 +115,12 @@ def check_usage(name: str, args: list, check_fun: typing.Callable) -> bool:
 
 
 def get_usage(name: str) -> str:
-    return USAGES.get(name, '')
+    return USAGES.get(name, "")
 
 
-def add_command(local: MyPyClass, console: MyPyConsole, name: str, function: typing.Callable):
+def add_command(
+    local: MyPyClass, console: MyPyConsole, name: str, function: typing.Callable
+):
     desc = local.translate(f"{name}_cmd")
     usage = get_usage(name)
     # if usage:
