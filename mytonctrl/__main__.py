@@ -10,12 +10,16 @@ from mytonctrl.mytonctrl import MyTonCtrl
 
 
 def _parse_init_args():
-    parser = argparse.ArgumentParser(
-        prog="mytonctrl.py",
-        usage="%(prog)s [-c <configfile>] [-w <wallets>]",
+    parser = argparse.ArgumentParser(prog="mytonctrl.py")
+    parser.add_argument("-c", "--config", dest="configfile", help="Custom `mytoncore.db` config file")
+    parser.add_argument("-w", "--wallets", dest="wallets", help="Custom wallets dir")
+    parser.add_argument(
+        "-s",
+        "--no-startup-checks",
+        dest="no_startup_checks",
+        action="store_true",
+        help="Skip startup checks (mytonctrl update, installer user, vport, warnings)",
     )
-    parser.add_argument("-c", "--config", dest="configfile")
-    parser.add_argument("-w", "--wallets", dest="wallets")
     args = parser.parse_args()
 
     if args.configfile is not None and not os.access(args.configfile, os.R_OK):
@@ -84,7 +88,7 @@ def _main():
 
     mtc = MyTonCtrl(local, ton, console)
 
-    mtc.run(debug)
+    mtc.run(debug, skip_startup_checks=args.no_startup_checks)
 
 
 if __name__ == "__main__":

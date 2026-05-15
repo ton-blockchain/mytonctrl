@@ -106,7 +106,7 @@ class MyTonCtrl:
         except Exception as e:
             self.local.add_log(f"PreUp error: {e}", "error")
 
-    def run(self, debug: bool = False):
+    def run(self, debug: bool = False, skip_startup_checks: bool = False):
         with get_package_resource_path(
                 "mytonctrl", "resources/translate.json"
         ) as translate_path:
@@ -118,7 +118,8 @@ class MyTonCtrl:
         self.local.db.config.isLocaldbSaving = False
         self.local.run()
 
-        self._pre_up()
+        if not skip_startup_checks:
+            self._pre_up()
 
         self._console_engine.run()
 

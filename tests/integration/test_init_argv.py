@@ -66,7 +66,7 @@ def _capture_ton(monkeypatch):
     return captured
 
 
-def _stub_app(monkeypatch, mtc_local=None, mtcore_local=None):
+def _stub_app(monkeypatch, mtc_local=None, mtcore_local=None, record=None):
     queue = iter([mtc_local, mtcore_local])
     monkeypatch.setattr(main_module, "MyPyClass", lambda *_: next(queue))
 
@@ -75,7 +75,9 @@ def _stub_app(monkeypatch, mtc_local=None, mtcore_local=None):
         def _add_console_commands(self, *a, **kw): pass
         def _pre_up(self, *a, **kw): pass
         def run(self, *a, **kw):
-            pass
+            if record is not None:
+                record["run_args"] = a
+                record["run_kwargs"] = kw
     monkeypatch.setattr(main_module, "MyTonCtrl", _StubMtc)
 
     monkeypatch.setattr(TestMyPyConsole, "run", lambda self: None, raising=False)
@@ -151,3 +153,65 @@ def test_mytonctrl_prints_version_on_startup(patched_local, mytonctrl_local, mon
     assert "MyTonCtrl" in out
     assert __commit__ in out
     assert __version__ in out
+
+
+def test_init_default_passes_skip_startup_checks_false(
+    patched_local, mytonctrl_local, monkeypatch
+):
+    monkeypatch.setattr(sys, "argv", ["mytonctrl.py"])
+    record = {}
+    _stub_app(monkeypatch, mytonctrl_local, patched_local, record=record)
+
+    main_module._main()
+
+    assert record["run_kwargs"].get("skip_startup_checks") is False
+
+
+def test_init_with_no_startup_checks_short_flag(
+    patched_local, mytonctrl_local, monkeypatch
+):
+    monkeypatch.setattr(sys, "argv", ["mytonctrl.py", "-s"])
+    record = {}
+    _stub_app(monkeypatch, mytonctrl_local, patched_local, record=record)
+
+    main_module._main()
+
+    assert record["run_kwargs"].get("skip_startup_checks") is True
+
+
+def test_init_with_no_startup_checks_long_flag(
+    patched_local, mytonctrl_local, monkeypatch
+):
+    monkeypatch.setattr(sys, "argv", ["mytonctrl.py", "--no-startup-checks"])
+    record = {}
+    _stub_app(monkeypatch, mytonctrl_local, patched_local, record=record)
+
+    main_module._main()
+
+    assert record["run_kwargs"].get("skip_startup_checks") is True
+
+
+def test_mytonctrl_run_skips_pre_up_when_flag_set(local, monkeypatch):
+    from mytonctrl.mytonctrl import MyTonCtrl
+
+    monkeypatch.setattr(MyTonCore, "create_self_db_backup", lambda self: None)
+    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
+    monkeypatch.setattr(TestLocal, "save", lambda *a, **kw: None)
+    monkeypatch.setattr(MyTonCore, "using_validator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_collator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_alert_bot", lambda self: False)
+    monkeypatch.setattr(TestLocal, "run", lambda *a, **kw: None, raising=False)
+    monkeypatch.setattr(TestMyPyConsole, "run", lambda self: None, raising=False)
+
+    ton = MyTonCore(local)
+    console = TestMyPyConsole(local)
+    mtc = MyTonCtrl(local, ton, console)
+
+    pre_up_calls = []
+    monkeypatch.setattr(mtc, "_pre_up", lambda: pre_up_calls.append(1))
+
+    mtc.run(skip_startup_checks=True)
+    assert pre_up_calls == []
+
+    mtc.run(skip_startup_checks=False)
+    assert pre_up_calls == [1]
