@@ -1004,17 +1004,17 @@ def CreateSymlinks(local):
 	env_file = "/etc/environment"
 	file = open(mytonctrl_file, 'wt')
 	# file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")  # TODO: fix path
-	file.write("/usr/bin/python3 -m mytonctrl $@")  # TODO: fix path
+	file.write('/usr/bin/python3 -m mytonctrl "$@"')  # TODO: fix path
 	file.close()
 	file = open(fift_file, 'wt')
-	file.write("/usr/bin/ton/crypto/fift $@")
+	file.write('/usr/bin/ton/crypto/fift "$@"')
 	file.close()
 	file = open(liteclient_file, 'wt')
-	file.write("/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/global.config.json $@")
+	file.write('/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/global.config.json "$@"')
 	file.close()
 	if cport:
 		file = open(validator_console_file, 'wt')
-		file.write("/usr/bin/ton/validator-engine-console/validator-engine-console -k /var/ton-work/keys/client -p /var/ton-work/keys/server.pub -a 127.0.0.1:" + str(cport) + " $@")
+		file.write('/usr/bin/ton/validator-engine-console/validator-engine-console -k /var/ton-work/keys/client -p /var/ton-work/keys/server.pub -a 127.0.0.1:' + str(cport) + ' "$@"')
 		file.close()
 		args = ["chmod", "+x", validator_console_file]
 		subprocess.run(args)
