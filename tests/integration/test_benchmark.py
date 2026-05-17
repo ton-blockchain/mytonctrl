@@ -2,6 +2,8 @@ import shutil
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
+from modules.general import GeneralModule
+from modules import general as general_module
 
 
 def test_benchmark_uv_not_installed_decline(cli, monkeypatch):
@@ -36,8 +38,7 @@ def test_benchmark_uv_not_installed_install(cli, monkeypatch):
 
     monkeypatch.setattr(subprocess, "run", fake_subprocess_run)
 
-    from mytonctrl import mytonctrl as mytonctrl_module
-    monkeypatch.setattr(mytonctrl_module, "get_service_status", lambda name: True)
+    monkeypatch.setattr(general_module, "get_service_status", lambda name: True)
 
     output = cli.execute("benchmark", no_color=True)
     assert calls[0] == ["curl", "-LsSf", "https://astral.sh/uv/install.sh", "-o", "/tmp/uv_install.sh"]
@@ -45,9 +46,8 @@ def test_benchmark_uv_not_installed_install(cli, monkeypatch):
 
 
 def test_benchmark_validator_running(cli, monkeypatch):
-    from mytonctrl import mytonctrl as mytonctrl_module
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/uv" if name == "uv" else None)
-    monkeypatch.setattr(mytonctrl_module, "get_service_status", lambda name: name == "validator")
+    monkeypatch.setattr(general_module, "get_service_status", lambda name: name == "validator")
 
     output = cli.execute("benchmark", no_color=True)
     assert "validator service is running" in output

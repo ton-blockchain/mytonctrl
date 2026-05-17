@@ -48,3 +48,8 @@ mytonctrl = [
     "resources/*",
     "scripts/*",
 ]
+
+[tool.pyright]
+exclude = [
+    "mytonctrl/scripts/**",
+]

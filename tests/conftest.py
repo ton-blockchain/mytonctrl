@@ -7,9 +7,11 @@ import os
 import pytest
 from typing import Protocol
 
+from mytoncore.utils import get_package_resource_path
+
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore.mytoncore import MyTonCore
-from mytonctrl.mytonctrl import Init
+from mytonctrl.mytonctrl import MyTonCtrl
 from mypylib.mypylib import MyPyClass
 from tests.helpers import remove_colors
 
@@ -84,10 +86,12 @@ class ConsoleProtocol(Protocol):
 class TestMyPyConsole(MyPyConsole):
     __test__ = False
 
+    mtc: MyTonCtrl
+
     def run_pre_up(self, no_color: bool = False):
         output = io.StringIO()
         with redirect_stderr(output), redirect_stdout(output):
-            self.start_function()
+            self.mtc._pre_up()
             output = output.getvalue()
             if no_color:
                 output = remove_colors(output)
@@ -113,8 +117,13 @@ def _cli_setup(local, monkeypatch) -> tuple[TestMyPyConsole, MyTonCore]:
     monkeypatch.setattr(MyTonCore, "using_nominator_pool", lambda self: True)
     monkeypatch.setattr(MyTonCore, "using_single_nominator", lambda self: True)
     monkeypatch.setattr(sys, "argv", ["mytonctrl.py"])
+    ton = MyTonCore(local)
     console = TestMyPyConsole(local)
-    ton = Init(local, local, console)
+    mtc = MyTonCtrl(local, ton, console)
+    console.mtc = mtc
+    mtc._add_console_commands()
+    with get_package_resource_path('mytonctrl', 'resources/translate.json') as translate_path:
+        local.init_translator(str(translate_path))
     return console, ton
 
 

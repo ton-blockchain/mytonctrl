@@ -461,3 +461,24 @@ def test_get_returned_stake(ton: MyTonCore, monkeypatch):
     monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: output)
     stake = ton.get_returned_stake(full_elector, 'ignored')
     assert stake == 1234.5
+
+
+def test_get_basechain_config(ton: MyTonCore, monkeypatch):
+    testnet_result = 'ConfigParam(12) = (\n  workchains:(hme_root\n    root:(hm_edge\n      label:(hml_same v:0 n:32)\n      node:(hmn_leaf\n        value:(workchain enabled_since:1573821854 monitor_min_split:2 min_split:2 max_split:4 basic:1 active:1 accept_msgs:1 flags:0 zerostate_root_hash:x55B13F6D0E1D0C34C9C2160F6F918E92D82BF9DDCF8DE2E4C94A3FDF39D15446 zerostate_file_hash:xEE0BEDFE4B32761FB35E9E1D8818EA720CAD1A0E7B4D2ED673C488E72E910342 version:0\n          format:(wfmt_basic vm_version:-1 vm_mode:0))))))\n\nx{C_}\n x{D0532EE74ECF01010270002AD89FB6870E861A64E10B07B7C8C7496C15FCEEE7C6F17264A51FEF9CE8AA237705F6FF25993B0FD9AF4F0EC40C753906568D073DA6976B39E24473974881A1000000000FFFFFFFF80000000000000004_}'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: testnet_result)
+    basechain_config = ton.get_basechain_config()
+    print(basechain_config)
+    assert basechain_config["enabled_since"] == 1573821854
+    assert basechain_config["min_split"] == 2
+    assert basechain_config["max_split"] == 4
+    assert basechain_config["monitor_min_split"] == 2
+
+    ton.SetFunctionBuffer('config12', None)
+
+    mainnet_result = 'ConfigParam(12) = (\n  workchains:(hme_root\n    root:(hm_edge\n      label:(hml_same v:0 n:32)\n      node:(hmn_leaf\n        value:(workchain_v2 enabled_since:1573821854 monitor_min_split:0 min_split:0 max_split:4 basic:1 active:1 accept_msgs:1 flags:0 zerostate_root_hash:x55B13F6D0E1D0C34C9C2160F6F918E92D82BF9DDCF8DE2E4C94A3FDF39D15446 zerostate_file_hash:xEE0BEDFE4B32761FB35E9E1D8818EA720CAD1A0E7B4D2ED673C488E72E910342 version:0\n          format:(wfmt_basic vm_version:-1 vm_mode:0)\n          split_merge_timings:(wc_split_merge_timings split_merge_delay:100 split_merge_interval:100 min_split_merge_interval:30 max_split_merge_delay:1000) persistent_state_split_depth:4)))))\nx{C_}\n x{D053AEE74ECF00000270002AD89FB6870E861A64E10B07B7C8C7496C15FCEEE7C6F17264A51FEF9CE8AA237705F6FF25993B0FD9AF4F0EC40C753906568D073DA6976B39E24473974881A1000000000FFFFFFFF8000000000000000000000032000000320000000F000001F4024_}\n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: mainnet_result)
+    basechain_config = ton.get_basechain_config()
+    assert basechain_config["enabled_since"] == 1573821854
+    assert basechain_config["min_split"] == 0
+    assert basechain_config["max_split"] == 4
+    assert basechain_config["monitor_min_split"] == 0

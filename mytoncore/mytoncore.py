@@ -6,6 +6,9 @@ import time
 import json
 import hashlib
 import struct
+import typing
+from typing import Union
+
 import psutil
 import subprocess
 import requests
@@ -22,7 +25,7 @@ from mytoncore.models import (
 	Block,
 	Transaction,
 	Message,
-	Pool,
+	Pool, Config12, Config15,
 )
 
 from mypylib.mypylib import (
@@ -369,7 +372,6 @@ class MyTonCore:
 	#end define
 
 	def GetLocalWallet(self, wallet_name: str, version=None, subwallet=None) -> Wallet:
-		self.local.add_log("start GetLocalWallet function", "debug")
 		walletPath = self.walletsDir + wallet_name
 		if version and "h" in version:
 			wallet = self.GetHighWalletFromFile(walletPath, subwallet, version)
@@ -378,7 +380,6 @@ class MyTonCore:
 		return wallet
 
 	def GetWalletFromFile(self, filePath, version):
-		self.local.add_log("start GetWalletFromFile function", "debug")
 		# Check input args
 		if (".addr" in filePath):
 			filePath = filePath.replace(".addr", '')
@@ -395,7 +396,6 @@ class MyTonCore:
 		return wallet
 
 	def GetHighWalletFromFile(self, filePath, subwallet, version):
-		self.local.add_log("start GetHighWalletFromFile function", "debug")
 		# Check input args
 		if (".addr" in filePath):
 			filePath = filePath.replace(".addr", '')
@@ -415,7 +415,6 @@ class MyTonCore:
 	def WalletVersion2Wallet(self, wallet):
 		if wallet.version is not None:
 			return
-		self.local.add_log("start WalletVersion2Wallet function", "debug")
 		walletsVersionList = self.GetWalletsVersionList()
 		version = walletsVersionList.get(wallet.addrB64)
 		if version is None:
@@ -435,7 +434,6 @@ class MyTonCore:
 	#end define
 
 	def GetVersionFromCodeHash(self, inputHash):
-		self.local.add_log("start GetVersionFromCodeHash function", "debug")
 		arr = dict()
 		arr["v1r1"] = "d670136510daff4fee1889b8872c4c1e89872ffa1fe58a23a5f5d99cef8edf32"
 		arr["v1r2"] = "2705a31a7ac162295c8aed0761cc6e031ab65521dd7b4a14631099e02de99e18"
@@ -480,7 +478,6 @@ class MyTonCore:
 			return buff
 		#end if
 
-		self.local.add_log("start GetFullConfigAddr function", "debug")
 		result = self.liteClient.run("getconfig 0")
 		configAddr_hex = self.GetVarFromWorkerOutput(result, "config_addr:x")
 		fullConfigAddr = "-1:{configAddr_hex}".format(configAddr_hex=configAddr_hex)
@@ -499,7 +496,6 @@ class MyTonCore:
 		#end if
 
 		# Get data
-		self.local.add_log("start GetFullElectorAddr function", "debug")
 		result = self.liteClient.run("getconfig 1")
 		electorAddr_hex = self.GetVarFromWorkerOutput(result, "elector_addr:x")
 		fullElectorAddr = "-1:{electorAddr_hex}".format(electorAddr_hex=electorAddr_hex)
@@ -517,7 +513,6 @@ class MyTonCore:
 			return buff
 		#end if
 
-		self.local.add_log("start GetActiveElectionId function", "debug")
 		cmd = "runmethodfull {fullElectorAddr} active_election_id".format(fullElectorAddr=fullElectorAddr)
 		result = self.liteClient.run(cmd)
 		activeElectionId = self.GetVarFromWorkerOutput(result, "result")
@@ -537,12 +532,11 @@ class MyTonCore:
 	#end define
 
 	def GetRootWorkchainEnabledTime(self):
-		self.local.add_log("start GetRootWorkchainEnabledTime function", "debug")
 		enabledTime = self.get_basechain_config()["enabled_since"]
 		return enabledTime
 	#end define
 
-	def get_basechain_config(self):
+	def get_basechain_config(self) -> Config12:
 		config12 = self.GetConfig(12)
 		return config12["workchains"]["root"]["node"]["value"]
 
@@ -689,7 +683,9 @@ class MyTonCore:
 		return item
 	#end define
 
-	def GetConfig(self, configId):
+	_Nested = typing.Dict[str, Union[str, int, "_Nested"]]
+
+	def GetConfig(self, configId) -> _Nested:
 		# Get buffer
 		bname = "config" + str(configId)
 		buff = self.GetFunctionBuffer(bname, timeout=60)
@@ -697,8 +693,6 @@ class MyTonCore:
 			return buff
 		#end if
 
-		text = "start GetConfig function ({})".format(configId)
-		self.local.add_log(text, "debug")
 		cmd = "getconfig {configId}".format(configId=configId)
 		result = self.liteClient.run(cmd)
 		start = result.find("ConfigParam")
@@ -710,7 +704,7 @@ class MyTonCore:
 		return data
 	#end define
 
-	def GetConfig15(self):
+	def GetConfig15(self) -> Config15:
 		config = self.GetConfig(15)
 		config15 = dict()
 		config15["validatorsElectedFor"] = config["validators_elected_for"]
@@ -737,7 +731,6 @@ class MyTonCore:
 			return buff
 		#end if
 
-		self.local.add_log("start GetConfig32 function", "debug")
 		config32 = Dict()
 		result = self.liteClient.run("getconfig 32")
 		config32["totalValidators"] = int(parse(result, "total:", ' '))
@@ -774,7 +767,6 @@ class MyTonCore:
 			return buff
 		#end if
 
-		self.local.add_log("start GetConfig34 function", "debug")
 		config34 = Dict()
 		result = self.liteClient.run("getconfig 34")
 		config34["totalValidators"] = int(parse(result, "total:", ' '))
@@ -812,7 +804,6 @@ class MyTonCore:
 			return buff
 		#end if
 
-		self.local.add_log("start GetConfig36 function", "debug")
 		config36 = dict()
 		try:
 			result = self.liteClient.run("getconfig 36")
@@ -845,6 +836,8 @@ class MyTonCore:
 		self.local.add_log("start CreateNewKey function", "debug")
 		result = self.validatorConsole.run("newkey")
 		key = parse(result, "created new key ", '\n')
+		if key is None:
+			raise Exception(f"Failed to get new ket: {result}")
 		return key
 	#end define
 
@@ -1183,7 +1176,6 @@ class MyTonCore:
 	#end define
 
 	def GetValidatorWallet(self):
-		self.local.add_log("start GetValidatorWallet function", "debug")
 		wallet_name = self.local.db.get("validatorWalletName")
 		if wallet_name is None:
 			raise Exception("Validator wallet not configured: validatorWalletName not set")
@@ -1667,7 +1659,6 @@ class MyTonCore:
 		return hashlib.sha256(pseudohash_bytes).hexdigest()
 
 	def GetOffers(self):
-		self.local.add_log("start GetOffers function", "debug")
 		fullConfigAddr = self.GetFullConfigAddr()
 		# Get raw data
 		cmd = "runmethodfull {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
@@ -1740,7 +1731,6 @@ class MyTonCore:
 		#end if
 
 		# Get raw data
-		self.local.add_log("start GetComplaints function", "debug")
 		cmd = "runmethodfull {fullElectorAddr} list_complaints {electionId}".format(fullElectorAddr=fullElectorAddr, electionId=electionId)
 		result = self.liteClient.run(cmd)
 		rawComplaints = lc_result_to_list(result)
@@ -1846,7 +1836,6 @@ class MyTonCore:
 	#end define
 
 	def GetComplaintsNumber(self):
-		self.local.add_log("start GetComplaintsNumber function", "debug")
 		result = dict()
 		complaints = self.GetComplaints()
 		if complaints is None:
@@ -2188,7 +2177,6 @@ class MyTonCore:
 	#end define
 
 	def GetOffersNumber(self):
-		self.local.add_log("start GetOffersNumber function", "debug")
 		result = dict()
 		offers = self.GetOffers()
 		saveOffers = self.GetSaveOffers()
@@ -2214,7 +2202,6 @@ class MyTonCore:
 			if adnlAddr == searchAdnlAddr:
 				return index
 			index += 1
-		self.local.add_log("GetValidatorIndex warning: index not found.", "warning")
 		return -1
 	#end define
 
@@ -2225,7 +2212,6 @@ class MyTonCore:
 	#end define
 
 	def GetDbSize(self, exceptions="log"):
-		self.local.add_log("start GetDbSize function", "debug")
 		exceptions = exceptions.split()
 		totalSize = 0
 		path = "/var/ton-work/"
@@ -2529,7 +2515,7 @@ class MyTonCore:
 		return bounceable
 	#en define
 
-	def GetStatistics(self, name: str, statistics: dict[str, list[int]] | None = None) -> list[int] | None:
+	def GetStatistics(self, name: str, statistics: dict[str, list[int]] | None = None) -> list[int] | dict[str, list[int]] | None:
 		if statistics is None:
 			statistics = self.local.db.get("statistics")
 		if statistics:

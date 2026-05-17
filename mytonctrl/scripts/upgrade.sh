@@ -91,6 +91,13 @@ rm -rf .ninja_*
 cp -r ${tmp_bin_dir}/${repo}/. .
 systemctl restart validator
 
-# Конец
 echo -e "${COLOR}[1/1]${ENDC} TON components update completed"
+
+# Patch wrappers
+for wrapper in /usr/bin/mytonctrl /usr/bin/fift /usr/bin/lite-client /usr/bin/validator-console; do
+		if [ -f "$wrapper" ]; then
+			sed -i 's| \$@$| "$@"|' "$wrapper"
+		fi
+done
+
 exit 0

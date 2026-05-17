@@ -1,6 +1,7 @@
 # pyright: strict
 
 from __future__ import annotations
+import traceback
 import os
 import sys
 import readline
@@ -27,15 +28,11 @@ class MyPyConsole:
     GREEN = "\033[92m"
     ENDC = "\033[0m"
 
-    def __init__(self, local: MyPyClass):
-        self.debug: bool = False
-        self.name: str = "console"
+    def __init__(self, local: MyPyClass, name: str = "console", debug: bool = False):
+        self.debug: bool = debug
+        self.name: str = name
         self.color: str = self.GREEN
         self.unknown_cmd: str = "Unknown command"
-        self.hello_text: str = (
-            "Welcome to the console. Enter 'help' to display the help menu."
-        )
-        self.start_function: Callable[[], None] | None = None
         self.menu_items: list[MyPyConsoleItem] = []
         self.history: deque[str] = deque(maxlen=100)
         self.local: MyPyClass = local
@@ -81,6 +78,9 @@ class MyPyConsole:
     def get_cmd_from_user(self):
         result = self.user_worker()
         self.add_history_item(result)
+        self.run_cmd(result)
+
+    def run_cmd(self, result: str) -> bool:
         result_list = result.split(" ")
         result_list = list(filter(None, result_list))
         cmd = None
@@ -88,22 +88,27 @@ class MyPyConsole:
             cmd = result_list[0]
         args = result_list[1:]
         for item in self.menu_items:
+            suc = True
             if cmd == item.cmd:
                 if self.debug:
                     item.func(args)
                 else:
-                    self._try(item.func, args)
+                    suc = self._try(item.func, args)
                 print()
-                return
+                return suc
         print(self.unknown_cmd)
+        return False
 
-    def _try(self, func: CallableFunc, args: list[str]):
+    def _try(self, func: CallableFunc, args: list[str]) -> bool:
         try:
             func(args)
+            return True
         except Exception as err:
+            traceback.print_exc()
             print(
                 "{RED}Error: {err}{ENDC}".format(RED=self.RED, ENDC=self.ENDC, err=err)
             )
+            return False
 
     def help(self, _: list[str]):
         index_list: list[int] = []
@@ -130,9 +135,6 @@ class MyPyConsole:
         self.run()
 
     def run(self):
-        print(self.hello_text)
-        if self.start_function:
-            self.start_function()
         try:
             self.history.extend(
                 self.local.db.get("console_history", [])

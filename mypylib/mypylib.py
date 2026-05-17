@@ -17,8 +17,6 @@ import subprocess
 import datetime as date_time_library
 from types import FrameType
 from typing import Any, Callable, Literal, Mapping, Sequence
-from urllib.request import urlopen
-from urllib.error import URLError
 
 INFO = "info"
 WARNING = "warning"
@@ -76,6 +74,7 @@ class bcolors:
 	bold = "\033[1m"
 	underline = "\033[4m"
 	default = "\033[39m"
+	dim = "\033[2m"
 
 	DEBUG = magenta
 	INFO = blue
@@ -138,7 +137,7 @@ class bcolors:
 		return text
 
 	colors = {"red": red, "green": green, "yellow": yellow, "blue": blue, "magenta": magenta, "cyan": cyan,
-			  "endc": endc, "bold": bold, "underline": underline}
+			  "endc": endc, "bold": bold, "underline": underline, "dim": dim}
 
 
 class MyPyClass:
@@ -196,7 +195,7 @@ class MyPyClass:
 		self.thread_count_old = threading.active_count()
 
 		# Logging the start of the program
-		self.add_log(f"Start program `{self.my_path}`")
+		self.add_log(f"Start program `{self.my_path}`", "debug")
 
 	def set_default_config(self):
 		if self.db.config.logLevel is None:
@@ -615,12 +614,6 @@ def parse(text: str | None, search: str | None, search2: str | None = None) -> s
 		text = text[:text.find(search2)]
 	return text
 
-def get_request(url: str) -> str:
-	link = urlopen(url)
-	data = link.read()
-	text = data.decode("utf-8")
-	return text
-
 def b2mb(item: int | str) -> float:
 	return round(int(item) / 1000 / 1000, 2)
 
@@ -935,92 +928,3 @@ def get_service_pid(name: str) -> int | None:
 		return None
 	pid = int(pid_text)
 	return pid
-
-def get_git_hash(git_path: str, short: bool = False) -> str | None:
-	args = ["git", "rev-parse", "HEAD"]
-	if short is True:
-		args.insert(2, '--short')
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path,
-							timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(err) > 0:
-		return
-	buff = output.split('\n')
-	return buff[0]
-
-def get_git_url(git_path: str) -> str | None:
-	args = ["git", "remote", "-v"]
-	output = ""
-	try:
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-								cwd=git_path, timeout=3)
-		output = process.stdout.decode("utf-8")
-		err = process.stderr.decode("utf-8")
-	except Exception as ex:
-		err = str(ex)
-	if len(err) > 0:
-		return None
-	lines = output.split('\n')
-	url = None
-	for line in lines:
-		if "origin" in line:
-			buff = line.split()
-			url = buff[1]
-	return url
-
-def get_git_author_and_repo(git_path: str) -> tuple[str | None, str | None]:
-	author = None
-	repo = None
-	url = get_git_url(git_path)
-	if url is not None:
-		buff = url.split('/')
-		if len(buff) == 5:
-			author = buff[3]
-			repo = buff[4]
-			repo = repo.split('.')
-			repo = repo[0]
-	return author, repo
-
-def get_git_last_remote_commit(git_path: str, branch: str = "master") -> str | None:
-	author, repo = get_git_author_and_repo(git_path)
-	if author is None or repo is None:
-		return
-	url = f"https://api.github.com/repos/{author}/{repo}/branches/{branch}"
-	sha = None
-	try:
-		text = get_request(url)
-		data = json.loads(text)
-		sha = data["commit"]["sha"]
-	except URLError:
-		pass
-	return sha
-
-def get_git_branch(git_path: str) -> str | None:
-	args = ["git", "branch", "-v"]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path,
-							timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(err) > 0:
-		return None
-	lines = output.split('\n')
-	branch = None
-	for line in lines:
-		if "*" in line:
-			buff = line.split()
-			branch = buff[1]
-	return branch
-
-def check_git_update(git_path: str) -> bool | None:
-	branch = get_git_branch(git_path)
-	if branch is None:
-		return None
-	new_hash = get_git_last_remote_commit(git_path, branch)
-	old_hash = get_git_hash(git_path)
-	result = False
-	if old_hash != new_hash:
-		result = True
-	if old_hash is None or new_hash is None:
-		result = None
-	return result

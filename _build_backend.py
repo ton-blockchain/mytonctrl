@@ -12,7 +12,7 @@ class GitCommitError(Exception):
 
 
 def _write_version():
-    commit_path = _PROJECT_ROOT / "mytonctrl" / "_commit.py"
+    commit_path = _PROJECT_ROOT / "mytonctrl" / "_version.py"
     try:
         git_root = Path(
             subprocess.check_output(
@@ -31,11 +31,22 @@ def _write_version():
             text=True,
         ).strip()
         commit = f'__commit__ = "{sha}"'
+        try:
+            tag = subprocess.check_output(
+                ["git", "describe", "--tags", "--abbrev=0", "--dirty"],
+                cwd=_PROJECT_ROOT,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            ).strip()
+            version = f'__version__ = {tag!r}'
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            version = '__version__ = "unknown"'
     except (subprocess.CalledProcessError, FileNotFoundError, GitCommitError):
         if commit_path.exists():
             return
         commit = '__commit__ = "unknown"'
-    commit_path.write_text(f"{commit}\n")
+        version = '__version__ = "unknown"'
+    commit_path.write_text(f"{commit}\n{version}\n")
 
 
 def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
