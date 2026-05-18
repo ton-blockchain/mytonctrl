@@ -180,6 +180,8 @@ class WarningChecker:
             color_print(self.local.translate("vport_error"))
 
     def check_mytonctrl_update(self):
+        if self.ton.local.db.get("updateCheckDisabled"):
+            return
         git_path = "/usr/src/mytonctrl"
         if not os.path.exists(git_path):
             return
