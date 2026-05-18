@@ -7,7 +7,7 @@ import requests
 
 from mypylib.mypylib import color_print, print_table, color_text, timeago, bcolors
 from modules.module import MtcModule
-from mytoncore.utils import raw_addr_to_b64
+from mytoncore.utils import raw_addr_to_b64, tlb_to_json
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
 
 
@@ -222,7 +222,7 @@ class UtilitiesModule(MtcModule):
 
         buff = lines[start:end]
         text = "".join(buff)
-        newData = self.ton.Tlb2Json(text)
+        newData = tlb_to_json(text)
         newFileName = self.ton.tempDir + "data1diff"
         file = open(newFileName, 'wt')
         newText = json.dumps(newData, indent=2)

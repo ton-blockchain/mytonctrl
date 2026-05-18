@@ -173,3 +173,18 @@ class Config15(TypedDict):
     electionsStartBefore: int
     electionsEndBefore: int
     stakeHeldFor: int
+
+
+class Config17(TypedDict):
+    minStake: float
+    maxStake: float
+    maxStakeFactor: int
+
+
+class ElectionsParticipant(TypedDict):
+    adnlAddr: str
+    pubkey: str
+    stake: float
+    maxFactor: float
+    walletAddr: str
+

@@ -17,7 +17,7 @@ from fastcrc import crc16
 from modules import MODES
 from mytoncore.stats_collector import StatsCollector
 from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path, raw_addr_to_b64, lc_result_to_list, \
-	nano_ton_to_ton
+	nano_ton_to_ton, tlb_to_json
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
 	Wallet,
@@ -25,7 +25,7 @@ from mytoncore.models import (
 	Block,
 	Transaction,
 	Message,
-	Pool, Config12, Config15,
+	Pool, Config12, Config15, ElectionsParticipant, Config17,
 )
 
 from mypylib.mypylib import (
@@ -697,7 +697,7 @@ class MyTonCore:
 		result = self.liteClient.run(cmd)
 		start = result.find("ConfigParam")
 		text = result[start:]
-		data = self.Tlb2Json(text)
+		data = tlb_to_json(text)
 
 		# Set buffer
 		self.SetFunctionBuffer(bname, data)
@@ -706,22 +706,20 @@ class MyTonCore:
 
 	def GetConfig15(self) -> Config15:
 		config = self.GetConfig(15)
-		config15 = dict()
-		config15["validatorsElectedFor"] = config["validators_elected_for"]
-		config15["electionsStartBefore"] = config["elections_start_before"]
-		config15["electionsEndBefore"] = config["elections_end_before"]
-		config15["stakeHeldFor"] = config["stake_held_for"]
+		config15 = {
+			"validatorsElectedFor": config["validators_elected_for"],
+			"electionsStartBefore": config["elections_start_before"],
+			"electionsEndBefore": config["elections_end_before"],
+			"stakeHeldFor": config["stake_held_for"]
+		}
 		return config15
-	#end define
 
-	def GetConfig17(self):
+	def GetConfig17(self) -> Config17:
 		config = self.GetConfig(17)
-		config17 = dict()
-		config17["minStake"] = ng2g(config["min_stake"]["amount"]["value"])
-		config17["maxStake"] = ng2g(config["max_stake"]["amount"]["value"])
-		config17["maxStakeFactor"] = config["max_stake_factor"]
+		config17 = {"minStake": ng2g(config["min_stake"]["amount"]["value"]),
+					"maxStake": ng2g(config["max_stake"]["amount"]["value"]),
+					"maxStakeFactor": config["max_stake_factor"]}
 		return config17
-	#end define
 
 	def GetConfig32(self):
 		# Get buffer
@@ -1329,7 +1327,7 @@ class MyTonCore:
 	def clear_tmp(self):
 		self.clear_dir(self.tempDir)
 
-	def make_backup(self, election_id: str):
+	def make_backup(self, election_id: int):
 		if not self.local.db.get("auto_backup"):
 			return
 		from modules.backups import BackupModule
@@ -1573,7 +1571,7 @@ class MyTonCore:
 		raise Exception("GetValidatorKey error: validator key not found. Are you sure you are a validator?")
 	#end define
 
-	def GetElectionEntries(self, past: bool = False):
+	def GetElectionEntries(self, past: bool = False) -> dict[str, ElectionsParticipant] | None:
 		# Get buffer
 		bname = "electionEntries" + str(past)
 		buff = self.GetFunctionBuffer(bname)
@@ -1617,8 +1615,8 @@ class MyTonCore:
 			item["pubkey"] = Dec2HexAddr(entry[0])
 			item["stake"] = ng2g(entry[1][0])
 			item["maxFactor"] = round(entry[1][1] / 655.36) / 100.0
-			item["walletAddr_hex"] = Dec2HexAddr(entry[1][2])
-			item["walletAddr"] = raw_addr_to_b64("-1:" + item["walletAddr_hex"])
+			wallet_addr_hash_part = Dec2HexAddr(entry[1][2])
+			item["walletAddr"] = raw_addr_to_b64("-1:" + wallet_addr_hash_part)
 			entries[adnlAddr] = item
 		#end for
 
@@ -1707,7 +1705,7 @@ class MyTonCore:
 		return offers
 	#end define
 
-	def GetComplaints(self, electionId=None, past=False):
+	def GetComplaints(self, electionId: int | None = None, past: bool = False) -> dict[str, typing.Any] | None:
 		# Get buffer
 		bname = "complaints" + str(past)
 		buff = self.GetFunctionBuffer(bname)
@@ -1718,13 +1716,17 @@ class MyTonCore:
 		# Calculate complaints time
 		complaints = dict()
 		fullElectorAddr = self.GetFullElectorAddr()
+		end = None
 		if electionId is None:
 			config32 = self.GetConfig32()
-			electionId = config32.get("startWorkTime")
-			end = config32.get("endWorkTime")
-			buff = end - electionId
+			if config32 is None:
+				raise Exception("No election id provided and could not get 32 config")
+			electionId = config32["startWorkTime"]
+			end = config32["endWorkTime"]
 		if past:
-			electionId = electionId - buff
+			if end is None:
+				raise Exception("Cannot compute past election id")
+			electionId = electionId - (end - electionId)
 			saveComplaints = self.GetSaveComplaints()
 			complaints = saveComplaints.get(str(electionId))
 			return complaints
@@ -1792,9 +1794,8 @@ class MyTonCore:
 
 		# Save complaints
 		if len(complaints) > 0:
-			electionId = str(electionId)
 			saveComplaints = self.GetSaveComplaints()
-			saveComplaints[electionId] = complaints
+			saveComplaints[str(electionId)] = complaints
 		return complaints
 	#end define
 
@@ -2132,6 +2133,8 @@ class MyTonCore:
 		self.local.add_log("start CheckValidators function", "debug")
 		electionId = start
 		complaints = self.GetComplaints(electionId)
+		if complaints is None:
+			raise Exception(f"Failed to get complaints for round {start}-{end}")
 		valid_complaints = self.get_valid_complaints(complaints, electionId)
 		voted_complaints = self.GetVotedComplaints(complaints)
 		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
@@ -2634,79 +2637,6 @@ class MyTonCore:
 	def set_initial_sync_off(self):
 		self.local.db.pop('initialSync', None)
 		self.local.save()
-
-	def Tlb2Json(self, text: str):
-		# Заменить скобки
-		start = 0
-		end = len(text)
-		if '=' in text:
-			start = text.find('=')+1
-		if text[start:].startswith(' x{'):  # param has no tlb scheme, return cell value
-			end = text.rfind('}')+1
-			return {'_': text[start:end].strip()}
-		if "x{" in text:
-			end = text.find("x{")
-		text = text[start:end]
-		text = text.strip()
-		text = text.replace('(', '{')
-		text = text.replace(')', '}')
-
-		# Добавить кавычки к строкам (1 этап)
-		buff = text
-		buff = buff.replace('\r', ' ')
-		buff = buff.replace('\n', ' ')
-		buff = buff.replace('\t', ' ')
-		buff = buff.replace('{', ' ')
-		buff = buff.replace('}', ' ')
-		buff = buff.replace(':', ' ')
-
-		# Добавить кавычки к строкам (2 этап)
-		buff2 = ""
-		itemList = list()
-		for item in list(buff):
-			if item == ' ':
-				if len(buff2) > 0:
-					itemList.append(buff2)
-					buff2 = ""
-				itemList.append(item)
-			else:
-				buff2 += item
-		#end for
-
-		# Добавить кавычки к строкам (3 этап)
-		i = 0
-		for item in itemList:
-			l = len(item)
-			if item == ' ':
-				pass
-			elif item.isdigit() is False:
-				c = '"'
-				item2 = c + item + c
-				text = text[:i] + item2 + text[i+l:]
-				i += 2
-			#end if
-			i += l
-		#end for
-
-		# Обозначить тип объекта
-		text = text.replace('{"', '{"_":"')
-
-		# Расставить запятые
-		while True:
-			try:
-				data = json.loads(text)
-				break
-			except json.JSONDecodeError as err:
-				if "Expecting ',' delimiter" in err.msg:
-					text = text[:err.pos] + ',' + text[err.pos:]
-				elif "Expecting property name enclosed in double quotes" in err.msg:
-					text = text[:err.pos] + '"_":' + text[err.pos:]
-				else:
-					raise err
-		#end while
-
-		return data
-	#end define
 
 	def GetValidatorsWalletsList(self):
 		result = list()
