@@ -995,6 +995,8 @@ class GeneralModule(MtcModule):
         if tmp_parent_dir is not None:
             tmp_parent_dir = os.path.expanduser(tmp_parent_dir)
             os.makedirs(tmp_parent_dir, exist_ok=True)
+        else:
+            tmp_parent_dir = '/var/ton-work'
 
         with tempfile.TemporaryDirectory(dir=tmp_parent_dir) as tmp_dir:
             tmp_dir = Path(tmp_dir)

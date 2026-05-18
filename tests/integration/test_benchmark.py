@@ -58,6 +58,22 @@ def test_benchmark_runs(cli, monkeypatch, tmp_path):
     monkeypatch.setattr(shutil, "copytree", lambda src, dst: None)
     monkeypatch.setattr(shutil, "copy", lambda src, dst: None)
 
+    temp_parent_dirs = []
+    benchmark_tmp_dir = tmp_path / "benchmark"
+    benchmark_tmp_dir.mkdir()
+
+    class FakeTemporaryDirectory:
+        def __init__(self, dir=None):
+            temp_parent_dirs.append(dir)
+
+        def __enter__(self):
+            return str(benchmark_tmp_dir)
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+    monkeypatch.setattr(general_module.tempfile, "TemporaryDirectory", FakeTemporaryDirectory)
+
     # mock Path.mkdir and Path.glob used for tl schemes
     monkeypatch.setattr(Path, "mkdir", lambda *a, **kw: None)
 
@@ -76,6 +92,7 @@ def test_benchmark_runs(cli, monkeypatch, tmp_path):
 
     cli.execute("benchmark --nodes 4 --tps 1000", no_color=True)
 
+    assert temp_parent_dirs == ["/var/ton-work"]
     assert len(calls) == 4
 
     # uv init
