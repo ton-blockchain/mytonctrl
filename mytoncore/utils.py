@@ -257,3 +257,71 @@ def lc_result_to_list(text: str) -> T:
 
     data = json.loads(output)
     return data
+
+
+def tlb_to_json(text: str) -> dict[str, Any]:
+    # Replace brackets
+    start = 0
+    end = len(text)
+    if '=' in text:
+        start = text.find('=') + 1
+    if text[start:].startswith(' x{'):  # param has no tlb scheme, return cell value
+        end = text.rfind('}') + 1
+        return {'_': text[start:end].strip()}
+    if "x{" in text:
+        end = text.find("x{")
+    text = text[start:end]
+    text = text.strip()
+    text = text.replace('(', '{')
+    text = text.replace(')', '}')
+
+    # Add " to strings (step 1)
+    buff = text
+    buff = buff.replace('\r', ' ')
+    buff = buff.replace('\n', ' ')
+    buff = buff.replace('\t', ' ')
+    buff = buff.replace('{', ' ')
+    buff = buff.replace('}', ' ')
+    buff = buff.replace(':', ' ')
+
+    # Add " to strings (step 2)
+    buff2 = ""
+    item_list: list[str] = []
+    for item in list(buff):
+        if item == ' ':
+            if len(buff2) > 0:
+                item_list.append(buff2)
+                buff2 = ""
+            item_list.append(item)
+        else:
+            buff2 += item
+
+    # Add " to strings (step 3)
+    i = 0
+    for item in item_list:
+        l = len(item)
+        if item == ' ':
+            pass
+        elif item.isdigit() is False:
+            c = '"'
+            item2 = c + item + c
+            text = text[:i] + item2 + text[i + l:]
+            i += 2
+        i += l
+
+    # set object type
+    text = text.replace('{"', '{"_":"')
+
+    # set comas
+    while True:
+        try:
+            data = json.loads(text)
+            break
+        except json.JSONDecodeError as err:
+            if "Expecting ',' delimiter" in err.msg:
+                text = text[:err.pos] + ',' + text[err.pos:]
+            elif "Expecting property name enclosed in double quotes" in err.msg:
+                text = text[:err.pos] + '"_":' + text[err.pos:]
+            else:
+                raise err
+    return data

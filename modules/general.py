@@ -47,7 +47,7 @@ from mytonctrl.utils import (
     pop_user_from_args,
     get_clang_major_version, pop_arg_from_args,
 )
-from mytoncore.models import Config15
+from mytoncore.models import Config15, Config17
 from modules.module import MtcModule
 
 
@@ -573,7 +573,7 @@ class GeneralModule(MtcModule):
         full_config_addr: str,
         full_elector_addr: str,
         config15: Config15,
-        config17: dict[str, int],
+        config17: Config17,
     ):
         color_print(self.local.translate("ton_config_head"))
 
@@ -995,6 +995,8 @@ class GeneralModule(MtcModule):
         if tmp_parent_dir is not None:
             tmp_parent_dir = os.path.expanduser(tmp_parent_dir)
             os.makedirs(tmp_parent_dir, exist_ok=True)
+        else:
+            tmp_parent_dir = '/var/ton-work'
 
         with tempfile.TemporaryDirectory(dir=tmp_parent_dir) as tmp_dir:
             tmp_dir = Path(tmp_dir)
