@@ -6,6 +6,7 @@ import shutil
 import sys
 import time
 import json
+import fcntl
 import signal
 import psutil
 import struct
@@ -15,6 +16,7 @@ import threading
 import traceback
 import subprocess
 import datetime as date_time_library
+from contextlib import contextmanager
 from types import FrameType
 from typing import Any, Callable, Literal, Mapping, Sequence
 
@@ -410,11 +412,8 @@ class MyPyClass:
 	def write_db(self, data: Mapping[str, Any]) -> None:
 		db_path = os.path.realpath(self.db_path)
 		text = json.dumps(data, indent=4)
-		self.lock_file(db_path)
-		try:
+		with self.lock_file(db_path):
 			self._write_file_atomic(db_path, text)
-		finally:
-			self.unlock_file(db_path)
 
 	def _write_file_atomic(self, path: str, text: str = "") -> None:
 		tmp_path = f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
@@ -430,22 +429,23 @@ class MyPyClass:
 				except OSError:
 					pass
 
-	def lock_file(self, path: str) -> None:
-		pid_path = path + ".lock"
-		for i in range(300):
-			if os.path.isfile(pid_path):
-				time.sleep(0.01)
-			else:
-				self.write_file(pid_path)
-				return
-		raise Exception("lock_file error: time out.")
-
-	def unlock_file(self, path: str) -> None:
-		pid_path = path + ".lock"
+	@contextmanager
+	def lock_file(self, path: str, timeout: float = 3.0):
+		lock_path = path + ".lock"
+		fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
 		try:
-			os.remove(pid_path)
-		except Exception:
-			print("Wow. You are faster than me")
+			deadline = time.monotonic() + timeout
+			while True:
+				try:
+					fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+					break
+				except BlockingIOError:
+					if time.monotonic() >= deadline:
+						raise Exception(f"lock_file error: time out: {lock_path}")
+					time.sleep(0.01)
+			yield
+		finally:
+			os.close(fd)
 
 	def merge_three_dicts(self, local_data, file_data, old_file_data):
 		if (id(local_data) == id(file_data) or
