@@ -33,7 +33,7 @@ def test_benchmark_uv_not_installed_install(cli, monkeypatch):
 
     def fake_subprocess_run(args, **kwargs):
         calls.append([str(a) for a in args])
-        if args[:2] == ["sh", "/tmp/uv_install.sh"]:
+        if args[0] == "sh":
             installed["uv"] = True
         return subprocess.CompletedProcess(args, 0)
 
@@ -42,8 +42,9 @@ def test_benchmark_uv_not_installed_install(cli, monkeypatch):
     monkeypatch.setattr(general_module, "get_service_status", lambda name: True)
 
     output = cli.execute("benchmark", no_color=True)
-    assert calls[0] == ["curl", "-LsSf", "https://astral.sh/uv/install.sh", "-o", "/tmp/uv_install.sh"]
-    assert calls[1] == ["sh", "/tmp/uv_install.sh"]
+    assert calls[0][:4] == ["curl", "-LsSf", "https://astral.sh/uv/install.sh", "-o"]
+    assert calls[0][4] != "/tmp/uv_install.sh"
+    assert calls[1] == ["sh", calls[0][4]]
 
 
 def test_benchmark_validator_running(cli, monkeypatch):

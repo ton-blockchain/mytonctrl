@@ -964,17 +964,18 @@ class GeneralModule(MtcModule):
         if shutil.which("uv") is None:
             answer = input("uv is not installed. Install it? [y/n] ").strip().lower()
             if answer == "y":
-                subprocess.run(
-                    [
-                        "curl",
-                        "-LsSf",
-                        "https://astral.sh/uv/install.sh",
-                        "-o",
-                        "/tmp/uv_install.sh",
-                    ],
-                    check=True,
-                )
-                subprocess.run(["sh", "/tmp/uv_install.sh"], check=True)
+                with tempfile.NamedTemporaryFile(prefix="uv_install_", suffix=".sh") as installer:
+                    subprocess.run(
+                        [
+                            "curl",
+                            "-LsSf",
+                            "https://astral.sh/uv/install.sh",
+                            "-o",
+                            installer.name,
+                        ],
+                        check=True,
+                    )
+                    subprocess.run(["sh", installer.name], check=True)
                 uv_local_bin = os.path.expanduser("~/.local/bin")
                 if uv_local_bin not in os.environ.get("PATH", ""):
                     os.environ["PATH"] = (
