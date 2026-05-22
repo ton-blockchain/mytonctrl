@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+import stat
 from pathlib import Path
 from unittest.mock import MagicMock
 from modules.general import GeneralModule
@@ -53,10 +54,41 @@ def test_benchmark_validator_running(cli, monkeypatch):
     assert "validator service is running" in output
 
 
+def test_benchmark_tmp_rejects_symlink(cli, monkeypatch):
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/uv" if name == "uv" else None)
+    monkeypatch.setattr(general_module, "get_service_status", lambda name: False)
+
+    class FakeStat:
+        st_mode = stat.S_IFLNK | 0o777
+
+    monkeypatch.setattr(general_module.os, "lstat", lambda path: FakeStat())
+
+    root_calls = []
+    monkeypatch.setattr(general_module, "run_as_root", lambda args: root_calls.append(args) or 0)
+
+    output = cli.execute("benchmark", no_color=True)
+
+    assert "benchmark temp path is not a directory" in output
+    assert root_calls == []
+
+
 def test_benchmark_runs(cli, monkeypatch, tmp_path):
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/uv" if name == "uv" else None)
     monkeypatch.setattr(shutil, "copytree", lambda src, dst: None)
     monkeypatch.setattr(shutil, "copy", lambda src, dst: None)
+
+    def fake_lstat(path):
+        raise FileNotFoundError
+
+    monkeypatch.setattr(general_module.os, "lstat", fake_lstat)
+
+    root_calls = []
+
+    def fake_run_as_root(args):
+        root_calls.append([str(arg) for arg in args])
+        return 0
+
+    monkeypatch.setattr(general_module, "run_as_root", fake_run_as_root)
 
     temp_parent_dirs = []
     benchmark_tmp_dir = tmp_path / "benchmark"
@@ -92,7 +124,8 @@ def test_benchmark_runs(cli, monkeypatch, tmp_path):
 
     cli.execute("benchmark --nodes 4 --tps 1000", no_color=True)
 
-    assert temp_parent_dirs == ["/var/ton-work"]
+    assert root_calls == [["mkdir", "-m", "777", "/var/ton-work/tmp"]]
+    assert temp_parent_dirs == ["/var/ton-work/tmp"]
     assert len(calls) == 4
 
     # uv init

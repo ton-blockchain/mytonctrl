@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import stat
 import tempfile
 from pathlib import Path
 import json
@@ -996,7 +997,19 @@ class GeneralModule(MtcModule):
             tmp_parent_dir = os.path.expanduser(tmp_parent_dir)
             os.makedirs(tmp_parent_dir, exist_ok=True)
         else:
-            tmp_parent_dir = '/var/ton-work'
+            tmp_parent_dir = "/var/ton-work/tmp"
+            try:
+                st = os.lstat(tmp_parent_dir)
+            except FileNotFoundError:
+                self.local.add_log(f"Creating cache dir for the benchmark: {tmp_parent_dir}")
+                exit_code = run_as_root(["mkdir", "-m", "777", tmp_parent_dir])
+                if exit_code != 0:
+                    color_print("{red}Error: failed to create benchmark temp directory{endc}")
+                    return
+            else:
+                if stat.S_ISLNK(st.st_mode) or not stat.S_ISDIR(st.st_mode):
+                    color_print("{red}Error: benchmark temp path is not a directory{endc}")
+                    return
 
         with tempfile.TemporaryDirectory(dir=tmp_parent_dir) as tmp_dir:
             tmp_dir = Path(tmp_dir)
