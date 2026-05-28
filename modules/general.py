@@ -776,11 +776,8 @@ class GeneralModule(MtcModule):
             )
             return
 
-        self.local.buffer.ton_storage = Dict()
-        self.local.buffer.ton_storage.api_port = api_port
-        self.local.buffer.global_config_path = "/usr/bin/ton/global.config.json"
         download_blocks(
-            self.local, str(path.absolute()), from_block, to_block, only_master
+            self.local, str(path.absolute()), api_port, self.ton.IsTestnet(), from_block, to_block, only_master
         )
 
     def set_quic_port(self, args: list[str]):

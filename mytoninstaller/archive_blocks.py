@@ -11,12 +11,14 @@ import time
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from mypylib import MyPyClass
+
 from mytoninstaller.utils import is_testnet
 
 
-def get_block_from_toncenter(local, workchain: int, shard: int = -9223372036854775808, seqno: int = None, utime: int = None):
+def get_block_from_toncenter(local: MyPyClass, global_config_path: str, workchain: int, shard: int = -9223372036854775808, seqno: int | None = None, utime: int | None = None):
     url = f'https://toncenter.com/api/v2/lookupBlock?workchain={workchain}&shard={shard}'
-    if is_testnet(local):
+    if is_testnet(global_config_path):
         url = url.replace('toncenter.com', 'testnet.toncenter.com')
     if seqno:
         url += f'&seqno={seqno}'
@@ -34,16 +36,16 @@ def get_block_from_toncenter(local, workchain: int, shard: int = -92233720368547
     return data['result']
 
 
-def download_blocks_bag(local, bag: dict, downloads_path: str):
+def download_blocks_bag(local, bag: dict, downloads_path: str, api_port: int):
     local.add_log(f"Downloading blocks from {bag['from']} to {bag['to']}", "info")
-    if not download_bag(local, bag['bag'], downloads_path):
+    if not download_bag(local, bag['bag'], downloads_path, api_port):
         local.add_log("Error downloading archive bag", "error")
         return
 
 
-def download_master_blocks_bag(local, bag: dict, downloads_path: str):
+def download_master_blocks_bag(local, bag: dict, downloads_path: str, api_port: int):
     local.add_log(f"Downloading master blocks from {bag['from']} to {bag['to']}", "info")
-    if not download_bag(local, bag['bag'], downloads_path, download_all=False, download_file=lambda f: ':' not in f['name']):
+    if not download_bag(local, bag['bag'], downloads_path, api_port, download_all=False, download_file=lambda f: ':' not in f['name']):
         local.add_log("Error downloading master bag", "error")
         return
 
@@ -58,9 +60,9 @@ def do_request(local, method: str, url: str, timeout: int = 3, **kwargs) -> dict
     raise Exception(f"Failed to make {method} request for {url}")
 
 
-def download_bag(local, bag_id: str, downloads_path: str, download_all: bool = True, download_file: typing.Callable = None):
+def download_bag(local, bag_id: str, downloads_path: str, api_port: int, download_all: bool = True, download_file: typing.Callable | None = None):
     indexes = []
-    local_ts_url = f"http://127.0.0.1:{local.buffer.ton_storage.api_port}"
+    local_ts_url = f"http://127.0.0.1:{api_port}"
 
     resp = do_request(local, 'POST', local_ts_url + '/api/v1/add', json={'bag_id': bag_id, 'download_all': download_all, 'path': downloads_path})
     if not resp['ok']:
@@ -95,36 +97,36 @@ def download_bag(local, bag_id: str, downloads_path: str, download_all: bool = T
     return True
 
 
-def update_init_block(local, seqno: int):
-    local.add_log(f"Editing init block in {local.buffer.global_config_path}", "info")
-    with open(local.buffer.global_config_path, 'r') as f:
+def update_init_block(local: MyPyClass, seqno: int, global_config_path: str):
+    local.add_log(f"Editing init block in {global_config_path}", "info")
+    with open(global_config_path, 'r') as f:
         config = json.load(f)
     if seqno != 0:
-        data = get_block_from_toncenter(local, workchain=-1, seqno=seqno)
+        data = get_block_from_toncenter(local, global_config_path, workchain=-1, seqno=seqno)
     else:
         data = config['validator']['zero_state']
     config['validator']['init_block']['seqno'] = seqno
     config['validator']['init_block']['file_hash'] = data['file_hash']
     config['validator']['init_block']['root_hash'] = data['root_hash']
-    with open(local.buffer.global_config_path, 'w') as f:
+    with open(global_config_path, 'w') as f:
         f.write(json.dumps(config, indent=4))
     return True
 
 
-def parse_block_value(local, block: str):
+def parse_block_value(local: MyPyClass, block: str, global_config_path: str):
     if block is None:
         return None
     if block.isdigit():
         return int(block)
     dt = datetime.datetime.strptime(block, "%Y-%m-%d")
     ts = int(dt.timestamp())
-    data = get_block_from_toncenter(local, workchain=-1, utime=ts)
+    data = get_block_from_toncenter(local, global_config_path, workchain=-1, utime=ts)
     return int(data['seqno'])
 
 
-def download_blocks(local, downloads_path: str, block_from: int, block_to: int | None = None, only_master: bool = False):
+def download_blocks(local: MyPyClass, downloads_path: str, api_port: int, testnet: bool, block_from: int, block_to: int | None = None, only_master: bool = False):
     url = 'https://archival-dump.ton.org/index/mainnet.json'
-    if is_testnet(local):
+    if testnet:
         url = 'https://archival-dump.ton.org/index/testnet.json'
     block_bags = []
     blocks_config = requests.get(url, timeout=3).json()
@@ -144,9 +146,9 @@ def download_blocks(local, downloads_path: str, block_from: int, block_to: int |
     local.add_log(f"Downloading blocks. Rough estimate total blocks size is {int(estimated_size / 2 ** 30)} GB", "info")
     with ThreadPoolExecutor(max_workers=4) as executor:
         if only_master:
-            futures = [executor.submit(download_master_blocks_bag, local, bag, downloads_path) for bag in block_bags]
+            futures = [executor.submit(download_master_blocks_bag, local, bag, downloads_path, api_port) for bag in block_bags]
         else:
-            futures = [executor.submit(download_blocks_bag, local, bag, downloads_path) for bag in block_bags]
+            futures = [executor.submit(download_blocks_bag, local, bag, downloads_path, api_port) for bag in block_bags]
         for future in as_completed(futures):
             try:
                 future.result()
@@ -156,19 +158,15 @@ def download_blocks(local, downloads_path: str, block_from: int, block_to: int |
     local.add_log("Downloading blocks is completed", "info")
 
 
-def run_process_hardforks(local, from_seqno: int):
-    script_path = os.path.join(local.buffer.mtc_src_dir, 'mytoninstaller', 'scripts', 'process_hardforks.py')
+def run_process_hardforks(local: MyPyClass, from_seqno: int, mtc_src_dir: str, global_config_path: str):
+    script_path = os.path.join(mtc_src_dir, 'mytoninstaller', 'scripts', 'process_hardforks.py')
     log_path = "/tmp/process_hardforks_logs.txt"
     log_file = open(log_path, "a")
 
     p = subprocess.Popen([
             "python3", script_path,
             "--from-seqno", str(from_seqno),
-            "--config-path", local.buffer.global_config_path,
-            # "--bin", local.buffer.ton_bin_dir + "validator-engine-console/validator-engine-console",
-            # "--client", local.buffer.keys_dir + "client",
-            # "--server", local.buffer.keys_dir + "server.pub",
-            # "--address", "127.0.0.1:"
+            "--config-path", global_config_path,
         ],
         stdout=log_file,
         stderr=log_file,

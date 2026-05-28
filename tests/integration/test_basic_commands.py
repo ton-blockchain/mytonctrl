@@ -459,32 +459,27 @@ def test_download_archive_blocks(cli, monkeypatch):
     output = cli.execute('download_archive_blocks test/ 1')
 
     assert 'Error' not in output
-    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 1, None, False)
-    assert calls[0].buffer.ton_storage.api_port == 3334
+    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 3334, False, 1, None, False)
 
     output = cli.execute('download_archive_blocks test/ 1 2')
 
     assert 'Error' not in output
-    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 1, 2, False)
-    assert calls[0].buffer.ton_storage.api_port == 3334
+    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 3334, False, 1, 2, False)
 
     output = cli.execute('download_archive_blocks test/ 1 2 --only-master')
 
     assert 'Error' not in output
-    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 1, 2, True)
-    assert calls[0].buffer.ton_storage.api_port == 3334
+    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 3334, False, 1, 2, True)
 
     output = cli.execute('download_archive_blocks 123 test/ 1 2 --only-master')
 
     assert 'Error' not in output
-    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 1, 2, True)
-    assert calls[0].buffer.ton_storage.api_port == 123
+    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 123, False, 1, 2, True)
 
     output = cli.execute('download_archive_blocks 123 /test/ 1')
 
     assert 'Error' not in output
-    assert calls[1:] == ('/test', 1, None, False)
-    assert calls[0].buffer.ton_storage.api_port == 123
+    assert calls[1:] == ('/test', 123, False, 1, None, False)
 
 
 def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):

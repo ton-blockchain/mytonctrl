@@ -59,9 +59,9 @@ def get_ed25519_pubkey(privkey):
 #end define
 
 
-def is_testnet(local):
+def is_testnet(global_config_path: str):
 	testnet_zero_state_root_hash = "gj+B8wb/AmlPk1z1AhVI484rhrUpgSr2oSFIh56VoSg="
-	with open(local.buffer.global_config_path) as f:
+	with open(global_config_path) as f:
 		config = json.load(f)
 	if config['validator']['zero_state']['root_hash'] == testnet_zero_state_root_hash:
 		return True

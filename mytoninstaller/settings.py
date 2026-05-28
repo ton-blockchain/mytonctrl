@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import os.path
 import shutil
@@ -26,36 +28,37 @@ from mytoncore.utils import get_package_resource_path
 from mytonctrl.utils import get_current_user, is_hex
 from mytoninstaller.archive_blocks import run_process_hardforks, parse_block_value, download_bag, update_init_block, \
 	download_blocks_bag, download_master_blocks_bag
+from mytoninstaller.context import InstallerContext
 from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, get_ed25519_pubkey, \
 	is_testnet, disable_service
 from mytoninstaller.config import SetConfig, GetConfig, get_own_ip, backup_config
 from mytoncore.utils import hex2b64
 
 
-def FirstNodeSettings(local):
-	if local.buffer.only_mtc:
+def FirstNodeSettings(local: MyPyClass, ctx: InstallerContext):
+	if ctx.only_mtc:
 		return
 
 	local.add_log("start FirstNodeSettings fuction", "debug")
 
 	# Создать переменные
-	vuser = local.buffer.vuser
-	ton_work_dir = local.buffer.ton_work_dir
-	ton_db_dir = local.buffer.ton_db_dir
-	keys_dir = local.buffer.keys_dir
-	tonLogPath = local.buffer.ton_log_path
-	validatorAppPath = local.buffer.validator_app_path
-	globalConfigPath = local.buffer.global_config_path
-	vconfig_path = local.buffer.vconfig_path
-	vport = local.buffer.vport
+	vuser = ctx.validator_user
+	ton_work_dir = ctx.paths.ton_work_dir
+	ton_db_dir = ctx.paths.ton_db_dir
+	keys_dir = ctx.paths.keys_dir
+	tonLogPath = ctx.paths.ton_log_path
+	validatorAppPath = ctx.paths.validator_app_path
+	globalConfigPath = ctx.paths.global_config_path
+	vconfig_path = ctx.paths.vconfig_path
+	vport = ctx.ports.validator
 
-	if local.buffer.archive_ttl is not None:
-		archive_ttl = int(local.buffer.archive_ttl)
+	if ctx.archive_ttl is not None:
+		archive_ttl = int(ctx.archive_ttl)
 	else:
-		archive_ttl = 2592000 if local.buffer.mode == 'liteserver' else 86400
+		archive_ttl = 2592000 if ctx.mode == 'liteserver' else 86400
 	state_ttl = None
-	if local.buffer.state_ttl is not None:
-		state_ttl = int(local.buffer.state_ttl)
+	if ctx.state_ttl is not None:
+		state_ttl = int(ctx.state_ttl)
 		archive_ttl -= state_ttl
 	if archive_ttl == 0:
 		archive_ttl = 1  # todo: remove this when archive_ttl==0 will be allowed in node
@@ -95,16 +98,16 @@ def FirstNodeSettings(local):
 	cmd = f"{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --verbosity 1"
 	cmd += ttl_cmd
 
-	if local.buffer.add_shard is not None:
-		add_shard = local.buffer.add_shard
+	if ctx.add_shard is not None:
+		add_shard = ctx.add_shard
 		cmd += ' -M'
 		for shard in add_shard.split():
 			cmd += f' --add-shard {shard}'
 
 	add2systemd(name="validator", user=vuser, start=cmd, pre='/bin/sleep 2')
 
-	if local.buffer.public_ip is not None:
-		ip = local.buffer.public_ip
+	if ctx.public_ip is not None:
+		ip = ctx.public_ip
 	else:
 		ip = get_own_ip()
 	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
@@ -115,8 +118,10 @@ def FirstNodeSettings(local):
 	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", ton_db_dir, "--ip", addr, "--logname", tonLogPath]
 	subprocess.run(args)
 
-	DownloadDump(local)
-	download_archive_from_ts(local)
+	if ctx.dump:
+		DownloadDump(local, ctx)
+	if ctx.archive_blocks:
+		download_archive_from_ts(local, ctx)
 
 	# chown 1
 	local.add_log("Chown ton-work dir", "debug")
@@ -127,10 +132,10 @@ def FirstNodeSettings(local):
 	StartValidator(local)
 
 
-def download_archive_from_ts(local):
-	if local.buffer.archive_blocks is None:
-		return
-	archive_blocks = local.buffer.archive_blocks
+def download_archive_from_ts(local: MyPyClass, ctx: InstallerContext):
+	archive_blocks = ctx.archive_blocks
+	if archive_blocks is None:
+		raise ValueError("archive_blocks is not specified")
 	downloads_path = '/var/ton-work/ts-downloads/'
 	os.makedirs(downloads_path, exist_ok=True)
 	subprocess.run(["chmod", "o+wx", downloads_path])
@@ -138,12 +143,12 @@ def download_archive_from_ts(local):
 	block_from, block_to = archive_blocks, None
 	if len(archive_blocks.split()) > 1:
 		block_from, block_to = archive_blocks.split()
-	block_from, block_to = parse_block_value(local, block_from), parse_block_value(local, block_to)
+	block_from, block_to = parse_block_value(local, block_from, ctx.paths.global_config_path), parse_block_value(local, block_to, ctx.paths.global_config_path)
 	block_from = max(1, block_from - 100)  # to download previous package as node may require some blocks from it
 
-	enable_ton_storage(local)
+	api_port = enable_ton_storage(local, ctx)
 	url = 'https://archival-dump.ton.org/index/mainnet.json'
-	if is_testnet(local):
+	if is_testnet(ctx.paths.global_config_path,):
 		url = 'https://archival-dump.ton.org/index/testnet.json'
 
 	state_bag = {}
@@ -186,18 +191,18 @@ def download_archive_from_ts(local):
 		return
 
 	local.add_log(f"Downloading blockchain state for block {state_bag['at_block']}", "info")
-	if not download_bag(local, state_bag['bag'], downloads_path):
+	if not download_bag(local, state_bag['bag'], downloads_path, api_port):
 		local.add_log("Error downloading state bag", "error")
 		return
 
 
-	update_init_block(local, state_bag['at_block'])
+	update_init_block(local, state_bag['at_block'], ctx.paths.global_config_path)
 	estimated_size = len(block_bags) * 4 * 2**30 + len(master_block_bags) * 4 * 2**30 * 0.2  # 4 GB per bag, 20% for master blocks
 
 	local.add_log(f"Downloading archive blocks. Rough estimate total blocks size is {int(estimated_size / 2**30)} GB", "info")
 	with ThreadPoolExecutor(max_workers=4) as executor:
-		futures = [executor.submit(download_blocks_bag, local, bag, downloads_path) for bag in block_bags]
-		futures += [executor.submit(download_master_blocks_bag, local, bag, downloads_path) for bag in master_block_bags]
+		futures = [executor.submit(download_blocks_bag, local, bag, downloads_path, api_port) for bag in block_bags]
+		futures += [executor.submit(download_master_blocks_bag, local, bag, downloads_path, api_port) for bag in master_block_bags]
 		for future in as_completed(futures):
 			try:
 				future.result()
@@ -207,8 +212,8 @@ def download_archive_from_ts(local):
 
 	local.add_log("Downloading blocks is completed, moving files", "info")
 
-	archive_dir = local.buffer.ton_db_dir + 'archive/'
-	import_dir = local.buffer.ton_db_dir + 'import/'
+	archive_dir = ctx.paths.ton_db_dir + 'archive/'
+	import_dir = ctx.paths.ton_db_dir + 'import/'
 	os.makedirs(import_dir, exist_ok=True)
 	states_dir = archive_dir + '/states'
 
@@ -248,28 +253,24 @@ def download_archive_from_ts(local):
 	if block_to is not None:
 		set_node_argument(local, ['--sync-shards-upto', str(block_to)])
 
-	with open(local.buffer.global_config_path, 'r') as f:
+	with open(ctx.paths.global_config_path, 'r') as f:
 		c = json.loads(f.read())
 	if c['validator']['hardforks'] and c['validator']['hardforks'][-1]['seqno'] > block_from:
-		run_process_hardforks(local, block_from)
+		run_process_hardforks(local, block_from, ctx.paths.mtc_src_dir, ctx.paths.global_config_path)
 
 	local.add_log("Changing permissions on imported files", "info")
 	subprocess.run(["chmod", "o+w", import_dir])
-	mconfig_path = local.buffer.mconfig_path
+	mconfig_path = ctx.mconfig_path
 	mconfig = GetConfig(path=mconfig_path)
 	mconfig.importGc = True
 	SetConfig(path=mconfig_path, data=mconfig)
 
 
-def DownloadDump(local):
-    dump = local.buffer.dump
-    if dump is False:
-        return
-    #end if
+def DownloadDump(local: MyPyClass, ctx: InstallerContext):
 
     local.add_log("start DownloadDump function", "debug")
     url = "https://dump.ton.org/dumps/latest"
-    if is_testnet(local):
+    if is_testnet(ctx.paths.global_config_path):
         url += '_testnet'
     dumpSize = requests.get(url + ".tar.size.archive.txt", timeout=3).text
     print("dumpSize:", dumpSize)
@@ -299,9 +300,9 @@ def DownloadDump(local):
     #end if
 #end define
 
-def FirstMytoncoreSettings(local):
+def FirstMytoncoreSettings(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start FirstMytoncoreSettings fuction", "debug")
-	user = local.buffer.user
+	user = ctx.user
 
 	# Прописать mytoncore.py в автозагрузку
 	# add2systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
@@ -330,13 +331,13 @@ def FirstMytoncoreSettings(local):
 	subprocess.run(args)
 
 	# Подготовить папку mytoncore
-	mconfig_path = local.buffer.mconfig_path
+	mconfig_path = ctx.mconfig_path
 	mconfigDir = get_dir_from_path(mconfig_path)
 	os.makedirs(mconfigDir, exist_ok=True)
 
 	# create variables
-	ton_bin_dir = local.buffer.ton_bin_dir
-	ton_src_dir = local.buffer.ton_src_dir
+	ton_bin_dir = ctx.paths.ton_bin_dir
+	ton_src_dir = ctx.paths.ton_src_dir
 
 	# general config
 	mconfig = Dict()
@@ -358,7 +359,7 @@ def FirstMytoncoreSettings(local):
 	mconfig.liteClient = liteClient
 
 	# Telemetry
-	mconfig.sendTelemetry = local.buffer.telemetry
+	mconfig.sendTelemetry = ctx.telemetry
 
 	# Записать настройки в файл
 	SetConfig(path=mconfig_path, data=mconfig)
@@ -371,20 +372,20 @@ def FirstMytoncoreSettings(local):
 	StartMytoncore(local)
 #end define
 
-def EnableValidatorConsole(local):
-	if local.buffer.only_mtc:
+def EnableValidatorConsole(local: MyPyClass, ctx: InstallerContext):
+	if ctx.only_mtc:
 		return
 	local.add_log("start EnableValidatorConsole function", "debug")
 
 	# Create variables
-	user = local.buffer.user
-	vuser = local.buffer.vuser
-	cport = local.buffer.cport
-	ton_db_dir = local.buffer.ton_db_dir
-	ton_bin_dir = local.buffer.ton_bin_dir
-	vconfig_path = local.buffer.vconfig_path
+	user = ctx.user
+	vuser = ctx.validator_user
+	cport = ctx.ports.validator_console
+	ton_db_dir = ctx.paths.ton_db_dir
+	ton_bin_dir = ctx.paths.ton_bin_dir
+	vconfig_path = ctx.paths.vconfig_path
 	generate_random_id = ton_bin_dir + "utils/generate-random-id"
-	keys_dir = local.buffer.keys_dir
+	keys_dir = ctx.paths.keys_dir
 	client_key = keys_dir + "client"
 	server_key = keys_dir + "server"
 	client_pubkey = client_key + ".pub"
@@ -449,7 +450,7 @@ def EnableValidatorConsole(local):
 	StartValidator(local)
 
 	# read mconfig
-	mconfig_path = local.buffer.mconfig_path
+	mconfig_path = ctx.mconfig_path
 	mconfig = GetConfig(path=mconfig_path)
 
 	# edit mytoncore config file
@@ -464,8 +465,8 @@ def EnableValidatorConsole(local):
 	SetConfig(path=mconfig_path, data=mconfig)
 
 	event_name = "enableVC"
-	if local.buffer.quic_port is not None:
-		event_name += f'_{local.buffer.quic_port}'
+	if ctx.ports.quic is not None:
+		event_name += f'_{ctx.ports.quic}'
 
 	cmd = f'python3 -m mytoncore -e "{event_name}"'
 	args = ["su", "-l", user, "-c", cmd]
@@ -475,20 +476,20 @@ def EnableValidatorConsole(local):
 	StartMytoncore(local)
 #end define
 
-def EnableLiteServer(local):
-	if local.buffer.only_mtc:
+def EnableLiteServer(local: MyPyClass, ctx: InstallerContext):
+	if ctx.only_mtc:
 		return
 
 	local.add_log("start EnableLiteServer function", "debug")
 
 	# Create variables
-	user = local.buffer.user
-	vuser = local.buffer.vuser
-	lport = local.buffer.lport
-	ton_db_dir = local.buffer.ton_db_dir
-	keys_dir = local.buffer.keys_dir
-	ton_bin_dir = local.buffer.ton_bin_dir
-	vconfig_path = local.buffer.vconfig_path
+	user = ctx.user
+	vuser = ctx.validator_user
+	lport = ctx.ports.liteserver
+	ton_db_dir = ctx.paths.ton_db_dir
+	keys_dir = ctx.paths.keys_dir
+	ton_bin_dir = ctx.paths.ton_bin_dir
+	vconfig_path = ctx.paths.vconfig_path
 	generate_random_id = ton_bin_dir + "utils/generate-random-id"
 	liteserver_key = keys_dir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
@@ -545,7 +546,7 @@ def EnableLiteServer(local):
 	# edit mytoncore config file
 	# read mconfig
 	local.add_log("read mconfig", "debug")
-	mconfig_path = local.buffer.mconfig_path
+	mconfig_path = ctx.mconfig_path
 	mconfig = GetConfig(path=mconfig_path)
 
 	# edit mytoncore config file
@@ -565,11 +566,11 @@ def EnableLiteServer(local):
 #end define
 
 
-def EnableDhtServer(local):
+def EnableDhtServer(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start EnableDhtServer function", "debug")
-	vuser = local.buffer.vuser
-	ton_bin_dir = local.buffer.ton_bin_dir
-	globalConfigPath = local.buffer.global_config_path
+	vuser = ctx.validator_user
+	ton_bin_dir = ctx.paths.ton_bin_dir
+	globalConfigPath = ctx.paths.global_config_path
 	dht_server = ton_bin_dir + "dht-server/dht-server"
 	generate_random_id = ton_bin_dir + "utils/generate-random-id"
 	tonDhtServerDir = "/var/ton-dht-server/"
@@ -624,9 +625,9 @@ def EnableDhtServer(local):
 #end define
 
 
-def EnableJsonRpc(local):
+def EnableJsonRpc(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start EnableJsonRpc function", "debug")
-	user = local.buffer.user
+	user = ctx.user
 
 	with get_package_resource_path('mytoninstaller.scripts', 'jsonrpcinstaller.sh') as jsonrpcinstaller_path:
 		local.add_log(f"Running script: {jsonrpcinstaller_path}", "debug")
@@ -648,21 +649,21 @@ def tha_exists():
 	return False
 #end define
 
-def enable_ton_http_api(local: MyPyClass, update: bool = False):
+def enable_ton_http_api(local: MyPyClass, user: str | None = None, update: bool = False):
 	try:
 		if update or not tha_exists():
-			do_enable_ton_http_api(local)
+			do_enable_ton_http_api(local, user)
 	except Exception as e:
 		local.add_log(f"Error in enable_ton_http_api: {e}", "warning")
 		pass
 #end define
 
-def do_enable_ton_http_api(local):
+def do_enable_ton_http_api(local: MyPyClass, user: str | None = None):
 	local.add_log("start do_enable_ton_http_api function", "debug")
 	if not os.path.exists('/usr/bin/ton/local.config.json'):
 		from mytoninstaller.mytoninstaller import CreateLocalConfigFile
-		CreateLocalConfigFile(local, [])
-	user = local.buffer.user or get_current_user()
+		CreateLocalConfigFile(local, [], user)
+	user = user or get_current_user()
 	with get_package_resource_path('mytoninstaller.scripts', 'ton_http_api_installer.sh') as ton_http_api_installer_path:
 		exit_code = run_as_root(["bash", str(ton_http_api_installer_path), "-u", user])
 	if exit_code == 0:
@@ -672,9 +673,9 @@ def do_enable_ton_http_api(local):
 	color_print(text)
 #end define
 
-def enable_ls_proxy(local):
+def enable_ls_proxy(local, ctx: InstallerContext):
 	local.add_log("start enable_ls_proxy function", "debug")
-	user = local.buffer.user
+	user = ctx.user
 	ls_proxy_port = random.randint(2000, 65000)
 	metrics_port = random.randint(2000, 65000)
 	bin_name = "ls_proxy"
@@ -703,7 +704,7 @@ def enable_ls_proxy(local):
 
 	# read mytoncore config
 	local.add_log("read mytoncore config", "debug")
-	mconfig = GetConfig(path=local.buffer.mconfig_path)
+	mconfig = GetConfig(path=ctx.mconfig_path)
 	ls_pubkey_path = mconfig.liteClient.liteServer.pubkeyPath
 	ls_port = mconfig.liteClient.liteServer.port
 
@@ -732,9 +733,9 @@ def enable_ls_proxy(local):
 	color_print("enable_ls_proxy - {green}OK{endc}")
 #end define
 
-def enable_ton_storage(local):
+def enable_ton_storage(local, ctx: InstallerContext):
 	local.add_log("start enable_ton_storage function", "debug")
-	user = local.buffer.user
+	user = ctx.user
 	udp_port = random.randint(2000, 65000)
 	api_port = random.randint(2000, 65000)
 	bin_name = "ton_storage"
@@ -776,7 +777,7 @@ def enable_ton_storage(local):
 
 	# read mconfig
 	local.add_log("read mconfig", "debug")
-	mconfig_path = local.buffer.mconfig_path
+	mconfig_path = ctx.mconfig_path
 	mconfig = GetConfig(path=mconfig_path)
 
 	# edit mytoncore config file
@@ -790,14 +791,12 @@ def enable_ton_storage(local):
 	local.add_log("write mconfig", "debug")
 	SetConfig(path=mconfig_path, data=mconfig)
 
-	local.buffer.ton_storage = ton_storage
-
 	# start ton_storage
 	start_service(local, bin_name)
 	color_print("enable_ton_storage - {green}OK{endc}")
-#end define
+	return api_port
 
-def DangerousRecoveryValidatorConfigFile(local):
+def DangerousRecoveryValidatorConfigFile(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start DangerousRecoveryValidatorConfigFile function", "info")
 
 	# Get keys from keyring
@@ -826,7 +825,7 @@ def DangerousRecoveryValidatorConfigFile(local):
 	vconfig.addrs = [buff]
 
 	# Get liteserver fragment
-	mconfig_path = local.buffer.mconfig_path
+	mconfig_path = ctx.mconfig_path
 	mconfig = GetConfig(path=mconfig_path)
 	lkey = mconfig.liteClient.liteServer.pubkeyPath
 	lport = mconfig.liteClient.liteServer.port
@@ -993,9 +992,9 @@ def DangerousRecoveryValidatorConfigFile(local):
 #end define
 
 
-def CreateSymlinks(local):
+def CreateSymlinks(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start CreateSymlinks fuction", "debug")
-	cport = local.buffer.cport
+	cport = ctx.ports.validator_console
 
 	mytonctrl_file = "/usr/bin/mytonctrl"
 	fift_file = "/usr/bin/fift"
@@ -1031,19 +1030,17 @@ def CreateSymlinks(local):
 #end define
 
 
-def EnableMode(local):
+def EnableMode(local: MyPyClass, ctx: InstallerContext):
 	args = ["python3", "-m", "mytoncore", "-e"]
-	if local.buffer.mode and local.buffer.mode != "none" and not local.buffer.backup:
-		args.append("enable_mode_" + local.buffer.mode)
+	if ctx.mode and ctx.mode != "none" and not ctx.backup:
+		args.append("enable_mode_" + ctx.mode)
 	else:
 		return
-	args = ["su", "-l", local.buffer.user, "-c", ' '.join(args)]
+	args = ["su", "-l", ctx.user, "-c", ' '.join(args)]
 	subprocess.run(args)
 
 
-def set_external_ip(local, ip):
-	mconfig_path = local.buffer.mconfig_path
-
+def set_external_ip(local: MyPyClass, ip: str, mconfig_path: str):
 	mconfig = GetConfig(path=mconfig_path)
 
 	mconfig.liteClient.liteServer.ip = ip
@@ -1054,46 +1051,46 @@ def set_external_ip(local, ip):
 	SetConfig(path=mconfig_path, data=mconfig)
 
 
-def ConfigureFromBackup(local):
-	if not local.buffer.backup:
+def ConfigureFromBackup(local: MyPyClass, ctx: InstallerContext):
+	if not ctx.backup:
 		return
 	from modules.backups import BackupModule
-	mconfig_path = local.buffer.mconfig_path
+	mconfig_path = ctx.mconfig_path
 	mconfig_dir = get_dir_from_path(mconfig_path)
 	local.add_log("start ConfigureFromBackup function", "info")
-	backup_file = local.buffer.backup
+	backup_file = ctx.backup
 
-	os.makedirs(local.buffer.ton_work_dir, exist_ok=True)
-	if not local.buffer.only_mtc:
+	os.makedirs(ctx.paths.ton_work_dir, exist_ok=True)
+	if not ctx.only_mtc:
 		ip = str(ip2int(get_own_ip()))
-		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file, "-i", ip], user=local.buffer.user)
+		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file, "-i", ip], user=ctx.user)
 
-	if local.buffer.only_mtc:
-		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file], user=local.buffer.user)
+	if ctx.only_mtc:
+		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file], user=ctx.user)
 		local.add_log("Installing only mtc", "info")
-		vconfig_path = local.buffer.vconfig_path
+		vconfig_path = ctx.paths.vconfig_path
 		vconfig = GetConfig(path=vconfig_path)
 		try:
 			node_ip = int2ip(vconfig['addrs'][0]['ip'])
 		except Exception:
 			local.add_log("Can't get ip from validator", "error")
 			return
-		set_external_ip(local, node_ip)
+		set_external_ip(local, node_ip, ctx.mconfig_path)
 
 	args = ["python3", "-m", "mytoncore", "-e", "enable_btc_teleport"]
-	args = ["su", "-l", local.buffer.user, "-c", ' '.join(args)]
+	args = ["su", "-l", ctx.user, "-c", ' '.join(args)]
 	subprocess.run(args)
 
 
-def ConfigureOnlyNode(local):
-	if not local.buffer.only_node:
+def ConfigureOnlyNode(local: MyPyClass, ctx: InstallerContext):
+	if not ctx.only_node:
 		return
 	from modules.backups import BackupModule
-	mconfig_path = local.buffer.mconfig_path
+	mconfig_path = ctx.mconfig_path
 	mconfig_dir = get_dir_from_path(mconfig_path)
 	local.add_log("start ConfigureOnlyNode function", "info")
 
-	process = BackupModule.run_create_backup(["-m", mconfig_dir], user=local.buffer.user)
+	process = BackupModule.run_create_backup(["-m", mconfig_dir], user=ctx.user)
 	if process.returncode != 0:
 		local.add_log("Backup creation failed", "error")
 		return
@@ -1106,8 +1103,8 @@ def ConfigureOnlyNode(local):
 	start_service(local, 'mytoncore')
 
 
-def SetInitialSync(local):
-	mconfig_path = local.buffer.mconfig_path
+def SetInitialSync(local: MyPyClass, ctx: InstallerContext):
+	mconfig_path = ctx.mconfig_path
 
 	mconfig = GetConfig(path=mconfig_path)
 	mconfig.initialSync = True
@@ -1116,13 +1113,13 @@ def SetInitialSync(local):
 	start_service(local, 'mytoncore')
 
 
-def SetupCollator(local):
-	if local.buffer.mode != "collator":
+def SetupCollator(local: MyPyClass, ctx: InstallerContext):
+	if ctx.mode != "collator":
 		return
-	shards = local.buffer.collate_shard.split()
+	shards = ctx.collate_shard.split()
 	if not shards:
 		shards = ['0:8000000000000000']
 	local.add_log(f"Setting up collator for shards: {shards}", "info")
 	args = ["python3", "-m", "mytoncore", "-e", "setup_collator_" + '_'.join(shards)]
-	args = ["su", "-l", local.buffer.user, "-c", ' '.join(args)]
+	args = ["su", "-l", ctx.user, "-c", ' '.join(args)]
 	subprocess.run(args)
