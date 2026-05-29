@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import struct
 from dataclasses import dataclass
-from typing import TypedDict
+from typing import TypedDict, Any
 
 from mytoncore.utils import raw_addr_to_b64
 
@@ -153,6 +153,12 @@ class Message:
 
     def __repr__(self):
         return self.__str__()
+
+
+@dataclass
+class CacheResult:
+    time: int
+    data: Any
 
 
 class Config12(TypedDict):

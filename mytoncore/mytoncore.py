@@ -7,7 +7,7 @@ import json
 import hashlib
 import struct
 import typing
-from typing import Union
+from typing import Union, Any
 
 import psutil
 import subprocess
@@ -25,7 +25,7 @@ from mytoncore.models import (
 	Block,
 	Transaction,
 	Message,
-	Pool, Config12, Config15, ElectionsParticipant, Config17,
+	Pool, Config12, Config15, ElectionsParticipant, Config17, CacheResult,
 )
 
 from mypylib.mypylib import (
@@ -41,6 +41,7 @@ class MyTonCore:
 	def __init__(self, local: MyPyClass):
 		self.local: MyPyClass = local
 		self.nodeName: str = ""
+		self.cache: dict[str, CacheResult] = {}
 
 		self.walletsDir = self.local.my_work_dir + "wallets/"
 		self.contractsDir = self.local.my_work_dir + "contracts/"
@@ -3163,25 +3164,19 @@ class MyTonCore:
 	def get_validator_engine_ip(self):
 		return self.validatorConsole.addr.split(':')[0]
 
-	def GetFunctionBuffer(self, name: str, timeout: int | float = 10):
-		timestamp = get_timestamp()
-		buff = self.local.buffer.get(name)
-		if buff is None:
-			return
-		buffTime = buff.get("time")
-		diffTime = timestamp - buffTime
-		if diffTime > timeout:
-			return
-		data = buff.get("data")
-		return data
-	#end define
+	def GetFunctionBuffer(self, name: str, timeout: int | float = 10) -> Any | None:
+		res = self.cache.get(name)
+		if res is None:
+			return None
+		if get_timestamp() - res.time > timeout:
+			return None
+		return res.data
 
-	def SetFunctionBuffer(self, name, data):
-		buff = dict()
-		buff["time"] = get_timestamp()
-		buff["data"] = data
-		self.local.buffer[name] = buff
-	#end define
+	def SetFunctionBuffer(self, name: str, data):
+		self.cache[name] = CacheResult(
+			time=get_timestamp(),
+			data=data
+		)
 
 	def IsTestnet(self):
 		networkName = self.GetNetworkName()
