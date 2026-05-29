@@ -30,6 +30,10 @@ class InstallerPaths:
         return self.ton_work_dir + "keys/"
 
     @property
+    def keyring_dir(self) -> str:
+        return self.ton_db_dir + "keyring/"
+
+    @property
     def ton_log_path(self) -> str:
         return self.ton_work_dir + "log"
 

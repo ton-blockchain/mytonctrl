@@ -136,7 +136,7 @@ def download_archive_from_ts(local: MyPyClass, ctx: InstallerContext):
 	archive_blocks = ctx.archive_blocks
 	if archive_blocks is None:
 		raise ValueError("archive_blocks is not specified")
-	downloads_path = '/var/ton-work/ts-downloads/'
+	downloads_path = f'{ctx.paths.ton_work_dir}ts-downloads/'
 	os.makedirs(downloads_path, exist_ok=True)
 	subprocess.run(["chmod", "o+wx", downloads_path])
 
@@ -290,7 +290,7 @@ def DownloadDump(local: MyPyClass, ctx: InstallerContext):
     os.system(cmd)
 
     # process the downloaded file
-    cmd = f"pv {temp_file} | plzip -d -n8 | tar -xC /var/ton-work/db"
+    cmd = f"pv {temp_file} | plzip -d -n8 | tar -xC {ctx.paths.ton_db_dir}"
     os.system(cmd)
 
     # clean up the temporary file after processing
@@ -801,7 +801,7 @@ def DangerousRecoveryValidatorConfigFile(local: MyPyClass, ctx: InstallerContext
 
 	# Get keys from keyring
 	keys = list()
-	keyringDir = "/var/ton-work/db/keyring/"
+	keyringDir = ctx.paths.keyring_dir
 	keyring = os.listdir(keyringDir)
 	os.chdir(keyringDir)
 	sorted(keyring, key=os.path.getmtime)
@@ -894,7 +894,7 @@ def DangerousRecoveryValidatorConfigFile(local: MyPyClass, ctx: InstallerContext
 	vconfig.control = [buff]
 
 	# Get dht fragment
-	files = os.listdir("/var/ton-work/db")
+	files = os.listdir(ctx.paths.ton_db_dir)
 	for item in files:
 		if item[:3] == "dht":
 			dhtS = item[4:]
@@ -1013,7 +1013,7 @@ def CreateSymlinks(local: MyPyClass, ctx: InstallerContext):
 	file.close()
 	if cport:
 		file = open(validator_console_file, 'wt')
-		file.write('/usr/bin/ton/validator-engine-console/validator-engine-console -k /var/ton-work/keys/client -p /var/ton-work/keys/server.pub -a 127.0.0.1:' + str(cport) + ' "$@"')
+		file.write(f'/usr/bin/ton/validator-engine-console/validator-engine-console -k {ctx.paths.keys_dir}client -p {ctx.paths.keys_dir}server.pub -a 127.0.0.1:' + str(cport) + ' "$@"')
 		file.close()
 		args = ["chmod", "+x", validator_console_file]
 		subprocess.run(args)
