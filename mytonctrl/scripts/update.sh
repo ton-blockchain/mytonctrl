@@ -38,13 +38,13 @@ cd ${tmpdir}/${repo} && git checkout ${branch}
 git submodule update --init --recursive
 
 rm -rf ${srcdir}/${repo}
-pip3 uninstall -y mytonctrl
 
 # Update code
 cd ${srcdir}
 cp -rf ${tmpdir}/${repo} ${srcdir}
 cd ${repo}
-pip3 install -U .
+python3 -m pip install -U "setuptools>=64"
+python3 -m pip install -U .
 
 systemctl daemon-reload
 systemctl restart mytoncore

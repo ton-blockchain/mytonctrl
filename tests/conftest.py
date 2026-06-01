@@ -1,17 +1,24 @@
+from __future__ import annotations
+
 import io
+import sys
 from contextlib import redirect_stdout, redirect_stderr
 import os
 import pytest
 from typing import Protocol
 
+from mytoncore.utils import get_package_resource_path
+
 from mypyconsole.mypyconsole import MyPyConsole
 from mytoncore.mytoncore import MyTonCore
-from mytonctrl.mytonctrl import Init
+from mytonctrl.mytonctrl import MyTonCtrl
 from mypylib.mypylib import MyPyClass
 from tests.helpers import remove_colors
 
 
 class TestLocal(MyPyClass):
+    __test__ = False
+
     def __init__(self, file_path: str, work_dir: str, temp_dir: str):
         self._work_dir = work_dir
         self._temp_dir = temp_dir
@@ -70,14 +77,6 @@ def local(tmp_path):
     return local
 
 
-@pytest.fixture()
-def ton(local, monkeypatch):
-    monkeypatch.setattr(MyTonCore, "create_self_db_backup", lambda self: None)
-    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
-    monkeypatch.setattr(TestLocal, 'save', lambda *args, **kwargs: None)
-    return MyTonCore(local)
-
-
 class ConsoleProtocol(Protocol):
 
     def execute(self, command: str, no_color: bool = False) -> str:
@@ -85,11 +84,14 @@ class ConsoleProtocol(Protocol):
 
 
 class TestMyPyConsole(MyPyConsole):
+    __test__ = False
+
+    mtc: MyTonCtrl
 
     def run_pre_up(self, no_color: bool = False):
         output = io.StringIO()
         with redirect_stderr(output), redirect_stdout(output):
-            self.start_function()
+            self.mtc._pre_up()
             output = output.getvalue()
             if no_color:
                 output = remove_colors(output)
@@ -107,13 +109,29 @@ class TestMyPyConsole(MyPyConsole):
 
 
 @pytest.fixture()
-def cli(local, ton) -> TestMyPyConsole:
+def _cli_setup(local, monkeypatch) -> tuple[TestMyPyConsole, MyTonCore]:
+    monkeypatch.setattr(MyTonCore, "create_self_db_backup", lambda self: None)
+    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
+    monkeypatch.setattr(TestLocal, "save", lambda *args, **kwargs: None)
+    monkeypatch.setattr(MyTonCore, "using_pool", lambda self: True)
+    monkeypatch.setattr(MyTonCore, "using_nominator_pool", lambda self: True)
+    monkeypatch.setattr(MyTonCore, "using_single_nominator", lambda self: True)
+    monkeypatch.setattr(sys, "argv", ["mytonctrl.py"])
+    ton = MyTonCore(local)
     console = TestMyPyConsole(local)
-    mp = pytest.MonkeyPatch()
-    mp.setattr(MyTonCore, "using_pool", lambda self: True)
-    mp.setattr(MyTonCore, "using_nominator_pool", lambda self: True)
-    mp.setattr(MyTonCore, "using_single_nominator", lambda self: True)
-    Init(local, ton, console, argv=[])
-    mp.undo()
-    # console.debug = True
-    return console
+    mtc = MyTonCtrl(local, ton, console)
+    console.mtc = mtc
+    mtc._add_console_commands()
+    with get_package_resource_path('mytonctrl', 'resources/translate.json') as translate_path:
+        local.init_translator(str(translate_path))
+    return console, ton
+
+
+@pytest.fixture()
+def cli(_cli_setup) -> TestMyPyConsole:
+    return _cli_setup[0]
+
+
+@pytest.fixture()
+def ton(_cli_setup) -> MyTonCore:
+    return _cli_setup[1]

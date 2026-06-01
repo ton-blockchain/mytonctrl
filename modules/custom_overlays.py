@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import requests
 
@@ -9,7 +11,7 @@ from mytonctrl.console_cmd import add_command, check_usage_two_args, check_usage
 
 class CustomOverlayModule(MtcModule):
 
-    def parse_config(self, name: str, config: dict, vset: list = None):
+    def parse_config(self, name: str, config: dict, vset: list | None = None):
         """
         Converts config to validator-console friendly format
         :param name: custom overlay name
@@ -101,7 +103,7 @@ class CustomOverlayModule(MtcModule):
         return False
 
     def delete_custom_overlay_from_vc(self, name: str):
-        result = self.ton.validatorConsole.Run(f"delcustomoverlay {name}")
+        result = self.ton.validatorConsole.run(f"delcustomoverlay {name}")
         return 'success' in result
 
     def add_custom_overlay_to_vc(self, config: dict):
@@ -112,7 +114,7 @@ class CustomOverlayModule(MtcModule):
         path = self.ton.tempDir + f'/custom_overlay_{config["name"]}.json'
         with open(path, 'w') as f:
             json.dump(config, f)
-        result = self.ton.validatorConsole.Run(f"addcustomoverlay {path}")
+        result = self.ton.validatorConsole.run(f"addcustomoverlay {path}")
         return 'success' in result
 
     def custom_overlays(self):
@@ -122,7 +124,7 @@ class CustomOverlayModule(MtcModule):
         self.deploy_custom_overlays()
 
     def deploy_custom_overlays(self):
-        result = self.ton.validatorConsole.Run("showcustomoverlays")
+        result = self.ton.validatorConsole.run("showcustomoverlays")
         if 'unknown command' in result:
             return  # node old version
         names = []

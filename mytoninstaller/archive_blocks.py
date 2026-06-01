@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import json
 import os
@@ -120,7 +122,7 @@ def parse_block_value(local, block: str):
     return int(data['seqno'])
 
 
-def download_blocks(local, downloads_path: str, block_from: int, block_to: int = None, only_master: bool = False):
+def download_blocks(local, downloads_path: str, block_from: int, block_to: int | None = None, only_master: bool = False):
     url = 'https://archival-dump.ton.org/index/mainnet.json'
     if is_testnet(local):
         url = 'https://archival-dump.ton.org/index/testnet.json'

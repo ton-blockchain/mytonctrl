@@ -1,8 +1,6 @@
-
 #!/bin/bash
 set -e
 
-# Проверить sudo
 if [ "$(id -u)" != "0" ]; then
 	echo "Please run script as root"
 	exit 1
@@ -25,11 +23,9 @@ done
 echo "config: ${config}"
 echo "checkout to ${ton_node_version}"
 
-# Цвета
 COLOR='\033[95m'
 ENDC='\033[0m'
 
-# На OSX нет такой директории по-умолчанию, поэтому создаем...
 SOURCES_DIR=/usr/src
 BIN_DIR=/usr/bin
 if [[ "$OSTYPE" =~ darwin.* ]]; then
@@ -38,8 +34,7 @@ if [[ "$OSTYPE" =~ darwin.* ]]; then
 	mkdir -p $SOURCES_DIR
 fi
 
-# Установка требуемых пакетов
-echo -e "${COLOR}[1/6]${ENDC} Installing required packages"
+echo -e "${COLOR}[1/5]${ENDC} Installing required packages"
 if [ "$OSTYPE" == "linux-gnu" ]; then
 	if [ hash yum 2>/dev/null ]; then
 		echo "RHEL-based Linux detected."
@@ -94,11 +89,8 @@ else
 	exit 1
 fi
 
-# Установка компонентов python3
-pip3 install psutil==6.1.0 crc16==0.1.1 requests==2.32.4
 
-# Клонирование репозиториев с github.com
-echo -e "${COLOR}[3/6]${ENDC} Preparing for compilation"
+echo -e "${COLOR}[2/5]${ENDC} Preparing for compilation"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
 git clone --recursive $repo_git_url $SOURCES_DIR/ton
@@ -118,12 +110,10 @@ cd ../
 
 git config --global --add safe.directory $SOURCES_DIR/ton
 
-# Подготавливаем папки для компиляции
 rm -rf $BIN_DIR/ton
 mkdir $BIN_DIR/ton
 cd $BIN_DIR/ton
 
-# Подготовиться к компиляции
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	export CMAKE_C_COMPILER=$(which clang)
 	export CMAKE_CXX_COMPILER=$(which clang++)
@@ -134,7 +124,6 @@ else
 	export CCACHE_DISABLE=1
 fi
 
-# Подготовиться к компиляции
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	if [[ $(uname -p) == 'arm' ]]; then
 		echo M1
@@ -146,7 +135,6 @@ else
 	cmake -DCMAKE_BUILD_TYPE=Release $SOURCES_DIR/ton -GNinja -DTON_USE_JEMALLOC=ON
 fi
 
-# Расчитываем количество процессоров для сборки
 if [[ "$OSTYPE" =~ darwin.* ]]; then
 	cpu_number=$(sysctl -n hw.logicalcpu)
 else
@@ -162,13 +150,11 @@ else
 	fi
 fi
 
-echo -e "${COLOR}[4/6]${ENDC} Source compilation, use ${cpu_number} cpus"
+echo -e "${COLOR}[3/5]${ENDC} Source compilation, use ${cpu_number} cpus"
 ninja -j ${cpu_number} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy create-state
 
-# Скачиваем конфигурационные файлы lite-client
-echo -e "${COLOR}[5/6]${ENDC} Downloading config files"
+echo -e "${COLOR}[4/5]${ENDC} Downloading config files"
 wget ${config} -O global.config.json
 
-# Выход из программы
-echo -e "${COLOR}[6/6]${ENDC} TON software installation complete"
+echo -e "${COLOR}[5/5]${ENDC} TON software installation complete"
 exit 0

@@ -1,4 +1,7 @@
-from mypylib import MyPyClass
+from modules.wallet import WalletModule
+from modules.general import GeneralModule
+
+from mypylib.mypylib import MyPyClass
 
 from mytoncore.mytoncore import MyTonCore
 
@@ -20,19 +23,19 @@ def run_event(local: MyPyClass, event_name: str):
 def enable_vc_event(local: MyPyClass, event_name: str):
     local.add_log("start EnableVcEvent function", "debug")
     ton = MyTonCore(local)
-    wallet = ton.CreateWallet("validator_wallet_001", -1)
+    module = WalletModule(ton, local)
+    wallet = module.create_wallet("validator_wallet_001", -1)
     assert wallet is not None
     local.db["validatorWalletName"] = wallet.name
     adnl_addr = ton.CreateNewKey()
-    assert adnl_addr is not None
     ton.add_adnl_addr(adnl_addr)
     local.db["adnlAddr"] = adnl_addr
     local.save()
 
-    from mytonctrl.mytonctrl import set_quic_port
     args = event_name.split("_")[1:]
     if args:
-        set_quic_port(local, ton, args)
+        module = GeneralModule(ton, local)
+        module.set_quic_port(args)
 
 
 def enable_mode(local: MyPyClass, event_name: str):

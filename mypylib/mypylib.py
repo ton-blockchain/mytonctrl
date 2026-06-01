@@ -4,25 +4,21 @@ import os
 import re
 import shutil
 import sys
-import grp
 import time
 import json
-import zlib
+import fcntl
 import signal
-import base64
 import psutil
 import struct
 import socket
-import hashlib
 import platform
-import requests
 import threading
+import traceback
 import subprocess
 import datetime as date_time_library
+from contextlib import contextmanager
 from types import FrameType
 from typing import Any, Callable, Literal, Mapping, Sequence
-from urllib.request import urlopen
-from urllib.error import URLError
 
 INFO = "info"
 WARNING = "warning"
@@ -43,7 +39,7 @@ class Dict(dict):
 		for key, value in d.items():
 			if type(value) in [dict, Dict]:
 				value = Dict(value)
-			if type(value) == list:
+			if isinstance(value, list):
 				value = self._parse_list(value)
 			self[key] = value
 
@@ -80,6 +76,7 @@ class bcolors:
 	bold = "\033[1m"
 	underline = "\033[4m"
 	default = "\033[39m"
+	dim = "\033[2m"
 
 	DEBUG = magenta
 	INFO = blue
@@ -98,60 +95,51 @@ class bcolors:
 				continue
 			text += str(item)
 		return text
-	#end define
 
 	@staticmethod
 	def magenta_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.magenta + text + bcolors.endc
 		return text
-	#end define
 
 	@staticmethod
 	def blue_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.blue + text + bcolors.endc
 		return text
-	#end define
 
 	@staticmethod
 	def green_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.green + text + bcolors.endc
 		return text
-	#end define
 
 	@staticmethod
 	def yellow_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.yellow + text + bcolors.endc
 		return text
-	#end define
 
 	@staticmethod
 	def red_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.red + text + bcolors.endc
 		return text
-	#end define
 
 	@staticmethod
 	def bold_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.bold + text + bcolors.endc
 		return text
-	#end define
 
 	@staticmethod
 	def underline_text(*args: Any) -> str:
 		text = bcolors.get_args(*args)
 		text = bcolors.underline + text + bcolors.endc
 		return text
-	#end define
 
 	colors = {"red": red, "green": green, "yellow": yellow, "blue": blue, "magenta": magenta, "cyan": cyan,
-			  "endc": endc, "bold": bold, "underline": underline}
-#end class
+			  "endc": endc, "bold": bold, "underline": underline, "dim": dim}
 
 
 class MyPyClass:
@@ -195,40 +183,10 @@ class MyPyClass:
 		signal.signal(signal.SIGINT, self.exit)
 		signal.signal(signal.SIGTERM, self.exit)
 
-	def start_service(self, service_name: str, sleep: int = 1) -> None:
-		self.add_log(f"Start/restart {service_name} service", "debug")
-		args = ["systemctl", "restart", service_name]
-		subprocess.run(args)
-
-		self.add_log(f"sleep {sleep} sec", "debug")
-		time.sleep(sleep)
-	# end define
-
-	def stop_service(self, service_name: str) -> None:
-		self.add_log(f"Stop {service_name} service", "debug")
-		args = ["systemctl", "stop", service_name]
-		subprocess.run(args)
-	# end define
-
 	def run(self) -> None:
-		# Check args
-		if "-ef" in sys.argv:
-			file = open(os.devnull, 'w')
-			sys.stdout = file
-			sys.stderr = file
-		if "-d" in sys.argv:
-			self.fork_daemon()
-		if "-s" in sys.argv:
-			x = sys.argv.index("-s")
-			file_path = sys.argv[x + 1]
-			self.get_settings(file_path)
-		if "--add2cron" in sys.argv:
-			self.add_to_crone()
-
 		# Start only one process (exit if process exist)
 		if self.db.config.isStartOnlyOneProcess:
 			self.start_only_one_process()
-		#end if
 
 		# Start other threads
 		self.start_cycle(self.self_test, sec=1)
@@ -239,8 +197,7 @@ class MyPyClass:
 		self.thread_count_old = threading.active_count()
 
 		# Logging the start of the program
-		self.add_log(f"Start program `{self.my_path}`")
-	#end define
+		self.add_log(f"Start program `{self.my_path}`", "debug")
 
 	def set_default_config(self):
 		if self.db.config.logLevel is None:
@@ -261,7 +218,6 @@ class MyPyClass:
 			self.db.config.isWritingLogFile = True
 		if self.db.config.logFileSizeLines is None:
 			self.db.config.logFileSizeLines = 16384
-	#end define
 
 	def start_only_one_process(self):
 		pid_file_path = self.pid_file_path
@@ -273,14 +229,12 @@ class MyPyClass:
 				pid = int(pid_str)
 				process = psutil.Process(pid)
 				full_process_name = " ".join(process.cmdline())
-			except:
+			except Exception:
 				full_process_name = ""
 			if full_process_name.find(self.my_full_name) > -1:
 				print("The process is already running")
 				sys.exit(1)
-		#end if
 		self.write_pid()
-	#end define
 
 	def write_pid(self):
 		pid = os.getpid()
@@ -288,7 +242,6 @@ class MyPyClass:
 		pid_file_path = self.pid_file_path
 		with open(pid_file_path, 'w') as file:
 			file.write(pid_str)
-	#end define
 
 	def self_test(self):
 		process = psutil.Process(os.getpid())
@@ -301,21 +254,9 @@ class MyPyClass:
 		if memory_using > self.db.config.memoryUsinglimit:
 			self.db.config.memoryUsinglimit += 50
 			self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb", WARNING)
-	#end define
-
-	def print_self_testing_result(self):
-		thread_count_old = self.thread_count_old
-		thread_count_new = self.thread_count
-		memory_using = self.memory_using
-		free_space_memory = self.free_space_memory
-		self.add_log(color_text("{blue}Self testing informatinon:{endc}"))
-		self.add_log(f"Threads: {thread_count_new} -> {thread_count_old}")
-		self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb")
-	#end define
 
 	def get_thread_name(self):
 		return threading.current_thread().name
-	#end define
 
 	def get_my_full_name(self):
 		'''return "test.py"'''
@@ -324,19 +265,16 @@ class MyPyClass:
 		if len(my_full_name) == 0:
 			my_full_name = "empty"
 		return my_full_name
-	#end define
 
 	def get_my_name(self):
 		my_full_name = self.get_my_full_name()
 		my_name = my_full_name[:my_full_name.rfind('.')]
 		return my_name
-	#end define
 
 	def get_my_path(self):
 		'''return "/some_dir/test.py"'''
 		my_path = os.path.abspath(self.file)
 		return my_path
-	#end define
 
 	def get_my_work_dir(self):
 		if self.check_root_permission():
@@ -362,7 +300,6 @@ class MyPyClass:
 		else:
 			lang = "en"
 		return lang
-	#end define
 
 	def check_root_permission(self):
 		process = subprocess.run(["touch", "/checkpermission"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -372,7 +309,6 @@ class MyPyClass:
 		else:
 			result = False
 		return result
-	#end define
 
 	def add_log(self, input_text: str, mode=INFO):
 		input_text = f"{input_text}"
@@ -411,7 +347,6 @@ class MyPyClass:
 
 		# Print log text
 		print(log_text)
-	#end define
 
 	def write_log(self):
 		log_file_name = self.log_file_name
@@ -420,8 +355,6 @@ class MyPyClass:
 			while len(self.log_list) > 0:
 				log_text = self.log_list.pop(0)
 				file.write(log_text + '\n')
-			#end while
-		#end with
 
 		# Control log size
 		if self.db.config.isLimitLogFile is False:
@@ -437,7 +370,6 @@ class MyPyClass:
 				i = i + 1
 			with open(log_file_name, 'w') as F:
 				F.writelines(f)
-	#end define
 
 	def count_lines(self, filename, chunk_size=1 << 13):
 		if not os.path.isfile(filename):
@@ -445,25 +377,6 @@ class MyPyClass:
 		with open(filename) as file:
 			return sum(chunk.count('\n')
 				for chunk in iter(lambda: file.read(chunk_size), ''))
-	#end define
-
-	def dict_to_base64_with_compress(self, item):
-		string = json.dumps(item)
-		original = string.encode("utf-8")
-		compressed = zlib.compress(original)
-		b64 = base64.b64encode(compressed)
-		data = b64.decode("utf-8")
-		return data
-	#end define
-
-	def base64_to_dict_with_decompress(self, item):
-		data = item.encode("utf-8")
-		b64 = base64.b64decode(data)
-		decompress = zlib.decompress(b64)
-		original = decompress.decode("utf-8")
-		data = json.loads(original)
-		return data
-	#end define
 
 	def exit(self, signum: int | None = None, frame: FrameType | None = None) -> None:
 		self.working = False
@@ -471,18 +384,15 @@ class MyPyClass:
 			os.remove(self.pid_file_path)
 		self.save()
 		sys.exit(0)
-	#end define
 
 	def read_file(self, path: str) -> str:
 		with open(path, 'rt') as file:
 			text = file.read()
 		return text
-	#end define
 
 	def write_file(self, path: str, text: str = "") -> None:
 		with open(path, 'wt') as file:
 			file.write(text)
-	#end define
 
 	def read_db(self, db_path: str) -> Dict:
 		err = None
@@ -493,22 +403,17 @@ class MyPyClass:
 				err = ex
 				time.sleep(0.1)
 		raise Exception(f"read_db error: {err}")
-	#end define
 
 	def read_db_process(self, db_path: str) -> Dict:
 		text = self.read_file(db_path)
 		data = json.loads(text)
 		return Dict(data)
-	#end define
 
 	def write_db(self, data: Mapping[str, Any]) -> None:
 		db_path = os.path.realpath(self.db_path)
 		text = json.dumps(data, indent=4)
-		self.lock_file(db_path)
-		try:
+		with self.lock_file(db_path):
 			self._write_file_atomic(db_path, text)
-		finally:
-			self.unlock_file(db_path)
 
 	def _write_file_atomic(self, path: str, text: str = "") -> None:
 		tmp_path = f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
@@ -524,24 +429,23 @@ class MyPyClass:
 				except OSError:
 					pass
 
-	def lock_file(self, path: str) -> None:
-		pid_path = path + ".lock"
-		for i in range(300):
-			if os.path.isfile(pid_path):
-				time.sleep(0.01)
-			else:
-				self.write_file(pid_path)
-				return
-		raise Exception("lock_file error: time out.")
-	#end define
-
-	def unlock_file(self, path: str) -> None:
-		pid_path = path + ".lock"
+	@contextmanager
+	def lock_file(self, path: str, timeout: float = 3.0):
+		lock_path = path + ".lock"
+		fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
 		try:
-			os.remove(pid_path)
-		except:
-			print("Wow. You are faster than me")
-	#end define
+			deadline = time.monotonic() + timeout
+			while True:
+				try:
+					fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+					break
+				except BlockingIOError:
+					if time.monotonic() >= deadline:
+						raise Exception(f"lock_file error: time out: {lock_path}")
+					time.sleep(0.01)
+			yield
+		finally:
+			os.close(fd)
 
 	def merge_three_dicts(self, local_data, file_data, old_file_data):
 		if (id(local_data) == id(file_data) or
@@ -549,13 +453,11 @@ class MyPyClass:
 			id(local_data) == id(old_file_data)):
 			print(local_data.keys())
 			print(file_data.keys())
-			raise Exception(f"merge_three_dicts error: merge the same object")
-		#end if
+			raise Exception("merge_three_dicts error: merge the same object")
 
 		need_write_local_data = False
 		if local_data == file_data and file_data == old_file_data:
 			return need_write_local_data
-		#end if
 
 		dict_keys = list()
 		dict_keys += [key for key in local_data if key not in dict_keys]
@@ -565,7 +467,6 @@ class MyPyClass:
 			if buff is True:
 				need_write_local_data = True
 		return need_write_local_data
-	#end define
 
 	def merge_three_dicts_process(self, key, local_data, file_data, old_file_data):
 		need_write_local_data = False
@@ -578,7 +479,6 @@ class MyPyClass:
 			# find config file change
 			self.mtdp_fcfc(key, local_data, file_data, old_file_data)
 		return need_write_local_data
-	#end define
 
 	def mtdp_get_tmp(self, key, local_data, file_data, old_file_data):
 		tmp = Dict()
@@ -589,7 +489,6 @@ class MyPyClass:
 		tmp.file_item_type = type(tmp.file_item)
 		tmp.old_file_item_type = type(tmp.old_file_item)
 		return tmp
-	#end define
 
 	def mtdp_flc(self, key, local_data, file_data, old_file_data):
 		dict_types = [dict, Dict]
@@ -607,7 +506,6 @@ class MyPyClass:
 			pass
 		else:
 			raise Exception(f"mtdp_flc error: {key} -> {tmp.local_item_type}, {tmp.file_item_type}, {tmp.old_file_item_type}")
-	#end define
 
 	def mtdp_fcfc(self, key, local_data, file_data, old_file_data):
 		dict_types = [dict, Dict]
@@ -625,7 +523,6 @@ class MyPyClass:
 			local_data[key] = Dict(tmp.file_item)
 		else:
 			raise Exception(f"mtdp_fcfc error: {key} -> {tmp.local_item_type}, {tmp.file_item_type}, {tmp.old_file_item_type}")
-	#end define
 
 	def save_db(self) -> None:
 		file_data = self.read_db(self.db_path)
@@ -633,12 +530,10 @@ class MyPyClass:
 		self.old_db = Dict(self.db)
 		if need_write_local_data:
 			self.write_db(self.db)
-	#end define
 
 	def save(self) -> None:
 		self.save_db()
 		self.write_log()
-	#end define
 
 	def load_db(self, db_path: str | None = None) -> bool:
 		result = False
@@ -655,48 +550,8 @@ class MyPyClass:
 		except Exception as err:
 			self.add_log(f"load_db error: {err}", ERROR)
 		return result
-	#end define
 
-	def get_settings(self, file_path: str) -> None:
-		try:
-			with open(file_path) as file:
-				text = file.read()
-			self.db = Dict(json.loads(text))
-			self.save_db()
-			print("get setting successful: " + file_path)
-			self.exit()
-		except Exception as err:
-			self.add_log(f"get_settings error: {err}", WARNING)
-	#end define
-
-	def get_python3_path(self) -> str:
-		python3_path = "/usr/bin/python3"
-		if platform.system() == "OpenBSD":
-			python3_path = "/usr/local/bin/python3"
-		return python3_path
-	#end define
-
-	def fork_daemon(self) -> None:
-		my_path = self.my_path
-		python3_path = self.get_python3_path()
-		cmd = " ".join([python3_path, my_path, "-ef", '&'])
-		os.system(cmd)
-		print("daemon start: " + my_path)
-		self.exit()
-	#end define
-
-	def add_to_crone(self) -> None:
-		python3_path = self.get_python3_path()
-		cron_text = f"@reboot {python3_path} \"{self.my_path}\" -d\n"
-		os.system("crontab -l > mycron")
-		with open("mycron", 'a') as file:
-			file.write(cron_text)
-		os.system("crontab mycron && rm mycron")
-		print("add to cron successful: " + cron_text)
-		self.exit()
-	#end define
-
-	def try_function(self, func: Callback, args: Sequence[Any] | None = None) -> Any:
+	def try_function(self, func: Callback, args: Sequence[Any] | None = None, log_traceback: bool = False) -> Any:
 		result = None
 		try:
 			if args is None:
@@ -705,8 +560,9 @@ class MyPyClass:
 				result = func(*args)
 		except Exception as err:
 			self.add_log(f"{func.__name__} error: {err}", ERROR)
+			if log_traceback:
+				self.add_log(traceback.format_exc(), ERROR)
 		return result
-	#end define
 
 	def start_thread(self, func: Callback, name: str | None = None, args: Sequence[Any] | None = None) -> None:
 		if name is None:
@@ -715,19 +571,16 @@ class MyPyClass:
 			args = ()
 		threading.Thread(target=func, name=name, args=args, daemon=True).start()
 		self.add_log("Thread {name} started".format(name=name), "debug")
-	#end define
 
 	def cycle(self, func: Callback, sec: float, args: Sequence[Any] | None) -> None:
 		while self.working:
-			self.try_function(func, args=args)
+			self.try_function(func, args=args, log_traceback=True)
 			time.sleep(sec)
-	#end define
 
 	def start_cycle(self, func: Callback, sec: float, args: Sequence[Any] | None = None, name: str | None = None) -> None:
 		if name is None:
 			name = func.__name__
 		self.start_thread(self.cycle, name=name, args=(func, sec, args))
-	#end define
 
 	def init_translator(self, file_path: str | None = None) -> None:
 		if file_path is None:
@@ -736,7 +589,6 @@ class MyPyClass:
 		with open(file_path, encoding="utf-8") as file:
 			text = file.read()
 		self.translate_dict = json.loads(text)
-	#end define
 
 	def translate(self, text: str) -> str:
 		if self.translate_dict is None:
@@ -751,19 +603,6 @@ class MyPyClass:
 			if ritem is not None:
 				text = text.replace(item, ritem)
 		return text
-	#end define
-#end class
-
-def get_hash_md5(file_name: str) -> str:
-	blocksize = 65536
-	hasher = hashlib.md5()
-	with open(file_name, 'rb') as file:
-		buf = file.read(blocksize)
-		while len(buf) > 0:
-			hasher.update(buf)
-			buf = file.read(blocksize)
-	return hasher.hexdigest()
-#end define
 
 def parse(text: str | None, search: str | None, search2: str | None = None) -> str | None:
 	if search is None or text is None:
@@ -774,18 +613,9 @@ def parse(text: str | None, search: str | None, search2: str | None = None) -> s
 	if search2 is not None and search2 in text:
 		text = text[:text.find(search2)]
 	return text
-#end define
-
-def get_request(url: str) -> str:
-	link = urlopen(url)
-	data = link.read()
-	text = data.decode("utf-8")
-	return text
-#end define
 
 def b2mb(item: int | str) -> float:
 	return round(int(item) / 1000 / 1000, 2)
-#end define
 
 def search_file_in_dir(path: str, file_name: str) -> str | None:
 	result = None
@@ -802,7 +632,6 @@ def search_file_in_dir(path: str, file_name: str) -> str | None:
 				result = entry.path
 				break
 	return result
-#end define
 
 def search_dir_in_dir(path: str, dir_name: str) -> str | None:
 	result = None
@@ -818,15 +647,12 @@ def search_dir_in_dir(path: str, dir_name: str) -> str | None:
 				result = buff
 				break
 	return result
-#end define
 
 def get_dir_from_path(path: str) -> str:
 	return path[:path.rfind('/') + 1]
-#end define
 
 def get_full_name_from_path(path: str) -> str:
 	return path[path.rfind('/') + 1:]
-#end define
 
 def print_table(arr: Sequence[Sequence[Any]]) -> None:
 	buff = dict()
@@ -843,11 +669,9 @@ def print_table(arr: Sequence[Sequence[Any]]) -> None:
 				ptext = bcolors.bold_text(ptext)
 			print(ptext, end='')
 		print()
-#end define
 
 def get_timestamp() -> int:
 	return int(time.time())
-#end define
 
 def color_text(text: str) -> str:
 	for cname in bcolors.colors:
@@ -855,12 +679,10 @@ def color_text(text: str) -> str:
 		if item in text:
 			text = text.replace(item, bcolors.colors[cname])
 	return text
-#end define
 
 def color_print(text: str) -> None:
 	text = color_text(text)
 	print(text)
-#end define
 
 def get_load_avg() -> list[float]:
 	psys = platform.system()
@@ -895,24 +717,12 @@ def get_internet_interface_name() -> str:
 		try:
 			arr = json.loads(text)
 			interface_name = arr[0]["dev"]
-		except:
+		except Exception:
 			lines = text.split('\n')
 			items = lines[0].split(' ')
 			buff = items.index("dev")
 			interface_name = items[buff + 1]
 	return interface_name
-#end define
-
-def thr_sleep() -> None:
-	while True:
-		time.sleep(10)
-#end define
-
-def timestamp2datetime(timestamp: int | float, format: str = "%d.%m.%Y %H:%M:%S") -> str:
-	datetime = time.localtime(timestamp)
-	result = time.strftime(format, datetime)
-	return result
-#end define
 
 def timeago(timestamp: int | date_time_library.datetime | Literal[False] = False) -> str:
 	"""
@@ -952,7 +762,6 @@ def timeago(timestamp: int | date_time_library.datetime | Literal[False] = False
 	if day_diff < 365:
 		return str(day_diff // 30) + " months ago"
 	return str(day_diff // 365) + " years ago"
-#end define
 
 def time2human(diff: int | float) -> str:
 	dt = date_time_library.timedelta(seconds=diff)
@@ -967,18 +776,12 @@ def time2human(diff: int | float) -> str:
 		if dt.seconds < 86400:
 			return str(dt.seconds // 3600) + " hours"
 	return str(dt.days) + " days"
-#end define
 
 def dec2hex(dec: int) -> str:
 	h = hex(dec)[2:]
 	if len(h) % 2 > 0:
 		h = '0' + h
 	return h
-#end define
-
-def hex2dec(h: str) -> int:
-	return int(h, base=16)
-#end define
 
 def run_as_root(args: list[str]) -> int:
 	psys = platform.system()
@@ -995,12 +798,6 @@ def run_as_root(args: list[str]) -> int:
 			raise Exception(f"run_as_root error: the system is not supported: {psys}")
 	exit_code = subprocess.call(args)
 	return exit_code
-#end define
-
-def get_username() -> str | None:
-	user = os.getenv("USER")
-	return user
-#end define
 
 def add2systemd(**kwargs):
 	name = kwargs.get("name")
@@ -1020,12 +817,11 @@ def add2systemd(**kwargs):
 	if name is None or start is None:
 		raise Exception("Bad args. Need 'name' and 'start'.")
 	if os.path.isfile(path):
-		if force == True:
+		if force:
 			print("Unit exist, force rewrite")
 		else:
 			print("Unit exist.")
 			return
-	#end if
 
 	text = f"""
 [Unit]
@@ -1078,7 +874,6 @@ rc_cmd $1
 		# Перезапустить systemd
 		args = ["systemctl", "daemon-reload"]
 		subprocess.run(args)
-	#end if
 
 	# Включить автозапуск
 	if psys == "OpenBSD":
@@ -1086,15 +881,12 @@ rc_cmd $1
 	else:
 		args = ["systemctl", "enable", name]
 	subprocess.run(args)
-#end define
 
 def ip2int(addr: str) -> int:
 	return struct.unpack("!i", socket.inet_aton(addr))[0]
-#end define
 
 def int2ip(dec: int) -> str:
 	return socket.inet_ntoa(struct.pack("!i", dec))
-#end define
 
 def get_service_status(name: str) -> bool:
 	status = False
@@ -1106,7 +898,6 @@ def get_service_status(name: str) -> bool:
 	if result == 0:
 		status = True
 	return status
-#end define
 
 def get_service_uptime(name: str) -> int | None:
 	property = "ExecMainStartTimestampMonotonic"
@@ -1123,7 +914,6 @@ def get_service_uptime(name: str) -> int | None:
 	start_timestamp = boot_timestamp + start_timestamp_monotonic
 	uptime = int(time_now - start_timestamp)
 	return uptime
-#end define
 
 def get_service_pid(name: str) -> int | None:
 	property = "MainPID"
@@ -1138,117 +928,3 @@ def get_service_pid(name: str) -> int | None:
 		return None
 	pid = int(pid_text)
 	return pid
-#end define
-
-def get_git_hash(git_path: str, short: bool = False) -> str | None:
-	args = ["git", "rev-parse", "HEAD"]
-	if short is True:
-		args.insert(2, '--short')
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path,
-							timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(err) > 0:
-		return
-	buff = output.split('\n')
-	return buff[0]
-#end define
-
-def get_git_url(git_path: str) -> str | None:
-	args = ["git", "remote", "-v"]
-	output = ""
-	try:
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-								cwd=git_path, timeout=3)
-		output = process.stdout.decode("utf-8")
-		err = process.stderr.decode("utf-8")
-	except Exception as ex:
-		err = str(ex)
-	if len(err) > 0:
-		return None
-	lines = output.split('\n')
-	url = None
-	for line in lines:
-		if "origin" in line:
-			buff = line.split()
-			url = buff[1]
-	#end if
-	return url
-#end define
-
-def get_git_author_and_repo(git_path: str) -> tuple[str | None, str | None]:
-	author = None
-	repo = None
-	url = get_git_url(git_path)
-	if url is not None:
-		buff = url.split('/')
-		if len(buff) == 5:
-			author = buff[3]
-			repo = buff[4]
-			repo = repo.split('.')
-			repo = repo[0]
-	return author, repo
-#end define
-
-def get_git_last_remote_commit(git_path: str, branch: str = "master") -> str | None:
-	author, repo = get_git_author_and_repo(git_path)
-	if author is None or repo is None:
-		return
-	url = f"https://api.github.com/repos/{author}/{repo}/branches/{branch}"
-	sha = None
-	try:
-		text = get_request(url)
-		data = json.loads(text)
-		sha = data["commit"]["sha"]
-	except URLError:
-		pass
-	return sha
-#end define
-
-def get_git_branch(git_path: str) -> str | None:
-	args = ["git", "branch", "-v"]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path,
-							timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(err) > 0:
-		return None
-	lines = output.split('\n')
-	branch = None
-	for line in lines:
-		if "*" in line:
-			buff = line.split()
-			branch = buff[1]
-	#end if
-	return branch
-#end define
-
-def check_git_update(git_path: str) -> bool | None:
-	branch = get_git_branch(git_path)
-	if branch is None:
-		return None
-	new_hash = get_git_last_remote_commit(git_path, branch)
-	old_hash = get_git_hash(git_path)
-	result = False
-	if old_hash != new_hash:
-		result = True
-	if old_hash is None or new_hash is None:
-		result = None
-	return result
-#end define
-
-def read_config_from_file(config_path: str) -> Dict:
-	file = open(config_path, 'rt')
-	text = file.read()
-	file.close()
-	config = Dict(json.loads(text))
-	return config
-#end define
-
-
-def write_config_to_file(config_path: str, data: Mapping[str, Any]) -> None:
-	text = json.dumps(data, indent=4)
-	file = open(config_path, 'wt')
-	file.write(text)
-	file.close()
-#end define

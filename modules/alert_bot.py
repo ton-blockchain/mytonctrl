@@ -9,6 +9,7 @@ from mypylib.mypylib import get_timestamp, print_table, color_print
 from mytoncore.utils import get_hostname, signed_int_to_hex64
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
 from mytonctrl.utils import timestamp2utcdatetime
+from modules.validator import ValidatorModule
 
 
 @dataclasses.dataclass
@@ -189,7 +190,7 @@ class AlertBotModule(MtcModule):
 
     def __init__(self, ton, local, *args, **kwargs):
         super().__init__(ton, local, *args, **kwargs)
-        self.validator_module = None
+        self.validator_module = ValidatorModule(self.ton, self.local)
         self.inited = False
         self.hostname = None
         self.ip = None
@@ -290,8 +291,6 @@ Severity: <code>{alert.severity}</code>
         self.chat_id = self.ton.local.db.get("ChatId")
         if self.token is None or self.chat_id is None:
             raise Exception("BotToken or ChatId is not set")
-        from modules.validator import ValidatorModule
-        self.validator_module = ValidatorModule(self.ton, self.local)
         self.hostname = get_hostname()
         adnl = self.ton.GetAdnlAddr()
         self.adnl = adnl
@@ -532,7 +531,9 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         trs = self.ton.GetAccountHistory(self.ton.GetAccount(res["walletAddr"]), limit=10)
 
         for tr in trs:
-            if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.src_addr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
+            if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.src_addr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body is not None and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
+                if tr.value is None:
+                    raise Exception(f"Stake returned transaction has no value: {tr}")
                 self.send_alert("stake_returned", stake=round(tr.value), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
                 return
         self.send_alert("stake_not_returned", address=res["walletAddr"])

@@ -123,3 +123,5 @@ venv/
 venv38/
 sandbox/
 /dev/
+_commit.py
+_version.py

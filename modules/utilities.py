@@ -7,6 +7,7 @@ import requests
 
 from mypylib.mypylib import color_print, print_table, color_text, timeago, bcolors
 from modules.module import MtcModule
+from mytoncore.utils import raw_addr_to_b64, tlb_to_json
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
 
 
@@ -48,15 +49,20 @@ class UtilitiesModule(MtcModule):
                 continue
             srcAddrFull = f"{message.src_workchain}:{message.src_addr}"
             destAddFull = f"{message.dest_workchain}:{message.dest_addr}"
-            if srcAddrFull == account.addrFull:
+            if srcAddrFull == account.addr_full:
                 type = color_text("{red}{bold}>>>{endc}")
                 fromto = destAddFull
             else:
                 type = color_text("{blue}{bold}<<<{endc}")
                 fromto = srcAddrFull
-            fromto = self.ton.AddrFull2AddrB64(fromto)
+            if 'None' in fromto:
+                fromto = 'None'
+            else:
+                fromto = raw_addr_to_b64(fromto, is_testnet=self.ton.IsTestnet())
             # datetime = timestamp2datetime(message.time, "%Y.%m.%d %H:%M:%S")
-            datetime = timeago(message.time)
+            datetime = 'n/a'
+            if message.time is not None:
+                datetime = timeago(message.time)
             table += [[datetime, type, message.value, fromto]]
         return table
 
@@ -161,12 +167,14 @@ class UtilitiesModule(MtcModule):
             config_value = config_value[start:end]
         # end if
 
-        args = [self.ton.liteClient.appPath, "--global-config", self.ton.liteClient.configPath, "--verbosity", "0"]
+        args = [self.ton.liteClient.app_path, "--global-config", self.ton.liteClient.config_path, "--verbosity", "0"]
         process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         time.sleep(1)
 
         fullConfigAddr = self.ton.GetFullConfigAddr()
         cmd = "runmethodfull {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
+        if process.stdin is None:
+            raise RuntimeError("stdin pipe not available")
         process.stdin.write(cmd.encode() + b'\n')
         process.stdin.flush()
         time.sleep(1)
@@ -177,10 +185,13 @@ class UtilitiesModule(MtcModule):
         time.sleep(1)
 
         process.terminate()
+        if process.stdout is None:
+            raise RuntimeError("stdout pipe not available")
         text = process.stdout.read().decode()
 
         lines = text.split('\n')
         b = len(lines)
+        a = None
         for i in range(b):
             line = lines[i]
             if "dumping cells as values of TLB type" in line:
@@ -188,6 +199,10 @@ class UtilitiesModule(MtcModule):
                 break
         # end for
 
+        if a is None:
+            raise Exception("Cannot find dumping cells as values of TLB type")
+
+        start, end = None, None
         for i in range(a, b):
             line = lines[i]
             if '(' in line:
@@ -202,9 +217,12 @@ class UtilitiesModule(MtcModule):
                 break
         # end for
 
+        if start is None or end is None:
+            raise Exception("Cannot find start and end of dumping cells as values of TLB type")
+
         buff = lines[start:end]
         text = "".join(buff)
-        newData = self.ton.Tlb2Json(text)
+        newData = tlb_to_json(text)
         newFileName = self.ton.tempDir + "data1diff"
         file = open(newFileName, 'wt')
         newText = json.dumps(newData, indent=2)

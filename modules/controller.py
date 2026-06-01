@@ -3,6 +3,7 @@ import os
 import time
 
 from mypylib.mypylib import color_print, print_table
+from mytoncore.utils import raw_addr_to_b64
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args, check_usage_args_min_max_len
 
 from mytonctrl.utils import GetItemFromList
@@ -73,9 +74,12 @@ class ControllerModule(MtcModule):
         table += [["Address", "Status", "Balance", "Approved", "State"]]
         for controllerAddr in controllers:
             account = self.ton.GetAccount(controllerAddr)
-            controllerData = self.ton.GetControllerData(controllerAddr)
-            approved = True if controllerData and controllerData["approved"] == -1 else False
-            state = controllerData["state"] if controllerData else None
+            try:
+                controller_data = self.ton.GetControllerData(controllerAddr)
+            except Exception:
+                controller_data = None
+            approved = True if controller_data and controller_data["approved"] == -1 else False
+            state = controller_data["state"] if controller_data else None
             table += [[controllerAddr, account.status, account.balance, approved, state]]
         print_table(table)
 
@@ -114,8 +118,8 @@ class ControllerModule(MtcModule):
             percent_per_round = float(args[0])
         else:
             percent_per_round = self.ton.GetSettings("max_interest_percent")
-        config15 = self.ton.GetConfig(15)
-        roundPeriod = config15["validators_elected_for"]
+        config15 = self.ton.GetConfig15()
+        roundPeriod = config15["validatorsElectedFor"]
         rounds = 365 * 24 * 3600 / roundPeriod
         yearInterest = (1 + percent_per_round / 100) * rounds
         yearInterestPercent = round(yearInterest / 100, 2)
@@ -192,13 +196,19 @@ class ControllerModule(MtcModule):
         for message in history:
             if message.src_addr is None or message.value is None:
                 continue
-            src_addr_full = f"{message.src_workchain}:{message.src_addr}"
-            dest_add_full = f"{message.dest_workchain}:{message.dest_addr}"
-            if src_addr_full == account.addrFull:
-                fromto = dest_add_full
+            src_addr_full = None
+            if message.src_workchain is not None and message.src_addr is not None:
+                src_addr_full = f"{message.src_workchain}:{message.src_addr}"
+            dest_addr_full = None
+            if message.dest_workchain is not None and message.dest_addr is not None:
+                dest_addr_full = f"{message.dest_workchain}:{message.dest_addr}"
+            if src_addr_full == account.addr_full:
+                fromto = dest_addr_full
             else:
                 fromto = src_addr_full
-            fromto = self.ton.AddrFull2AddrB64(fromto)
+            if fromto is None:
+                continue
+            fromto = raw_addr_to_b64(fromto)
             if fromto not in addrs_list:
                 addrs_list.append(fromto)
 

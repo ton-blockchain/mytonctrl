@@ -28,7 +28,7 @@ def test_new_single_pool(cli, ton, monkeypatch, mocker: MockerFixture):
             f.write(b'\x00'*36)
         return "Saved single nominator pool"
 
-    monkeypatch.setattr(ton.fift, "Run", fake_fift_run)
+    monkeypatch.setattr(ton.fift, "run", fake_fift_run)
 
     pool_name = "test_single_pool"
     pool_path = ton.poolsDir + pool_name

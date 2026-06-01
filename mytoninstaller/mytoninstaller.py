@@ -77,7 +77,6 @@ def Init(local, console):
 		return partial(func, *args)
 
 	# Create user console
-	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.add_item("status", inject_globals(Status), "Print TON component status")
 	console.add_item("set_node_argument", inject_globals(set_node_argument), "Set node argument", "<arg_name> [arg_value1] [arg_value2] [-d (to delete)]")
@@ -349,11 +348,11 @@ def General(local, console):
 ###
 def mytoninstaller():
 	local = MyPyClass(__file__)
-	console = MyPyConsole(local)
+	console = MyPyConsole(local, "MyTonInstaller")
 
 	Init(local, console)
 	if len(sys.argv) > 1:
 		General(local, console)
 	else:
-		console.Run()
+		console.run()
 	local.exit()

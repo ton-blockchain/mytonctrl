@@ -8,7 +8,8 @@ import requests
 from pytest_mock import MockerFixture
 
 from mytoncore.utils import get_package_resource_path
-from mytonctrl import mytonctrl as mytonctrl_module
+from modules import general as general_module
+from modules.general import GeneralModule
 from mypylib.mypylib import MyPyClass
 from mypylib.mypylib import Dict
 from mytoncore.mytoncore import MyTonCore
@@ -47,13 +48,13 @@ def test_update(cli, monkeypatch, mocker):
     exit_mock = mocker.Mock()
     monkeypatch.setattr(MyPyClass, "exit", exit_mock)
 
-    monkeypatch.setattr(mytonctrl_module, "check_git", lambda args, default_repo, text: ("author", "repo", "branch", None))
+    monkeypatch.setattr(general_module, "check_git", lambda args, default_repo, text: ("author", "repo", "branch", None))
 
     calls = {}
     def fake_run_as_root(run_args):
         calls["run_args"] = run_args
         return 0
-    monkeypatch.setattr(mytonctrl_module, "run_as_root", fake_run_as_root)
+    monkeypatch.setattr(general_module, "run_as_root", fake_run_as_root)
 
     output = cli.execute("update")
     with get_package_resource_path('mytonctrl', 'scripts/update.sh') as upd_path:
@@ -64,15 +65,15 @@ def test_update(cli, monkeypatch, mocker):
 
 
 def test_upgrade(cli, monkeypatch):
-    monkeypatch.setattr(mytonctrl_module, "check_git", lambda args, default_repo, text: ("author", "repo", "branch", None))
+    monkeypatch.setattr(general_module, "check_git", lambda args, default_repo, text: ("author", "repo", "branch", None))
 
     calls = {}
     def fake_run_as_root(run_args):
         calls["run_args"] = run_args
         return 0
 
-    monkeypatch.setattr(mytonctrl_module, "run_as_root", fake_run_as_root)
-    monkeypatch.setattr(mytonctrl_module, "get_clang_major_version", lambda: 21)
+    monkeypatch.setattr(general_module, "run_as_root", fake_run_as_root)
+    monkeypatch.setattr(general_module, "get_clang_major_version", lambda: 21)
     monkeypatch.setattr(MyTonCore, "using_validator", lambda self: False)
     with get_package_resource_path('mytonctrl', 'scripts/upgrade.sh') as upg_path:
         assert upg_path.is_file()
@@ -100,14 +101,14 @@ def test_upgrade(cli, monkeypatch):
 
     # clang version is < 21, abort
     calls = {}
-    monkeypatch.setattr(mytonctrl_module, "get_clang_major_version", lambda: 14)
+    monkeypatch.setattr(general_module, "get_clang_major_version", lambda: 14)
     monkeypatch.setattr('builtins.input', lambda _: "n")
     output = cli.execute("upgrade")
     assert "aborted." in output
     assert not calls
 
     # clang version is < 21, proceed
-    monkeypatch.setattr(mytonctrl_module, "get_clang_major_version", lambda: 14)
+    monkeypatch.setattr(general_module, "get_clang_major_version", lambda: 14)
     monkeypatch.setattr('builtins.input', lambda _: "y")
     output = cli.execute("upgrade")
     assert "Upgrade - \x1b[32mOK\x1b" in output
@@ -115,16 +116,16 @@ def test_upgrade(cli, monkeypatch):
     assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch"]
 
     # call upgrade_btc_teleport if using validator
-    monkeypatch.setattr(mytonctrl_module, "get_clang_major_version", lambda: 21)
+    monkeypatch.setattr(general_module, "get_clang_major_version", lambda: 21)
     calls = {}
     monkeypatch.setattr(MyTonCore, "using_validator", lambda self: True)
     teleport_calls = {}
-    def fake_upgrade_btc_teleport(local, ton, reinstall=False, branch="master", user=None):
+    def fake_upgrade_btc_teleport(self, reinstall=False, branch="master", user=None):
         teleport_calls["called"] = True
         teleport_calls["reinstall"] = reinstall
         teleport_calls["branch"] = branch
         teleport_calls["user"] = user
-    monkeypatch.setattr(mytonctrl_module, "upgrade_btc_teleport", fake_upgrade_btc_teleport)
+    monkeypatch.setattr(GeneralModule, "upgrade_btc_teleport", fake_upgrade_btc_teleport)
     output = cli.execute("upgrade", no_color=True)
     assert teleport_calls.get("called") is True
     assert teleport_calls.get("reinstall") is False
@@ -132,25 +133,25 @@ def test_upgrade(cli, monkeypatch):
     assert "Error" not in output
     assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch"]
 
-    monkeypatch.setattr(mytonctrl_module, "run_as_root", lambda _: 1)
+    monkeypatch.setattr(general_module, "run_as_root", lambda _: 1)
     output = cli.execute("upgrade", no_color=True)
     assert "Upgrade - Error" in output
 
 
 def test_upgrade_btc_teleport(cli, monkeypatch, mocker: MockerFixture):
     teleport_calls = {}
-    def fake_upgrade_btc_teleport(local, ton, reinstall=False, branch="master", user=None):
+    def fake_upgrade_btc_teleport(self, reinstall=False, branch="master", user=None):
         teleport_calls["called"] = True
         teleport_calls["reinstall"] = reinstall
         teleport_calls["branch"] = branch
         teleport_calls["user"] = user
 
-    monkeypatch.setattr(mytonctrl_module, "upgrade_btc_teleport", fake_upgrade_btc_teleport)
+    monkeypatch.setattr(GeneralModule, "upgrade_btc_teleport", fake_upgrade_btc_teleport)
 
     run_as_root_mocker = mocker.Mock()
-    monkeypatch.setattr(mytonctrl_module, "run_as_root", run_as_root_mocker)
+    monkeypatch.setattr(general_module, "run_as_root", run_as_root_mocker)
     check_git_mocker = mocker.Mock()
-    monkeypatch.setattr(mytonctrl_module, "check_git", check_git_mocker)
+    monkeypatch.setattr(general_module, "check_git", check_git_mocker)
 
     output = cli.execute("upgrade --btc-teleport dev -u alice")
 
@@ -218,12 +219,12 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda *_: vconfig_mock)
     monkeypatch.setattr(MyTonCore, "get_validator_engine_ip", lambda *_: '127.0.0.1')
 
-    monkeypatch.setattr(mytonctrl_module, 'get_git_hash', lambda *_, **__: 'abcd')
-    monkeypatch.setattr(mytonctrl_module, 'get_git_branch', lambda *_: 'master')
-    monkeypatch.setattr(mytonctrl_module, 'get_bin_git_hash', lambda *_, **__: 'abcd')
-    monkeypatch.setattr(mytonctrl_module, 'fix_git_config', lambda *_: None)
-    monkeypatch.setattr(mytonctrl_module, 'get_service_status', lambda *_: True)
-    monkeypatch.setattr(mytonctrl_module, 'get_service_uptime', lambda *_: 1000)
+    monkeypatch.setattr(general_module, 'get_git_hash', lambda *_, **__: 'abcd')
+    monkeypatch.setattr(general_module, 'get_git_branch', lambda *_: 'master')
+    monkeypatch.setattr(general_module, 'get_bin_git_hash', lambda *_, **__: 'abcd')
+    monkeypatch.setattr(general_module, 'fix_git_config', lambda *_: None)
+    monkeypatch.setattr(general_module, 'get_service_status', lambda *_: True)
+    monkeypatch.setattr(general_module, 'get_service_uptime', lambda *_: 1000)
 
     output = cli.execute("status", no_color=True)
     assert 'Error' not in output
@@ -273,8 +274,8 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "GetComplaintsNumber", lambda *_: None)
     monkeypatch.setattr(MyTonCore, "GetAccount", lambda *_: Dict({"balance": 1000}))
 
-    monkeypatch.setattr(mytonctrl_module, "get_memory_info", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
-    monkeypatch.setattr(mytonctrl_module, "get_swap_info", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
+    monkeypatch.setattr(general_module, "get_memory_info", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
+    monkeypatch.setattr(general_module, "get_swap_info", lambda: {'total': 0, 'usage': 0, 'usagePercent': 0})
 
     output = cli.execute("status", no_color=True)
     assert "Traceback" not in output
@@ -443,11 +444,11 @@ def test_download_archive_blocks(cli, monkeypatch):
         calls = args
         return
 
-    monkeypatch.setattr('mytonctrl.mytonctrl.download_blocks', download_blocks)
+    monkeypatch.setattr('modules.general.download_blocks', download_blocks)
 
     output = cli.execute('download_archive_blocks test/ 1')
     assert 'Failed to get Ton Storage API port and port was not provided' in output
-    monkeypatch.setattr('mytonctrl.mytonctrl.get_ton_storage_port', lambda *_: 3334)
+    monkeypatch.setattr('modules.general.get_ton_storage_port', lambda *_: 3334)
 
     # unable to connect
     output = cli.execute('download_archive_blocks test/ 1')
@@ -511,7 +512,7 @@ def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # Happy path - set quic port with default category, no existing quic addrs, no collators
     validator_console_mock = mocker.Mock()
-    validator_console_mock.Run.return_value = "success"
+    validator_console_mock.run.return_value = "success"
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
         "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]}],  # 127.0.0.1
         "collators": [],
@@ -519,26 +520,26 @@ def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "GetAdnlAddr", lambda self: "TEST_ADNL_ADDR")
     update_adnl_mock = mocker.Mock()
     monkeypatch.setattr(MyTonCore, "update_adnl_category", update_adnl_mock)
-    ton.validatorConsole = validator_console_mock
+    ton._validator_console = validator_console_mock
 
     output = cli.execute("set_quic_port 1234", no_color=True)
     update_adnl_mock.assert_called_once_with(adnl_addr="TEST_ADNL_ADDR", category=2)
-    validator_console_mock.Run.assert_called_once_with("add-quic-addr 127.0.0.1:1234 [ 2 ] [ ]")
+    validator_console_mock.run.assert_called_once_with("add-quic-addr 127.0.0.1:1234 [ 2 ] [ ]")
 
     # Happy path - with custom category
     update_adnl_mock.reset_mock()
-    validator_console_mock.Run.reset_mock()
+    validator_console_mock.run.reset_mock()
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
         "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [3]}],
         "collators": [],
     })
     output = cli.execute("set_quic_port 5555 3", no_color=True)
     update_adnl_mock.assert_called_once_with(adnl_addr="TEST_ADNL_ADDR", category=3)
-    validator_console_mock.Run.assert_called_once_with("add-quic-addr 127.0.0.1:5555 [ 3 ] [ ]")
+    validator_console_mock.run.assert_called_once_with("add-quic-addr 127.0.0.1:5555 [ 3 ] [ ]")
 
     # Happy path - delete existing quic addr before adding new one
     update_adnl_mock.reset_mock()
-    validator_console_mock.Run.reset_mock()
+    validator_console_mock.run.reset_mock()
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
         "addrs": [
             {"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]},
@@ -548,13 +549,13 @@ def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
     })
     output = cli.execute("set_quic_port 1234", no_color=True)
     assert "Deleted quic addr 127.0.0.1:9999" in output
-    assert validator_console_mock.Run.call_count == 2
-    validator_console_mock.Run.assert_any_call("del-quic-addr 127.0.0.1:9999 [ 1 ] [  ]")
-    validator_console_mock.Run.assert_any_call("add-quic-addr 127.0.0.1:1234 [ 2 ] [ ]")
+    assert validator_console_mock.run.call_count == 2
+    validator_console_mock.run.assert_any_call("del-quic-addr 127.0.0.1:9999 [ 1 ] [  ]")
+    validator_console_mock.run.assert_any_call("add-quic-addr 127.0.0.1:1234 [ 2 ] [ ]")
 
     # Happy path - with collators, updates their adnl categories too
     update_adnl_mock.reset_mock()
-    validator_console_mock.Run.reset_mock()
+    validator_console_mock.run.reset_mock()
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
         "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]}],
         "collators": [{"adnl_id": base64.b64encode(b"\xaa" * 32).decode()}],
@@ -565,23 +566,23 @@ def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # Port 0 - should not call add-quic-addr
     update_adnl_mock.reset_mock()
-    validator_console_mock.Run.reset_mock()
+    validator_console_mock.run.reset_mock()
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
         "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]}, {"@type": "engine.quicAddr", "ip": 2130706433, "port": 9999, "categories": [1], "priority_categories": []}],
         "collators": [],
     })
     output = cli.execute("set_quic_port 0", no_color=True)
     update_adnl_mock.assert_not_called()
-    validator_console_mock.Run.assert_called_once_with("del-quic-addr 127.0.0.1:9999 [ 1 ] [  ]")
+    validator_console_mock.run.assert_called_once_with("del-quic-addr 127.0.0.1:9999 [ 1 ] [  ]")
 
     # Category not set for address - should raise
     update_adnl_mock.reset_mock()
-    validator_console_mock.Run.reset_mock()
+    validator_console_mock.run.reset_mock()
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
         "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [1, 3]}],
         "collators": [],
     })
     output = cli.execute("set_quic_port 1234", no_color=True)
     assert "Category 2 is not set for address" in output
-    validator_console_mock.Run.assert_not_called()
+    validator_console_mock.run.assert_not_called()
     update_adnl_mock.assert_not_called()

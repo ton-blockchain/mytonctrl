@@ -2,35 +2,36 @@ import socket
 import subprocess
 
 from mytoncore import MyTonCore
-from mytonctrl import mytonctrl
+from mytonctrl.warnings import WarningChecker
+from mytonctrl import warnings
 from pytest_mock import MockerFixture
 
 
 def test_check_mytonctrl_update(cli, monkeypatch):
-    monkeypatch.setattr(mytonctrl, 'warnings', lambda *_: None)
-    monkeypatch.setattr(mytonctrl, 'check_installer_user', lambda *_: None)
-    monkeypatch.setattr(mytonctrl, 'check_vport', lambda *_: None)
-    monkeypatch.setattr(mytonctrl.os.path, 'exists', lambda _: True)
+    monkeypatch.setattr(WarningChecker, 'run_warnings', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'check_installer_user', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'check_vport', lambda *_: None)
+    monkeypatch.setattr(warnings.os.path, 'exists', lambda _: True)
 
-    monkeypatch.setattr(mytonctrl, 'check_git_update', lambda *_: True)
+    monkeypatch.setattr(warnings, 'check_git_update', lambda *_: True)
     output = cli.run_pre_up()
     assert 'MyTonCtrl update available' in output
 
-    monkeypatch.setattr(mytonctrl, 'check_git_update', lambda *_: False)
+    monkeypatch.setattr(warnings, 'check_git_update', lambda *_: False)
     output = cli.run_pre_up()
     assert 'MyTonCtrl update available' not in output
 
-    monkeypatch.setattr(mytonctrl.os.path, 'exists', lambda _: False)
+    monkeypatch.setattr(warnings.os.path, 'exists', lambda _: False)
 
-    monkeypatch.setattr(mytonctrl, 'check_git_update', lambda *_: True)
+    monkeypatch.setattr(warnings, 'check_git_update', lambda *_: True)
     output = cli.run_pre_up()
     assert 'MyTonCtrl update available' not in output
 
 
 def test_check_installer_user(cli, monkeypatch, mocker: MockerFixture):
-    monkeypatch.setattr(mytonctrl, 'check_mytonctrl_update', lambda *_: None)
-    monkeypatch.setattr(mytonctrl, 'warnings', lambda *_: None)
-    monkeypatch.setattr(mytonctrl, 'check_vport', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'check_mytonctrl_update', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'run_warnings', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'check_vport', lambda *_: None)
 
     whoami_result = mocker.Mock()
     whoami_result.stdout = b'testuser\n'
@@ -53,9 +54,9 @@ def test_check_installer_user(cli, monkeypatch, mocker: MockerFixture):
 
 
 def test_check_vport(cli, monkeypatch, mocker: MockerFixture):
-    monkeypatch.setattr(mytonctrl, 'check_mytonctrl_update', lambda *_: None)
-    monkeypatch.setattr(mytonctrl, 'warnings', lambda *_: None)
-    monkeypatch.setattr(mytonctrl, 'check_installer_user', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'check_mytonctrl_update', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'run_warnings', lambda *_: None)
+    monkeypatch.setattr(WarningChecker, 'check_installer_user', lambda *_: None)
 
     monkeypatch.setattr(MyTonCore, 'GetValidatorConfig', mocker.Mock(side_effect=Exception('test error')))
     output = cli.run_pre_up()

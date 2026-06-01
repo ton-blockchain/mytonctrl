@@ -2,6 +2,7 @@ import os
 
 from mypylib.mypylib import color_print
 from modules.pool import PoolModule
+from mytoncore.models import Pool
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args, check_usage_args_len
 
 
@@ -27,7 +28,7 @@ class NominatorPoolModule(PoolModule):
         wallet = self.ton.GetValidatorWallet()
         args = [fift_script, wallet.addrB64, validator_reward_share, max_nominators_count, min_validator_stake,
                 min_nominator_stake, file_path]
-        result = self.ton.fift.Run(args)
+        result = self.ton.fift.run(args)
         if "Saved pool" not in result:
             raise Exception("CreatePool error: " + result)
         # end if
@@ -36,7 +37,7 @@ class NominatorPoolModule(PoolModule):
         new_pool = self.ton.GetLocalPool(pool_name)
         for pool in pools:
             if pool.name != new_pool.name and pool.addrB64 == new_pool.addrB64:
-                new_pool.Delete()
+                new_pool.delete()
                 raise Exception("CreatePool error: Pool with the same parameters already exists.")
 
     def new_pool(self, args):
@@ -54,7 +55,7 @@ class NominatorPoolModule(PoolModule):
         self.do_create_pool(pool_name, validator_reward_share_percent, max_nominators_count, min_validator_stake, min_nominator_stake)
         color_print("NewPool - {green}OK{endc}")
 
-    def do_activate_pool(self, pool, ex=True):
+    def do_activate_pool(self, pool: Pool, ex=True):
         self.ton.local.add_log("start ActivatePool function", "debug")
         account = self.ton.GetAccount(pool.addrB64)
         if account.status == "empty":
@@ -64,7 +65,7 @@ class NominatorPoolModule(PoolModule):
         else:
             validator_wallet = self.ton.GetValidatorWallet()
             self.ton.check_account_active(validator_wallet.addrB64)
-            self.ton.SendFile(pool.bocFilePath, pool, timeout=False, remove=False)
+            self.ton.SendFile(pool.bocFilePath, timeout=False, remove=False)
     #end define
 
     def activate_pool(self, args):
@@ -88,7 +89,7 @@ class NominatorPoolModule(PoolModule):
         bocPath = self.ton.local.my_temp_dir + wallet.name + "validator-deposit-query.boc"
         fiftScript = self.ton.contractsDir + "nominator-pool/func/validator-deposit.fif"
         args = [fiftScript, bocPath]
-        self.ton.fift.Run(args)
+        self.ton.fift.run(args)
         resultFilePath = self.ton.SignBocWithWallet(wallet, bocPath, pool_addr, amount)
         self.ton.SendFile(resultFilePath, wallet)
 

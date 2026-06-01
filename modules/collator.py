@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from modules.module import MtcModule
 from mypylib import color_print, print_table
 from mytoncore.utils import b642hex, signed_int_to_hex64, shard_prefix_len, hex_shard_to_int, shard_prefix, shard_is_ancestor
@@ -17,7 +19,7 @@ class CollatorModule(MtcModule):
 
     def add_collator_to_vc(self, adnl_addr: str, shard: str):
         self.local.add_log("start add_collator_to_vc function", "debug")
-        result = self.ton.validatorConsole.Run(f"add-collator {adnl_addr} {shard}")
+        result = self.ton.validatorConsole.run(f"add-collator {adnl_addr} {shard}")
         return result
 
     @staticmethod
@@ -101,7 +103,7 @@ class CollatorModule(MtcModule):
                 adnl_hex = b642hex(c['adnl_id']).upper()
                 workchain = int(c['shard']['workchain'])
                 shard_int = int(c['shard']['shard'])
-                res = self.ton.validatorConsole.Run(f"del-collator {adnl_hex} {workchain} {shard_int}")
+                res = self.ton.validatorConsole.run(f"del-collator {adnl_hex} {workchain} {shard_int}")
                 if 'success' not in res.lower():
                     errors.append(res.strip())
             if errors:
@@ -116,7 +118,7 @@ class CollatorModule(MtcModule):
         workchain = int(shard_id['workchain'])
         shard_int = int(shard_id['shard'])
 
-        res = self.ton.validatorConsole.Run(f"del-collator {adnl_addr} {workchain} {shard_int}")
+        res = self.ton.validatorConsole.run(f"del-collator {adnl_addr} {workchain} {shard_int}")
         if 'successfully removed collator' not in res.lower():
             raise Exception(f'Failed to disable collator: del-collator query failed: {res}')
         color_print("stop_collator - {green}OK{endc}")
@@ -124,7 +126,7 @@ class CollatorModule(MtcModule):
     def get_collators(self):
         return self.ton.GetValidatorConfig()['collators']
 
-    def print_collators(self, args: list = None):
+    def print_collators(self, args: list[str]):
         collators = self.get_collators()
         if not collators:
             print("No collators found")
@@ -138,10 +140,10 @@ class CollatorModule(MtcModule):
     def add_validator_to_collation_wl(self, args: list):
         if not check_usage_args_min_len("add_validator_to_collation_wl", args, 1):
             return
-        self.ton.validatorConsole.Run("collator-whitelist-enable 1")
+        self.ton.validatorConsole.run("collator-whitelist-enable 1")
         self.local.add_log("Collation whitelist enabled")
         for adnl_addr in args:
-            result = self.ton.validatorConsole.Run(f"collator-whitelist-add {adnl_addr}")
+            result = self.ton.validatorConsole.run(f"collator-whitelist-add {adnl_addr}")
             if 'success' not in result:
                 raise Exception(f'Failed to add validator to collation whitelist: {result}')
         color_print("add_validator_to_collation_wl - {green}OK{endc}")
@@ -150,7 +152,7 @@ class CollatorModule(MtcModule):
         if not check_usage_args_min_len("delete_validator_from_collation_wl", args, 1):
             return
         for adnl_addr in args:
-            result = self.ton.validatorConsole.Run(f"collator-whitelist-del {adnl_addr}")
+            result = self.ton.validatorConsole.run(f"collator-whitelist-del {adnl_addr}")
             if 'success' not in result:
                 raise Exception(f'Failed to delete validator from collation whitelist: {result}')
         color_print("delete_validator_from_collation_wl - {green}OK{endc}")
@@ -158,13 +160,13 @@ class CollatorModule(MtcModule):
     def disable_collation_validator_wl(self, args: list):
         if not check_usage_no_args("disable_collation_wl", args):
             return
-        result = self.ton.validatorConsole.Run("collator-whitelist-enable 0")
+        result = self.ton.validatorConsole.run("collator-whitelist-enable 0")
         if 'success' not in result:
             raise Exception(f'Failed to disable collation validator whitelist: {result}')
         color_print("disable_collation_validator_wl - {green}OK{endc}")
 
-    def print_collation_validators_whitelist(self, args: list = None):
-        result = self.ton.validatorConsole.Run('collator-whitelist-show')
+    def print_collation_validators_whitelist(self, args: list[str]):
+        result = self.ton.validatorConsole.run('collator-whitelist-show')
         result = result.split('conn ready')[1].strip()
         print(result)
 

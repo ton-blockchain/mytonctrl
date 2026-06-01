@@ -2,43 +2,88 @@
 
 from __future__ import annotations
 import os
+import struct
 from dataclasses import dataclass
+from typing import TypedDict
+
+from mytoncore.utils import raw_addr_to_b64
 
 
 @dataclass
-class Wallet:
+class _HasAddress:
+    workchain: int
+    addr: str
+
+    @property
+    def addr_full(self) -> str:
+        return f"{self.workchain}:{self.addr}"
+
+    @property
+    def addrB64(self) -> str:
+        return raw_addr_to_b64(self.addr_full, bounceable=True)
+
+    @property
+    def addrB64_init(self) -> str:
+        return raw_addr_to_b64(self.addr_full, bounceable=False)
+
+    @staticmethod
+    def _get_data_from_file(path: str) -> tuple[int, str]:
+        with open(path, "rb") as file:
+            data = file.read()
+            addr = data[:32].hex()
+            workchain = struct.unpack("i", data[32:])[0]
+            return workchain, addr
+
+
+@dataclass
+class Wallet(_HasAddress):
     name: str
     path: str
     version: str
-    addrFull: str | None = None
-    workchain: int | None = None
-    addr: str | None = None
-    addrB64: str | None = None
-    addrB64_init: str | None = None
-    oldseqno: int | None = None
     subwallet: int | None = None
+    seqno: int | None = None
 
     def __post_init__(self):
-        self.addrFilePath: str = f"{self.path}.addr"
+        self.addrFilePath: str = f"{self.path}.addr" if self.subwallet is None else f"{self.path}{self.subwallet}.addr"
         self.privFilePath: str = f"{self.path}.pk"
-        self.bocFilePath: str = f"{self.path}-query.boc"
+        self.bocFilePath: str = f"{self.path}-query.boc" if self.subwallet is None else f"{self.path}{self.subwallet}-query.boc"
 
-    def Delete(self):
+    @classmethod
+    def from_file(cls, name: str, path: str, version: str, subwallet: int | None = None):
+        addr_file = f"{path}.addr" if subwallet is None else f"{path}{subwallet}.addr"
+        workchain, addr = cls._get_data_from_file(addr_file)
+        return cls(workchain, addr, name, path, version, subwallet)
+
+    def delete(self):
         os.remove(self.addrFilePath)
         os.remove(self.privFilePath)
 
 
 @dataclass
-class Account:
-    workchain: int
-    addr: str
-    addrB64: str | None = None
-    addrFull: str | None = None
+class Account(_HasAddress):
     status: str = "empty"
     balance: float = 0
     lt: str | None = None
     hash: str | None = None
     codeHash: str | None = None
+
+
+@dataclass
+class Pool(_HasAddress):
+    name: str
+    path: str
+
+    def __post_init__(self):
+        self.addrFilePath: str = f"{self.path}.addr"
+        self.bocFilePath: str = f"{self.path}-query.boc"
+
+    @classmethod
+    def from_file(cls, name: str, path: str):
+        workchain, addr = cls._get_data_from_file(f"{path}.addr")
+        return cls(workchain, addr, name, path)
+
+    def delete(self):
+        os.remove(self.addrFilePath)
 
 
 @dataclass
@@ -110,19 +155,36 @@ class Message:
         return self.__str__()
 
 
-@dataclass
-class Pool:
-    name: str
-    path: str
-    addrFull: str | None = None
-    workchain: int | None = None
-    addr: str | None = None
-    addrB64: str | None = None
-    addrB64_init: str | None = None
+class Config12(TypedDict):
+    enabled_since: int
+    monitor_min_split: int
+    min_split: int
+    max_split: int
+    basic: int
+    active: int
+    accept_msgs: int
+    flags: int
+    zerostate_root_hash: str
+    zerostate_file_hash: str
 
-    def __post_init__(self):
-        self.addrFilePath: str = f"{self.path}.addr"
-        self.bocFilePath: str = f"{self.path}-query.boc"
 
-    def Delete(self):
-        os.remove(self.addrFilePath)
+class Config15(TypedDict):
+    validatorsElectedFor: int
+    electionsStartBefore: int
+    electionsEndBefore: int
+    stakeHeldFor: int
+
+
+class Config17(TypedDict):
+    minStake: float
+    maxStake: float
+    maxStakeFactor: int
+
+
+class ElectionsParticipant(TypedDict):
+    adnlAddr: str
+    pubkey: str
+    stake: float
+    maxFactor: float
+    walletAddr: str
+

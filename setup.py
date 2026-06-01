@@ -1,47 +1,48 @@
-from setuptools import setup, find_packages
-from os.path import dirname, join
+from pathlib import Path
 
-with open(join(dirname(__file__), "README.md"), "r") as f:
-	long_description = f.read()
-with open(join(dirname(__file__), "requirements.txt")) as file:
-	install_requires = file.read().split('\n')
+from setuptools import find_packages, setup
 
 
-version = 'v0.1'
+ROOT = Path(__file__).resolve().parent
+
 
 setup(
-	author='igroman787',
-	author_email='igroman787',
-	name='mytonctrl',
-	version=version,
-	packages=find_packages('.', exclude=['tests', 'tests.*']),
-	install_requires=install_requires,
-	package_data={
-		'mytoninstaller.scripts': ['*.sh'],
-		'mytoncore': [
-			'contracts/**/*',
-			'complaints/*'
-		],
-		'mytonctrl': [
-			'resources/*', 
-			'scripts/*', 
-		],
-		'': ['requirements.txt'],
-	},
-	zip_safe=True,
-	python_requires='>=3.8',
-	classifiers=[
-		 "Development Status :: 3 - Alpha",
-		 "Intended Audience :: Developers",
-		 "Programming Language :: Python :: 3.8",
-		 "Programming Language :: Python :: 3.9",
-		 "Programming Language :: Python :: 3.10",
-		 "Programming Language :: Python :: 3.11",
-		 "License :: Other/Proprietary License",
-		 "Topic :: Software Development :: Libraries"
-	],
-	url="https://github.com/ton-blockchain/mytonctrl",
-	description="MyTonCtrl",
-	long_description_content_type="text/markdown",
-	long_description=long_description,
+    name="mytonctrl",
+    version="0.1.0",
+    description="MyTonCtrl",
+    long_description=(ROOT / "README.md").read_text(encoding="utf-8"),
+    long_description_content_type="text/markdown",
+    author="TON Core",
+    url="https://github.com/ton-blockchain/mytonctrl",
+    packages=find_packages(
+        ".",
+        include=[
+            "mytoninstaller*",
+            "mypyconsole*",
+            "mytonctrl*",
+            "mypylib*",
+            "modules*",
+            "mytoncore*",
+        ],
+        exclude=["tests", "tests.*"],
+    ),
+    install_requires=[
+        "requests==2.32.4",
+        "psutil==6.1.0",
+        "fastcrc==0.3.2",
+        "pynacl==1.5.0",
+        "importlib_resources==6.4.5; python_version < '3.9'",
+    ],
+    package_data={
+        "mytoninstaller.scripts": ["*.sh"],
+        "mytoncore": [
+            "contracts/single-nominator-pool/*",
+            "complaints/*",
+        ],
+        "mytonctrl": [
+            "resources/*",
+            "scripts/*",
+        ],
+    },
+    python_requires=">=3.8",
 )

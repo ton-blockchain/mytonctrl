@@ -11,7 +11,7 @@ def timestamp2utcdatetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
     if timestamp is None:
         return "n/a"
     datetime = time.gmtime(timestamp)
-    result = time.strftime(format, datetime) + ' UTC'
+    result = time.strftime(format, datetime) + " UTC"
     return result
 
 
@@ -30,24 +30,10 @@ def is_hex(s):
         return False
 
 
-def fix_git_config(git_path: str):
-    args = ["git", "status"]
-    try:
-        process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path, timeout=3)
-        err = process.stderr.decode("utf-8")
-    except Exception as e:
-        err = str(e)
-    if err:
-        if 'git config --global --add safe.directory' in err:
-            args = ["git", "config", "--global", "--add", "safe.directory", git_path]
-            subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
-        else:
-            raise Exception(f'Failed to check git status: {err}')
-# end define
-
 def GetColorInt(data, border, logic, ending=None):
+    result = "n/a"
     if data is None:
-        result = "n/a"
+        return result
     elif logic == "more":
         if data >= border:
             result = bcolors.green_text(data, ending)
@@ -59,10 +45,14 @@ def GetColorInt(data, border, logic, ending=None):
         else:
             result = bcolors.red_text(data, ending)
     return result
+
+
 # end define
+
 
 def get_current_user():
     return pwd.getpwuid(os.getuid()).pw_name
+
 
 def pop_arg_from_args(args: typing.List[str], arg_name: str) -> typing.Optional[str]:
     if arg_name in args:
@@ -74,20 +64,26 @@ def pop_arg_from_args(args: typing.List[str], arg_name: str) -> typing.Optional[
         return value
     return None
 
+
 def pop_user_from_args(args: list) -> typing.Optional[str]:
-    return pop_arg_from_args(args, '-u')
+    return pop_arg_from_args(args, "-u")
 
 
 def get_clang_major_version():
     try:
-        process = subprocess.run(["clang", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                 text=True, timeout=3)
+        process = subprocess.run(
+            ["clang", "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=3,
+        )
         if process.returncode != 0:
             return None
 
         output = process.stdout
 
-        lines = output.strip().split('\n')
+        lines = output.strip().split("\n")
         if not lines:
             return None
 
@@ -96,9 +92,9 @@ def get_clang_major_version():
             return None
 
         version_part = first_line.split("clang version")[1].strip()
-        major_version = version_part.split('.')[0]
+        major_version = version_part.split(".")[0]
 
-        major_version = ''.join(c for c in major_version if c.isdigit())
+        major_version = "".join(c for c in major_version if c.isdigit())
 
         if not major_version:
             return None
@@ -146,10 +142,6 @@ def get_os_version() -> typing.Tuple[typing.Optional[str], typing.Optional[str]]
             data[key] = val.strip('"')
 
     distro = data.get("ID")
-    version = (
-            data.get("VERSION_ID")
-            or data.get("BUILD_ID")
-            or data.get("VERSION")
-    )
+    version = data.get("VERSION_ID") or data.get("BUILD_ID") or data.get("VERSION")
 
     return distro, version
