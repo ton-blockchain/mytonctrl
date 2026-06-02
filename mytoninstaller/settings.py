@@ -284,17 +284,21 @@ def DownloadDump(local):
     os.system(cmd)
 
     # download dump using aria2c to a temporary file
+    dump_dir = "/var/ton-work/db"
     temp_file = "/var/ton-work/db/latest.tar.lz"
     cmd = (
-        "aria2c -x 4 -s 4 --http-keep-alive=false "
+        "aria2c -x 4 -s 4 --enable-http-keep-alive=false "
         "--retry-wait=5 --max-tries=20 --lowest-speed-limit=1M "
         "--connect-timeout=60 --timeout=120 -c "
-        f"{url}.tar.lz -d /var/ton-work/db -o latest.tar.lz"
+        f"{url}.tar.lz -d {dump_dir} -o latest.tar.lz"
     )
-    os.system(cmd)
+    if os.system(cmd) != 0 or not os.path.exists(temp_file):
+        local.add_log(f"Dump download failed: {temp_file}", "error")
+        return
+    #end if
 
     # process the downloaded file
-    cmd = f"pv {temp_file} | plzip -d -n8 | tar -xC /var/ton-work/db"
+    cmd = f"pv {temp_file} | plzip -d -n8 | tar -xC {dump_dir}"
     os.system(cmd)
 
     # clean up the temporary file after processing
