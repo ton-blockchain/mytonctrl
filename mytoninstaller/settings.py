@@ -287,8 +287,8 @@ def DownloadDump(local):
     dump_dir = "/var/ton-work/db"
     temp_file = "/var/ton-work/db/latest.tar.lz"
     cmd = (
-        "aria2c -x 4 -s 4 --enable-http-keep-alive=false "
-        "--retry-wait=5 --max-tries=20 --lowest-speed-limit=1M "
+        "aria2c -x 8 -s 8 --enable-http-keep-alive=false "
+        "--retry-wait=5 --max-tries=200 "
         "--connect-timeout=60 --timeout=120 -c "
         f"{url}.tar.lz -d {dump_dir} -o latest.tar.lz"
     )
