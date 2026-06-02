@@ -298,7 +298,11 @@ def DownloadDump(local):
     #end if
 
     # process the downloaded file
-    cmd = f"pv {temp_file} | plzip -d -n8 | tar -xC {dump_dir}"
+    archive_size = os.path.getsize(temp_file)
+    msg = f"Dump downloaded to {temp_file}. Starting extraction to {dump_dir}"
+    print(msg, flush=True)
+    local.add_log(msg, "info")
+    cmd = f"pv -f -i 60 -p -t -e -r -b -s {archive_size} {temp_file} | plzip -d -n8 | tar -xC {dump_dir}"
     os.system(cmd)
 
     # clean up the temporary file after processing
