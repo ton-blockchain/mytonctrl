@@ -284,8 +284,13 @@ def DownloadDump(local):
     os.system(cmd)
 
     # download dump using aria2c to a temporary file
-    temp_file = "/tmp/latest.tar.lz"
-    cmd = f"aria2c -x 8 -s 8 -c {url}.tar.lz -d / -o {temp_file}"
+    temp_file = "/var/ton-work/db/latest.tar.lz"
+    cmd = (
+        "aria2c -x 4 -s 4 --http-keep-alive=false "
+        "--retry-wait=5 --max-tries=20 --lowest-speed-limit=1M "
+        "--connect-timeout=60 --timeout=120 -c "
+        f"{url}.tar.lz -d /var/ton-work/db -o latest.tar.lz"
+    )
     os.system(cmd)
 
     # process the downloaded file
