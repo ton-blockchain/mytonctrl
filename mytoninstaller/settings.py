@@ -310,6 +310,7 @@ def DownloadDump(local):
     extraction_elapsed = FormatElapsedTime(time.monotonic() - extraction_started_at)
     if extraction_result != 0:
         local.add_log(f"Dump extraction failed after {extraction_elapsed}", "error")
+        CleanupDumpTempFiles(local, temp_file)
         return
     #end if
     msg = f"Dump extracted to {dump_dir} in {extraction_elapsed}"
@@ -317,10 +318,17 @@ def DownloadDump(local):
     local.add_log(msg, "info")
 
     # clean up the temporary file after processing
-    if os.path.exists(temp_file):
-        os.remove(temp_file)
-        local.add_log(f"Temporary file {temp_file} removed", "debug")
-    #end if
+    CleanupDumpTempFiles(local, temp_file)
+#end define
+
+
+def CleanupDumpTempFiles(local, temp_file):
+    for path in [temp_file, temp_file + ".aria2"]:
+        if os.path.exists(path):
+            os.remove(path)
+            local.add_log(f"Temporary file {path} removed", "debug")
+        #end if
+    #end for
 #end define
 
 
