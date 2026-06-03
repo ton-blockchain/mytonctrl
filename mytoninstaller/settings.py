@@ -292,24 +292,89 @@ def DownloadDump(local):
         "--connect-timeout=60 --timeout=120 -c "
         f"{url}.tar.lz -d {dump_dir} -o latest.tar.lz"
     )
-    if os.system(cmd) != 0 or not os.path.exists(temp_file):
-        local.add_log(f"Dump download failed: {temp_file}", "error")
+    download_started_at = time.monotonic()
+    download_result = os.system(cmd)
+    download_elapsed = FormatElapsedTime(time.monotonic() - download_started_at)
+    if download_result != 0 or not os.path.exists(temp_file):
+        local.add_log(f"Dump download failed after {download_elapsed}: {temp_file}", "error")
         return
     #end if
 
     # process the downloaded file
     archive_size = os.path.getsize(temp_file)
-    msg = f"Dump downloaded to {temp_file}. Starting extraction to {dump_dir}"
+    msg = f"Dump downloaded to {temp_file} in {download_elapsed}. Starting extraction to {dump_dir}"
     print(msg, flush=True)
     local.add_log(msg, "info")
-    cmd = f"pv -f -i 60 -p -t -e -r -b -s {archive_size} {temp_file} | plzip -d -n8 | tar -xC {dump_dir}"
-    os.system(cmd)
+    extraction_started_at = time.monotonic()
+    extraction_result = ExtractDump(local, archive_size, temp_file, dump_dir)
+    extraction_elapsed = FormatElapsedTime(time.monotonic() - extraction_started_at)
+    if extraction_result != 0:
+        local.add_log(f"Dump extraction failed after {extraction_elapsed}", "error")
+        CleanupDumpTempFiles(local, temp_file)
+        return
+    #end if
+    msg = f"Dump extracted to {dump_dir} in {extraction_elapsed}"
+    print(msg, flush=True)
+    local.add_log(msg, "info")
 
     # clean up the temporary file after processing
-    if os.path.exists(temp_file):
-        os.remove(temp_file)
-        local.add_log(f"Temporary file {temp_file} removed", "debug")
+    CleanupDumpTempFiles(local, temp_file)
+#end define
+
+
+def CleanupDumpTempFiles(local, temp_file):
+    for path in [temp_file, temp_file + ".aria2"]:
+        if os.path.exists(path):
+            os.remove(path)
+            local.add_log(f"Temporary file {path} removed", "debug")
+        #end if
+    #end for
+#end define
+
+
+def FormatElapsedTime(elapsed):
+    total_seconds = int(elapsed)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
     #end if
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    #end if
+    return f"{seconds}s"
+#end define
+
+
+def UseInteractiveExtractionProgress():
+    if not sys.stderr.isatty():
+        return False
+    # Container log collectors usually need newline-delimited output, even if a TTY is allocated.
+    if os.path.exists("/.dockerenv") or os.path.exists("/run/.containerenv"):
+        return False
+    if os.getenv("KUBERNETES_SERVICE_HOST") or os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount"):
+        return False
+    return True
+#end define
+
+
+def ExtractDump(local, archive_size, temp_file, dump_dir):
+    if UseInteractiveExtractionProgress():
+        extract_cmd = 'pv -f -i 60 -p -t -e -r -b -s "$1" "$2" | plzip -d -n8 | tar -xC "$3"'
+    else:
+        extract_cmd = (
+            'pv -n -i 60 -s "$1" "$2" '
+            '2> >(while IFS= read -r progress; do echo "Dump extraction progress: ${progress}%"; done) '
+            '| plzip -d -n8 | tar -xC "$3"'
+        )
+    # Use bash for pipefail and process substitution in log-friendly progress mode.
+    result = subprocess.run([
+        "bash", "-o", "pipefail", "-c", extract_cmd,
+        "extract-dump", str(archive_size), temp_file, dump_dir
+    ])
+    if result.returncode != 0:
+        local.add_log(f"Dump extraction failed with exit code {result.returncode}", "error")
+    return result.returncode
 #end define
 
 def FirstMytoncoreSettings(local):
