@@ -302,14 +302,47 @@ def DownloadDump(local):
     msg = f"Dump downloaded to {temp_file}. Starting extraction to {dump_dir}"
     print(msg, flush=True)
     local.add_log(msg, "info")
-    cmd = f"pv -f -i 60 -p -t -e -r -b -s {archive_size} {temp_file} | plzip -d -n8 | tar -xC {dump_dir}"
-    os.system(cmd)
+    if ExtractDump(local, archive_size, temp_file, dump_dir) != 0:
+        return
+    #end if
 
     # clean up the temporary file after processing
     if os.path.exists(temp_file):
         os.remove(temp_file)
         local.add_log(f"Temporary file {temp_file} removed", "debug")
     #end if
+#end define
+
+
+def UseInteractiveExtractionProgress():
+    if not sys.stderr.isatty():
+        return False
+    # Container log collectors usually need newline-delimited output, even if a TTY is allocated.
+    if os.path.exists("/.dockerenv") or os.path.exists("/run/.containerenv"):
+        return False
+    if os.getenv("KUBERNETES_SERVICE_HOST") or os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount"):
+        return False
+    return True
+#end define
+
+
+def ExtractDump(local, archive_size, temp_file, dump_dir):
+    if UseInteractiveExtractionProgress():
+        extract_cmd = 'pv -f -i 60 -p -t -e -r -b -s "$1" "$2" | plzip -d -n8 | tar -xC "$3"'
+    else:
+        extract_cmd = (
+            'pv -n -i 60 -s "$1" "$2" '
+            '2> >(while IFS= read -r progress; do echo "Dump extraction progress: ${progress}%"; done) '
+            '| plzip -d -n8 | tar -xC "$3"'
+        )
+    # Use bash for pipefail and process substitution in log-friendly progress mode.
+    result = subprocess.run([
+        "bash", "-o", "pipefail", "-c", extract_cmd,
+        "extract-dump", str(archive_size), temp_file, dump_dir
+    ])
+    if result.returncode != 0:
+        local.add_log(f"Dump extraction failed with exit code {result.returncode}", "error")
+    return result.returncode
 #end define
 
 def FirstMytoncoreSettings(local):
