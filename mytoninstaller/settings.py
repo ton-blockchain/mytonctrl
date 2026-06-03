@@ -292,25 +292,49 @@ def DownloadDump(local):
         "--connect-timeout=60 --timeout=120 -c "
         f"{url}.tar.lz -d {dump_dir} -o latest.tar.lz"
     )
-    if os.system(cmd) != 0 or not os.path.exists(temp_file):
-        local.add_log(f"Dump download failed: {temp_file}", "error")
+    download_started_at = time.monotonic()
+    download_result = os.system(cmd)
+    download_elapsed = FormatElapsedTime(time.monotonic() - download_started_at)
+    if download_result != 0 or not os.path.exists(temp_file):
+        local.add_log(f"Dump download failed after {download_elapsed}: {temp_file}", "error")
         return
     #end if
 
     # process the downloaded file
     archive_size = os.path.getsize(temp_file)
-    msg = f"Dump downloaded to {temp_file}. Starting extraction to {dump_dir}"
+    msg = f"Dump downloaded to {temp_file} in {download_elapsed}. Starting extraction to {dump_dir}"
     print(msg, flush=True)
     local.add_log(msg, "info")
-    if ExtractDump(local, archive_size, temp_file, dump_dir) != 0:
+    extraction_started_at = time.monotonic()
+    extraction_result = ExtractDump(local, archive_size, temp_file, dump_dir)
+    extraction_elapsed = FormatElapsedTime(time.monotonic() - extraction_started_at)
+    if extraction_result != 0:
+        local.add_log(f"Dump extraction failed after {extraction_elapsed}", "error")
         return
     #end if
+    msg = f"Dump extracted to {dump_dir} in {extraction_elapsed}"
+    print(msg, flush=True)
+    local.add_log(msg, "info")
 
     # clean up the temporary file after processing
     if os.path.exists(temp_file):
         os.remove(temp_file)
         local.add_log(f"Temporary file {temp_file} removed", "debug")
     #end if
+#end define
+
+
+def FormatElapsedTime(elapsed):
+    total_seconds = int(elapsed)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+    #end if
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    #end if
+    return f"{seconds}s"
 #end define
 
 
