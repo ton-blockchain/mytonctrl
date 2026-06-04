@@ -268,14 +268,33 @@ def DownloadDump(local):
     #end if
 
     local.add_log("start DownloadDump function", "debug")
-    url = "https://dump.ton.org/dumps/latest"
+    base_url = "https://dump.ton.org/dumps"
+    dump_name = "latest"
     if is_testnet(local):
-        url += '_testnet'
-    dumpSize = requests.get(url + ".tar.size.archive.txt", timeout=3).text
+        dump_name += '_testnet'
+    #end if
+    dump_dir = "/var/ton-work/db"
+    os.makedirs(dump_dir, exist_ok=True)
+    CleanupDumpTempFiles(local, os.path.join(dump_dir, "latest.tar.lz"))
+
+    try:
+        dump_metadata = GetDumpMetadata(base_url, dump_name)
+    except Exception as e:
+        local.add_log(f"Failed to get dump metadata: {e}", "error")
+        return
+    #end try
+
+    archive_name = dump_metadata["archive_name"]
+    temp_file = os.path.join(dump_dir, archive_name)
+    CleanupDumpTempFiles(local, temp_file)
+    dumpSize = dump_metadata["archive_size"]
+    print("dumpName:", archive_name)
     print("dumpSize:", dumpSize)
-    needSpace = int(dumpSize) * 3
-    diskSpace = psutil.disk_usage("/var")
+    print("dumpDiskSize:", dump_metadata["disk_size"])
+    needSpace = dump_metadata["archive_size"] + dump_metadata["disk_size"]
+    diskSpace = psutil.disk_usage(dump_dir)
     if needSpace > diskSpace.free:
+        local.add_log(f"Not enough disk space in {dump_dir}: need {needSpace}, free {diskSpace.free}", "error")
         return
     #end if
 
@@ -284,19 +303,35 @@ def DownloadDump(local):
     os.system(cmd)
 
     # download dump using aria2c to a temporary file
-    dump_dir = "/var/ton-work/db"
-    temp_file = "/var/ton-work/db/latest.tar.lz"
-    cmd = (
-        "aria2c -x 8 -s 8 --enable-http-keep-alive=false "
-        "--retry-wait=5 --max-tries=200 "
-        "--connect-timeout=60 --timeout=120 -c "
-        f"{url}.tar.lz -d {dump_dir} -o latest.tar.lz"
-    )
+    cmd = [
+        "aria2c",
+        "-x", "8",
+        "-s", "8",
+        "--enable-http-keep-alive=false",
+        "--retry-wait=5",
+        "--max-tries=20",
+        "--connect-timeout=60",
+        "--timeout=120",
+        "--auto-file-renaming=false",
+        "--allow-overwrite=true",
+        "--check-integrity=true",
+        f"--checksum=sha-256={dump_metadata['sha256']}",
+        "-c",
+        f"{base_url}/{archive_name}",
+        "-d", dump_dir,
+        "-o", archive_name,
+    ]
     download_started_at = time.monotonic()
-    download_result = os.system(cmd)
+    download_result = subprocess.run(cmd).returncode
     download_elapsed = FormatElapsedTime(time.monotonic() - download_started_at)
     if download_result != 0 or not os.path.exists(temp_file):
         local.add_log(f"Dump download failed after {download_elapsed}: {temp_file}", "error")
+        CleanupDumpTempFiles(local, temp_file)
+        return
+    #end if
+    if os.path.getsize(temp_file) != dump_metadata["archive_size"]:
+        local.add_log(f"Dump download size mismatch after {download_elapsed}: {temp_file}", "error")
+        CleanupDumpTempFiles(local, temp_file)
         return
     #end if
 
@@ -329,6 +364,44 @@ def CleanupDumpTempFiles(local, temp_file):
             local.add_log(f"Temporary file {path} removed", "debug")
         #end if
     #end for
+#end define
+
+
+def GetDumpMetadata(base_url, dump_name):
+    latest_name = requests.get(f"{base_url}/{dump_name}.tar.name.txt", timeout=10).text.strip()
+    if not latest_name:
+        raise RuntimeError(f"empty dump name for {dump_name}")
+    #end if
+
+    metadata_name = os.path.basename(latest_name)
+    archive_name = metadata_name
+    if not archive_name.endswith(".lz"):
+        archive_name += ".lz"
+    else:
+        metadata_name = archive_name[:-3]
+    #end if
+
+    sha_text = requests.get(f"{base_url}/{metadata_name}.sha256sum.txt", timeout=10).text.strip()
+    sha_parts = sha_text.split()
+    if not sha_parts:
+        raise RuntimeError(f"empty dump sha256 for {metadata_name}")
+    #end if
+    sha256 = sha_parts[0]
+    if len(sha256) != 64:
+        raise RuntimeError(f"invalid dump sha256 for {metadata_name}: {sha256}")
+    #end if
+    if len(sha_parts) > 1 and os.path.basename(sha_parts[1]) != archive_name:
+        raise RuntimeError(f"dump sha256 file does not match archive {archive_name}: {sha_parts[1]}")
+    #end if
+
+    archive_size = int(requests.get(f"{base_url}/{metadata_name}.size.archive.txt", timeout=10).text.strip())
+    disk_size = int(requests.get(f"{base_url}/{metadata_name}.size.disk.txt", timeout=10).text.strip())
+    return {
+        "archive_name": archive_name,
+        "sha256": sha256,
+        "archive_size": archive_size,
+        "disk_size": disk_size,
+    }
 #end define
 
 
