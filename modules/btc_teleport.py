@@ -22,14 +22,18 @@ class BtcTeleportModule(MtcModule):
         self.bin_dir = self.src_dir + '/out'
 
     def create_local_file(self):
-        from mytoninstaller.mytoninstaller import CreateLocalConfigFile
-        CreateLocalConfigFile(self.local, [])
+        from mytoninstaller.mytoninstaller import InstallerCtrl
+        installer = InstallerCtrl.from_ton(self.ton)
+        installer.create_local_config_file([])
 
     def create_env_file(self, reinit=False):
         env_path = self.bin_dir + '/.env'
         if os.path.exists(env_path) and not reinit:
             return
-        self.create_local_file()
+        try:
+            self.create_local_file()
+        except Exception as e:
+            self.local.add_log(f'Failed to create local config file: {e}', 'error')
         config_path = "/usr/bin/ton/local.config.json"
         if not os.path.exists(config_path):
             config_path = 'https://ton.org/global-config.json'

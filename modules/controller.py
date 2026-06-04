@@ -237,8 +237,9 @@ class ControllerModule(MtcModule):
 
     @classmethod
     def check_enable(cls, ton: "MyTonCore"):
-        from mytoninstaller.settings import enable_ton_http_api
-        enable_ton_http_api(ton.local)
+        from mytoninstaller.mytoninstaller import InstallerCtrl
+        installer = InstallerCtrl.from_ton(ton)
+        installer.enable_ton_http_api()
 
     def add_console_commands(self, console):
         add_command(self.local, console, "create_controllers", self.create_controllers)

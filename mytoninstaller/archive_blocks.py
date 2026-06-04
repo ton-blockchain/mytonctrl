@@ -36,21 +36,21 @@ def get_block_from_toncenter(local: MyPyClass, global_config_path: str, workchai
     return data['result']
 
 
-def download_blocks_bag(local, bag: dict, downloads_path: str, api_port: int):
+def download_blocks_bag(local: MyPyClass, bag: dict, downloads_path: str, api_port: int):
     local.add_log(f"Downloading blocks from {bag['from']} to {bag['to']}", "info")
     if not download_bag(local, bag['bag'], downloads_path, api_port):
         local.add_log("Error downloading archive bag", "error")
         return
 
 
-def download_master_blocks_bag(local, bag: dict, downloads_path: str, api_port: int):
+def download_master_blocks_bag(local: MyPyClass, bag: dict, downloads_path: str, api_port: int):
     local.add_log(f"Downloading master blocks from {bag['from']} to {bag['to']}", "info")
     if not download_bag(local, bag['bag'], downloads_path, api_port, download_all=False, download_file=lambda f: ':' not in f['name']):
         local.add_log("Error downloading master bag", "error")
         return
 
 
-def do_request(local, method: str, url: str, timeout: int = 3, **kwargs) -> dict:
+def do_request(local: MyPyClass, method: str, url: str, timeout: int = 3, **kwargs) -> dict:
     for _ in range(3):
         try:
             return requests.request(method, url, timeout=timeout, **kwargs).json()
@@ -60,7 +60,7 @@ def do_request(local, method: str, url: str, timeout: int = 3, **kwargs) -> dict
     raise Exception(f"Failed to make {method} request for {url}")
 
 
-def download_bag(local, bag_id: str, downloads_path: str, api_port: int, download_all: bool = True, download_file: typing.Callable | None = None):
+def download_bag(local: MyPyClass, bag_id: str, downloads_path: str, api_port: int, download_all: bool = True, download_file: typing.Callable[[dict], bool] | None = None):
     indexes = []
     local_ts_url = f"http://127.0.0.1:{api_port}"
 
@@ -74,7 +74,7 @@ def download_bag(local, bag_id: str, downloads_path: str, api_port: int, downloa
             time.sleep(1)
             resp = do_request(local, 'GET', local_ts_url + f'/api/v1/details?bag_id={bag_id}')
         for f in resp['files']:
-            if download_file(f):
+            if download_file and download_file(f):
                 indexes.append(f['index'])
         resp = do_request(local, 'POST', local_ts_url + '/api/v1/add', json={'bag_id': bag_id, 'download_all': download_all, 'path': downloads_path, 'files': indexes})
         if not resp['ok']:

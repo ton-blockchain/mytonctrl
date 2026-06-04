@@ -823,7 +823,7 @@ def add2systemd(**kwargs):
 
 	text = f"""
 [Unit]
-Description = {name} service. Created by https://github.com/igroman787/mypylib.
+Description = {name} service
 After = network.target
 
 [Service]

@@ -9,30 +9,24 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import psutil
-import base64
 import subprocess
 import requests
-import random
 import json
 
 from mypylib import MyPyClass
 from mypylib.mypylib import (
 	add2systemd,
 	get_dir_from_path,
-	run_as_root,
-	color_print,
 	ip2int,
 	Dict, int2ip
 )
-from mytoncore.utils import get_package_resource_path
-from mytonctrl.utils import get_current_user, is_hex
+from mytonctrl.utils import is_hex
 from mytoninstaller.archive_blocks import run_process_hardforks, parse_block_value, download_bag, update_init_block, \
 	download_blocks_bag, download_master_blocks_bag
 from mytoninstaller.context import InstallerContext
-from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, get_ed25519_pubkey, \
+from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, \
 	is_testnet, disable_service
-from mytoninstaller.config import SetConfig, GetConfig, get_own_ip, backup_config
-from mytoncore.utils import hex2b64
+from mytoninstaller.config import SetConfig, GetConfig, get_own_ip
 
 
 def FirstNodeSettings(local: MyPyClass, ctx: InstallerContext):
@@ -146,7 +140,8 @@ def download_archive_from_ts(local: MyPyClass, ctx: InstallerContext):
 	block_from, block_to = parse_block_value(local, block_from, ctx.paths.global_config_path), parse_block_value(local, block_to, ctx.paths.global_config_path)
 	block_from = max(1, block_from - 100)  # to download previous package as node may require some blocks from it
 
-	api_port = enable_ton_storage(local, ctx)
+	from mytoninstaller.scripts.ton_storage import enable_ton_storage
+	api_port = enable_ton_storage(ctx.user, ctx.mconfig_path)
 	url = 'https://archival-dump.ton.org/index/mainnet.json'
 	if is_testnet(ctx.paths.global_config_path,):
 		url = 'https://archival-dump.ton.org/index/testnet.json'
@@ -247,11 +242,11 @@ def download_archive_from_ts(local: MyPyClass, ctx: InstallerContext):
 	stop_service(local, "ton_storage")  # stop TS
 	disable_service(local, "ton_storage")
 
-	from mytoninstaller.mytoninstaller import set_node_argument
+	from mytoninstaller.node_args import set_node_argument
 
-	set_node_argument(local, ['--skip-key-sync'])
+	set_node_argument(['--skip-key-sync'])
 	if block_to is not None:
-		set_node_argument(local, ['--sync-shards-upto', str(block_to)])
+		set_node_argument(['--sync-shards-upto', str(block_to)])
 
 	with open(ctx.paths.global_config_path, 'r') as f:
 		c = json.loads(f.read())
@@ -477,9 +472,6 @@ def EnableValidatorConsole(local: MyPyClass, ctx: InstallerContext):
 #end define
 
 def EnableLiteServer(local: MyPyClass, ctx: InstallerContext):
-	if ctx.only_mtc:
-		return
-
 	local.add_log("start EnableLiteServer function", "debug")
 
 	# Create variables
@@ -564,433 +556,6 @@ def EnableLiteServer(local: MyPyClass, ctx: InstallerContext):
 	# restart mytoncore
 	StartMytoncore(local)
 #end define
-
-
-def EnableDhtServer(local: MyPyClass, ctx: InstallerContext):
-	local.add_log("start EnableDhtServer function", "debug")
-	vuser = ctx.validator_user
-	ton_bin_dir = ctx.paths.ton_bin_dir
-	globalConfigPath = ctx.paths.global_config_path
-	dht_server = ton_bin_dir + "dht-server/dht-server"
-	generate_random_id = ton_bin_dir + "utils/generate-random-id"
-	tonDhtServerDir = "/var/ton-dht-server/"
-	tonDhtKeyringDir = tonDhtServerDir + "keyring/"
-
-	# Проверить конфигурацию
-	dht_config_path = "/var/ton-dht-server/config.json"
-	if os.path.isfile(dht_config_path):
-		local.add_log(f"DHT-Server '{dht_config_path}' already exist. Break EnableDhtServer fuction", "warning")
-		return
-	#end if
-
-	# Подготовить папку
-	os.makedirs(tonDhtServerDir, exist_ok=True)
-
-	# Прописать автозагрузку
-	cmd = "{dht_server} -C {globalConfigPath} -D {tonDhtServerDir}"
-	cmd = cmd.format(dht_server=dht_server, globalConfigPath=globalConfigPath, tonDhtServerDir=tonDhtServerDir)
-	add2systemd(name="dht-server", user=vuser, start=cmd)
-
-	# Получить внешний ip адрес
-	ip = get_own_ip()
-	port = random.randint(2000, 65000)
-	addr = "{ip}:{port}".format(ip=ip, port=port)
-
-	# Первый запуск
-	args = [dht_server, "-C", globalConfigPath, "-D", tonDhtServerDir, "-I", addr]
-	subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-	# Получить вывод конфига
-	key = os.listdir(tonDhtKeyringDir)[0]
-	ip = ip2int(ip)
-	text = '{"@type": "adnl.addressList", "addrs": [{"@type": "adnl.address.udp", "ip": ' + str(ip) + ', "port": ' + str(port) + '}], "version": 0, "reinit_date": 0, "priority": 0, "expire_at": 0}'
-	args = [generate_random_id, "-m", "dht", "-k", tonDhtKeyringDir + key, "-a", text]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(err) > 0:
-		raise Exception(err)
-	#end if
-
-	data = json.loads(output)
-	text = json.dumps(data, indent=4)
-	print(text)
-
-	# chown 1
-	args = ["chown", "-R", vuser + ':' + vuser, tonDhtServerDir]
-	subprocess.run(args)
-
-	# start DHT-Server
-	start_service(local, "dht-server")
-#end define
-
-
-def EnableJsonRpc(local: MyPyClass, ctx: InstallerContext):
-	local.add_log("start EnableJsonRpc function", "debug")
-	user = ctx.user
-
-	with get_package_resource_path('mytoninstaller.scripts', 'jsonrpcinstaller.sh') as jsonrpcinstaller_path:
-		local.add_log(f"Running script: {jsonrpcinstaller_path}", "debug")
-		exit_code = run_as_root(["bash", str(jsonrpcinstaller_path), "-u", user])  # TODO: fix path
-	if exit_code == 0:
-		text = "EnableJsonRpc - {green}OK{endc}"
-	else:
-		text = "EnableJsonRpc - {red}Error{endc}"
-	color_print(text)
-#end define
-
-def tha_exists():
-	try:
-		resp = requests.get('http://127.0.0.1:8801/healthcheck', timeout=3)
-	except Exception:
-		return False
-	if resp.status_code == 200 and resp.text == '"OK"':
-		return True
-	return False
-#end define
-
-def enable_ton_http_api(local: MyPyClass, user: str | None = None, update: bool = False):
-	try:
-		if update or not tha_exists():
-			do_enable_ton_http_api(local, user)
-	except Exception as e:
-		local.add_log(f"Error in enable_ton_http_api: {e}", "warning")
-		pass
-#end define
-
-def do_enable_ton_http_api(local: MyPyClass, user: str | None = None):
-	local.add_log("start do_enable_ton_http_api function", "debug")
-	if not os.path.exists('/usr/bin/ton/local.config.json'):
-		from mytoninstaller.mytoninstaller import CreateLocalConfigFile
-		CreateLocalConfigFile(local, [], user)
-	user = user or get_current_user()
-	with get_package_resource_path('mytoninstaller.scripts', 'ton_http_api_installer.sh') as ton_http_api_installer_path:
-		exit_code = run_as_root(["bash", str(ton_http_api_installer_path), "-u", user])
-	if exit_code == 0:
-		text = "do_enable_ton_http_api - {green}OK{endc}"
-	else:
-		text = "do_enable_ton_http_api - {red}Error{endc}"
-	color_print(text)
-#end define
-
-def enable_ls_proxy(local, ctx: InstallerContext):
-	local.add_log("start enable_ls_proxy function", "debug")
-	user = ctx.user
-	ls_proxy_port = random.randint(2000, 65000)
-	metrics_port = random.randint(2000, 65000)
-	bin_name = "ls_proxy"
-	ls_proxy_db_path = f"/var/{bin_name}"
-	ls_proxy_path = f"{ls_proxy_db_path}/{bin_name}"
-	ls_proxy_config_path = f"{ls_proxy_db_path}/ls-proxy-config.json"
-
-	with get_package_resource_path('mytoninstaller.scripts', 'ls_proxy_installer.sh') as installer_path:
-		local.add_log(f"Running script: {installer_path}", "debug")
-		exit_code = run_as_root(["bash", str(installer_path), "-u", user])
-	if exit_code != 0:
-		color_print("enable_ls_proxy - {red}Error{endc}")
-		raise Exception("enable_ls_proxy - Error")
-	#end if
-
-	# Прописать автозагрузку
-	add2systemd(name=bin_name, user=user, start=ls_proxy_path, workdir=ls_proxy_db_path)
-
-	# Первый запуск - создание конфига
-	start_service(local, bin_name)
-	stop_service(local, bin_name)
-
-	# read ls_proxy config
-	local.add_log("read ls_proxy config", "debug")
-	ls_proxy_config = GetConfig(path=ls_proxy_config_path)
-
-	# read mytoncore config
-	local.add_log("read mytoncore config", "debug")
-	mconfig = GetConfig(path=ctx.mconfig_path)
-	ls_pubkey_path = mconfig.liteClient.liteServer.pubkeyPath
-	ls_port = mconfig.liteClient.liteServer.port
-
-	# read ls_pubkey
-	with open(ls_pubkey_path, 'rb') as file:
-		data = file.read()
-		pubkey = data[4:]
-		ls_pubkey = base64.b64encode(pubkey).decode("utf-8")
-	#end with
-
-	# prepare config
-	ls_proxy_config.ListenAddr = f"0.0.0.0:{ls_proxy_port}"
-	ls_proxy_config.MetricsAddr = f"127.0.0.1:{metrics_port}"
-	ls_proxy_config.Backends = [{
-		"Name": "local_ls",
-		"Addr": f"127.0.0.1:{ls_port}",
-		"Key": ls_pubkey
-	}]
-
-	# write ls_proxy config
-	local.add_log("write ls_proxy config", "debug")
-	SetConfig(path=ls_proxy_config_path, data=ls_proxy_config)
-
-	# start ls_proxy
-	start_service(local, bin_name)
-	color_print("enable_ls_proxy - {green}OK{endc}")
-#end define
-
-def enable_ton_storage(local, ctx: InstallerContext):
-	local.add_log("start enable_ton_storage function", "debug")
-	user = ctx.user
-	udp_port = random.randint(2000, 65000)
-	api_port = random.randint(2000, 65000)
-	bin_name = "ton_storage"
-	db_path = f"/var/{bin_name}"
-	bin_path = f"{db_path}/{bin_name}"
-	config_path = f"{db_path}/tonutils-storage-db/config.json"
-	network_config = "/usr/bin/ton/global.config.json"
-
-	with get_package_resource_path('mytoninstaller.scripts', 'ton_storage_installer.sh') as installer_path:
-		local.add_log(f"Running script: {installer_path}", "debug")
-		exit_code = run_as_root(["bash", str(installer_path), "-u", user])
-	if exit_code != 0:
-		color_print("enable_ton_storage - {red}Error{endc}")
-		raise Exception("enable_ton_storage - Error")
-	#end if
-
-	# Прописать автозагрузку
-	start_cmd = f"{bin_path} -network-config {network_config} -daemon -api 127.0.0.1:{api_port}"
-	add2systemd(name=bin_name, user=user, start=start_cmd, workdir=db_path, force=True)
-
-	# Первый запуск - создание конфига
-	start_service(local, bin_name, sleep=10)
-	stop_service(local, bin_name)
-
-	# read ton_storage config
-	local.add_log("read ton_storage config", "debug")
-	ton_storage_config = GetConfig(path=config_path)
-
-	# prepare config
-	ton_storage_config.ListenAddr = f"0.0.0.0:{udp_port}"
-	ton_storage_config.ExternalIP = get_own_ip()
-
-	# write ton_storage config
-	local.add_log("write ton_storage config", "debug")
-	SetConfig(path=config_path, data=ton_storage_config)
-
-	# backup config
-	backup_config(local, config_path)
-
-	# read mconfig
-	local.add_log("read mconfig", "debug")
-	mconfig_path = ctx.mconfig_path
-	mconfig = GetConfig(path=mconfig_path)
-
-	# edit mytoncore config file
-	local.add_log("edit mytoncore config file", "debug")
-	ton_storage = Dict()
-	ton_storage.udp_port = udp_port
-	ton_storage.api_port = api_port
-	mconfig.ton_storage = ton_storage
-
-	# write mconfig
-	local.add_log("write mconfig", "debug")
-	SetConfig(path=mconfig_path, data=mconfig)
-
-	# start ton_storage
-	start_service(local, bin_name)
-	color_print("enable_ton_storage - {green}OK{endc}")
-	return api_port
-
-def DangerousRecoveryValidatorConfigFile(local: MyPyClass, ctx: InstallerContext):
-	local.add_log("start DangerousRecoveryValidatorConfigFile function", "info")
-
-	# Get keys from keyring
-	keys = list()
-	keyringDir = ctx.paths.keyring_dir
-	keyring = os.listdir(keyringDir)
-	os.chdir(keyringDir)
-	sorted(keyring, key=os.path.getmtime)
-	for item in keyring:
-		b64String = hex2b64(item)
-		keys.append(b64String)
-	#end for
-
-	# Create config object
-	vconfig = Dict()
-	vconfig["@type"] = "engine.validator.config"
-	vconfig.out_port = 3278
-
-	# Create addrs object
-	buff = Dict()
-	buff["@type"] = "engine.addr"
-	buff.ip = ip2int(get_own_ip())
-	buff.port = None
-	buff.categories = [0, 1, 2, 3]
-	buff.priority_categories = []
-	vconfig.addrs = [buff]
-
-	# Get liteserver fragment
-	mconfig_path = ctx.mconfig_path
-	mconfig = GetConfig(path=mconfig_path)
-	lkey = mconfig.liteClient.liteServer.pubkeyPath
-	lport = mconfig.liteClient.liteServer.port
-
-	# Read lite server pubkey
-	file = open(lkey, 'rb')
-	data = file.read()
-	file.close()
-	ls_pubkey = data[4:]
-
-	# Search lite server priv key
-	for item in keyring:
-		path = keyringDir + item
-		file = open(path, 'rb')
-		data = file.read()
-		file.close()
-		privkey = data[4:]
-		pubkey = get_ed25519_pubkey(privkey)
-		if pubkey == ls_pubkey:
-			ls_id = hex2b64(item)
-			keys.remove(ls_id)
-	#end for
-
-	# Create LS object
-	buff = Dict()
-	buff["@type"] = "engine.liteServer"
-	buff.id = ls_id
-	buff.port = lport
-	vconfig.liteservers = [buff]
-
-	# Get validator-console fragment
-	ckey = mconfig.validatorConsole.pubKeyPath
-	addr = mconfig.validatorConsole.addr
-	buff = addr.split(':')
-	cport = int(buff[1])
-
-	# Read validator-console pubkey
-	file = open(ckey, 'rb')
-	data = file.read()
-	file.close()
-	vPubkey = data[4:]
-
-	# Search validator-console priv key
-	for item in keyring:
-		path = keyringDir + item
-		file = open(path, 'rb')
-		data = file.read()
-		file.close()
-		privkey = data[4:]
-		pubkey = get_ed25519_pubkey(privkey)
-		if pubkey == vPubkey:
-			vcId = hex2b64(item)
-			keys.remove(vcId)
-	#end for
-
-	# Create VC object
-	buff = Dict()
-	buff2 = Dict()
-	buff["@type"] = "engine.controlInterface"
-	buff.id = vcId
-	buff.port = cport
-	buff2["@type"] = "engine.controlProcess"
-	buff2.id = None
-	buff2.permissions = 15
-	buff.allowed = buff2
-	vconfig.control = [buff]
-
-	# Get dht fragment
-	files = os.listdir(ctx.paths.ton_db_dir)
-	for item in files:
-		if item[:3] == "dht":
-			dhtS = item[4:]
-			dhtS = dhtS.replace('_', '/')
-			dhtS = dhtS.replace('-', '+')
-			break
-	#end for
-
-	# Get ght from keys
-	for item in keys:
-		if dhtS in item:
-			dhtId = item
-			keys.remove(dhtId)
-	#end for
-
-	# Create dht object
-	buff = Dict()
-	buff["@type"] = "engine.dht"
-	buff.id = dhtId
-	vconfig.dht = [buff]
-
-	# Create adnl object
-	adnl2 = Dict()
-	adnl2["@type"] = "engine.adnl"
-	adnl2.id = dhtId
-	adnl2.category = 0
-
-	# Create adnl object
-	adnlId = hex2b64(mconfig["adnlAddr"])
-	keys.remove(adnlId)
-	adnl3 = Dict()
-	adnl3["@type"] = "engine.adnl"
-	adnl3.id = adnlId
-	adnl3.category = 0
-
-	# Create adnl object
-	adnl1 = Dict()
-	adnl1["@type"] = "engine.adnl"
-	adnl1.id = keys.pop(0)
-	adnl1.category = 1
-
-	vconfig.adnl = [adnl1, adnl2, adnl3]
-
-	# Get dumps from tmp
-	dumps = list()
-	dumpsDir = "/tmp/mytoncore/"
-	dumpsList = os.listdir(dumpsDir)
-	os.chdir(dumpsDir)
-	sorted(dumpsList, key=os.path.getmtime)
-	for item in dumpsList:
-		if "ElectionEntry.json" in item:
-			dumps.append(item)
-	#end for
-
-	# Create validators object
-	validators = list()
-
-	# Read dump file
-	while len(keys) > 0:
-		dumpPath = dumps.pop()
-		file = open(dumpPath, 'rt')
-		data = file.read()
-		file.close()
-		dump = json.loads(data)
-		vkey = hex2b64(dump["validatorKey"])
-		temp_key = Dict()
-		temp_key["@type"] = "engine.validatorTempKey"
-		temp_key.key = vkey
-		temp_key.expire_at = dump["endWorkTime"]
-		adnl_addr = Dict()
-		adnl_addr["@type"] = "engine.validatorAdnlAddress"
-		adnl_addr.id = adnlId
-		adnl_addr.expire_at = dump["endWorkTime"]
-
-		# Create validator object
-		validator = Dict()
-		validator["@type"] = "engine.validator"
-		validator.id = vkey
-		validator.temp_keys = [temp_key]
-		validator.adnl_addrs = [adnl_addr]
-		validator.election_date = dump["startWorkTime"]
-		validator.expire_at = dump["endWorkTime"]
-		if vkey in keys:
-			validators.append(validator)
-			keys.remove(vkey)
-		#end if
-	#end while
-
-	# Add validators object to vconfig
-	vconfig.validators = validators
-
-
-	print("vconfig:", json.dumps(vconfig, indent=4))
-	print("keys:", keys)
-#end define
-
 
 def CreateSymlinks(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start CreateSymlinks fuction", "debug")

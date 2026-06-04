@@ -1,362 +1,279 @@
 from __future__ import annotations
 
-import argparse
+import base64
 import os
-import sys
-import inspect
-import random
 import json
 import subprocess
+import tempfile
+from typing import final, TypedDict, Callable
 
 import requests
 
-from mypylib.mypylib import MyPyClass, run_as_root, color_print
+from mypylib.mypylib import MyPyClass, run_as_root, color_print, ip2int
 from mypyconsole.mypyconsole import MyPyConsole
+from mytoncore.mytoncore import MyTonCore
 from mytoncore.utils import get_package_resource_path
-from mytonctrl.utils import get_current_user, pop_user_from_args
+from mytonctrl.utils import get_current_user
 
-from mytoninstaller.config import GetLiteServerConfig, get_ls_proxy_config
-from mytoninstaller.context import InstallerContext, InstallerPaths, InstallerPorts
-from mytoninstaller.node_args import get_node_args
-from mytoninstaller.utils import GetInitBlock, get_ton_storage_port
-from mytoncore.utils import dict2b64, str2bool, b642dict, b642hex
+from mytoninstaller.config import get_ls_proxy_config, get_own_ip
+from mytoninstaller.context import InstallerPaths
+from mytoninstaller.node_args import get_node_args, set_node_argument
+from mytoninstaller.utils import get_ton_storage_port, tha_exists
+from mytoncore.utils import b642hex
 
-from mytoninstaller.settings import (
-	FirstNodeSettings,
-	FirstMytoncoreSettings,
-	EnableValidatorConsole,
-	EnableLiteServer,
-	EnableDhtServer,
-	EnableJsonRpc,
-	enable_ton_http_api,
-	DangerousRecoveryValidatorConfigFile,
-	CreateSymlinks,
-	enable_ls_proxy,
-	enable_ton_storage,
-	EnableMode, ConfigureFromBackup, ConfigureOnlyNode, SetInitialSync, SetupCollator
-)
-from mytoninstaller.config import (
-	CreateLocalConfig,
-	BackupMconfig,
-)
-
-from functools import partial
+defaultLocalConfigPath = "/usr/bin/ton/local.config.json"
 
 
-def Init(local: MyPyClass):
-	local.db.config.isStartOnlyOneProcess = False
-	local.db.config.logLevel = "debug"
-	local.db.config.isIgnorLogWarning = True # disable warning
-	local.run()
-	local.db.config.isIgnorLogWarning = False # enable warning
+class LsData(TypedDict):
+	pubkeyPath: str
+	ip: str
+	port: int
 
-def add_commands(local: MyPyClass, console: MyPyConsole, ctx: InstallerContext):
-	# this funciton injects MyPyClass instance
-	def inject_globals(func):
-		args = []
-		for arg_name in inspect.getfullargspec(func)[0]:
-			if arg_name == 'local':
-				args.append(local)
-			if arg_name == 'ctx':
-				args.append(ctx)
-		return partial(func, *args)
-
-	# Create user console
-	console.color = console.RED
-	console.add_item("status", inject_globals(Status), "Print TON component status")
-	console.add_item("set_node_argument", inject_globals(set_node_argument), "Set node argument", "<arg_name> [arg_value1] [arg_value2] [-d (to delete)]")
-	console.add_item("enable", inject_globals(Enable), "Enable some function", "<mode_name>")
-	console.add_item("update", inject_globals(Enable), "Update some function: 'JR' - jsonrpc.  Example: 'update JR'", "<mode_name>")
-	console.add_item("plsc", inject_globals(PrintLiteServerConfig), "Print lite-server config")
-	console.add_item("clcf", inject_globals(CreateLocalConfigFileCommand), "Create lite-server config file", "[-u <user>]")
-	console.add_item("print_ls_proxy_config", inject_globals(print_ls_proxy_config), "Print ls-proxy config")
-	console.add_item("create_ls_proxy_config_file", inject_globals(create_ls_proxy_config_file), "Create ls-proxy config file")
-	console.add_item("drvcf", inject_globals(DRVCF), "Dangerous recovery validator config file")
-	console.add_item("setwebpass", inject_globals(SetWebPassword), "Set a password for the web admin interface")
-	console.add_item("ton_storage_list", inject_globals(ton_storage_list), "Print result of /list method at Ton Storage API")
-
-def Status(ctx: InstallerContext, _):
-	keys_dir = ctx.paths.keys_dir
-	server_key = keys_dir + "server"
-	client_key = keys_dir + "client"
-	liteserver_key = keys_dir + "liteserver"
-	liteserver_pubkey = liteserver_key + ".pub"
-
-	statuses = {
-		'Full node status': os.path.isfile(ctx.paths.vconfig_path),
-		'Mytoncore status': os.path.isfile(ctx.mconfig_path),
-		'V.console status': os.path.isfile(server_key) or os.path.isfile(client_key),
-		'Liteserver status': os.path.isfile(liteserver_pubkey)
-	}
-
-	color_print("{cyan}===[ Services status ]==={endc}")
-	for item in statuses.items():
-		status = '{green}enabled{endc}' if item[1] else '{red}disabled{endc}'
-		color_print(f"{item[0]}: {status}")
-
-	node_args = get_node_args()
-	color_print("{cyan}===[ Node arguments ]==={endc}")
-	for key, value in node_args.items():
-		if len(value) == 0:
-			print(f"{key}")
-		for v in value:
-			print(f"{key}: {v}")
-#end define
+class InitBlock(TypedDict):
+	seqno: int
+	rootHash: str
+	fileHash: str
 
 
-def set_node_argument(local, args):
-	if len(args) < 1:
-		color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)].\n"
-					"Examples: 'set_node_argument --archive-ttl 86400' or 'set_node_argument --archive-ttl -d' or 'set_node_argument -M' or 'set_node_argument --add-shard 0:2000000000000000 0:a000000000000000'")
-		return
-	arg_name = args[0]
-	args = [arg_name, " ".join(args[1:])]
-	with get_package_resource_path('mytoninstaller.scripts', 'set_node_argument.py') as script_path:
-		run_as_root(['python3', str(script_path)] + args)
-	color_print("set_node_argument - {green}OK{endc}")
-#end define
+@final
+class InstallerCtrl:
 
+	def __init__(
+			self,
+			local: MyPyClass,
+			mconfig_path: str,
+			paths: InstallerPaths,
+			ls_data: LsData | None,
+			get_init_block: Callable[[], InitBlock] | None,
+			console: MyPyConsole | None = None
+	):
+		self.local= local
+		self.mconfig_path = mconfig_path
+		self._paths = paths
+		self._ls_data = ls_data
+		self._validator_user = 'validator'
+		self._get_init_block = get_init_block
+		self._console_engine = console
 
-def Enable(local: MyPyClass, ctx: InstallerContext, args: list):
-	if len(args) < 1:
-		color_print("{red}Bad args. Usage:{endc} enable <mode-name>")
-		print("'FN' - Full node")
-		print("'VC' - Validator console")
-		print("'LS' - Lite-Server")
-		print("'DS' - DHT-Server")
-		print("'JR' - jsonrpc")
-		print("'THA' - ton-http-api")
-		print("'LSP' - ls-proxy")
-		print("'TS' - ton-storage")
-		print("Example: 'enable FN'")
-		return
-	name = args[0]
-	if name == "THA":
-		CreateLocalConfigFile(local, args, ctx.user)
-	args = ["python3", "-m", "mytoninstaller", "-u", ctx.user, "-e", f"enable{name}"]
-	run_as_root(args)
-#end define
+	def run(self, cmd: str | None = None):
+		if self._console_engine is None:
+			raise ValueError("Console engine is not set")
+		self.local.db.config.isStartOnlyOneProcess = False
+		self.local.db.config.logLevel = "debug"
+		self._console_engine.color = self._console_engine.RED
+		self._add_console_commands(self._console_engine)
+		if cmd:
+			self._console_engine.run_cmd(cmd)
+			return
+		self._console_engine.run()
 
+	def _add_console_commands(self, console: MyPyConsole):
+		console.add_item("status", self._print_status, "Print TON component status")
+		console.add_item("set_node_argument", self._set_node_argument, "Set node argument", "<arg_name> [arg_value1] [arg_value2] [-d (to delete)]")
+		console.add_item("enable", self.enable, "Enable some function", "<mode_name>")
+		console.add_item("update", self.enable, "Update some function: 'JR' - jsonrpc.  Example: 'update JR'", "<mode_name>")
+		console.add_item("plsc", self._print_ls_config, "Print lite-server config")
+		console.add_item("clcf", self.create_local_config_file, "Create lite-server config file", "[path]")
+		console.add_item("print_ls_proxy_config", self._print_ls_proxy_config, "Print ls-proxy config")
+		console.add_item("drvcf", self._drvcf, "Dangerous recovery validator config file")
+		console.add_item("setwebpass", self._set_web_password, "Set a password for the web admin interface")
+		console.add_item("ton_storage_list", self.ton_storage_list, "Print result of /list method at Ton Storage API")
 
-def DRVCF(ctx: InstallerContext, _):
-	args = ["python3", "-m", "mytoninstaller", "-u", ctx.user, "-e", "drvcf"]
-	run_as_root(args)
-#end define
+	def _print_status(self, _: list[str]):
+		keys_dir = self._paths.keys_dir
+		server_key = keys_dir + "server"
+		client_key = keys_dir + "client"
+		liteserver_key = keys_dir + "liteserver"
+		liteserver_pubkey = liteserver_key + ".pub"
 
+		statuses = {
+			'Full node status': os.path.isfile(self._paths.vconfig_path),
+			'Mytoncore status': os.path.isfile(self.mconfig_path),
+			'V.console status': os.path.isfile(server_key) or os.path.isfile(client_key),
+			'Liteserver status': os.path.isfile(liteserver_pubkey)
+		}
 
-def SetWebPassword(args):
-	args = ["python3", "/usr/src/mtc-jsonrpc/mtc-jsonrpc.py", "-p"]
-	subprocess.run(args)
-#end define
+		color_print("{cyan}===[ Services status ]==={endc}")
+		for item in statuses.items():
+			status = '{green}enabled{endc}' if item[1] else '{red}disabled{endc}'
+			color_print(f"{item[0]}: {status}")
 
+		node_args = get_node_args()
+		color_print("{cyan}===[ Node arguments ]==={endc}")
+		for key, value in node_args.items():
+			if len(value) == 0:
+				print(f"{key}")
+			for v in value:
+				print(f"{key}: {v}")
 
-def ton_storage_list(local, args: list):
-	if len(args) > 0:
-		api_port = int(args[0])
-	else:
-		api_port = get_ton_storage_port(local)
-		if api_port is None:
-			raise Exception('Failed to get Ton Storage API port and port was not provided. Use ton_storage_list [api_port]')
-	data = requests.get(f"http://127.0.0.1:{api_port}" + '/api/v1/list', timeout=3)
-	if data.status_code != 200:
-		raise Exception(f'Failed to get Ton Storage list: {data.text}')
-	print(json.dumps(data.json(), indent=4))
+	def _set_node_argument(self, args: list[str]):
+		if len(args) < 1:
+			color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)].\n"
+						"Examples: 'set_node_argument --archive-ttl 86400' or 'set_node_argument --archive-ttl -d' or 'set_node_argument -M' or 'set_node_argument --add-shard 0:2000000000000000 0:a000000000000000'")
+			return
+		set_node_argument(args)
 
+	def enable(self, args: list[str]):
+		if len(args) < 1:
+			color_print("{red}Bad args. Usage:{endc} enable <mode-name>")
+			return
+		name = args[0]
+		if name == "DS":
+			with get_package_resource_path('mytoninstaller.scripts', 'dht_server.py') as script_path:
+				run_as_root(['python3', str(script_path), self._validator_user, self._paths.ton_bin_dir, self._paths.global_config_path])
+		elif name == "JR":
+			self._enable_json_rpc()
+		elif name == "THA":
+			self.create_local_config_file([])
+			self.enable_ton_http_api(update=True)
+		elif name == "LSP":
+			user = get_current_user()
+			with get_package_resource_path('mytoninstaller.scripts', 'ls_proxy.py') as script_path:
+				run_as_root(['python3', str(script_path), user, self.mconfig_path])
+		elif name == "TS":
+			user = get_current_user()
+			with get_package_resource_path('mytoninstaller.scripts', 'ton_storage.py') as script_path:
+				run_as_root(['python3', str(script_path), user, self.mconfig_path])
+		else:
+			color_print("{red}Bad args{endc}")
+			print("'DS' - DHT-Server")
+			print("'JR' - jsonrpc")
+			print("'THA' - ton-http-api")
+			print("'LSP' - ls-proxy")
+			print("'TS' - ton-storage")
 
-def PrintLiteServerConfig(local: MyPyClass, ctx: InstallerContext, _):
-	liteServerConfig = GetLiteServerConfig(local, ctx)
-	text = json.dumps(liteServerConfig, indent=4)
-	print(text)
-#end define
-
-
-def CreateLocalConfigFileCommand(local: MyPyClass, ctx: InstallerContext, args):
-	CreateLocalConfigFile(local, args, ctx.user)
-
-def CreateLocalConfigFile(local: MyPyClass, args, user: str | None = None):
-	init_block = GetInitBlock()
-	if init_block['rootHash'] is None:
-		local.add_log("Failed to get recent init block. Using init block from global config.", "warning")
-		with open('/usr/bin/ton/global.config.json', 'r') as f:
-			config = json.load(f)
-		config_init_block = config['validator']['init_block']
-		init_block = dict()
-		init_block["seqno"] = config_init_block['seqno']
-		init_block["rootHash"] = b642hex(config_init_block['root_hash'])
-		init_block["fileHash"] = b642hex(config_init_block['file_hash'])
-	init_block_b64 = dict2b64(init_block)
-	user = pop_user_from_args(args) or user
-	if user is None:
+	def _enable_json_rpc(self):
 		user = get_current_user()
-	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "clc", "--init-block", init_block_b64]
-	run_as_root(args)
-#end define
+		with get_package_resource_path('mytoninstaller.scripts', 'jsonrpcinstaller.sh') as jsonrpcinstaller_path:
+			exit_code = run_as_root(["bash", str(jsonrpcinstaller_path), "-u", user])  # TODO: fix path
+		if exit_code == 0:
+			text = "EnableJsonRpc - {green}OK{endc}"
+		else:
+			text = "EnableJsonRpc - {red}Error{endc}"
+		color_print(text)
 
-def print_ls_proxy_config(local, args):
-	ls_proxy_config = get_ls_proxy_config(local)
-	text = json.dumps(ls_proxy_config, indent=4)
-	print(text)
-#end define
+	def _drvcf(self, _: list[str]):
+		with get_package_resource_path('mytoninstaller.scripts', 'drvcf.py') as script_path:
+			run_as_root(['python3', str(script_path), self._paths.keyring_dir, self.mconfig_path, self._paths.ton_db_dir])
 
-def create_ls_proxy_config_file(local, args):
-	print("TODO")
-#end define
+	def _set_web_password(self, _: list[str]):
+		args = ["python3", "/usr/src/mtc-jsonrpc/mtc-jsonrpc.py", "-p"]
+		subprocess.run(args)
 
-def Event(local: MyPyClass, ctx: InstallerContext, name: str, initBlock_b64: str | None = None):
-	if name == "enableFN":
-		FirstNodeSettings(local, ctx)
-	if name == "enableVC":
-		EnableValidatorConsole(local, ctx)
-	if name == "enableLS":
-		EnableLiteServer(local, ctx)
-	if name == "enableDS":
-		EnableDhtServer(local, ctx)
-	if name == "drvcf":
-		DangerousRecoveryValidatorConfigFile(local, ctx)
-	if name == "enableJR":
-		EnableJsonRpc(local, ctx)
-	if name == "enableTHA":
-		enable_ton_http_api(local, user=ctx.user, update=True)
-	if name == "enableLSP":
-		enable_ls_proxy(local, ctx)
-	if name == "enableTS":
-		enable_ton_storage(local, ctx)
-	if name == "clc":
-		if initBlock_b64 is None:
-			raise ValueError("init block is required for clc event")
-		initBlock = b642dict(initBlock_b64)
-		CreateLocalConfig(local, ctx, initBlock)
-	local.exit()
+	def ton_storage_list(self, args: list[str]):
+		if len(args) > 0:
+			api_port = int(args[0])
+		else:
+			api_port = get_ton_storage_port(self.local)
+			if api_port is None:
+				raise Exception('Failed to get Ton Storage API port and port was not provided. Use ton_storage_list [api_port]')
+		data = requests.get(f"http://127.0.0.1:{api_port}" + '/api/v1/list', timeout=3)
+		if data.status_code != 200:
+			raise Exception(f'Failed to get Ton Storage list: {data.text}')
+		print(json.dumps(data.json(), indent=4))
 
+	def enable_ton_http_api(self, update: bool = False):
+		try:
+			if update or not tha_exists():
+				self.do_enable_ton_http_api()
+		except Exception as e:
+			self.local.add_log(f"Error in enable_ton_http_api: {e}", "warning")
+			pass
 
-def Command(local, args, console):
-	cmd = args[0]
-	args = args[1:]
-	for item in console.menu_items:
-		if cmd == item.cmd:
-			console._try(item.func, args)
-			print()
-			local.exit()
-	print(console.unknown_cmd)
-	local.exit()
-#end define
+	def do_enable_ton_http_api(self):
+		self.local.add_log("start do_enable_ton_http_api function", "debug")
+		if not os.path.exists('/usr/bin/ton/local.config.json'):
+			self.create_local_config_file([])
+		user = get_current_user()
+		with get_package_resource_path('mytoninstaller.scripts',
+		                               'ton_http_api_installer.sh') as ton_http_api_installer_path:
+			exit_code = run_as_root(["bash", str(ton_http_api_installer_path), "-u", user])
+		if exit_code == 0:
+			text = "do_enable_ton_http_api - {green}OK{endc}"
+		else:
+			text = "do_enable_ton_http_api - {red}Error{endc}"
+		color_print(text)
 
+	def _get_ls_config(self):
+		if self._ls_data is None:
+			raise Exception("Liteserver data is not set")
+		ls_ip = self._ls_data["ip"]
+		if ls_ip == '127.0.0.1':
+			ls_ip = get_own_ip()
+		ip = ip2int(ls_ip)
+		with open(self._ls_data["pubkeyPath"], 'rb') as f:
+			data = f.read()
+		key = base64.b64encode(data[4:])
+		result = {
+			"ip": ip,
+			"port": self._ls_data["port"],
+			"id": {
+				"@type": "pub.ed25519",
+				"key": key.decode()
+			}
+		}
+		return result
 
-def _build_general_arg_parser():
-	parser = argparse.ArgumentParser(prog="mytoninstaller", allow_abbrev=False)
-	parser.add_argument("-u", dest="user", help="user to be used for MyTonCtrl installation")
-	parser.add_argument("-c", dest="command", help="run installer console command")
-	parser.add_argument("-e", dest="event", help="run installer event")
-	parser.add_argument("--init-block", help="base64 init block for clc event")
-	parser.add_argument(
-		"-t",
-		dest="telemetry",
-		nargs="?",
-		const="false",
-		type=str2bool,
-		help="set telemetry boolean; without a value disables telemetry",
-	)
-	parser.add_argument(
-		"--dump",
-		nargs="?",
-		const="true",
-		type=str2bool,
-		help="set whether to use pre-packaged dump",
-	)
-	parser.add_argument("-m", dest="mode", help="installation mode")
-	parser.add_argument(
-		"--only-mtc",
-		nargs="?",
-		const="true",
-		type=str2bool,
-		help="install only MyTonCtrl",
-	)
-	parser.add_argument(
-		"--only-node",
-		nargs="?",
-		const="true",
-		type=str2bool,
-		help="install only TON node",
-	)
-	parser.add_argument("--backup", help="backup file for MyTonCtrl installation")
-	return parser
+	def create_local_config_file(self, args: list[str]):
+		path = args[0] if len(args) > 0 else defaultLocalConfigPath
+		init_block: InitBlock | None = None
+		if self._get_init_block is not None:
+			try:
+				init_block = self._get_init_block()
+			except Exception as e:
+				self.local.add_log(f"Failed to get init block: {e}", "warning")
 
+		if init_block is None or init_block['rootHash'] is None:
+			self.local.add_log("Failed to get recent init block. Using init block from global config.", "warning")
+			with open(self._paths.global_config_path, 'r') as f:
+				config = json.load(f)
+			config_init_block = config['validator']['init_block']
+			init_block = {"seqno": config_init_block['seqno'], "rootHash": b642hex(config_init_block['root_hash']), "fileHash": b642hex(config_init_block['file_hash'])}
+		self._create_local_config(init_block, path)
 
-def _parse_general_args(argv=None):
-	parser = _build_general_arg_parser()
-	args = parser.parse_args(argv)
-	if args.command is None and args.event == "clc" and args.init_block is None:
-		parser.error("--init-block is required with -e clc")
-	return args
+	def _create_local_config(self, init_block: InitBlock, localConfigPath: str):
+		from mytoncore.utils import hex2base64
 
+		with open(self._paths.global_config_path, 'r') as f:
+			data = json.loads(f.read())
 
-def get_context(local: MyPyClass, args) -> InstallerContext:
-	user = get_current_user()
-	vuser = "validator"
-	telemetry = False or args.telemetry
-	dump = False or args.dump
+		lite_server_config = self._get_ls_config()
+		data["liteservers"] = [lite_server_config]
+		data["validator"]["init_block"]["seqno"] = init_block["seqno"]
+		data["validator"]["init_block"]["root_hash"] = hex2base64(init_block["rootHash"])
+		data["validator"]["init_block"]["file_hash"] = hex2base64(init_block["fileHash"])
+		text = json.dumps(data, indent=4)
 
-	if args.user is not None:
-		user = args.user
+		# write local config file
+		try:
+			with open(localConfigPath, 'wt') as file:
+				file.write(text)
+		except PermissionError:
+			with tempfile.NamedTemporaryFile('wt', suffix='.json') as tmp_file:
+				tmp_file.write(text)
+				tmp_file.flush()
+				exit_code = run_as_root(["install", "-m", "0644", tmp_file.name, localConfigPath])
+			if exit_code != 0:
+				message = f"Failed to create local config file {localConfigPath} as root (exit code {exit_code})."
+				self.local.add_log(message, "error")
+				raise RuntimeError(message)
 
-	vc_port = int(
-		os.getenv('VALIDATOR_CONSOLE_PORT') if os.getenv('VALIDATOR_CONSOLE_PORT') else random.randint(2000, 65000))
-	ls_port = int(os.getenv('LITESERVER_PORT') if os.getenv('LITESERVER_PORT') else random.randint(2000, 65000))
-	v_port = int(os.getenv('VALIDATOR_PORT') if os.getenv('VALIDATOR_PORT') else random.randint(2000, 64000))
-	quic_port = int(os.getenv('QUIC_PORT')) if os.getenv('QUIC_PORT') else None
-	ports = InstallerPorts(vc_port, ls_port, v_port, quic_port)
+		print("Local config file created:", localConfigPath)
 
-	archive_ttl = int(os.getenv('ARCHIVE_TTL')) if os.getenv('ARCHIVE_TTL') else None
-	state_ttl = int(os.getenv('STATE_TTL')) if os.getenv('STATE_TTL') else None
-	public_ip = os.getenv('PUBLIC_IP')
-	add_shard = os.getenv('ADD_SHARD')
-	archive_blocks = os.getenv('ARCHIVE_BLOCKS')
-	collate_shard = os.getenv('COLLATE_SHARD', '')
+	def _print_ls_config(self, _: list[str]):
+		print(json.dumps(self._get_ls_config(), indent=4))
 
-	backup = None
-	if args.backup is not None:
-		if args.backup != "none":
-			backup = args.backup
+	def _print_ls_proxy_config(self, _: list[str]):
+		print(json.dumps(get_ls_proxy_config(), indent=4))
 
-	paths = InstallerPaths()
-	return InstallerContext(user, vuser, paths, ports, telemetry, dump, args.mode, args.only_mtc, args.only_node, backup,
-	                       archive_ttl, state_ttl, public_ip, add_shard, archive_blocks, collate_shard)
-
-
-def General(local: MyPyClass, console: MyPyConsole, args, ctx: InstallerContext):
-	if args.command is not None:
-		Command(local, args.command.split(), console)
-		return
-	if args.event is not None:
-		Event(local, ctx, args.event, args.init_block)
-		return
-
-	FirstMytoncoreSettings(local, ctx)
-	FirstNodeSettings(local, ctx)
-	EnableValidatorConsole(local, ctx)
-	EnableLiteServer(local, ctx)
-	BackupMconfig(local, ctx)
-	CreateSymlinks(local, ctx)
-	EnableMode(local, ctx)
-	ConfigureFromBackup(local, ctx)
-	ConfigureOnlyNode(local, ctx)
-	SetInitialSync(local, ctx)
-	SetupCollator(local, ctx)
-
-
-###
-### Start of the program
-###
-def mytoninstaller():
-	local = MyPyClass(__file__)
-	console = MyPyConsole(local, "MyTonInstaller")
-
-	Init(local)
-	args = _parse_general_args()
-	ctx = get_context(local, args)
-	add_commands(local, console, ctx)
-	if len(sys.argv) > 1:
-		General(local, console, args, ctx)
-	else:
-		console.run()
-	local.exit()
+	@classmethod
+	def from_ton(cls, ton: MyTonCore):
+		local = MyPyClass(__file__)
+		console = MyPyConsole(local, name="MyTonInstaller")
+		return cls(local,
+				   mconfig_path=ton.local.db_path,
+				   paths=InstallerPaths(),
+				   ls_data=ton.local.db.get("liteClient", {}).get("liteServer"),
+				   get_init_block=ton.GetInitBlock,
+				   console=console,
+		           )

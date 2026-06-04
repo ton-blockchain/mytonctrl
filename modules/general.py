@@ -1090,16 +1090,19 @@ class GeneralModule(MtcModule):
                 f"  {{bold}}{setting_name}{{endc}}: {setting.description}.\n    Default value: {setting.default_value}"
             )
 
-    def Installer(self, args: list[str]):
-        cmd = ["python3", "-m", "mytoninstaller"]
-        if args:
-            cmd += ["-c", " ".join(args)]
-        subprocess.run(cmd)
+    def run_installer(self, args: list[str]):
+        from mytoninstaller.mytoninstaller import InstallerCtrl
+        installer = InstallerCtrl.from_ton(self.ton)
+        try:
+            installer.run(' '.join(args))
+        except SystemExit:
+            self.local.add_log("Exited MyTonInstaller")
+            pass
 
     def add_console_commands(self, console):
         add_command(self.local, console, "update", self.Update)
         add_command(self.local, console, "upgrade", self.Upgrade)
-        add_command(self.local, console, "installer", self.Installer)
+        add_command(self.local, console, "installer", self.run_installer)
         add_command(self.local, console, "status", self.print_status)
         add_command(self.local, console, "status_modes", self.mode_status)
         add_command(self.local, console, "status_settings", self.settings_status)

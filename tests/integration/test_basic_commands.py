@@ -1,8 +1,12 @@
 import base64
+import json
 import os
 import pathlib
 import subprocess
 
+from mytoninstaller import mytoninstaller as installer_module
+from mytoninstaller.context import InstallerPaths
+from mytoninstaller.mytoninstaller import InstallerCtrl
 import pytest
 import requests
 from pytest_mock import MockerFixture
@@ -167,14 +171,67 @@ def test_upgrade_btc_teleport(cli, monkeypatch, mocker: MockerFixture):
 
 def test_installer(cli, monkeypatch):
     calls = {}
-    def fake_run(args):
-        calls["args"] = args
+    def fake_run(self, cmd):
+        calls["cmd"] = cmd
         return 0
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(InstallerCtrl, "run", fake_run)
 
     output = cli.execute("installer cmd arg1 arg2")
-    assert calls["args"] == ["python3", "-m", "mytoninstaller", '-c',  "cmd arg1 arg2"]
+    assert calls["cmd"] == "cmd arg1 arg2"
     assert "Error" not in output
+
+
+def test_create_local_config_root_fallback_sets_readable_mode(local, tmp_path, monkeypatch):
+    ton_bin_dir = tmp_path / "ton"
+    ton_bin_dir.mkdir()
+    global_config_path = ton_bin_dir / "global.config.json"
+    local_config_path = ton_bin_dir / "local.config.json"
+    pubkey_path = tmp_path / "liteserver.pub"
+
+    global_config_path.write_text(json.dumps({
+        "validator": {
+            "init_block": {
+                "seqno": 1,
+                "root_hash": "",
+                "file_hash": "",
+            }
+        },
+        "liteservers": [],
+    }))
+    pubkey_path.write_bytes(b"\0\0\0\0" + b"a" * 32)
+
+    real_open = open
+
+    def fake_open(file, mode="r", *args, **kwargs):
+        if file == str(local_config_path) and "w" in mode:
+            raise PermissionError
+        return real_open(file, mode, *args, **kwargs)
+
+    root_calls = []
+
+    def fake_run_as_root(args):
+        root_calls.append(args)
+        assert pathlib.Path(args[3]).is_file()
+        return 0
+
+    monkeypatch.setattr("builtins.open", fake_open)
+    monkeypatch.setattr(installer_module, "run_as_root", fake_run_as_root)
+
+    installer = InstallerCtrl(
+        local=local,
+        mconfig_path=str(tmp_path / "mytoncore.db"),
+        paths=InstallerPaths(bin_dir=str(tmp_path) + "/"),
+        ls_data={"pubkeyPath": str(pubkey_path), "ip": "1.2.3.4", "port": 33333},
+        get_init_block=None,
+    )
+    installer._create_local_config(
+        {"seqno": 42, "rootHash": "00" * 32, "fileHash": "11" * 32},
+        str(local_config_path),
+    )
+
+    assert len(root_calls) == 1
+    assert root_calls[0][:3] == ["install", "-m", "0644"]
+    assert root_calls[0][4] == str(local_config_path)
 
 
 def test_status(cli, monkeypatch, mocker: MockerFixture):
