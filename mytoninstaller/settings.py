@@ -78,7 +78,10 @@ def FirstNodeSettings(local: MyPyClass, ctx: InstallerContext):
 	os.makedirs(keys_dir, exist_ok=True)
 
 	# Прописать автозагрузку
-	cpus = psutil.cpu_count() - 1
+	cpus = psutil.cpu_count()
+	if cpus is None:
+		raise ValueError("Failed to get CPU count")
+	cpus -= 1
 
 	ttl_cmd = ''
 	if archive_ttl == -1:
@@ -138,6 +141,8 @@ def download_archive_from_ts(local: MyPyClass, ctx: InstallerContext):
 	if len(archive_blocks.split()) > 1:
 		block_from, block_to = archive_blocks.split()
 	block_from, block_to = parse_block_value(local, block_from, ctx.paths.global_config_path), parse_block_value(local, block_to, ctx.paths.global_config_path)
+	if block_from is None:
+		raise ValueError(f"Invalid block_from value: {block_from}")
 	block_from = max(1, block_from - 100)  # to download previous package as node may require some blocks from it
 
 	from mytoninstaller.scripts.ton_storage import enable_ton_storage

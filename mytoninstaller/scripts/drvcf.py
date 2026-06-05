@@ -45,6 +45,7 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 	ls_pubkey = data[4:]
 
 	# Search lite server priv key
+	ls_id = None
 	for item in keyring:
 		path = keyring_dir + item
 		file = open(path, 'rb')
@@ -77,6 +78,7 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 	vPubkey = data[4:]
 
 	# Search validator-console priv key
+	vcId = None
 	for item in keyring:
 		path = keyring_dir + item
 		file = open(path, 'rb')
@@ -102,6 +104,7 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 	vconfig.control = [buff]
 
 	# Get dht fragment
+	dhtS = None
 	files = os.listdir(ton_db_dir)
 	for item in files:
 		if item[:3] == "dht":
@@ -112,8 +115,9 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 	#end for
 
 	# Get ght from keys
+	dhtId = None
 	for item in keys:
-		if dhtS in item:
+		if dhtS and dhtS in item:
 			dhtId = item
 			keys.remove(dhtId)
 	#end for

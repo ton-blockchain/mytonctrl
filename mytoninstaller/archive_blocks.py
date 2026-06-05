@@ -113,7 +113,7 @@ def update_init_block(local: MyPyClass, seqno: int, global_config_path: str):
     return True
 
 
-def parse_block_value(local: MyPyClass, block: str, global_config_path: str):
+def parse_block_value(local: MyPyClass, block: str | None, global_config_path: str):
     if block is None:
         return None
     if block.isdigit():

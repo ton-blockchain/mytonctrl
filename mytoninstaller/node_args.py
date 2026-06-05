@@ -21,10 +21,11 @@ def get_node_start_command():
             return line.split('=')[1].strip()
 #end define
 
-def get_node_args(start_command: str = None):
+def get_node_args(start_command: str | None = None):
     if start_command is None:
         start_command = get_node_start_command()
-    #end if
+    if start_command is None:
+        raise Exception("Can't get node start command")
 
     result = dict() # {key: [value1, value2]}
     node_args = start_command.split(' ')[1:]

@@ -74,15 +74,20 @@ def get_context(args) -> InstallerContext:
     if args.user is not None:
         user = args.user
 
-    vc_port = int(
-        os.getenv('VALIDATOR_CONSOLE_PORT') if os.getenv('VALIDATOR_CONSOLE_PORT') else random.randint(2000, 65000))
-    ls_port = int(os.getenv('LITESERVER_PORT') if os.getenv('LITESERVER_PORT') else random.randint(2000, 65000))
-    v_port = int(os.getenv('VALIDATOR_PORT') if os.getenv('VALIDATOR_PORT') else random.randint(2000, 64000))
-    quic_port = int(os.getenv('QUIC_PORT')) if os.getenv('QUIC_PORT') else None
+    vc_port_env = os.getenv('VALIDATOR_CONSOLE_PORT')
+    vc_port = int(vc_port_env) if vc_port_env else random.randint(2000, 65000)
+    ls_port_env = os.getenv('LITESERVER_PORT')
+    ls_port = int(ls_port_env) if ls_port_env else random.randint(2000, 65000)
+    v_port_env = os.getenv('VALIDATOR_PORT')
+    v_port = int(v_port_env) if v_port_env else random.randint(2000, 64000)
+    quic_port_env = os.getenv('QUIC_PORT')
+    quic_port = int(quic_port_env) if quic_port_env else None
     ports = InstallerPorts(vc_port, ls_port, v_port, quic_port)
 
-    archive_ttl = int(os.getenv('ARCHIVE_TTL')) if os.getenv('ARCHIVE_TTL') else None
-    state_ttl = int(os.getenv('STATE_TTL')) if os.getenv('STATE_TTL') else None
+    archive_ttl_env = os.getenv('ARCHIVE_TTL')
+    archive_ttl = int(archive_ttl_env) if archive_ttl_env else None
+    state_ttl_env = os.getenv('STATE_TTL')
+    state_ttl = int(state_ttl_env) if state_ttl_env else None
     public_ip = os.getenv('PUBLIC_IP')
     add_shard = os.getenv('ADD_SHARD')
     archive_blocks = os.getenv('ARCHIVE_BLOCKS')

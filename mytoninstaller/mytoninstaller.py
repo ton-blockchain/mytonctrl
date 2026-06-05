@@ -11,6 +11,7 @@ import requests
 
 from mypylib.mypylib import MyPyClass, run_as_root, color_print, ip2int
 from mypyconsole.mypyconsole import MyPyConsole
+from mytoncore.models import BlockHead
 from mytoncore.mytoncore import MyTonCore
 from mytoncore.utils import get_package_resource_path
 from mytonctrl.utils import get_current_user
@@ -29,11 +30,6 @@ class LsData(TypedDict):
 	ip: str
 	port: int
 
-class InitBlock(TypedDict):
-	seqno: int
-	rootHash: str
-	fileHash: str
-
 
 @final
 class InstallerCtrl:
@@ -44,7 +40,7 @@ class InstallerCtrl:
 			mconfig_path: str,
 			paths: InstallerPaths,
 			ls_data: LsData | None,
-			get_init_block: Callable[[], InitBlock] | None,
+			get_init_block: Callable[[], BlockHead] | None,
 			console: MyPyConsole | None = None
 	):
 		self.local= local
@@ -216,7 +212,7 @@ class InstallerCtrl:
 
 	def create_local_config_file(self, args: list[str]):
 		path = args[0] if len(args) > 0 else defaultLocalConfigPath
-		init_block: InitBlock | None = None
+		init_block: BlockHead | None = None
 		if self._get_init_block is not None:
 			try:
 				init_block = self._get_init_block()
@@ -231,7 +227,7 @@ class InstallerCtrl:
 			init_block = {"seqno": config_init_block['seqno'], "rootHash": b642hex(config_init_block['root_hash']), "fileHash": b642hex(config_init_block['file_hash'])}
 		self._create_local_config(init_block, path)
 
-	def _create_local_config(self, init_block: InitBlock, localConfigPath: str):
+	def _create_local_config(self, init_block: BlockHead, localConfigPath: str):
 		from mytoncore.utils import hex2base64
 
 		with open(self._paths.global_config_path, 'r') as f:

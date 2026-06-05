@@ -25,7 +25,7 @@ from mytoncore.models import (
 	Block,
 	Transaction,
 	Message,
-	Pool, Config12, Config15, ElectionsParticipant, Config17, CacheResult,
+	Pool, Config12, Config15, ElectionsParticipant, Config17, CacheResult, BlockHead,
 )
 
 from mypylib.mypylib import (
@@ -554,7 +554,7 @@ class MyTonCore:
 		return block
 	#end define
 
-	def GetInitBlock(self):
+	def GetInitBlock(self) -> BlockHead:
 		block = self.GetLastBlock()
 		cmd = f"gethead {block}"
 		result = self.liteClient.run(cmd)
@@ -563,12 +563,9 @@ class MyTonCore:
 		return data
 	#end define
 
-	def GetBlockHead(self, workchain, shardchain, seqno):
+	def GetBlockHead(self, workchain, shardchain, seqno) -> BlockHead:
 		block = self.GetBlock(workchain, shardchain, seqno)
-		data = dict()
-		data["seqno"] = block.seqno
-		data["rootHash"] = block.rootHash
-		data["fileHash"] = block.fileHash
+		data: BlockHead = {"seqno": block.seqno, "rootHash": block.rootHash, "fileHash": block.fileHash}
 		return data
 	#end define
 

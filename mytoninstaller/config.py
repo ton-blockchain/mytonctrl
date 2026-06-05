@@ -37,8 +37,9 @@ def BackupMconfig(local: MyPyClass, ctx: InstallerContext):
 #end define
 
 def get_own_ip():
+	from urllib3.util import connection
+	connection.HAS_IPV6 = False
 	pat = re.compile(r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$")
-	requests.packages.urllib3.util.connection.HAS_IPV6 = False
 	ip = requests.get("https://ifconfig.me/ip", timeout=3).text
 	if not pat.fullmatch(ip):
 		ip = requests.get("https://ipinfo.io/ip", timeout=3).text

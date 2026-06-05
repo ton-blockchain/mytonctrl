@@ -194,3 +194,8 @@ class ElectionsParticipant(TypedDict):
     maxFactor: float
     walletAddr: str
 
+
+class BlockHead(TypedDict):
+    seqno: int
+    rootHash: str
+    fileHash: str
