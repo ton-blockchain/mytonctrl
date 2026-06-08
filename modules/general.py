@@ -888,26 +888,6 @@ class GeneralModule(MtcModule):
             args, default_repo="ton", text="upgrade"
         )
 
-        # bugfix if the files are in the wrong place
-        liteClient = self.ton.GetSettings("liteClient")
-        configPath = liteClient.get("configPath")
-        pubkeyPath = liteClient.get("liteServer").get("pubkeyPath")
-        if "ton-lite-client-test1" in configPath:
-            liteClient["configPath"] = configPath.replace(
-                "lite-client/ton-lite-client-test1.config.json", "global.config.json"
-            )
-        if "/usr/bin/ton" in pubkeyPath:
-            liteClient["liteServer"]["pubkeyPath"] = "/var/ton-work/keys/liteserver.pub"
-        self.ton.SetSettings("liteClient", liteClient)
-        validatorConsole = self.ton.GetSettings("validatorConsole")
-        privKeyPath = validatorConsole.get("privKeyPath")
-        pubKeyPath = validatorConsole.get("pubKeyPath")
-        if "/usr/bin/ton" in privKeyPath:
-            validatorConsole["privKeyPath"] = "/var/ton-work/keys/client"
-        if "/usr/bin/ton" in pubKeyPath:
-            validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
-        self.ton.SetSettings("validatorConsole", validatorConsole)
-
         clang_version = get_clang_major_version()
         if clang_version is None or clang_version < self.CLANG_VERSION_REQUIRED:
             text = f"{{red}}WARNING: THIS UPGRADE WILL MOST PROBABLY FAIL DUE TO A WRONG CLANG VERSION: {clang_version}, REQUIRED VERSION IS {self.CLANG_VERSION_REQUIRED}. RECOMMENDED TO EXIT NOW AND UPGRADE CLANG AS PER INSTRUCTIONS: https://gist.github.com/neodix42/24d6a401e928f7e895fcc8e7b7c5c24a{{endc}}\n"
