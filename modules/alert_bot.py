@@ -493,18 +493,23 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
     def get_myself_from_election(self, config: dict):
         if not config["validators"]:
             return
-        adnl = self.ton.GetAdnlAddr()
-        save_elections = self.ton.GetSaveElections()
-        elections = save_elections.get(str(config["startWorkTime"]))
+        elections = self.ton.get_saved_election_entries(config["startWorkTime"])
         if elections is None:
             return
-        if adnl not in elections:  # didn't participate in elections
+        election = None
+        key = self.ton.get_validator_key_by_time(config["startWorkTime"])
+        if key is not None:
+            election = elections.get(self.ton.get_clean_pubkey_hex(key))
+        if not election:  # key expired or rotated
+            election = self.validator_module.find_myself(
+                sorted(elections.values(), key=lambda x: x.get('stake', 0), reverse=True))
+        if not election:
             return
         validator = self.validator_module.find_myself(config["validators"])
         if validator is None:
             return False
-        validator['stake'] = elections[adnl].get('stake')
-        validator['walletAddr'] = elections[adnl].get('walletAddr')
+        validator['stake'] = election.get('stake')
+        validator['walletAddr'] = election.get('walletAddr')
         return validator
 
     def check_stake_sent(self):

@@ -10,9 +10,13 @@ from mytonctrl.console_cmd import check_usage_two_args, add_command, check_usage
 
 from mytonctrl.utils import timestamp2utcdatetime, GetColorInt, pop_arg_from_args, is_hex
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Mapping, Sequence, TypeVar
+
 if TYPE_CHECKING:
     from mytoncore import MyTonCore
+
+
+X = TypeVar("X", bound=Mapping[str, Any])
 
 
 class ValidatorModule(MtcModule):
@@ -57,7 +61,7 @@ class ValidatorModule(MtcModule):
         self.ton.VoteComplaint(election_id, complaint_hash)
         color_print("VoteComplaint - {green}OK{endc}")
 
-    def find_myself(self, validators: list) -> Dict | None:
+    def find_myself(self, validators: Sequence[X]) -> X | None:
         adnl_addr = self.ton.GetAdnlAddr()
         for validator in validators:
             if validator.get("adnlAddr") == adnl_addr:

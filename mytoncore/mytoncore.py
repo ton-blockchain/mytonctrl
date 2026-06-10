@@ -16,7 +16,7 @@ from fastcrc import crc16
 
 from modules import MODES
 from mytoncore.stats_collector import StatsCollector
-from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path, raw_addr_to_b64, lc_result_to_list, \
+from mytoncore.utils import b642hex, xhex2hex, ng2g, get_package_resource_path, raw_addr_to_b64, lc_result_to_list, \
 	nano_ton_to_ton, tlb_to_json
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
@@ -505,25 +505,18 @@ class MyTonCore:
 		return fullElectorAddr
 	#end define
 
-	def GetActiveElectionId(self, fullElectorAddr) -> int:
-		# Get buffer
-		bname = "activeElectionId"
-		buff = self.GetFunctionBuffer(bname)
-		if buff:
-			return buff
-		#end if
-
-		cmd = "runmethodfull {fullElectorAddr} active_election_id".format(fullElectorAddr=fullElectorAddr)
+	def GetActiveElectionId(self, full_elector_addr: str) -> int:
+		cmd = "runmethodfull {fullElectorAddr} active_election_id".format(fullElectorAddr=full_elector_addr)
 		result = self.liteClient.run(cmd)
 		activeElectionId = self.GetVarFromWorkerOutput(result, "result")
+		if activeElectionId is None:
+			raise ValueError(f"result is not found: {result}")
 		activeElectionId = activeElectionId.replace(' ', '')
 		activeElectionId = parse(activeElectionId, '[', ']')
+		if activeElectionId is None:
+			raise ValueError(f"election id is not found: {result}")
 		activeElectionId = int(activeElectionId)
-
-		# Set buffer
-		self.SetFunctionBuffer(bname, activeElectionId)
 		return activeElectionId
-	#end define
 
 	def GetValidatorsElectedFor(self):
 		self.local.add_log("start GetValidatorsElectedFor function", "debug")
@@ -839,12 +832,18 @@ class MyTonCore:
 		return key
 	#end define
 
-	def GetPubKeyBase64(self, key):
+	def GetPubKeyBase64(self, key: str):
 		self.local.add_log("start GetPubKeyBase64 function", "debug")
 		result = self.validatorConsole.run("exportpub " + key)
 		validatorPubkey_b64 = parse(result, "got public key: ", '\n')
+		if validatorPubkey_b64 is None:
+			raise Exception(f"Failed to get public key: {result}")
 		return validatorPubkey_b64
 	#end define
+
+	def get_clean_pubkey_hex(self, key: str):
+		validator_pubkey_b64 = self.GetPubKeyBase64(key)
+		return b642hex(validator_pubkey_b64)[8:].upper()  # skip magic prefix
 
 	def AddKeyToValidator(self, key, startWorkTime, endWorkTime):
 		self.local.add_log("start AddKeyToValidator function", "debug")
@@ -856,7 +855,7 @@ class MyTonCore:
 		return output
 	#end define
 
-	def AddKeyToTemp(self, key, endWorkTime):
+	def AddKeyToTemp(self, key: str, endWorkTime: int):
 		self.local.add_log("start AddKeyToTemp function", "debug")
 		output = False
 		result = self.validatorConsole.run("addtempkey {key} {key} {endWorkTime}".format(key=key, endWorkTime=endWorkTime))
@@ -1228,17 +1227,17 @@ class MyTonCore:
 			if base64.b64decode(a.id) == adnl_addr_bytes:
 				have_adnl = True
 				break
-		#end for
 		if not have_adnl:
 			raise Exception('ADNL address is not found')
-		#end if
 
-		# Check if election entry already completed
-		entries = self.GetElectionEntries()
-		if adnl_addr in entries:
-			self.local.add_log("Elections entry already completed", "info")
-			return
-		#end if
+		validator_key = self.get_validator_key_by_time(startWorkTime, vconfig)
+		if validator_key is not None:
+			validator_pubkey_hex = self.get_clean_pubkey_hex(validator_key)
+			# Check if election entry already completed
+			entries = self.GetElectionEntries()
+			if validator_pubkey_hex in entries:
+				self.local.add_log("Elections entry already completed", "info")
+				return
 
 		pool = None
 		controllerAddr = None
@@ -1262,12 +1261,13 @@ class MyTonCore:
 		endWorkTime = startWorkTime + validatorsElectedFor + 300 # 300 sec - margin of seconds
 
 		# Create keys
-		validatorKey = self.GetValidatorKeyByTime(startWorkTime, endWorkTime)
-		self.AddKeyToTemp(validatorKey, endWorkTime) # add one more time to ensure it is in temp keys
-		validatorPubkey_b64  = self.GetPubKeyBase64(validatorKey)
+		if validator_key is None:
+			validator_key = self.create_validator_key(startWorkTime, endWorkTime)
+		validator_pubkey_b64  = self.GetPubKeyBase64(validator_key)
+		self.AddKeyToTemp(validator_key, endWorkTime) # add one more time to ensure it is in temp keys
 
 		# Attach ADNL addr to validator
-		self.AttachAdnlAddrToValidator(adnl_addr, validatorKey, endWorkTime)
+		self.AttachAdnlAddrToValidator(adnl_addr, validator_key, endWorkTime)
 
 		# Get max factor
 		maxFactor = self.GetMaxFactor()
@@ -1277,8 +1277,8 @@ class MyTonCore:
 			if pool is None:
 				raise Exception("Could not get pool with pool mode on")
 			var1 = self.CreateElectionRequest(pool.addrB64, startWorkTime, adnl_addr, maxFactor)
-			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-			validatorPubkey, resultFilePath = self.SignElectionRequestWithPoolWithValidator(pool, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
+			validatorSignature = self.GetValidatorSignature(validator_key, var1)
+			validatorPubkey, resultFilePath = self.SignElectionRequestWithPoolWithValidator(pool, startWorkTime, adnl_addr, validator_pubkey_b64, validatorSignature, maxFactor, stake)
 
 			# Send boc file to TON
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, pool.addrB64, 1.3)
@@ -1287,16 +1287,16 @@ class MyTonCore:
 			if controllerAddr is None:
 				raise Exception("Could not get controller with controller mode on")
 			var1 = self.CreateElectionRequest(controllerAddr, startWorkTime, adnl_addr, maxFactor)
-			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-			validatorPubkey, resultFilePath = self.SignElectionRequestWithController(controllerAddr, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor, stake)
+			validatorSignature = self.GetValidatorSignature(validator_key, var1)
+			validatorPubkey, resultFilePath = self.SignElectionRequestWithController(controllerAddr, startWorkTime, adnl_addr, validator_pubkey_b64, validatorSignature, maxFactor, stake)
 
 			# Send boc file to TON
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, controllerAddr, 1.03)
 			self.SendFile(resultFilePath, wallet)
 		else:
 			var1 = self.CreateElectionRequest(wallet.addrB64, startWorkTime, adnl_addr, maxFactor)
-			validatorSignature = self.GetValidatorSignature(validatorKey, var1)
-			validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnl_addr, validatorPubkey_b64, validatorSignature, maxFactor)
+			validatorSignature = self.GetValidatorSignature(validator_key, var1)
+			validatorPubkey, resultFilePath = self.SignElectionRequestWithValidator(wallet, startWorkTime, adnl_addr, validator_pubkey_b64, validatorSignature, maxFactor)
 
 			# Send boc file to TON
 			resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, fullElectorAddr, stake)
@@ -1304,7 +1304,7 @@ class MyTonCore:
 		#end if
 
 		# Save vars to json file
-		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnl_addr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
+		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validator_key, validatorPubkey_b64=validator_pubkey_b64, adnlAddr=adnl_addr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
 		self.local.add_log("ElectionEntry completed. Start work time: " + str(startWorkTime))
 
 		self.clear_tmp()
@@ -1350,24 +1350,20 @@ class MyTonCore:
 		if exit_code == 0:
 			self.local.add_log("Backup created successfully", "info")
 
-	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
-		self.local.add_log("start GetValidatorKeyByTime function", "debug")
-		# Check temp key
-		vconfig = self.GetValidatorConfig()
+	def get_validator_key_by_time(self, start_work_time: int, vconfig: Dict | None = None):
+		if vconfig is None:
+			vconfig = self.GetValidatorConfig()
 		for item in vconfig.validators:
-			if item.get("election_date") == startWorkTime:
-				validatorKey_b64 = item.get("id")
-				validatorKey = base64.b64decode(validatorKey_b64).hex()
-				validatorKey = validatorKey.upper()
-				return validatorKey
-		#end for
+			if item.get("election_date") == start_work_time:
+				validator_key = base64.b64decode(item.get("id")).hex().upper()
+				return validator_key
+		return None
 
-		# Create temp key
-		validatorKey = self.CreateNewKey()
-		self.AddKeyToValidator(validatorKey, startWorkTime, endWorkTime)
-		self.AddKeyToTemp(validatorKey, endWorkTime)
-		return validatorKey
-	#end define
+	def create_validator_key(self, start_work_time: int, end_work_time: int):
+		validator_key = self.CreateNewKey()
+		self.AddKeyToValidator(validator_key, start_work_time, end_work_time)
+		self.AddKeyToTemp(validator_key, end_work_time)
+		return validator_key
 
 	def RecoverStake(self):
 		wallet = self.GetValidatorWallet()
@@ -1572,35 +1568,25 @@ class MyTonCore:
 	#end define
 
 	def GetElectionEntries(self, past: bool = False) -> dict[str, ElectionsParticipant] | None:
-		# Get buffer
-		bname = "electionEntries" + str(past)
-		buff = self.GetFunctionBuffer(bname)
-		if buff:
-			return buff
-		#end if
-
-		# Check if the elections are open
-		entries = dict()
-		fullElectorAddr = self.GetFullElectorAddr()
-		electionId = self.GetActiveElectionId(fullElectorAddr)
-		if not past and electionId == 0:
-			return entries
-		#end if
-
 		if past:
 			config34 = self.GetConfig34()
-			electionId = config34.get("startWorkTime")
+			election_id = config34.get("startWorkTime")
 			end = config34.get("endWorkTime")
-			buff = end - electionId
-			electionId = electionId - buff
-			saveElections = self.GetSaveElections()
-			entries = saveElections.get(str(electionId))
+			buff = end - election_id
+			election_id = election_id - buff
+			entries = self.get_saved_election_entries(election_id)
 			return entries
-		#end if
+
+		full_elector_addr = self.GetFullElectorAddr()
+		election_id = self.GetActiveElectionId(full_elector_addr)
+		if election_id == 0:
+			return {}
+
+		entries = {}
 
 		# Get raw data
 		self.local.add_log("start GetElectionEntries function", "debug")
-		cmd = "runmethodfull {fullElectorAddr} participant_list_extended".format(fullElectorAddr=fullElectorAddr)
+		cmd = f"runmethodfull {full_elector_addr} participant_list_extended"
 		result = self.liteClient.run(cmd)
 		raw_election_entries = lc_result_to_list(result)
 		election_entries = raw_election_entries[4]
@@ -1609,28 +1595,21 @@ class MyTonCore:
 				continue
 
 			# Create dict
-			item = dict()
-			adnlAddr = Dec2HexAddr(entry[1][3])
-			item["adnlAddr"] = adnlAddr
-			item["pubkey"] = Dec2HexAddr(entry[0])
-			item["stake"] = ng2g(entry[1][0])
-			item["maxFactor"] = round(entry[1][1] / 655.36) / 100.0
-			wallet_addr_hash_part = Dec2HexAddr(entry[1][2])
-			item["walletAddr"] = raw_addr_to_b64("-1:" + wallet_addr_hash_part)
-			entries[adnlAddr] = item
-		#end for
-
-		# Set buffer
-		self.SetFunctionBuffer(bname, entries)
+			item = {
+				"pubkey": Dec2HexAddr(entry[0]),
+				"adnlAddr": Dec2HexAddr(entry[1][3]),
+				"stake": ng2g(entry[1][0]),
+				"maxFactor": round(entry[1][1] / 655.36) / 100.0,
+				"walletAddr": raw_addr_to_b64("-1:" + Dec2HexAddr(entry[1][2]))
+			}
+			entries[item["pubkey"]] = item
 
 		# Save elections
-		electionId = str(electionId)
-		saveElections = self.GetSaveElections()
-		saveElections[electionId] = entries
+		saveElections = self._get_save_elections()
+		saveElections[str(election_id)] = entries
 		return entries
-	#end define
 
-	def GetSaveElections(self):
+	def _get_save_elections(self) -> dict[str, dict[str, ElectionsParticipant]]:
 		timestamp = get_timestamp()
 		saveElections = self.local.db.get("saveElections")
 		if saveElections is None:
@@ -1644,12 +1623,12 @@ class MyTonCore:
 		return saveElections
 	#end define
 
-	def GetSaveElectionEntries(self, electionId):
-		electionId = str(electionId)
-		saveElections = self.GetSaveElections()
-		result = saveElections.get(electionId)
-		return result
-	#end define
+	def get_saved_election_entries(self, election_id: int):
+		saveElections = self._get_save_elections()
+		result = saveElections.get(str(election_id))
+		if result is not None:  # temp fix for migration period of cached past election entries. todo: remove this
+			return {x['pubkey']: x for x in result.values()}
+		return None
 
 	def calculate_offer_pseudohash(self, offer_hash: str, param_id: int):
 		config_val = self.GetConfig(param_id)
@@ -2097,10 +2076,10 @@ class MyTonCore:
 		validatorsLoad = self.GetValidatorsLoad(start, end)
 		validators = config["validators"]
 		electionId = config.get("startWorkTime")
-		saveElectionEntries = self.GetSaveElectionEntries(electionId)
+		saveElectionEntries = self.get_saved_election_entries(electionId)
 		for vid in range(len(validators)):
 			validator = validators[vid]
-			adnlAddr = validator["adnlAddr"]
+			pubkey = validator["pubkey"]
 			if len(validatorsLoad) > 0:
 				validator["mr"] = validatorsLoad[vid]["mr"]
 				validator["wr"] = validatorsLoad[vid]["wr"]
@@ -2115,9 +2094,9 @@ class MyTonCore:
 					validator["is_masterchain"] = True
 				if not validator["is_masterchain"]:
 					validator["efficiency"] = round(validator["wr"] * 100, 2)
-			if saveElectionEntries and adnlAddr in saveElectionEntries:
-				validator["walletAddr"] = saveElectionEntries[adnlAddr]["walletAddr"]
-				validator["stake"] = saveElectionEntries[adnlAddr].get("stake")
+			if saveElectionEntries and pubkey in saveElectionEntries:
+				validator["walletAddr"] = saveElectionEntries[pubkey]["walletAddr"]
+				validator["stake"] = saveElectionEntries[pubkey].get("stake")
 				validator["stake"] = int(validator["stake"]) if validator["stake"] else None
 		#end for
 
