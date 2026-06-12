@@ -10,7 +10,7 @@ from mytoncore.utils import get_package_resource_path
 from mytoninstaller.config import GetConfig, SetConfig
 
 
-def enable_ls_proxy(user: str, mconfig_path: str):
+def enable_ls_proxy(user: str, mconfig_path: str, src_dir: str):
     ls_proxy_port = random.randint(2000, 65000)
     metrics_port = random.randint(2000, 65000)
     bin_name = "ls_proxy"
@@ -19,7 +19,7 @@ def enable_ls_proxy(user: str, mconfig_path: str):
     ls_proxy_config_path = f"{ls_proxy_db_path}/ls-proxy-config.json"
 
     with get_package_resource_path('mytoninstaller.scripts', 'ls_proxy_installer.sh') as installer_path:
-        process = subprocess.run(["bash", str(installer_path), "-u", user], capture_output=True)
+        process = subprocess.run(["bash", str(installer_path), "-u", user, "-s", src_dir], capture_output=True)
     if process.returncode != 0:
         raise Exception(f"Failed to run ls proxy installer: {process.stdout.decode()} {process.stderr.decode()}")
 
@@ -59,6 +59,6 @@ def enable_ls_proxy(user: str, mconfig_path: str):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        sys.exit("usage: ls_proxy.py <user> <mconfig_path>")
-    enable_ls_proxy(sys.argv[1], sys.argv[2])
+    if len(sys.argv) != 4:
+        sys.exit("usage: ls_proxy.py <user> <mconfig_path> <src_dir>")
+    enable_ls_proxy(sys.argv[1], sys.argv[2], sys.argv[3])

@@ -20,6 +20,7 @@ from mytoncore.utils import xhex2hex, ng2g, get_package_resource_path, raw_addr_
 	nano_ton_to_ton, tlb_to_json
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
+	Paths,
 	Wallet,
 	Account,
 	Block,
@@ -146,6 +147,12 @@ class MyTonCore:
 		except Exception:
 			self.local.add_log("Could not update backup, backup_tmp file is broken", "warning")
 			os.remove(backup_tmp_path)
+
+	def get_paths(self) -> Paths:
+		paths = self.local.db.get("paths")
+		if paths is None:
+			return Paths()
+		return Paths.from_dict(paths)
 
 	def GetVarFromWorkerOutput(self, text: str, search: str):
 		if ':' not in search:
@@ -2207,15 +2214,15 @@ class MyTonCore:
 	#end define
 
 	def GetDbUsage(self):
-		path = "/var/ton-work/db"
-		data = psutil.disk_usage(path)
+		path = self.get_paths().ton_db
+		data = psutil.disk_usage(str(path))
 		return data.percent
 	#end define
 
 	def GetDbSize(self, exceptions="log"):
 		exceptions = exceptions.split()
 		totalSize = 0
-		path = "/var/ton-work/"
+		path = self.get_paths().ton_work
 		for directory, subdirectory, files in os.walk(path):
 			for file in files:
 				buff = file.split('.')
@@ -2645,37 +2652,18 @@ class MyTonCore:
 		return result
 	#end define
 
-	def DownloadContract(self, url, branch=None):
+	def DownloadContract(self, url: str, branch: str | None = None):
 		self.local.add_log("start DownloadContract function", "debug")
 		buff = url.split('/')
 		gitPath = self.contractsDir + buff[-1] + '/'
 
 		args = ["git", "clone", url]
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.contractsDir, timeout=30)
+		subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.contractsDir, timeout=30)
 
 		if branch is not None:
 			args = ["git", "checkout", branch]
-			process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
-		#end if
+			subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
 
-		if not os.path.isfile(gitPath + "build.sh"):
-			return
-		if not os.path.isfile("/usr/bin/func"):
-			return
-		#	file = open("/usr/bin/func", 'wt')
-		#	file.write("/usr/bin/ton/crypto/func $@")
-		#	file.close()
-		#end if
-
-		os.makedirs(gitPath + "build", exist_ok=True)
-		args = ["bash", "build.sh"]
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=30)
-		process.stdout.decode("utf-8")
-		err = process.stderr.decode("utf-8")
-		if len(err) > 0:
-			raise Exception(err)
-		#end if
-	#end define
 
 	def WithdrawFromPoolProcess(self, poolAddr, amount):
 		self.local.add_log("start WithdrawFromPoolProcess function", "debug")

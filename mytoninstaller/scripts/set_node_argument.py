@@ -1,3 +1,4 @@
+import os
 import sys
 import subprocess
 from mytoninstaller.node_args import get_node_args, get_node_start_command, get_validator_service
@@ -15,7 +16,7 @@ def set_node_arg(arg_name: str, arg_value: str = ''):
     if start_command is None:
         raise Exception('Cannot find node start command in service file')
     first_arg = start_command.split(' ')[0]
-    if first_arg != '/usr/bin/ton/validator-engine/validator-engine':
+    if os.path.basename(first_arg) != 'validator-engine':
         raise Exception('Invalid node start command in service file')
     #end if
     

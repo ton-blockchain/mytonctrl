@@ -9,8 +9,8 @@ from mytoninstaller.config import get_own_ip
 
 
 def EnableDhtServer(validator_user: str, ton_bin_dir: str, global_config_path: str):
-    dht_server = ton_bin_dir + "dht-server/dht-server"
-    generate_random_id = ton_bin_dir + "utils/generate-random-id"
+    dht_server = os.path.join(ton_bin_dir, "dht-server", "dht-server")
+    generate_random_id = os.path.join(ton_bin_dir, "utils", "generate-random-id")
     tonDhtServerDir = "/var/ton-dht-server/"
     tonDhtKeyringDir = tonDhtServerDir + "keyring/"
 

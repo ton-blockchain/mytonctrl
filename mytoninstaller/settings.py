@@ -20,10 +20,11 @@ from mypylib.mypylib import (
 	ip2int,
 	Dict, int2ip
 )
+from mytoncore.models import Paths
 from mytonctrl.utils import is_hex
 from mytoninstaller.archive_blocks import run_process_hardforks, parse_block_value, download_bag, update_init_block, \
 	download_blocks_bag, download_master_blocks_bag
-from mytoninstaller.context import InstallerContext
+from mytoninstaller.context import InstallerContext, InstallerPaths
 from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, \
 	is_testnet, disable_service
 from mytoninstaller.config import SetConfig, GetConfig, get_own_ip
@@ -146,7 +147,7 @@ def download_archive_from_ts(local: MyPyClass, ctx: InstallerContext):
 	block_from = max(1, block_from - 100)  # to download previous package as node may require some blocks from it
 
 	from mytoninstaller.scripts.ton_storage import enable_ton_storage
-	api_port = enable_ton_storage(ctx.user, ctx.mconfig_path)
+	api_port = enable_ton_storage(ctx.user, ctx.mconfig_path, ctx.paths.global_config_path, ctx.paths.src_dir)
 	url = 'https://archival-dump.ton.org/index/mainnet.json'
 	if is_testnet(ctx.paths.global_config_path,):
 		url = 'https://archival-dump.ton.org/index/testnet.json'
@@ -275,7 +276,7 @@ def DownloadDump(local: MyPyClass, ctx: InstallerContext):
     dumpSize = requests.get(url + ".tar.size.archive.txt", timeout=3).text
     print("dumpSize:", dumpSize)
     needSpace = int(dumpSize) * 3
-    diskSpace = psutil.disk_usage("/var")
+    diskSpace = psutil.disk_usage(ctx.paths.ton_db_dir)
     if needSpace > diskSpace.free:
         return
     #end if
@@ -304,12 +305,10 @@ def FirstMytoncoreSettings(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start FirstMytoncoreSettings fuction", "debug")
 	user = ctx.user
 
-	# Прописать mytoncore.py в автозагрузку
-	# add2systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
 	add2systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m mytoncore")
 
 	# Проверить конфигурацию
-	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
+	path = ctx.mconfig_path
 	if os.path.isfile(path):
 		local.add_log(f"{path} already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
@@ -358,10 +357,8 @@ def FirstMytoncoreSettings(local: MyPyClass, ctx: InstallerContext):
 	liteClient.configPath = ton_bin_dir + "global.config.json"
 	mconfig.liteClient = liteClient
 
-	# Telemetry
 	mconfig.sendTelemetry = ctx.telemetry
-
-	# Записать настройки в файл
+	mconfig.paths = get_paths_dict(ctx.paths)
 	SetConfig(path=mconfig_path, data=mconfig)
 
 	# chown 1
@@ -572,18 +569,17 @@ def CreateSymlinks(local: MyPyClass, ctx: InstallerContext):
 	validator_console_file = "/usr/bin/validator-console"
 	env_file = "/etc/environment"
 	file = open(mytonctrl_file, 'wt')
-	# file.write("/usr/bin/python3 /usr/src/mytonctrl/mytonctrl.py $@")  # TODO: fix path
 	file.write('/usr/bin/python3 -m mytonctrl "$@"')  # TODO: fix path
 	file.close()
 	file = open(fift_file, 'wt')
-	file.write('/usr/bin/ton/crypto/fift "$@"')
+	file.write(ctx.paths.ton_bin_dir + 'crypto/fift "$@"')
 	file.close()
 	file = open(liteclient_file, 'wt')
-	file.write('/usr/bin/ton/lite-client/lite-client -C /usr/bin/ton/global.config.json "$@"')
+	file.write(ctx.paths.ton_bin_dir + f'lite-client/lite-client -C {ctx.paths.global_config_path} "$@"')
 	file.close()
 	if cport:
 		file = open(validator_console_file, 'wt')
-		file.write(f'/usr/bin/ton/validator-engine-console/validator-engine-console -k {ctx.paths.keys_dir}client -p {ctx.paths.keys_dir}server.pub -a 127.0.0.1:' + str(cport) + ' "$@"')
+		file.write(ctx.paths.ton_bin_dir + f'validator-engine-console/validator-engine-console -k {ctx.paths.keys_dir}client -p {ctx.paths.keys_dir}server.pub -a 127.0.0.1:' + str(cport) + ' "$@"')
 		file.close()
 		args = ["chmod", "+x", validator_console_file]
 		subprocess.run(args)
@@ -591,7 +587,7 @@ def CreateSymlinks(local: MyPyClass, ctx: InstallerContext):
 	subprocess.run(args)
 
 	# env
-	fiftpath = "export FIFTPATH=/usr/src/ton/crypto/fift/lib/:/usr/src/ton/crypto/smartcont/"
+	fiftpath = f"export FIFTPATH={ctx.paths.ton_src_dir}crypto/fift/lib/:{ctx.paths.ton_src_dir}crypto/smartcont/"
 	file = open(env_file, 'rt+')
 	text = file.read()
 	if fiftpath not in text:
@@ -631,12 +627,21 @@ def ConfigureFromBackup(local: MyPyClass, ctx: InstallerContext):
 	backup_file = ctx.backup
 
 	os.makedirs(ctx.paths.ton_work_dir, exist_ok=True)
+	ton_work_dir = ctx.paths.ton_work_dir.rstrip('/')
 	if not ctx.only_mtc:
 		ip = str(ip2int(get_own_ip()))
-		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file, "-i", ip], user=ctx.user)
+		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file, "-i", ip, "-t", ton_work_dir], user=ctx.user)
+	else:
+		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file, "-t", ton_work_dir], user=ctx.user)
+
+	# the restored mconfig may carry the donor's paths. re-write the target ones
+	write_paths(local, ctx)
+	mconfig = GetConfig(path=mconfig_path)
+	update_client_path_settings(mconfig, Paths.from_dict(get_paths_dict(ctx.paths)))
+	SetConfig(path=mconfig_path, data=mconfig)
+	StartMytoncore(local)  # the restore script started mytoncore with the donor's settings
 
 	if ctx.only_mtc:
-		BackupModule.run_restore_backup(["-m", mconfig_dir, "-n", backup_file], user=ctx.user)
 		local.add_log("Installing only mtc", "info")
 		vconfig_path = ctx.paths.vconfig_path
 		vconfig = GetConfig(path=vconfig_path)
@@ -660,7 +665,9 @@ def ConfigureOnlyNode(local: MyPyClass, ctx: InstallerContext):
 	mconfig_dir = get_dir_from_path(mconfig_path)
 	local.add_log("start ConfigureOnlyNode function", "info")
 
-	process = BackupModule.run_create_backup(["-m", mconfig_dir], user=ctx.user)
+	ton_work_dir = ctx.paths.ton_work_dir.rstrip('/')
+	keys_dir = ctx.paths.keys_dir.rstrip('/')
+	process = BackupModule.run_create_backup(["-m", mconfig_dir, "-t", ton_work_dir, "-k", keys_dir], user=ctx.user)
 	if process.returncode != 0:
 		local.add_log("Backup creation failed", "error")
 		return
@@ -693,3 +700,46 @@ def SetupCollator(local: MyPyClass, ctx: InstallerContext):
 	args = ["python3", "-m", "mytoncore", "-e", "setup_collator_" + '_'.join(shards)]
 	args = ["su", "-l", ctx.user, "-c", ' '.join(args)]
 	subprocess.run(args)
+
+
+def get_paths_dict(paths: InstallerPaths) -> dict[str, str]:
+	return {
+		'ton_work': paths.ton_work_dir,
+		'ton_db': paths.ton_db_dir,
+		'ton_keys': paths.keys_dir,
+		'ton_src': paths.ton_src_dir,
+		'ton_bin': paths.ton_bin_dir,
+		'mtc_src': paths.mtc_src_dir,
+		'src_dir': paths.src_dir,
+	}
+
+
+def write_paths(local: MyPyClass, ctx: InstallerContext):
+	local.add_log("start write_paths function", "debug")
+	mconfig_path = ctx.mconfig_path
+	if not os.path.isfile(mconfig_path):
+		local.add_log(f"write_paths: {mconfig_path} does not exist, skipping", "warning")
+		return
+	mconfig = GetConfig(path=mconfig_path)
+	mconfig['paths'] = get_paths_dict(ctx.paths)
+	SetConfig(path=mconfig_path, data=mconfig)
+
+
+def update_client_path_settings(db: Dict, paths: Paths):
+	fift = db.get('fift')
+	if fift is not None:
+		fift['appPath'] = str(paths.ton_bin / 'crypto/fift')
+		fift['libsPath'] = str(paths.ton_src / 'crypto/fift/lib')
+		fift['smartcontsPath'] = str(paths.ton_src / 'crypto/smartcont')
+	lite_client = db.get('liteClient')
+	if lite_client is not None:
+		lite_client['appPath'] = str(paths.ton_bin / 'lite-client/lite-client')
+		lite_client['configPath'] = str(paths.global_config_path)
+		lite_server = lite_client.get('liteServer')
+		if lite_server is not None:
+			lite_server['pubkeyPath'] = str(paths.ton_keys / 'liteserver.pub')
+	validator_console = db.get('validatorConsole')
+	if validator_console is not None:
+		validator_console['appPath'] = str(paths.ton_bin / 'validator-engine-console/validator-engine-console')
+		validator_console['privKeyPath'] = str(paths.ton_keys / 'client')
+		validator_console['pubKeyPath'] = str(paths.ton_keys / 'server.pub')

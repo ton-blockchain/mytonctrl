@@ -9,17 +9,17 @@ from mytoncore.utils import get_package_resource_path
 from mytoninstaller.config import GetConfig, get_own_ip, SetConfig
 
 
-def enable_ton_storage(user: str, mconfig_path: str):
+def enable_ton_storage(user: str, mconfig_path: str, global_config_path: str, src_dir: str):
     udp_port = random.randint(2000, 65000)
     api_port = random.randint(2000, 65000)
     bin_name = "ton_storage"
     db_path = f"/var/{bin_name}"
     bin_path = f"{db_path}/{bin_name}"
     config_path = f"{db_path}/tonutils-storage-db/config.json"
-    network_config = "/usr/bin/ton/global.config.json"
+    network_config = global_config_path
 
     with get_package_resource_path('mytoninstaller.scripts', 'ton_storage_installer.sh') as installer_path:
-        process = subprocess.run(["bash", str(installer_path), "-u", user], capture_output=True)
+        process = subprocess.run(["bash", str(installer_path), "-u", user, "-s", src_dir], capture_output=True)
     if process.returncode != 0:
         raise Exception(f"Failed to run ton_storage installer: {process.stdout.decode()} {process.stderr.decode()}")
 
@@ -56,6 +56,6 @@ def enable_ton_storage(user: str, mconfig_path: str):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        sys.exit("usage: ton_storage.py <user> <mconfig_path>")
-    enable_ton_storage(sys.argv[1], sys.argv[2])
+    if len(sys.argv) != 5:
+        sys.exit("usage: ton_storage.py <user> <mconfig_path> <network_config_path> <src_dir>")
+    enable_ton_storage(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

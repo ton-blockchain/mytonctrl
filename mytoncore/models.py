@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 import os
+from pathlib import Path
 import struct
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import TypedDict, Any
 
 from mytoncore.utils import raw_addr_to_b64
@@ -199,3 +200,35 @@ class BlockHead(TypedDict):
     seqno: int
     rootHash: str
     fileHash: str
+
+
+@dataclass(frozen=True)
+class Paths:
+    ton_work: Path = Path('/var/ton-work/')
+    ton_db: Path = Path('/var/ton-work/db/')
+    ton_keys: Path = Path('/var/ton-work/keys/')
+    ton_src: Path = Path('/usr/src/ton/')
+    ton_bin: Path = Path('/usr/bin/ton/')
+    mtc_src: Path = Path('/usr/src/mytonctrl/')
+    src_dir: Path = Path('/usr/src/')
+
+    @classmethod
+    def from_dict(cls, data: dict[str, str]) -> Paths:
+        names = {f.name for f in fields(cls)}
+        return cls(**{key: Path(value) for key, value in data.items() if key in names})
+
+    @property
+    def keyring_dir(self) -> Path:
+        return self.ton_db / "keyring"
+
+    @property
+    def vconfig_path(self) -> Path:
+        return self.ton_db / "config.json"
+
+    @property
+    def global_config_path(self) -> Path:
+        return self.ton_bin / "global.config.json"
+
+    @property
+    def local_config_path(self) -> Path:
+        return self.ton_bin / "local.config.json"

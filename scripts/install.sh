@@ -21,6 +21,9 @@ show_help_and_exit() {
     echo ' -p, --backup  PATH            Provide backup file for MyTonCtrl installation'
     echo ' -o, --only-mtc                Install only MyTonCtrl. Must be used with -p'
     echo ' -l, --only-node               Install only TON node'
+    echo ' -S, --src-dir  PATH           Directory for sources (default /usr/src)'
+    echo ' -B, --bin-dir  PATH           Directory for binaries (default /usr/bin)'
+    echo ' -W, --ton-work-dir  PATH      TON node working directory (default /var/ton-work)'
     echo ' -h, --help                    Show this help'
     exit
 }
@@ -59,6 +62,9 @@ only_mtc=false
 only_node=false
 backup=none
 mode=none
+src_dir=""
+bin_dir=""
+ton_work_dir=""
 cpu_required=16
 mem_required=64000000  # 64GB in KB
 
@@ -84,7 +90,7 @@ while (($#)); do
     --print-env)    export PRINT_ENV=true ;;
 
     # with arg
-    --config|--author|--repo|--branch|--mode|--network|--node-repo|--backup|--user|--node-version|--env-file)
+    --config|--author|--repo|--branch|--mode|--network|--node-repo|--backup|--user|--node-version|--env-file|--src-dir|--bin-dir|--ton-work-dir)
       if (($# < 2)); then
         echo "Error: option $1 requires value" >&2; exit 2
       fi
@@ -100,6 +106,9 @@ while (($#)); do
         --user)         newargv+=(-u "$2") ;;
         --node-version) newargv+=(-v "$2") ;;
         --env-file)     newargv+=(-e "$2") ;;
+        --src-dir)      newargv+=(-S "$2") ;;
+        --bin-dir)      newargv+=(-B "$2") ;;
+        --ton-work-dir) newargv+=(-W "$2") ;;
       esac
       shift ;;
     --*)
@@ -114,7 +123,7 @@ done
 #printf '\n'
 set -- "${newargv[@]}"
 
-while getopts ":Ac:tidola:r:b:m:n:v:u:p:g:e:h" flag; do
+while getopts ":Ac:tidola:r:b:m:n:v:u:p:g:e:S:B:W:h" flag; do
     case "${flag}" in
         A) archive=true;;
         c) config=${OPTARG}; config_overridden=true;;
@@ -133,6 +142,9 @@ while getopts ":Ac:tidola:r:b:m:n:v:u:p:g:e:h" flag; do
         l) only_node=true;;
         p) backup=${OPTARG};;
         e) env_file=${OPTARG};;
+        S) src_dir=${OPTARG};;
+        B) bin_dir=${OPTARG};;
+        W) ton_work_dir=${OPTARG};;
         h) show_help_and_exit;;
         *)
             echo "Flag -${flag} is not recognized. Aborting"
@@ -203,15 +215,22 @@ if [ "$ignore" = false ] && ([ "${cpus}" -lt "${cpu_required}" ] || [ "${memory}
 fi
 
 echo -e "${COLOR}[2/5]${ENDC} Checking for required TON components"
-SOURCES_DIR=/usr/src
-BIN_DIR=/usr/bin
-
-# create dirs for OSX
+# installation directories; can be overridden with --src-dir, --bin-dir, --ton-work-dir
 if [[ "$OSTYPE" =~ darwin.* ]]; then
-    SOURCES_DIR=/usr/local/src
-    BIN_DIR=/usr/local/bin
-    mkdir -p ${SOURCES_DIR}
+    SOURCES_DIR=${src_dir:-/usr/local/src}
+    BIN_DIR=${bin_dir:-/usr/local/bin}
+else
+    SOURCES_DIR=${src_dir:-/usr/src}
+    BIN_DIR=${bin_dir:-/usr/bin}
 fi
+TON_WORK_DIR=${ton_work_dir:-/var/ton-work}
+
+abspath() { case "$1" in /*) printf '%s\n' "$1";; *) printf '%s/%s\n' "$PWD" "$1";; esac; }
+SOURCES_DIR=$(abspath "${SOURCES_DIR}")
+BIN_DIR=$(abspath "${BIN_DIR}")
+TON_WORK_DIR=$(abspath "${TON_WORK_DIR}")
+
+mkdir -p "${SOURCES_DIR}"
 
 if [ ! -f ~/.config/pip/pip.conf ]; then  # create pip config
     mkdir -p ~/.config/pip
@@ -231,7 +250,7 @@ if  [ ! -f "${file1}" ] || [ ! -f "${file2}" ] || [ ! -f "${file3}" ]; then
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install_clang.sh -O /tmp/install_clang.sh
     bash /tmp/install_clang.sh
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/ton_installer.sh -O /tmp/ton_installer.sh
-    bash /tmp/ton_installer.sh -c ${config} -g ${ton_node_git_url} -v ${ton_node_version}
+    bash /tmp/ton_installer.sh -c ${config} -g ${ton_node_git_url} -v ${ton_node_version} -s "${SOURCES_DIR}" -b "${BIN_DIR}"
 fi
 
 # Cloning mytonctrl
@@ -239,13 +258,13 @@ echo -e "${COLOR}[3/5]${ENDC} Installing MyTonCtrl"
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
 
 # remove previous installation
-cd $SOURCES_DIR
-rm -rf $SOURCES_DIR/mytonctrl
+cd "$SOURCES_DIR"
+rm -rf "$SOURCES_DIR/mytonctrl"
 pip3 uninstall -y mytonctrl
 
 git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git ${repo}  # TODO: return --recursive back when fix libraries
 git config --global --add safe.directory $SOURCES_DIR/${repo}
-cd $SOURCES_DIR/${repo}
+cd "$SOURCES_DIR/${repo}"
 
 pip3 install -U .  # TODO: make installation from git directly
 
@@ -260,11 +279,11 @@ if [ "${user}" = "" ]; then  # no user
     fi
 fi
 echo "User: $user"
-python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode} --only-mtc ${only_mtc} --backup ${backup} --only-node ${only_node}
+python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode} --only-mtc ${only_mtc} --backup ${backup} --only-node ${only_node} --bin-dir "${BIN_DIR}" --src-dir "${SOURCES_DIR}" --ton-work-dir "${TON_WORK_DIR}"
 
 # create symbolic link if branch not eq mytonctrl
 if [ "${repo}" != "mytonctrl" ]; then
-    ln -sf ${SOURCES_DIR}/${repo} ${SOURCES_DIR}/mytonctrl
+    ln -sf "${SOURCES_DIR}/${repo}" "${SOURCES_DIR}/mytonctrl"
 fi
 
 echo -e "${COLOR}[5/5]${ENDC} Mytonctrl installation completed"

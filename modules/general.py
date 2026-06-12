@@ -523,7 +523,8 @@ class GeneralModule(MtcModule):
         )
         print(db_status_text)
 
-        mtc_git_path = "/usr/src/mytonctrl"
+        paths = self.ton.get_paths()
+        mtc_git_path = paths.mtc_src
         try:
             fix_git_config(mtc_git_path)
             mtc_git_hash = get_git_hash(mtc_git_path, short=True)
@@ -537,10 +538,10 @@ class GeneralModule(MtcModule):
         except Exception:
             pass
 
-        validator_git_path = "/usr/src/ton"
+        validator_git_path = paths.ton_src
         try:
             fix_git_config(validator_git_path)
-            validator_bin_git_path = "/usr/bin/ton/validator-engine/validator-engine"
+            validator_bin_git_path = paths.ton_bin / "validator-engine" / "validator-engine"
             validator_git_branch = get_git_branch(validator_git_path)
             validator_git_hash = get_bin_git_hash(validator_bin_git_path, short=True)
             validator_git_hash_text = bcolors.yellow_text(validator_git_hash)
@@ -553,7 +554,7 @@ class GeneralModule(MtcModule):
             pass
 
         if self.ton.using_validator():
-            btc_teleport_path = "/usr/src/ton-teleport-btc-periphery/"
+            btc_teleport_path = paths.src_dir / "ton-teleport-btc-periphery"
             if os.path.exists(btc_teleport_path):
                 btc_teleport_git_hash = get_git_hash(btc_teleport_path, short=True)
                 btc_teleport_git_branch = get_git_branch(btc_teleport_path)
@@ -850,8 +851,9 @@ class GeneralModule(MtcModule):
 
     def Update(self, args: list[str]):
         repo = "mytonctrl"
+        paths = self.ton.get_paths()
         author, repo, branch, _ = check_git(
-            args, repo, "update"
+            args, paths.mtc_src, repo, "update"
         )  # todo: implement --url for update
         # Run script
         with get_package_resource_path(
@@ -866,6 +868,8 @@ class GeneralModule(MtcModule):
                 repo,
                 "-b",
                 branch,
+                "-S",
+                str(paths.mtc_src),
             ]
             exitCode = run_as_root(runArgs)
         if exitCode == 0:
@@ -884,8 +888,10 @@ class GeneralModule(MtcModule):
             self.upgrade_btc_teleport(reinstall=True, branch=branch, user=user)
             return
 
+        paths = self.ton.get_paths()
+
         author, repo, branch, git_url = check_git(
-            args, default_repo="ton", text="upgrade"
+            args, paths.ton_src, default_repo="ton", text="upgrade"
         )
 
         clang_version = get_clang_major_version()
@@ -922,6 +928,7 @@ class GeneralModule(MtcModule):
                     "-b",
                     branch,
                 ]
+            runArgs += ["-B", str(paths.ton_bin), "-S", str(paths.ton_src)]
             exitCode = run_as_root(runArgs)
         if self.ton.using_validator():
             self.upgrade_btc_teleport()
@@ -975,7 +982,7 @@ class GeneralModule(MtcModule):
             tmp_parent_dir = os.path.expanduser(tmp_parent_dir)
             os.makedirs(tmp_parent_dir, exist_ok=True)
         else:
-            tmp_parent_dir = "/var/ton-work/tmp"
+            tmp_parent_dir = str(self.ton.get_paths().ton_work / "tmp")
             try:
                 st = os.lstat(tmp_parent_dir)
             except FileNotFoundError:
@@ -994,6 +1001,7 @@ class GeneralModule(MtcModule):
             with get_package_resource_path(
                 "mytonctrl", "scripts/benchmark.py"
             ) as benchmark_path:
+                paths = self.ton.get_paths()
                 shutil.copy(benchmark_path, tmp_dir / "benchmark.py")
 
                 subprocess.run(
@@ -1010,7 +1018,7 @@ class GeneralModule(MtcModule):
                     check=True,
                 )
 
-                src_dir = Path("/usr/src/ton")
+                src_dir = paths.ton_src
                 test_dir = tmp_dir / "test"
                 tontester_dir = test_dir / "tontester"
 
@@ -1035,9 +1043,9 @@ class GeneralModule(MtcModule):
                     "run",
                     "benchmark.py",
                     "--build-dir",
-                    "/usr/bin/ton",
+                    paths.ton_bin,
                     "--source-dir",
-                    "/usr/src/ton",
+                    paths.ton_src,
                     "--work-dir",
                     str(tmp_dir / "test" / "integration" / ".network"),
                 ] + args

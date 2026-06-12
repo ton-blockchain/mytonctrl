@@ -11,18 +11,15 @@ import requests
 
 from mypylib.mypylib import MyPyClass, run_as_root, color_print, ip2int
 from mypyconsole.mypyconsole import MyPyConsole
-from mytoncore.models import BlockHead
+from mytoncore.models import BlockHead, Paths
 from mytoncore.mytoncore import MyTonCore
 from mytoncore.utils import get_package_resource_path
 from mytonctrl.utils import get_current_user
 
 from mytoninstaller.config import get_ls_proxy_config, get_own_ip
-from mytoninstaller.context import InstallerPaths
 from mytoninstaller.node_args import get_node_args, set_node_argument
 from mytoninstaller.utils import get_ton_storage_port, tha_exists
 from mytoncore.utils import b642hex
-
-defaultLocalConfigPath = "/usr/bin/ton/local.config.json"
 
 
 class LsData(TypedDict):
@@ -38,7 +35,7 @@ class InstallerCtrl:
 			self,
 			local: MyPyClass,
 			mconfig_path: str,
-			paths: InstallerPaths,
+			paths: Paths,
 			ls_data: LsData | None,
 			get_init_block: Callable[[], BlockHead] | None,
 			console: MyPyConsole | None = None
@@ -76,11 +73,10 @@ class InstallerCtrl:
 		console.add_item("ton_storage_list", self.ton_storage_list, "Print result of /list method at Ton Storage API")
 
 	def _print_status(self, _: list[str]):
-		keys_dir = self._paths.keys_dir
-		server_key = keys_dir + "server"
-		client_key = keys_dir + "client"
-		liteserver_key = keys_dir + "liteserver"
-		liteserver_pubkey = liteserver_key + ".pub"
+		keys_dir = self._paths.ton_keys
+		server_key = keys_dir / "server"
+		client_key = keys_dir / "client"
+		liteserver_pubkey = keys_dir / "liteserver.pub"
 
 		statuses = {
 			'Full node status': os.path.isfile(self._paths.vconfig_path),
@@ -116,7 +112,7 @@ class InstallerCtrl:
 		name = args[0]
 		if name == "DS":
 			with get_package_resource_path('mytoninstaller.scripts', 'dht_server.py') as script_path:
-				run_as_root(['python3', str(script_path), self._validator_user, self._paths.ton_bin_dir, self._paths.global_config_path])
+				run_as_root(['python3', str(script_path), self._validator_user, str(self._paths.ton_bin), str(self._paths.global_config_path)])
 		elif name == "JR":
 			self._enable_json_rpc()
 		elif name == "THA":
@@ -125,11 +121,11 @@ class InstallerCtrl:
 		elif name == "LSP":
 			user = get_current_user()
 			with get_package_resource_path('mytoninstaller.scripts', 'ls_proxy.py') as script_path:
-				run_as_root(['python3', str(script_path), user, self.mconfig_path])
+				run_as_root(['python3', str(script_path), user, self.mconfig_path, str(self._paths.src_dir)])
 		elif name == "TS":
 			user = get_current_user()
 			with get_package_resource_path('mytoninstaller.scripts', 'ton_storage.py') as script_path:
-				run_as_root(['python3', str(script_path), user, self.mconfig_path])
+				run_as_root(['python3', str(script_path), user, self.mconfig_path, str(self._paths.global_config_path), str(self._paths.src_dir)])
 		else:
 			color_print("{red}Bad args{endc}")
 			print("'DS' - DHT-Server")
@@ -141,7 +137,7 @@ class InstallerCtrl:
 	def _enable_json_rpc(self):
 		user = get_current_user()
 		with get_package_resource_path('mytoninstaller.scripts', 'jsonrpcinstaller.sh') as jsonrpcinstaller_path:
-			exit_code = run_as_root(["bash", str(jsonrpcinstaller_path), "-u", user])  # TODO: fix path
+			exit_code = run_as_root(["bash", str(jsonrpcinstaller_path), "-u", user, "-s", str(self._paths.src_dir)])
 		if exit_code == 0:
 			text = "EnableJsonRpc - {green}OK{endc}"
 		else:
@@ -150,10 +146,10 @@ class InstallerCtrl:
 
 	def _drvcf(self, _: list[str]):
 		with get_package_resource_path('mytoninstaller.scripts', 'drvcf.py') as script_path:
-			run_as_root(['python3', str(script_path), self._paths.keyring_dir, self.mconfig_path, self._paths.ton_db_dir])
+			run_as_root(['python3', str(script_path), str(self._paths.keyring_dir), self.mconfig_path, str(self._paths.ton_db)])
 
 	def _set_web_password(self, _: list[str]):
-		args = ["python3", "/usr/src/mtc-jsonrpc/mtc-jsonrpc.py", "-p"]
+		args = ["python3", str(self._paths.src_dir / "mtc-jsonrpc" / "mtc-jsonrpc.py"), "-p"]
 		subprocess.run(args)
 
 	def ton_storage_list(self, args: list[str]):
@@ -178,12 +174,12 @@ class InstallerCtrl:
 
 	def do_enable_ton_http_api(self):
 		self.local.add_log("start do_enable_ton_http_api function", "debug")
-		if not os.path.exists('/usr/bin/ton/local.config.json'):
+		if not os.path.exists(self._paths.local_config_path):
 			self.create_local_config_file([])
 		user = get_current_user()
 		with get_package_resource_path('mytoninstaller.scripts',
 		                               'ton_http_api_installer.sh') as ton_http_api_installer_path:
-			exit_code = run_as_root(["bash", str(ton_http_api_installer_path), "-u", user])
+			exit_code = run_as_root(["bash", str(ton_http_api_installer_path), "-u", user, "-b", str(self._paths.ton_bin), "-c", str(self._paths.local_config_path)])
 		if exit_code == 0:
 			text = "do_enable_ton_http_api - {green}OK{endc}"
 		else:
@@ -211,7 +207,7 @@ class InstallerCtrl:
 		return result
 
 	def create_local_config_file(self, args: list[str]):
-		path = args[0] if len(args) > 0 else defaultLocalConfigPath
+		path = args[0] if len(args) > 0 else str(self._paths.local_config_path)
 		init_block: BlockHead | None = None
 		if self._get_init_block is not None:
 			try:
@@ -268,7 +264,7 @@ class InstallerCtrl:
 		console = MyPyConsole(local, name="MyTonInstaller")
 		return cls(local,
 				   mconfig_path=ton.local.db_path,
-				   paths=InstallerPaths(),
+				   paths=ton.get_paths(),
 				   ls_data=ton.local.db.get("liteClient", {}).get("liteServer"),
 				   get_init_block=ton.GetInitBlock,
 				   console=console,

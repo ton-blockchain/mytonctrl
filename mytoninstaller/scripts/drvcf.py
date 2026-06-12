@@ -47,7 +47,7 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 	# Search lite server priv key
 	ls_id = None
 	for item in keyring:
-		path = keyring_dir + item
+		path = os.path.join(keyring_dir, item)
 		file = open(path, 'rb')
 		data = file.read()
 		file.close()
@@ -80,7 +80,7 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 	# Search validator-console priv key
 	vcId = None
 	for item in keyring:
-		path = keyring_dir + item
+		path = os.path.join(keyring_dir, item)
 		file = open(path, 'rb')
 		data = file.read()
 		file.close()

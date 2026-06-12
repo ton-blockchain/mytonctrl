@@ -2,6 +2,7 @@ import argparse
 import os
 import random
 import sys
+from pathlib import Path
 
 from mytoncore.utils import str2bool
 
@@ -15,7 +16,7 @@ from mytoninstaller.settings import (
     EnableValidatorConsole,
     EnableLiteServer,
     CreateSymlinks,
-    EnableMode, ConfigureFromBackup, ConfigureOnlyNode, SetInitialSync, SetupCollator
+    EnableMode, ConfigureFromBackup, ConfigureOnlyNode, SetInitialSync, SetupCollator, write_paths
 )
 from mytoninstaller.config import (
     BackupMconfig,
@@ -56,6 +57,9 @@ def _build_general_arg_parser():
         help="install only TON node",
     )
     parser.add_argument("--backup", help="backup file for MyTonCtrl installation")
+    parser.add_argument("--bin-dir", dest="bin_dir", help="directory with binaries (default /usr/bin/)")
+    parser.add_argument("--src-dir", dest="src_dir", help="directory with sources (default /usr/src/)")
+    parser.add_argument("--ton-work-dir", dest="ton_work_dir", help="TON node working directory (default /var/ton-work/)")
     return parser
 
 
@@ -63,6 +67,10 @@ def _parse_general_args(argv=None):
     parser = _build_general_arg_parser()
     args = parser.parse_args(argv)
     return args
+
+
+def _normalize_dir(path: str) -> str:
+    return os.path.join(Path(path).absolute(), "")
 
 
 def get_context(args) -> InstallerContext:
@@ -98,7 +106,14 @@ def get_context(args) -> InstallerContext:
         if args.backup != "none":
             backup = args.backup
 
-    paths = InstallerPaths()
+    paths_kwargs = {}
+    if args.bin_dir:
+        paths_kwargs["bin_dir"] = _normalize_dir(args.bin_dir)
+    if args.src_dir:
+        paths_kwargs["src_dir"] = _normalize_dir(args.src_dir)
+    if args.ton_work_dir:
+        paths_kwargs["ton_work_dir"] = _normalize_dir(args.ton_work_dir)
+    paths = InstallerPaths(**paths_kwargs)
     return InstallerContext(user, vuser, paths, ports, telemetry, dump, args.mode, args.only_mtc, args.only_node, backup,
                            archive_ttl, state_ttl, public_ip, add_shard, archive_blocks, collate_shard)
 
@@ -109,6 +124,7 @@ def mytoninstaller():
     args = _parse_general_args()
     ctx = get_context(args)
     FirstMytoncoreSettings(local, ctx)
+    write_paths(local, ctx)
     FirstNodeSettings(local, ctx)
     EnableValidatorConsole(local, ctx)
     if not ctx.only_mtc:
