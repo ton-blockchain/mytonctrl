@@ -74,13 +74,16 @@ class PrometheusModule(MtcModule):
         index = self.ton.GetValidatorIndex()
         result.append(METRICS['validator_id'].to_format(index))
         config = self.ton.GetConfig34()
-        save_elections = self.ton.GetSaveElections()
-        elections = save_elections.get(str(config["startWorkTime"]))
-        if elections is not None:
-            adnl = self.ton.GetAdnlAddr()
-            stake = elections.get(adnl, {}).get('stake')
-            if stake:
-                result.append(METRICS['stake'].to_format(round(stake, 2)))
+        elections = self.ton.get_saved_election_entries(config["startWorkTime"])
+        if elections is None:
+            return
+        key = self.ton.get_validator_key_by_time(config["startWorkTime"])
+        if key is None:
+            return
+        pubkey = self.ton.get_clean_pubkey_hex(key)
+        election = elections.get(pubkey)
+        if election and election.get('stake'):
+            result.append(METRICS['stake'].to_format(round(election.get('stake'), 2)))
 
     def get_node_stats_metrics(self, result: list):
         stats = self.ton.get_node_statistics()
