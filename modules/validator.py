@@ -3,7 +3,7 @@ import json
 import time
 
 from modules.btc_teleport import BtcTeleportModule
-from mypylib.mypylib import Dict, color_print, get_timestamp
+from mypylib.mypylib import color_print, get_timestamp
 from modules.module import MtcModule
 from mytoncore.utils import hex_shard_to_int, hex2b64
 from mytonctrl.console_cmd import check_usage_two_args, add_command, check_usage_args_min_max_len
