@@ -32,6 +32,7 @@ from mytoninstaller.settings import (
 	CreateSymlinks,
 	enable_ls_proxy,
 	enable_ton_storage,
+	enable_archive_sync,
 	EnableMode, ConfigureFromBackup, ConfigureOnlyNode, SetInitialSync, SetupCollator
 )
 from mytoninstaller.config import (
@@ -178,6 +179,7 @@ def Enable(local, args: list):
 		print("'THA' - ton-http-api")
 		print("'LSP' - ls-proxy")
 		print("'TS' - ton-storage")
+		print("'AS' - archive-sync")
 		print("Example: 'enable FN'")
 		return
 	name = args[0]
@@ -268,6 +270,8 @@ def Event(local, name):
 		enable_ls_proxy(local)
 	if name == "enableTS":
 		enable_ton_storage(local)
+	if name == "enableAS":
+		enable_archive_sync(local)
 	if name == "clc":
 		ix = sys.argv.index("-i")
 		initBlock_b64 = sys.argv[ix+1]

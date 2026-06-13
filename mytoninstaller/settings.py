@@ -260,6 +260,8 @@ def download_archive_from_ts(local):
 	mconfig.importGc = True
 	SetConfig(path=mconfig_path, data=mconfig)
 
+	enable_archive_sync(local)
+
 
 def DownloadDump(local):
     dump = local.buffer.dump
@@ -796,6 +798,16 @@ def enable_ton_storage(local):
 	start_service(local, bin_name)
 	color_print("enable_ton_storage - {green}OK{endc}")
 #end define
+
+def enable_archive_sync(local):
+	local.add_log("start enable_archive_sync function", "debug")
+	script_path = os.path.join(local.buffer.mtc_src_dir, 'mytoninstaller', 'scripts', 'archive_sync_daemon.py')
+	start_cmd = f"python3 -u {script_path}"
+	add2systemd(name="archive_sync", user="root", start=start_cmd)
+	start_service(local, "archive_sync")
+	color_print("enable_archive_sync - {green}OK{endc}")
+#end define
+
 
 def DangerousRecoveryValidatorConfigFile(local):
 	local.add_log("start DangerousRecoveryValidatorConfigFile function", "info")
