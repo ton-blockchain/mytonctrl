@@ -8,11 +8,16 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 user=${SUDO_USER:-}
+bindir="/usr/bin/ton"
+ls_config="/usr/bin/ton/local.config.json"
 
-while getopts u: flag
+
+while getopts u:b:c: flag
 do
 	case "${flag}" in
     u) user=${OPTARG};;
+    b) bindir=${OPTARG};;
+    c) ls_config=${OPTARG};;
     *) echo "Flag -${flag} is not recognized. Aborting"; exit 1 ;;
 	esac
 done
@@ -42,9 +47,8 @@ chown -R ${user}:${user} ${venv_path}
 # add to startup
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
 venv_ton_http_api="${venv_path}/bin/ton-http-api"
-tonlib_path="/usr/bin/ton/tonlib/libtonlibjson.so"
-ls_config="/usr/bin/ton/local.config.json"
-cmd="from sys import path; path.append('/usr/src/mytonctrl/'); from mypylib.mypylib import add2systemd; add2systemd(name='ton_http_api', user='${user}', start='${venv_ton_http_api} --logs-level=INFO --host 127.0.0.1 --port 8801 --liteserver-config ${ls_config} --cdll-path ${tonlib_path} --tonlib-keystore /tmp/tonlib_keystore/')"
+tonlib_path="${bindir}/tonlib/libtonlibjson.so"
+cmd="from mypylib.mypylib import add2systemd; add2systemd(name='ton_http_api', user='${user}', start='${venv_ton_http_api} --logs-level=INFO --host 127.0.0.1 --port 8801 --liteserver-config ${ls_config} --cdll-path ${tonlib_path} --tonlib-keystore /tmp/tonlib_keystore/')"
 python3 -c "${cmd}"
 systemctl daemon-reload
 systemctl restart ton_http_api

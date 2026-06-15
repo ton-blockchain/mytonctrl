@@ -4,18 +4,11 @@ import time
 import subprocess
 import typing
 
+import requests
 from nacl.signing import SigningKey
 
+from mypylib import MyPyClass
 
-def GetInitBlock():
-	from mypylib.mypylib import MyPyClass
-	from mytoncore import MyTonCore
-
-	mytoncore_local = MyPyClass('mytoncore.py')
-	ton = MyTonCore(mytoncore_local)
-	initBlock = ton.GetInitBlock()
-	return initBlock
-#end define
 
 def start_service(local, service_name:str, sleep:int=1):
 	local.add_log(f"Start/restart {service_name} service", "debug")
@@ -59,23 +52,23 @@ def get_ed25519_pubkey(privkey):
 #end define
 
 
-def is_testnet(local):
+def is_testnet(global_config_path: str):
 	testnet_zero_state_root_hash = "gj+B8wb/AmlPk1z1AhVI484rhrUpgSr2oSFIh56VoSg="
-	with open(local.buffer.global_config_path) as f:
+	with open(global_config_path) as f:
 		config = json.load(f)
 	if config['validator']['zero_state']['root_hash'] == testnet_zero_state_root_hash:
 		return True
 	return False
 
 
-def get_ton_storage_port(local) -> typing.Optional[int]:
+def get_ton_storage_port(local: MyPyClass) -> typing.Optional[int]:
 	p = subprocess.run(["systemctl", "cat", "ton_storage.service"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
 					   timeout=3)
 	if p.returncode != 0:
 		local.add_log("Failed to get ton_storage.service", "error")
 		return None
-	p.output = p.stdout.decode("utf-8")
-	for line in p.output.splitlines():
+	output = p.stdout.decode()
+	for line in output.splitlines():
 		if line.startswith('ExecStart'):
 			cmd = line.split()
 			if '-api' not in cmd:
@@ -84,3 +77,12 @@ def get_ton_storage_port(local) -> typing.Optional[int]:
 			return int(cmd[cmd.index('-api') + 1].split(':')[1])
 	local.add_log("Failed to find ExecStart in ton_storage.service", "error")
 	return None
+
+def tha_exists():
+	try:
+		resp = requests.get('http://127.0.0.1:8801/healthcheck', timeout=3)
+	except Exception:
+		return False
+	if resp.status_code == 200 and resp.text == '"OK"':
+		return True
+	return False

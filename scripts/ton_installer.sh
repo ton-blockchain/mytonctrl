@@ -8,11 +8,13 @@ fi
 
 repo_git_url="https://github.com/ton-blockchain/ton.git"
 
-while getopts ":c:v:g:h" flag; do
+while getopts ":c:v:g:s:b:h" flag; do
     case "${flag}" in
         g) repo_git_url=${OPTARG};;
         c) config=${OPTARG};;
         v) ton_node_version=${OPTARG};;
+        s) src_dir=${OPTARG};;
+        b) bin_dir=${OPTARG};;
         h) show_help_and_exit;;
         *)
             echo "Flag -${flag} is not recognized. Aborting"
@@ -26,13 +28,15 @@ echo "checkout to ${ton_node_version}"
 COLOR='\033[95m'
 ENDC='\033[0m'
 
-SOURCES_DIR=/usr/src
-BIN_DIR=/usr/bin
+# installation directories; can be overridden with -s and -b
 if [[ "$OSTYPE" =~ darwin.* ]]; then
-	SOURCES_DIR=/usr/local/src
-	BIN_DIR=/usr/local/bin
-	mkdir -p $SOURCES_DIR
+	SOURCES_DIR=${src_dir:-/usr/local/src}
+	BIN_DIR=${bin_dir:-/usr/local/bin}
+else
+	SOURCES_DIR=${src_dir:-/usr/src}
+	BIN_DIR=${bin_dir:-/usr/bin}
 fi
+mkdir -p $SOURCES_DIR
 
 echo -e "${COLOR}[1/5]${ENDC} Installing required packages"
 if [ "$OSTYPE" == "linux-gnu" ]; then
@@ -111,7 +115,7 @@ cd ../
 git config --global --add safe.directory $SOURCES_DIR/ton
 
 rm -rf $BIN_DIR/ton
-mkdir $BIN_DIR/ton
+mkdir -p $BIN_DIR/ton
 cd $BIN_DIR/ton
 
 if [[ "$OSTYPE" =~ darwin.* ]]; then

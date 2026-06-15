@@ -140,7 +140,7 @@ class BackgroundRunner:
         if not self._ton.local.db.get("importGc", False):
             return
         self._local.add_log("GC import is running", "debug")
-        import_path = "/var/ton-work/db/import"
+        import_path = self._ton.get_paths().ton_db / "import"
         files = os.listdir(import_path)
         if not files:
             self._local.add_log("No files left to import", "debug")

@@ -7,7 +7,7 @@ import json
 import hashlib
 import struct
 import typing
-from typing import Union
+from typing import Union, Any
 
 import psutil
 import subprocess
@@ -20,12 +20,13 @@ from mytoncore.utils import b642hex, xhex2hex, ng2g, get_package_resource_path, 
 	nano_ton_to_ton, tlb_to_json
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
+	Paths,
 	Wallet,
 	Account,
 	Block,
 	Transaction,
 	Message,
-	Pool, Config12, Config15, ElectionsParticipant, Config17,
+	Pool, Config12, Config15, ElectionsParticipant, Config17, CacheResult, BlockHead,
 )
 
 from mypylib.mypylib import (
@@ -41,6 +42,7 @@ class MyTonCore:
 	def __init__(self, local: MyPyClass):
 		self.local: MyPyClass = local
 		self.nodeName: str = ""
+		self.cache: dict[str, CacheResult] = {}
 
 		self.walletsDir = self.local.my_work_dir + "wallets/"
 		self.contractsDir = self.local.my_work_dir + "contracts/"
@@ -145,6 +147,12 @@ class MyTonCore:
 		except Exception:
 			self.local.add_log("Could not update backup, backup_tmp file is broken", "warning")
 			os.remove(backup_tmp_path)
+
+	def get_paths(self) -> Paths:
+		paths = self.local.db.get("paths")
+		if paths is None:
+			return Paths()
+		return Paths.from_dict(paths)
 
 	def GetVarFromWorkerOutput(self, text: str, search: str):
 		if ':' not in search:
@@ -546,7 +554,7 @@ class MyTonCore:
 		return block
 	#end define
 
-	def GetInitBlock(self):
+	def GetInitBlock(self) -> BlockHead:
 		block = self.GetLastBlock()
 		cmd = f"gethead {block}"
 		result = self.liteClient.run(cmd)
@@ -555,12 +563,9 @@ class MyTonCore:
 		return data
 	#end define
 
-	def GetBlockHead(self, workchain, shardchain, seqno):
+	def GetBlockHead(self, workchain, shardchain, seqno) -> BlockHead:
 		block = self.GetBlock(workchain, shardchain, seqno)
-		data = dict()
-		data["seqno"] = block.seqno
-		data["rootHash"] = block.rootHash
-		data["fileHash"] = block.fileHash
+		data: BlockHead = {"seqno": block.seqno, "rootHash": block.rootHash, "fileHash": block.fileHash}
 		return data
 	#end define
 
@@ -2188,15 +2193,15 @@ class MyTonCore:
 	#end define
 
 	def GetDbUsage(self):
-		path = "/var/ton-work/db"
-		data = psutil.disk_usage(path)
+		path = self.get_paths().ton_db
+		data = psutil.disk_usage(str(path))
 		return data.percent
 	#end define
 
 	def GetDbSize(self, exceptions="log"):
 		exceptions = exceptions.split()
 		totalSize = 0
-		path = "/var/ton-work/"
+		path = self.get_paths().ton_work
 		for directory, subdirectory, files in os.walk(path):
 			for file in files:
 				buff = file.split('.')
@@ -2626,37 +2631,18 @@ class MyTonCore:
 		return result
 	#end define
 
-	def DownloadContract(self, url, branch=None):
+	def DownloadContract(self, url: str, branch: str | None = None):
 		self.local.add_log("start DownloadContract function", "debug")
 		buff = url.split('/')
 		gitPath = self.contractsDir + buff[-1] + '/'
 
 		args = ["git", "clone", url]
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.contractsDir, timeout=30)
+		subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.contractsDir, timeout=30)
 
 		if branch is not None:
 			args = ["git", "checkout", branch]
-			process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
-		#end if
+			subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
 
-		if not os.path.isfile(gitPath + "build.sh"):
-			return
-		if not os.path.isfile("/usr/bin/func"):
-			return
-		#	file = open("/usr/bin/func", 'wt')
-		#	file.write("/usr/bin/ton/crypto/func $@")
-		#	file.close()
-		#end if
-
-		os.makedirs(gitPath + "build", exist_ok=True)
-		args = ["bash", "build.sh"]
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=30)
-		process.stdout.decode("utf-8")
-		err = process.stderr.decode("utf-8")
-		if len(err) > 0:
-			raise Exception(err)
-		#end if
-	#end define
 
 	def WithdrawFromPoolProcess(self, poolAddr, amount):
 		self.local.add_log("start WithdrawFromPoolProcess function", "debug")
@@ -3142,25 +3128,19 @@ class MyTonCore:
 	def get_validator_engine_ip(self):
 		return self.validatorConsole.addr.split(':')[0]
 
-	def GetFunctionBuffer(self, name: str, timeout: int | float = 10):
-		timestamp = get_timestamp()
-		buff = self.local.buffer.get(name)
-		if buff is None:
-			return
-		buffTime = buff.get("time")
-		diffTime = timestamp - buffTime
-		if diffTime > timeout:
-			return
-		data = buff.get("data")
-		return data
-	#end define
+	def GetFunctionBuffer(self, name: str, timeout: int | float = 10) -> Any | None:
+		res = self.cache.get(name)
+		if res is None:
+			return None
+		if get_timestamp() - res.time > timeout:
+			return None
+		return res.data
 
-	def SetFunctionBuffer(self, name, data):
-		buff = dict()
-		buff["time"] = get_timestamp()
-		buff["data"] = data
-		self.local.buffer[name] = buff
-	#end define
+	def SetFunctionBuffer(self, name: str, data):
+		self.cache[name] = CacheResult(
+			time=get_timestamp(),
+			data=data
+		)
 
 	def IsTestnet(self):
 		networkName = self.GetNetworkName()

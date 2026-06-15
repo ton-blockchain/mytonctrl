@@ -156,8 +156,6 @@ class MyPyClass:
 		self.memory_using: float | None = None
 		self.free_space_memory: float | None = None
 
-		self.buffer: Dict = Dict()
-
 		self.my_name: str = self.get_my_name()
 		self.my_full_name: str = self.get_my_full_name()
 		self.my_path: str = self.get_my_path()
@@ -825,7 +823,7 @@ def add2systemd(**kwargs):
 
 	text = f"""
 [Unit]
-Description = {name} service. Created by https://github.com/igroman787/mypylib.
+Description = {name} service
 After = network.target
 
 [Service]

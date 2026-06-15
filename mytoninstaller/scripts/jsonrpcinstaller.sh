@@ -8,10 +8,13 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 # Get arguments
-while getopts u: flag
+srcdir="/usr/src"
+while getopts u:s: flag
 do
 	case "${flag}" in
 		u) user=${OPTARG};;
+		s) srcdir=${OPTARG};;
+		*) echo "Flag -${flag} is not recognized. Aborting"; exit 1 ;;
 	esac
 done
 
@@ -34,7 +37,7 @@ pip3 install Werkzeug json-rpc cloudscraper pyotp jsonpickle  # todo: set versio
 echo -e "${COLOR}[2/4]${ENDC} Cloning github repository"
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
 
-cd /usr/src/
+cd ${srcdir}
 rm -rf mtc-jsonrpc
 git clone --branch=${branch} --recursive https://github.com/${author}/${repo}.git
 
@@ -42,7 +45,7 @@ git clone --branch=${branch} --recursive https://github.com/${author}/${repo}.gi
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 echo "Script dir: ${SCRIPT_DIR}"
-${SCRIPT_DIR}/add2systemd.sh -n mtc-jsonrpc -s "/usr/bin/python3 /usr/src/mtc-jsonrpc/mtc-jsonrpc.py" -u ${user} -g ${user}
+${SCRIPT_DIR}/add2systemd.sh -n mtc-jsonrpc -s "/usr/bin/python3 ${srcdir}/mtc-jsonrpc/mtc-jsonrpc.py" -u ${user} -g ${user}
 
 # Выход из программы
 echo -e "${COLOR}[4/4]${ENDC} JsonRPC installation complete"

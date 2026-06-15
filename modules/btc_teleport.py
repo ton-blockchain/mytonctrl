@@ -18,19 +18,24 @@ class BtcTeleportModule(MtcModule):
         super().__init__(ton, local, *args, **kwargs)
         self.keystore_path = self.ton.local.my_work_dir + '/btc_oracle_keystore'
         self.repo_name = 'ton-teleport-btc-periphery'
-        self.src_dir = f"/usr/src/{self.repo_name}"
+        self.src_root = str(self.ton.get_paths().src_dir)
+        self.src_dir = os.path.join(self.src_root, self.repo_name)
         self.bin_dir = self.src_dir + '/out'
 
     def create_local_file(self):
-        from mytoninstaller.mytoninstaller import CreateLocalConfigFile
-        CreateLocalConfigFile(self.local, [])
+        from mytoninstaller.mytoninstaller import InstallerCtrl
+        installer = InstallerCtrl.from_ton(self.ton)
+        installer.create_local_config_file([])
 
     def create_env_file(self, reinit=False):
         env_path = self.bin_dir + '/.env'
         if os.path.exists(env_path) and not reinit:
             return
-        self.create_local_file()
-        config_path = "/usr/bin/ton/local.config.json"
+        try:
+            self.create_local_file()
+        except Exception as e:
+            self.local.add_log(f'Failed to create local config file: {e}', 'error')
+        config_path = self.ton.get_paths().local_config_path
         if not os.path.exists(config_path):
             config_path = 'https://ton.org/global-config.json'
             warning_text = f"""
@@ -68,7 +73,7 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         if user is None:
             user = get_current_user()
         with get_package_resource_path('mytonctrl', 'scripts/btc_teleport1.sh') as script_path:
-            exit_code = run_as_root(["bash", str(script_path), "-s", '/usr/src', "-r", self.repo_name, "-b", branch, "-u", user])
+            exit_code = run_as_root(["bash", str(script_path), "-s", self.src_root, "-r", self.repo_name, "-b", branch, "-u", user])
         if exit_code != 0:
             raise Exception('Failed to install btc_teleport')
         with get_package_resource_path('mytonctrl', 'scripts/btc_teleport2.sh') as script_path:

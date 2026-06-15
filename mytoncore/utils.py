@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -91,7 +92,7 @@ def ng2g(ng: int | None) -> float | None:
     return int(ng) / 10**9
 
 
-def parse_db_stats(path: str):
+def parse_db_stats(path: Path):
     with open(path) as f:
         lines = f.readlines()
     result: dict[str, float | dict[str, float]] = {}
