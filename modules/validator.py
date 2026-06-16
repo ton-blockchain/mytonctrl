@@ -6,17 +6,18 @@ from modules.btc_teleport import BtcTeleportModule
 from mypylib.mypylib import color_print, get_timestamp
 from modules.module import MtcModule
 from mytoncore.utils import hex_shard_to_int, hex2b64
+from mytoncore.models import ValidatorConfig
 from mytonctrl.console_cmd import check_usage_two_args, add_command, check_usage_args_min_max_len
 
 from mytonctrl.utils import timestamp2utcdatetime, GetColorInt, pop_arg_from_args, is_hex
 
-from typing import TYPE_CHECKING, Any, Mapping, Sequence, TypeVar
+from typing import TYPE_CHECKING, Sequence, TypeVar
 
 if TYPE_CHECKING:
     from mytoncore import MyTonCore
 
 
-X = TypeVar("X", bound=Mapping[str, Any])
+X = TypeVar("X", bound=ValidatorConfig)
 
 
 class ValidatorModule(MtcModule):
@@ -64,26 +65,32 @@ class ValidatorModule(MtcModule):
     def find_myself(self, validators: Sequence[X]) -> X | None:
         adnl_addr = self.ton.GetAdnlAddr()
         for validator in validators:
-            if validator.get("adnlAddr") == adnl_addr:
+            if validator.adnl_addr == adnl_addr:
                 return validator
         return None
 
     def check_efficiency(self, args):
         self.local.add_log("start GetValidatorEfficiency function", "debug")
-        previous_validators = self.ton.GetValidatorsList(past=True)
-        validators = self.ton.GetValidatorsList()
+        previous_validators = []
+        try:
+            previous_validators = self.ton.GetValidatorsList(past=True)
+        except Exception as e:
+            self.local.add_log(f"Failed to get validators list: {e}", "error")
+        validators = []
+        try:
+            validators = self.ton.GetValidatorsList()
+        except Exception as e:
+            self.local.add_log(f"Failed to get validators list: {e}", "error")
         validator = self.find_myself(previous_validators)
-        config32 = self.ton.GetConfig32()
-        config34 = self.ton.GetConfig34()
+        config32 = self.ton.get_config_32()
+        config34 = self.ton.get_config_34()
         color_print("{cyan}===[ Validator efficiency ]==={endc}")
-        start_time = timestamp2utcdatetime(config32.startWorkTime)
-        end_time = timestamp2utcdatetime(config32.endWorkTime)
+        start_time = timestamp2utcdatetime(config32.start_work_time)
+        end_time = timestamp2utcdatetime(config32.end_work_time)
         color_print(f"Previous round time: {{yellow}}from {start_time} to {end_time}{{endc}}")
         if validator:
-            if validator.get('efficiency') is None:
-                print('Failed to get efficiency for the previous round')
-            elif validator.is_masterchain is False and validator.get('efficiency') != 0:
-                print(f"Validator index is greater than {config32['mainValidators']} in the previous round - no efficiency data.")
+            if validator.is_masterchain is False and validator.efficiency != 0:
+                print(f"Validator index is greater than {config32.main_validators} in the previous round - no efficiency data.")
             else:
                 efficiency = 100 if validator.efficiency > 100 else validator.efficiency
                 color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
@@ -96,17 +103,15 @@ class ValidatorModule(MtcModule):
         else:
             print("Couldn't find this validator in the previous round")
         validator = self.find_myself(validators)
-        start_time = timestamp2utcdatetime(config34.startWorkTime)
+        start_time = timestamp2utcdatetime(config34.start_work_time)
         end_time = timestamp2utcdatetime(int(get_timestamp()))
         color_print(f"Current round time: {{green}}from {start_time} to {end_time}{{endc}}")
         if validator:
             if validator.is_masterchain is False and validator.efficiency != 0:
-                print(f"Validator index is greater than {config34['mainValidators']} in the current round - no efficiency data.")
-            elif (time.time() - config34.startWorkTime) / (config34.endWorkTime - config34.startWorkTime) < 0.8:
+                print(f"Validator index is greater than {config34.main_validators} in the current round - no efficiency data.")
+            elif (time.time() - config34.start_work_time) / (config34.end_work_time - config34.start_work_time) < 0.8:
                 print("The validation round has started recently, there is not enough data yet. "
                       "The efficiency evaluation will become more accurate towards the end of the round.")
-            elif validator.get('efficiency') is None:
-                print('Failed to get efficiency for the current round')
             else:
                 efficiency = 100 if validator.efficiency > 100 else validator.efficiency
                 color_efficiency = GetColorInt(efficiency, 90, logic="more", ending="%")
@@ -118,9 +123,9 @@ class ValidatorModule(MtcModule):
     # end define
 
     def get_my_complaint(self):
-        config32 = self.ton.GetConfig32()
+        config32 = self.ton.get_config_32()
         save_complaints = self.ton.GetSaveComplaints()
-        complaints = save_complaints.get(str(config32['startWorkTime']))
+        complaints = save_complaints.get(str(config32.start_work_time))
         if not complaints:
             return
         for c in complaints.values():

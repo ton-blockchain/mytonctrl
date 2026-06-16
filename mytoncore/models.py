@@ -121,7 +121,7 @@ class Block:
 class Transaction:
     block: Block
     type: str | None
-    time: int | None
+    time: int
     total_fees: float | None
 
     def __str__(self):
@@ -162,30 +162,20 @@ class CacheResult:
     data: Any
 
 
-class Config12(TypedDict):
-    enabled_since: int
-    monitor_min_split: int
-    min_split: int
-    max_split: int
-    basic: int
-    active: int
-    accept_msgs: int
-    flags: int
-    zerostate_root_hash: str
-    zerostate_file_hash: str
+@dataclass
+class Config15:
+    validators_elected_for: int
+    elections_start_before: int
+    elections_end_before: int
+    stake_held_for: int
 
 
-class Config15(TypedDict):
-    validatorsElectedFor: int
-    electionsStartBefore: int
-    electionsEndBefore: int
-    stakeHeldFor: int
-
-
-class Config17(TypedDict):
-    minStake: float
-    maxStake: float
-    maxStakeFactor: int
+@dataclass
+class Config17:
+    min_stake: float
+    max_stake: float
+    max_stake_factor: int
+    min_total_stake: float
 
 
 class ElectionsParticipant(TypedDict):
@@ -200,6 +190,45 @@ class BlockHead(TypedDict):
     seqno: int
     rootHash: str
     fileHash: str
+
+
+@dataclass
+class ValidatorConfig:
+    adnl_addr: str
+    pubkey: str
+    weight: int
+
+
+@dataclass
+class ValidatorConfigExt(ValidatorConfig):
+    mr: float
+    wr: float
+    efficiency: float
+    online: bool
+    master_blocks_created: float
+    master_blocks_expected: float
+    blocks_created: float
+    blocks_expected: float
+    is_masterchain: bool
+    wallet_addr: str | None = None
+    stake: float | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ValidatorConfigExt:
+        legacy_aliases = {"adnlAddr": "adnl_addr", "walletAddr": "wallet_addr"}
+        names = {f.name for f in fields(cls)}
+        return cls(**{name: value for key, value in data.items()
+                      if (name := legacy_aliases.get(key, key)) in names})
+
+
+@dataclass
+class Config:
+    total_validators: int
+    main_validators: int
+    start_work_time: int
+    end_work_time: int
+    total_weight: int | None
+    validators: list[ValidatorConfig]
 
 
 @dataclass(frozen=True)

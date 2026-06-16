@@ -231,7 +231,7 @@ class StatsCollector:
 
         # statistics['node']: [stats_from_election_id, stats_from_prev_min, stats_now]
 
-        election_id = self._ton.GetConfig34(no_cache=True)["startWorkTime"]
+        election_id = self._ton.get_config_34(no_cache=True).start_work_time
         if len(statistics["node"]) == 0:
             statistics["node"] = [None, data]
         elif len(statistics["node"]) < 3:

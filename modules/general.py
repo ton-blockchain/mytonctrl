@@ -106,9 +106,9 @@ class GeneralModule(MtcModule):
 
         if all_status:
             try:
-                config34 = self.ton.GetConfig34()
-                total_validators = config34["totalValidators"]
-                config36 = self.ton.GetConfig36()
+                config34 = self.ton.get_config_34()
+                total_validators = config34.total_validators
+                config36 = self.ton.get_config_36()
                 full_elector_addr = self.ton.GetFullElectorAddr()
                 start_work_time = self.ton.GetActiveElectionId(full_elector_addr)
                 self.print_ton_status(start_work_time, total_validators)
@@ -119,21 +119,21 @@ class GeneralModule(MtcModule):
 
         if all_status and self.ton.using_validator():
             full_config_addr = self.ton.GetFullConfigAddr()
-            config15 = self.ton.GetConfig15()
-            config17 = self.ton.GetConfig17()
+            config15 = self.ton.get_config_15()
+            config17 = self.ton.get_config_17()
             self.print_ton_config(
                 full_config_addr, full_elector_addr, config15, config17
             )
             if (
                 config34 is not None
-                and config36 is not None
                 and start_work_time is not None
             ):
-                old_start_work_time = config36.get("startWorkTime")
-                if old_start_work_time is None:
-                    old_start_work_time = config34.get("startWorkTime")
+                if config36 is not None:
+                    old_start_work_time = config36.start_work_time
+                else:
+                    old_start_work_time = config34.start_work_time
                 root_workchain_enabled_time_int = self.local.try_function(
-                    self.ton.GetRootWorkchainEnabledTime
+                    self.ton.get_root_workchain_enabled_time
                 )
                 self.print_network_times(
                     root_workchain_enabled_time_int,
@@ -590,13 +590,13 @@ class GeneralModule(MtcModule):
         print(full_elector_addr_text)
 
         validators_elected_for_text = bcolors.yellow_text(
-            config15["validatorsElectedFor"]
+            config15.validators_elected_for
         )
         elections_start_before_text = bcolors.yellow_text(
-            config15["electionsStartBefore"]
+            config15.elections_start_before
         )
-        elections_end_before_text = bcolors.yellow_text(config15["electionsEndBefore"])
-        stake_held_for_text = bcolors.yellow_text(config15["stakeHeldFor"])
+        elections_end_before_text = bcolors.yellow_text(config15.elections_end_before)
+        stake_held_for_text = bcolors.yellow_text(config15.stake_held_for)
         elections_text = self.local.translate("ton_config_elections").format(
             validators_elected_for_text,
             elections_start_before_text,
@@ -605,8 +605,8 @@ class GeneralModule(MtcModule):
         )
         print(elections_text)
 
-        min_stake_text = bcolors.yellow_text(config17["minStake"])
-        max_stake_text = bcolors.yellow_text(config17["maxStake"])
+        min_stake_text = bcolors.yellow_text(config17.min_stake)
+        max_stake_text = bcolors.yellow_text(config17.max_stake)
         stake_text = self.local.translate("ton_config_stake").format(
             min_stake_text, max_stake_text
         )
@@ -630,9 +630,9 @@ class GeneralModule(MtcModule):
         ).format(bcolors.yellow_text(root_workchain_enabled_time))
         print(root_workchain_enabled_time_text)
 
-        validators_elected_for = config15["validatorsElectedFor"]
-        elections_start_before = config15["electionsStartBefore"]
-        elections_end_before = config15["electionsEndBefore"]
+        validators_elected_for = config15.validators_elected_for
+        elections_start_before = config15.elections_start_before
+        elections_end_before = config15.elections_end_before
 
         if start_work_time == 0:
             start_work_time = old_start_work_time

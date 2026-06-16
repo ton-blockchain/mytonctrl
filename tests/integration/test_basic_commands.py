@@ -4,7 +4,7 @@ import os
 import pathlib
 import subprocess
 
-from mytoncore.models import Paths
+from mytoncore.models import Config15, Config17, Paths, Config
 from mytoninstaller import mytoninstaller as installer_module
 from mytoninstaller.context import InstallerPaths
 from mytoninstaller.mytoninstaller import InstallerCtrl
@@ -309,16 +309,14 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda *_: 'mainnet')
     monkeypatch.setattr(MyTonCore, "get_root_workchain_enabled_time", lambda *_: 1234, raising=False)
     monkeypatch.setattr(MyTonCore, "GetRootWorkchainEnabledTime", lambda *_: 1234, raising=False)
-    monkeypatch.setattr(MyTonCore, "get_config_34", lambda _: {"totalValidators": 100, "startWorkTime": 0}, raising=False)
-    monkeypatch.setattr(MyTonCore, "GetConfig34", lambda _: {"totalValidators": 100, "startWorkTime": 0}, raising=False)
-    monkeypatch.setattr(MyTonCore, "get_config_36", lambda _: {"startWorkTime": None}, raising=False)
-    monkeypatch.setattr(MyTonCore, "GetConfig36", lambda _: {"startWorkTime": None}, raising=False)
+    monkeypatch.setattr(MyTonCore, "get_config_34", lambda _: Config(total_validators=100, main_validators=100, start_work_time=0, end_work_time=0, total_weight=None, validators=[]), raising=False)
+    monkeypatch.setattr(MyTonCore, "get_config_36", lambda _: None, raising=False)
     monkeypatch.setattr(MyTonCore, "get_shards", lambda *_: [1, 2, 3], raising=False)
     monkeypatch.setattr(MyTonCore, "GetShards", lambda *_: [1, 2, 3], raising=False)
     monkeypatch.setattr(MyTonCore, "get_config", lambda *_: {'validators_elected_for': 65536, 'elections_start_before': 32768, 'elections_end_before': 8192, 'stake_held_for': 32768}, raising=False)
     monkeypatch.setattr(MyTonCore, "GetConfig", lambda *_: {'validators_elected_for': 65536, 'elections_start_before': 32768, 'elections_end_before': 8192, 'stake_held_for': 32768}, raising=False)
-    monkeypatch.setattr(MyTonCore, "get_config_17", lambda *_: {'minStake': 10000.0, 'maxStake': 10000000.0, 'maxStakeFactor': 1966080, 'minTotalStake': 200000.0}, raising=False)
-    monkeypatch.setattr(MyTonCore, "GetConfig17", lambda *_: {'minStake': 10000.0, 'maxStake': 10000000.0, 'maxStakeFactor': 1966080, 'minTotalStake': 200000.0}, raising=False)
+    monkeypatch.setattr(MyTonCore, "get_config_17", lambda *_: Config17(min_stake=10000.0, max_stake=10000000.0, max_stake_factor=1966080, min_total_stake=200000.0), raising=False)
+    monkeypatch.setattr(MyTonCore, "get_config_15", lambda *_: Config15(validators_elected_for=65536, elections_start_before=32768, elections_end_before=8192, stake_held_for=32768), raising=False)
     monkeypatch.setattr(MyTonCore, "get_full_config_addr", lambda *_: 'config_addr', raising=False)
     monkeypatch.setattr(MyTonCore, "GetFullConfigAddr", lambda *_: 'config_addr', raising=False)
     monkeypatch.setattr(MyTonCore, "get_full_elector_addr", lambda *_: 'elector_addr', raising=False)
