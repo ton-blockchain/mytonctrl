@@ -118,8 +118,8 @@ class ControllerModule(MtcModule):
             percent_per_round = float(args[0])
         else:
             percent_per_round = self.ton.GetSettings("max_interest_percent")
-        config15 = self.ton.GetConfig15()
-        roundPeriod = config15["validatorsElectedFor"]
+        config15 = self.ton.get_config_15()
+        roundPeriod = config15.validators_elected_for
         rounds = 365 * 24 * 3600 / roundPeriod
         yearInterest = (1 + percent_per_round / 100) * rounds
         yearInterestPercent = round(yearInterest / 100, 2)

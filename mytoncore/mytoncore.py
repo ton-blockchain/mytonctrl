@@ -7,6 +7,7 @@ import json
 import hashlib
 import struct
 import typing
+from dataclasses import asdict
 from typing import Union, Any
 
 import psutil
@@ -16,17 +17,31 @@ from fastcrc import crc16
 
 from modules import MODES
 from mytoncore.stats_collector import StatsCollector
-from mytoncore.utils import b642hex, xhex2hex, ng2g, get_package_resource_path, raw_addr_to_b64, lc_result_to_list, \
-	nano_ton_to_ton, tlb_to_json
+from mytoncore.utils import (
+    b642hex,
+    xhex2hex,
+    ng2g,
+    get_package_resource_path,
+    raw_addr_to_b64,
+	nano_ton_to_ton
+)
+from mytoncore.output import (
+    lc_result_to_list,
+    parse_int,
+    tlb_to_json,
+    parse_validator_set,
+)
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
+	Config,
 	Paths,
+	ValidatorConfigExt,
 	Wallet,
 	Account,
 	Block,
 	Transaction,
 	Message,
-	Pool, Config12, Config15, ElectionsParticipant, Config17, CacheResult, BlockHead,
+	Pool, Config15, ElectionsParticipant, Config17, CacheResult, BlockHead,
 )
 
 from mypylib.mypylib import (
@@ -526,21 +541,6 @@ class MyTonCore:
 		activeElectionId = int(activeElectionId)
 		return activeElectionId
 
-	def GetValidatorsElectedFor(self):
-		self.local.add_log("start GetValidatorsElectedFor function", "debug")
-		config15 = self.GetConfig15()
-		return config15["validatorsElectedFor"]
-	#end define
-
-	def GetRootWorkchainEnabledTime(self):
-		enabledTime = self.get_basechain_config()["enabled_since"]
-		return enabledTime
-	#end define
-
-	def get_basechain_config(self) -> Config12:
-		config12 = self.GetConfig(12)
-		return config12["workchains"]["root"]["node"]["value"]
-
 	def GetLastBlock(self):
 		block = None
 		cmd = "last"
@@ -682,151 +682,71 @@ class MyTonCore:
 	#end define
 
 	_Nested = typing.Dict[str, Union[str, int, "_Nested"]]
-
-	def GetConfig(self, configId) -> _Nested:
-		# Get buffer
-		bname = "config" + str(configId)
-		buff = self.GetFunctionBuffer(bname, timeout=60)
+	def get_config(self, config_id: int) -> _Nested:
+		bname = "config" + str(config_id)
+		buff = self.GetFunctionBuffer(bname, timeout=10)
 		if buff:
 			return buff
-		#end if
-
-		cmd = "getconfig {configId}".format(configId=configId)
+		cmd = f"getconfig {config_id}"
 		result = self.liteClient.run(cmd)
-		start = result.find("ConfigParam")
-		text = result[start:]
+		text = result[result.find("ConfigParam"):]
 		data = tlb_to_json(text)
-
-		# Set buffer
 		self.SetFunctionBuffer(bname, data)
 		return data
-	#end define
 
-	def GetConfig15(self) -> Config15:
-		config = self.GetConfig(15)
-		config15 = {
-			"validatorsElectedFor": config["validators_elected_for"],
-			"electionsStartBefore": config["elections_start_before"],
-			"electionsEndBefore": config["elections_end_before"],
-			"stakeHeldFor": config["stake_held_for"]
-		}
-		return config15
+	def get_basechain_config(self) -> dict:
+		config12 = self.get_config(12)
+		return config12["workchains"]["root"]["node"]["value"]
 
-	def GetConfig17(self) -> Config17:
-		config = self.GetConfig(17)
-		config17 = {"minStake": ng2g(config["min_stake"]["amount"]["value"]),
-					"maxStake": ng2g(config["max_stake"]["amount"]["value"]),
-					"maxStakeFactor": config["max_stake_factor"]}
-		return config17
+	def get_root_workchain_enabled_time(self) -> int:
+		enabled_time = self.get_basechain_config()["enabled_since"]
+		return enabled_time
 
-	def GetConfig32(self):
-		# Get buffer
-		bname = "config32"
-		buff = self.GetFunctionBuffer(bname, timeout=60)
+	def get_config_15(self) -> Config15:
+		result = self.liteClient.run("getconfig 15")
+		return Config15(
+			validators_elected_for=parse_int("validators_elected_for:", result),
+			elections_start_before=parse_int("elections_start_before:", result),
+			elections_end_before=parse_int("elections_end_before:", result),
+			stake_held_for=parse_int("stake_held_for:", result),
+		)
+
+	def get_config_17(self) -> Config17:
+		config = self.get_config(17)
+		return Config17(
+			min_stake=nano_ton_to_ton(config["min_stake"]["amount"]["value"]),
+			max_stake=nano_ton_to_ton(config["max_stake"]["amount"]["value"]),
+			max_stake_factor=config["max_stake_factor"],
+			min_total_stake=nano_ton_to_ton(config["min_total_stake"]["amount"]["value"])
+		)
+
+	def get_config_32(self) -> Config:
+		bname = "typed_config32"
+		buff = self.GetFunctionBuffer(bname, timeout=10)
 		if buff:
 			return buff
-		#end if
-
-		config32 = Dict()
 		result = self.liteClient.run("getconfig 32")
-		config32["totalValidators"] = int(parse(result, "total:", ' '))
-		config32["mainValidators"] = int(parse(result, "main:", ' '))
-		config32["startWorkTime"] = int(parse(result, "utime_since:", ' '))
-		config32["endWorkTime"] = int(parse(result, "utime_until:", ' '))
-		lines = result.split('\n')
-		validators = list()
-		for line in lines:
-			if "public_key:" in line:
-				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
-				pubkey = parse(line, "pubkey:x", ')')
-				try:
-					validatorWeight = int(parse(line, "weight:", ' '))
-				except ValueError:
-					validatorWeight = int(parse(line, "weight:", ')'))
-				buff = Dict()
-				buff["adnlAddr"] = validatorAdnlAddr
-				buff["pubkey"] = pubkey
-				buff["weight"] = validatorWeight
-				validators.append(buff)
-		config32["validators"] = validators
-
-		# Set buffer
+		config32 = parse_validator_set(result)
 		self.SetFunctionBuffer(bname, config32)
 		return config32
-	#end define
 
-	def GetConfig34(self, no_cache: bool = False):
-		# Get buffer
-		bname = "config34"
+	def get_config_34(self, no_cache: bool = False) -> Config:
+		bname = "typed_config34"
 		buff = self.GetFunctionBuffer(bname, timeout=10)
 		if buff and not no_cache:
 			return buff
-		#end if
-
-		config34 = Dict()
 		result = self.liteClient.run("getconfig 34")
-		config34["totalValidators"] = int(parse(result, "total:", ' '))
-		config34["mainValidators"] = int(parse(result, "main:", ' '))
-		config34["startWorkTime"] = int(parse(result, "utime_since:", ' '))
-		config34["endWorkTime"] = int(parse(result, "utime_until:", ' '))
-		config34["totalWeight"] = int(parse(result, "total_weight:", ' '))
-		lines = result.split('\n')
-		validators = list()
-		for line in lines:
-			if "public_key:" in line:
-				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
-				pubkey = parse(line, "pubkey:x", ')')
-				try:
-					validatorWeight = int(parse(line, "weight:", ' '))
-				except ValueError:
-					validatorWeight = int(parse(line, "weight:", ')'))
-				buff = Dict()
-				buff["adnlAddr"] = validatorAdnlAddr
-				buff["pubkey"] = pubkey
-				buff["weight"] = validatorWeight
-				validators.append(buff)
-		config34["validators"] = validators
-
-		# Set buffer
+		config34 = parse_validator_set(result)
 		self.SetFunctionBuffer(bname, config34)
 		return config34
-	#end define
 
-	def GetConfig36(self):
-		# Get buffer
-		bname = "config36"
-		buff = self.GetFunctionBuffer(bname, timeout=60)
-		if buff:
-			return buff
-		#end if
-
-		config36 = dict()
+	def get_config_36(self) -> Config | None:
+		result = self.liteClient.run("getconfig 36")
 		try:
-			result = self.liteClient.run("getconfig 36")
-			config36["totalValidators"] = int(parse(result, "total:", ' '))
-			config36["startWorkTime"] = int(parse(result, "utime_since:", ' '))
-			config36["endWorkTime"] = int(parse(result, "utime_until:", ' '))
-			lines = result.split('\n')
-			validators = list()
-			for line in lines:
-				if "public_key:" in line:
-					validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
-					pubkey = parse(line, "pubkey:x", ')')
-					validatorWeight = parse(line, "weight:", ' ')
-					buff = dict()
-					buff["adnlAddr"] = validatorAdnlAddr
-					buff["pubkey"] = pubkey
-					buff["weight"] = validatorWeight
-					validators.append(buff)
-			config36["validators"] = validators
+			config36 = parse_validator_set(result)
 		except Exception:
-			config36["validators"] = list()
-		#end try
-
-		# Set buffer
-		self.SetFunctionBuffer(bname, config36)
+			config36 = None
 		return config36
-	#end define
 
 	def CreateNewKey(self):
 		self.local.add_log("start CreateNewKey function", "debug")
@@ -1125,7 +1045,7 @@ class MyTonCore:
 		stakePercent = self.local.db.get("stakePercent", 100)
 		stake_no_split = self.local.db.get("stakeNoSplit", False)
 		vconfig = self.GetValidatorConfig()
-		config17 = self.GetConfig17()
+		config17 = self.get_config_17()
 
 		is_single_nominator = self.is_account_single_nominator(account)
 
@@ -1141,7 +1061,7 @@ class MyTonCore:
 				sp = 1
 			if len(vconfig.validators) == 0 and not stake_no_split:
 				stake = int(account.balance*sp/2)
-				if stake < config17["minStake"]:  # not enough funds to divide them by 2
+				if stake < config17.min_stake:  # not enough funds to divide them by 2
 					stake = int(account.balance*sp)
 			else:
 				stake = int(account.balance*sp)
@@ -1152,12 +1072,12 @@ class MyTonCore:
 			raise Exception("Failed to get stake")
 
 		# Check if we have enough coins
-		if stake > config17["maxStake"]:
+		if stake > config17.max_stake:
 			text = "Stake is greater than the maximum value. Will be used the maximum stake."
 			self.local.add_log(text, "warning")
-			stake = config17["maxStake"]
-		if config17["minStake"] > stake:
-			text = "Stake less than the minimum stake. Minimum stake: {minStake}".format(minStake=config17["minStake"])
+			stake = config17.max_stake
+		if config17.min_stake > stake:
+			text = "Stake less than the minimum stake. Minimum stake: {minStake}".format(minStake=config17.min_stake)
 			# self.local.add_log(text, "error")
 			raise Exception(text)
 		if stake > account.balance:
@@ -1171,8 +1091,8 @@ class MyTonCore:
 		# Either use defined maxFactor, or set maximal allowed by config17
 		maxFactor = self.local.db.get("maxFactor")
 		if maxFactor is None:
-			config17 = self.GetConfig17()
-			maxFactor = config17["maxStakeFactor"] / 65536
+			config17 = self.get_config_17()
+			maxFactor = config17.max_stake_factor / 65536
 		maxFactor = round(maxFactor, 1)
 		return maxFactor
 	#end define
@@ -1240,7 +1160,7 @@ class MyTonCore:
 			validator_pubkey_hex = self.get_clean_pubkey_hex(validator_key)
 			# Check if election entry already completed
 			entries = self.GetElectionEntries()
-			if validator_pubkey_hex in entries:
+			if entries and validator_pubkey_hex in entries:
 				self.local.add_log("Elections entry already completed", "info")
 				return
 
@@ -1262,7 +1182,7 @@ class MyTonCore:
 		stake = self.GetStake(account)
 
 		# Calculate endWorkTime
-		validatorsElectedFor = self.GetValidatorsElectedFor()
+		validatorsElectedFor = self.get_config_15().validators_elected_for
 		endWorkTime = startWorkTime + validatorsElectedFor + 300 # 300 sec - margin of seconds
 
 		# Create keys
@@ -1419,13 +1339,13 @@ class MyTonCore:
 		poolData = self.GetPoolData(poolAddr)
 
 		timeNow = int(time.time())
-		config34 = self.GetConfig34()
+		config34 = self.get_config_34()
 		fullElectorAddr = self.GetFullElectorAddr()
 		returnedStake = self.get_returned_stake(fullElectorAddr, poolAddr)
 		pendingWithdraws = self.GetPendingWithdraws()
 		if (poolData["state"] == 2 and
 			poolData["validatorSetChangesCount"] < 2 and
-			poolData["validatorSetChangeTime"] < config34["startWorkTime"]):
+			poolData["validatorSetChangeTime"] < config34.start_work_time):
 			self.PoolProcessUpdateValidatorSet(poolAddr, wallet)
 			poolData = self.GetPoolData(poolAddr)
 		if (returnedStake > 0 and
@@ -1574,9 +1494,9 @@ class MyTonCore:
 
 	def GetElectionEntries(self, past: bool = False) -> dict[str, ElectionsParticipant] | None:
 		if past:
-			config34 = self.GetConfig34()
-			election_id = config34.get("startWorkTime")
-			end = config34.get("endWorkTime")
+			config34 = self.get_config_34()
+			election_id = config34.start_work_time
+			end = config34.end_work_time
 			buff = end - election_id
 			election_id = election_id - buff
 			entries = self.get_saved_election_entries(election_id)
@@ -1636,7 +1556,7 @@ class MyTonCore:
 		return None
 
 	def calculate_offer_pseudohash(self, offer_hash: str, param_id: int):
-		config_val = self.GetConfig(param_id)
+		config_val = self.get_config(param_id)
 		pseudohash_bytes = offer_hash.encode() + json.dumps(config_val, sort_keys=True).encode()
 		return hashlib.sha256(pseudohash_bytes).hexdigest()
 
@@ -1647,8 +1567,8 @@ class MyTonCore:
 		result = self.liteClient.run(cmd)
 		rawOffers = lc_result_to_list(result)
 		rawOffers = rawOffers[0]
-		config34 = self.GetConfig34()
-		totalWeight = config34.get("totalWeight")
+		config34 = self.get_config_34()
+		totalWeight = config34.total_weight
 
 		# Get json
 		offers = list()
@@ -1702,11 +1622,11 @@ class MyTonCore:
 		fullElectorAddr = self.GetFullElectorAddr()
 		end = None
 		if electionId is None:
-			config32 = self.GetConfig32()
+			config32 = self.get_config_32()
 			if config32 is None:
 				raise Exception("No election id provided and could not get 32 config")
-			electionId = config32["startWorkTime"]
-			end = config32["endWorkTime"]
+			electionId = config32.start_work_time
+			end = config32.end_work_time
 		if past:
 			if end is None:
 				raise Exception("Cannot compute past election id")
@@ -1721,8 +1641,8 @@ class MyTonCore:
 		result = self.liteClient.run(cmd)
 		rawComplaints = lc_result_to_list(result)
 		rawComplaints = rawComplaints[0]
-		config34 = self.GetConfig34()
-		totalWeight = config34.get("totalWeight")
+		config34 = self.get_config_34()
+		totalWeight = config34.total_weight
 
 		# Get json
 		for complaint in rawComplaints:
@@ -1811,11 +1731,11 @@ class MyTonCore:
 	#end define
 
 	def GetAdnlFromPubkey(self, inputPubkey):
-		config32 = self.GetConfig32()
-		validators = config32["validators"]
+		config32 = self.get_config_32()
+		validators = config32.validators
 		for validator in validators:
-			adnl = validator["adnlAddr"]
-			pubkey = validator["pubkey"]
+			adnl = validator.adnl_addr
+			pubkey = validator.pubkey
 			if pubkey == inputPubkey:
 				return adnl
 	#end define
@@ -1905,10 +1825,10 @@ class MyTonCore:
 
 	def get_valid_complaints(self, complaints: dict, election_id: int):
 		self.local.add_log("start get_valid_complaints function", "debug")
-		config32 = self.GetConfig32()
-		start = config32.get("startWorkTime")
+		config32 = self.get_config_32()
+		start = config32.start_work_time
 		assert start == election_id, 'provided election_id != election_id from config32'
-		end = config32.get("endWorkTime")
+		end = config32.end_work_time
 		validators_load = self.GetValidatorsLoad(start, end - 60, save_comp_files=True, v2=True)
 		voted_complaints = self.GetVotedComplaints(complaints)
 		voted_complaints_pseudohashes = [complaint['pseudohash'] for complaint in voted_complaints.values()]
@@ -1924,7 +1844,7 @@ class MyTonCore:
 			if complaint['electionId'] != start:
 				self.local.add_log(f"skip checking complaint {complaint['hash_hex']}: "
 								   f"election_id ({election_id}) doesn't match with "
-								   f"start work time ({config32.get('startWorkTime')})", "info")
+								   f"start work time ({config32.start_work_time})", "info")
 				continue
 
 			exists = False
@@ -1948,7 +1868,7 @@ class MyTonCore:
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint info was not found, probably it's wrong", "info")
 				continue
 
-			if vload["id"] >= config32['mainValidators']:
+			if vload["id"] >= config32.main_validators:
 				self.local.add_log(f"complaint {complaint['hash_hex']} declined: complaint created for non masterchain validator", "info")
 				continue
 
@@ -1981,6 +1901,8 @@ class MyTonCore:
 			filePrefix = ""
 		cmd = f"checkloadall{cmd_suf} {start} {end} {filePrefix}"
 		result = self.liteClient.run(cmd, timeout=180 if v2 else 30)
+		if 'total:' not in result:
+			raise Exception(f"Failed to get validators load: {result}")
 		lines = result.split('\n')
 		data = dict()
 		for line in lines:
@@ -2015,7 +1937,7 @@ class MyTonCore:
 				if masterBlocksExpected > 0:  # show only masterchain efficiency for masterchain validator
 					r = mr
 				else:
-					r = (mr + wr) / 2
+					r = wr
 				efficiency = round(r * 100, 2)
 				if efficiency > 10:
 					online = True
@@ -2051,67 +1973,68 @@ class MyTonCore:
 		return data
 	#end define
 
-	def GetValidatorsList(self, past=False, fast=False, start=None, end=None):
+	def GetValidatorsList(self, past: bool=False, fast: bool=False, start: int | None = None, end: int | None = None) -> list[ValidatorConfigExt]:
 		# Get buffer
 		bname = "validatorsList" + str(past) + str(start) + str(end)
 		buff = self.GetFunctionBuffer(bname, timeout=60)
 		if buff:
 			return buff
-		#end if
 
-		config = self.GetConfig34()
+		config = self.get_config_34()
 		if end is None:
 			timestamp = get_timestamp()
 			end = timestamp - 60
 		if start is None:
 			if fast:
-				start = max(end - 1000, config.get("startWorkTime"))
+				start = max(end - 1000, config.start_work_time)
 			else:
-				start = config.get("startWorkTime")
+				start = config.start_work_time
 		if past:
-			config = self.GetConfig32()
-			start = config.get("startWorkTime")
-			end = config.get("endWorkTime") - 60
+			config = self.get_config_32()
+			start = config.start_work_time
+			end = config.end_work_time - 60
 			save_vl = self.GetSaveVl()
 			start_str = str(start)
 			if start_str in save_vl:
-				return save_vl[start_str]
-		#end if
+				return [ValidatorConfigExt.from_dict(entry) for entry in save_vl[start_str]]
 
-		validatorsLoad = self.GetValidatorsLoad(start, end)
-		validators = config["validators"]
-		electionId = config.get("startWorkTime")
+		validators_load = self.GetValidatorsLoad(start, end)
+		validators: list[ValidatorConfigExt] = []
+		electionId = config.start_work_time
 		saveElectionEntries = self.get_saved_election_entries(electionId)
-		for vid in range(len(validators)):
-			validator = validators[vid]
-			pubkey = validator["pubkey"]
-			if len(validatorsLoad) > 0:
-				validator["mr"] = validatorsLoad[vid]["mr"]
-				validator["wr"] = validatorsLoad[vid]["wr"]
-				validator["efficiency"] = validatorsLoad[vid]["efficiency"]
-				validator["online"] = validatorsLoad[vid]["online"]
-				validator["master_blocks_created"] = validatorsLoad[vid]["masterBlocksCreated"]
-				validator["master_blocks_expected"] = validatorsLoad[vid]["masterBlocksExpected"]
-				validator["blocks_created"] = validatorsLoad[vid]["masterBlocksCreated"] + validatorsLoad[vid]["workBlocksCreated"]
-				validator["blocks_expected"] = validatorsLoad[vid]["masterBlocksExpected"] + validatorsLoad[vid]["workBlocksExpected"]
-				validator["is_masterchain"] = False
-				if vid < config["mainValidators"]:
-					validator["is_masterchain"] = True
-				if not validator["is_masterchain"]:
-					validator["efficiency"] = round(validator["wr"] * 100, 2)
+		for vid in range(len(config.validators)):
+			base = config.validators[vid]
+			load = validators_load[vid]
+			pubkey = base.pubkey
+			wallet_addr, stake = None, None
 			if saveElectionEntries and pubkey in saveElectionEntries:
-				validator["walletAddr"] = saveElectionEntries[pubkey]["walletAddr"]
-				validator["stake"] = saveElectionEntries[pubkey].get("stake")
-				validator["stake"] = int(validator["stake"]) if validator["stake"] else None
-		#end for
+				entry = saveElectionEntries[pubkey]
+				wallet_addr = entry["walletAddr"]
+				stake = entry.get("stake")
+				stake = int(stake) if stake else None
+			validator = ValidatorConfigExt(
+				adnl_addr=base.adnl_addr,
+				pubkey=base.pubkey,
+				weight=base.weight,
+				mr=load["mr"],
+				wr=load["wr"],
+				efficiency=load["efficiency"],
+				online=load["online"],
+				master_blocks_created=load["masterBlocksCreated"],
+				master_blocks_expected=load["masterBlocksExpected"],
+				blocks_created=load["masterBlocksCreated"] + load["workBlocksCreated"],
+				blocks_expected=load["masterBlocksExpected"] + load["workBlocksExpected"],
+				is_masterchain=vid < config.main_validators,
+				wallet_addr=wallet_addr,
+				stake=stake,
+			)
+			validators.append(validator)
 
-		# Set buffer
 		self.SetFunctionBuffer(bname, validators)
 		if past:
 			save_vl = self.GetSaveVl()
-			save_vl[str(start)] = validators
+			save_vl[str(start)] = [asdict(v) for v in validators]
 		return validators
-	#end define
 
 	def CheckValidators(self, start: int, end: int):
 		self.local.add_log("start CheckValidators function", "debug")
@@ -2125,7 +2048,7 @@ class MyTonCore:
 		data = self.GetValidatorsLoad(start, end, save_comp_files=True, v2=True)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet()
-		config = self.GetConfig32()
+		config = self.get_config_32()
 
 		# Check wallet and balance
 		if wallet is None:
@@ -2143,7 +2066,7 @@ class MyTonCore:
 			pseudohash = pubkey + str(electionId)
 			if pseudohash in valid_complaints or pseudohash in voted_complaints_pseudohashes:  # do not create complaints that already created or voted by ourself
 				continue
-			if item['id'] >= config['mainValidators']:  # do not create complaints for non-masterchain validators
+			if item['id'] >= config.main_validators:  # do not create complaints for non-masterchain validators
 				continue
 			# Create complaint
 			fileName = self.remove_proofs_from_complaint(fileName)
@@ -2179,13 +2102,13 @@ class MyTonCore:
 	#end define
 
 	def GetValidatorIndex(self, adnlAddr=None):
-		config34 = self.GetConfig34()
-		validators = config34.get("validators")
+		config34 = self.get_config_34()
+		validators = config34.validators
 		if adnlAddr is None:
 			adnlAddr = self.GetAdnlAddr()
 		index = 0
 		for validator in validators:
-			searchAdnlAddr = validator.get("adnlAddr")
+			searchAdnlAddr = validator.adnl_addr
 			if adnlAddr == searchAdnlAddr:
 				return index
 			index += 1
@@ -2626,8 +2549,7 @@ class MyTonCore:
 		result = list()
 		vl = self.GetValidatorsList(fast=True)
 		for item in vl:
-			walletAddr = item["walletAddr"]
-			result.append(walletAddr)
+			result.append(item.wallet_addr)
 		return result
 	#end define
 
@@ -2753,9 +2675,9 @@ class MyTonCore:
 			self.local.add_log(f"Failed to get stake for pool {addr}: {e}", "debug")
 			return False
 		now = get_timestamp()
-		config15 = self.GetConfig15()
+		config15 = self.get_config_15()
 		last_sent_stake_time = self.get_pool_last_sent_stake_time(addr)
-		stake_freeze_delay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
+		stake_freeze_delay = config15.validators_elected_for + config15.stake_held_for
 		result = last_sent_stake_time + stake_freeze_delay < now
 		print(f"{addr}: {result}. {last_sent_stake_time}, {stake_freeze_delay}, {now}")
 		return result
@@ -2859,10 +2781,10 @@ class MyTonCore:
 		if stop_controllers_list is not None and addrB64 in stop_controllers_list:
 			return False
 		now = get_timestamp()
-		config15 = self.GetConfig15()
+		config15 = self.get_config_15()
 		controllerData = self.GetControllerData(addrB64)
 		lastSentStakeTime = controllerData["stake_at"]
-		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
+		stakeFreezeDelay = config15.validators_elected_for + config15.stake_held_for
 		result = lastSentStakeTime + stakeFreezeDelay < now
 		print(f"{addrB64}: {result}. {lastSentStakeTime}, {stakeFreezeDelay}, {now}")
 		return result
@@ -3039,13 +2961,13 @@ class MyTonCore:
 			return
 
 		timeNow = int(time.time())
-		config34 = self.GetConfig34()
+		config34 = self.get_config_34()
 		fullElectorAddr = self.GetFullElectorAddr()
 		returnedStake = self.get_returned_stake(fullElectorAddr, controllerAddr)
 		controllerPendingWithdraws = self.GetControllerPendingWithdraws()
 		if (controllerData["state"] == 3 and
 			controllerData["validator_set_changes_count"] < 2 and
-			controllerData["validator_set_change_time"] < config34["startWorkTime"]):
+			controllerData["validator_set_change_time"] < config34.start_work_time):
 			self.ControllerUpdateValidatorSetProcess(controllerAddr, wallet)
 			controllerData = self.GetControllerData(controllerAddr)
 		if (returnedStake > 0 and
@@ -3056,7 +2978,7 @@ class MyTonCore:
 			controllerData = self.GetControllerData(controllerAddr)
 		if (controllerData["state"] == 0 and
 			controllerData["borrowed_amount"] > 0 and
-			config34["startWorkTime"] > controllerData["borrowing_time"]):
+			config34.start_work_time > controllerData["borrowing_time"]):
 			self.ReturnUnusedLoan(controllerAddr)
 		if (controllerData["state"] == 0 and controllerAddr in controllerPendingWithdraws):
 			self.HandleControllerPendingWithdraw(controllerPendingWithdraws, controllerAddr)

@@ -1,3 +1,4 @@
+from dataclasses import asdict
 import json
 import random
 import subprocess
@@ -7,7 +8,8 @@ import requests
 
 from mypylib.mypylib import color_print, print_table, color_text, timeago, bcolors
 from modules.module import MtcModule
-from mytoncore.utils import raw_addr_to_b64, tlb_to_json
+from mytoncore.utils import raw_addr_to_b64
+from mytoncore.output import tlb_to_json
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
 
 
@@ -229,7 +231,7 @@ class UtilitiesModule(MtcModule):
         file.write(newText)
         file.close()
 
-        oldData = self.ton.GetConfig(config_id)
+        oldData = self.ton.get_config(config_id)
         oldFileName = self.ton.tempDir + "data2diff"
         file = open(oldFileName, 'wt')
         oldText = json.dumps(oldData, indent=2)
@@ -315,18 +317,19 @@ class UtilitiesModule(MtcModule):
             print("No data")
             return
         if "--json" in args:
+            data = [asdict(item) for item in data]
             text = json.dumps(data, indent=2)
             print(text)
         else:
             table = list()
             table += [["id", "ADNL", "Pubkey", "Wallet", "Stake", "Efficiency", "Online"]]
             for i, item in enumerate(data):
-                adnl = item.get("adnlAddr")
-                pubkey = item.get("pubkey")
-                walletAddr = item.get("walletAddr")
-                efficiency = item.get("efficiency")
-                online = item.get("online")
-                stake = item.get("stake")
+                adnl = item.adnl_addr
+                pubkey = item.pubkey
+                walletAddr = item.wallet_addr
+                efficiency = item.efficiency
+                online = item.online
+                stake = item.stake
                 if "adnl" not in args:
                     adnl = self.reduct(adnl)
                 if "pubkey" not in args:

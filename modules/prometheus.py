@@ -73,11 +73,11 @@ class PrometheusModule(MtcModule):
     def get_validator_validation_metrics(self, result: list):
         index = self.ton.GetValidatorIndex()
         result.append(METRICS['validator_id'].to_format(index))
-        config = self.ton.GetConfig34()
-        elections = self.ton.get_saved_election_entries(config["startWorkTime"])
+        config = self.ton.get_config_34()
+        elections = self.ton.get_saved_election_entries(config.start_work_time)
         if elections is None:
             return
-        key = self.ton.get_validator_key_by_time(config["startWorkTime"])
+        key = self.ton.get_validator_key_by_time(config.start_work_time)
         if key is None:
             return
         pubkey = self.ton.get_clean_pubkey_hex(key)

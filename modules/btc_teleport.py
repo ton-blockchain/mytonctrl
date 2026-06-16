@@ -101,7 +101,7 @@ LOG_FILE=/var/log/btc_teleport/btc_teleport.log
         if not check_usage_args_min_max_len("remove_btc_teleport", args, min_len=0, max_len=1):
             return
         if '--force' not in args:
-            if -1 < self.ton.GetValidatorIndex() < self.ton.GetConfig34()['mainValidators']:
+            if -1 < self.ton.GetValidatorIndex() < self.ton.get_config_34().main_validators:
                 self.local.add_log('You can not remove btc_teleport on working masterchain validator', 'error')
                 return
         exit_code = self.run_remove_btc_teleport(["-s", self.src_dir, "-k", self.keystore_path])

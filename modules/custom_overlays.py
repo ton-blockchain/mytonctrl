@@ -132,13 +132,13 @@ class CustomOverlayModule(MtcModule):
             if line.startswith('Overlay'):
                 names.append(line.split(' ')[1].replace('"', '').replace(':', ''))
 
-        config34 = self.ton.GetConfig34()
-        current_el_id = config34['startWorkTime']
-        current_vset = [i["adnlAddr"] for i in config34['validators']]
+        config34 = self.ton.get_config_34()
+        current_el_id = config34.start_work_time
+        current_vset = [i.adnl_addr for i in config34.validators]
 
-        config36 = self.ton.GetConfig36()
-        next_el_id = config36['startWorkTime'] if config36['validators'] else 0
-        next_vset = [i["adnlAddr"] for i in config36['validators']]
+        config36 = self.ton.get_config_36()
+        next_el_id = config36.start_work_time if config36 is not None else 0
+        next_vset = [i.adnl_addr for i in config36.validators] if config36 is not None else []
 
         for name in names:
             # check that overlay still exists in mtc db
