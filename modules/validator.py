@@ -89,7 +89,7 @@ class ValidatorModule(MtcModule):
         end_time = timestamp2utcdatetime(config32.end_work_time)
         color_print(f"Previous round time: {{yellow}}from {start_time} to {end_time}{{endc}}")
         if validator:
-            if validator.is_masterchain is False and validator.efficiency != 0:
+            if not validator.is_masterchain:
                 print(f"Validator index is greater than {config32.main_validators} in the previous round - no efficiency data.")
             else:
                 efficiency = 100 if validator.efficiency > 100 else validator.efficiency
@@ -107,7 +107,7 @@ class ValidatorModule(MtcModule):
         end_time = timestamp2utcdatetime(int(get_timestamp()))
         color_print(f"Current round time: {{green}}from {start_time} to {end_time}{{endc}}")
         if validator:
-            if validator.is_masterchain is False and validator.efficiency != 0:
+            if not validator.is_masterchain:
                 print(f"Validator index is greater than {config34.main_validators} in the current round - no efficiency data.")
             elif (time.time() - config34.start_work_time) / (config34.end_work_time - config34.start_work_time) < 0.8:
                 print("The validation round has started recently, there is not enough data yet. "
