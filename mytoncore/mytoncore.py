@@ -742,11 +742,9 @@ class MyTonCore:
 
 	def get_config_36(self) -> Config | None:
 		result = self.liteClient.run("getconfig 36")
-		try:
-			config36 = parse_validator_set(result)
-		except Exception:
-			config36 = None
-		return config36
+		if 'ConfigParam(36) = (null)' in result:
+			return None
+		return parse_validator_set(result)
 
 	def CreateNewKey(self):
 		self.local.add_log("start CreateNewKey function", "debug")
