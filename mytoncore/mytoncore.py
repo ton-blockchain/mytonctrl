@@ -26,13 +26,14 @@ from mytoncore.utils import (
 	nano_ton_to_ton
 )
 from mytoncore.output import (
-    lc_result_to_list,
-    tlb_to_json,
-    get_var_from_text,
-    get_var_from_dict,
-    get_int_from_dict,
-    get_item_from_dict,
-    get_key_from_dict,
+	get_cell_body,
+	lc_result_to_list,
+	tlb_to_json,
+	get_var_from_text,
+	get_var_from_dict,
+	get_int_from_dict,
+	get_item_from_dict,
+	get_key_from_dict, get_var_from_worker_output,
 )
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
@@ -178,36 +179,6 @@ class MyTonCore:
 			return Paths()
 		return Paths.from_dict(paths)
 
-	def GetVarFromWorkerOutput(self, text: str, search: str):
-		if ':' not in search:
-			search += ':'
-		if search is None or text is None:
-			return None
-		if search not in text:
-			return None
-		start = text.find(search) + len(search)
-		count = 0
-		bcount = 0
-		textLen = len(text)
-		end = textLen
-		for i in range(start, textLen):
-			letter = text[i]
-			if letter == '(':
-				count += 1
-				bcount += 1
-			elif letter == ')':
-				count -= 1
-			if letter == ')' and count < 1:
-				end = i + 1
-				break
-			elif letter == '\n' and count < 1:
-				end = i
-				break
-		result = text[start:end]
-		if count != 0 and bcount == 0:
-			result = result.replace(')', '')
-		return result
-
 	def run_get_method(self, addr: str, method: str):
 		cmd = f"runmethodfull {addr} {method}"
 		result = self.liteClient.run(cmd)
@@ -225,21 +196,20 @@ class MyTonCore:
 		account = Account(workchain, addr)
 		cmd = "getaccount {inputAddr}".format(inputAddr=inputAddr)
 		result = self.liteClient.run(cmd)
-		storage = self.GetVarFromWorkerOutput(result, "storage")
+		storage = get_var_from_worker_output(result, "storage")
 		if storage is None:
 			return account
-		addr = self.GetVarFromWorkerOutput(result, "addr")
-		balance = self.GetVarFromWorkerOutput(storage, "balance")
-		grams = self.GetVarFromWorkerOutput(balance, "grams")
-		value = self.GetVarFromWorkerOutput(grams, "value")
-		state = self.GetVarFromWorkerOutput(storage, "state")
-		code_buff = self.GetVarFromWorkerOutput(state, "code")
-		data_buff = self.GetVarFromWorkerOutput(state, "data")
-		code = self.GetVarFromWorkerOutput(code_buff, "value")
-		data = self.GetVarFromWorkerOutput(data_buff, "value")
-		code = self.GetBody(code)
-		data = self.GetBody(data)
-		codeHash = self.GetCodeHash(code)
+		balance = get_var_from_worker_output(storage, "balance")
+		grams = get_var_from_worker_output(balance, "grams")
+		value = get_var_from_worker_output(grams, "value")
+		state = get_var_from_worker_output(storage, "state")
+		code_buff = get_var_from_worker_output(state, "code")
+		code = get_var_from_worker_output(code_buff, "value")
+		code_hash = None
+		if code is not None:
+			code = get_cell_body(code.split('\n'))
+			code_bytes = bytes.fromhex(code)
+			code_hash = hashlib.sha256(code_bytes).hexdigest()
 		status = parse(state, "account_", '\n')
 		if status is not None:
 			account.status = status
@@ -247,17 +217,8 @@ class MyTonCore:
 			account.balance = nano_ton_to_ton(int(value))
 		account.lt = parse(result, "lt = ", ' ')
 		account.hash = parse(result, "hash = ", '\n')
-		account.codeHash = codeHash
+		account.codeHash = code_hash
 		return account
-	#end define
-
-	def GetCodeHash(self, code):
-		if code is None:
-			return
-		codeBytes = bytes.fromhex(code)
-		codeHash = hashlib.sha256(codeBytes).hexdigest()
-		return codeHash
-	#end define
 
 	def GetAccountHistory(self, account, limit) -> list[Message]:
 		self.local.add_log("start GetAccountHistory function", "debug")
@@ -317,7 +278,9 @@ class MyTonCore:
 			message = get_item_from_dict(data, "message")
 			body = get_item_from_dict(message, "body")
 			value = get_item_from_dict(body, "value")
-			body = self.GetBodyFromDict(value)
+			body = None
+			if value is not None:
+				body = get_cell_body(value) or None
 
 			message = Message(
 				transaction=tr,
@@ -339,62 +302,6 @@ class MyTonCore:
 				result.append(item)
 		#end for
 		result.reverse()
-		return result
-	#end define
-
-	def GetBody(self, buff):
-		if buff is None:
-			return
-		#end if
-
-		body = ""
-		arr = buff.split('\n')
-		for item in arr:
-			if "x{" not in item:
-				continue
-			buff = parse(item, '{', '}')
-			buff = buff.replace('_', '')
-			if len(buff)%2 == 1:
-				buff = "0" + buff
-			body += buff
-		#end for
-		return body
-	#end define
-
-	def GetBodyFromDict(self, buff):
-		if buff is None:
-			return
-		#end if
-
-		body = ""
-		for item in buff:
-			if "x{" not in item:
-				continue
-			buff = parse(item, '{', '}')
-			buff = buff.replace('_', '')
-			if len(buff)%2 == 1:
-				buff = "0" + buff
-			body += buff
-		#end for
-		if body == "":
-			body = None
-		return body
-	#end define
-
-	def GetComment(self, body):
-		if body is None:
-			return
-		#end if
-
-		start = body[:8]
-		data = body[8:]
-		result = None
-		if start == "00000000":
-			buff = bytes.fromhex(data)
-			try:
-				result = buff.decode("utf-8")
-			except Exception:
-				pass
 		return result
 	#end define
 
@@ -506,7 +413,7 @@ class MyTonCore:
 		#end if
 
 		result = self.liteClient.run("getconfig 0")
-		configAddr_hex = self.GetVarFromWorkerOutput(result, "config_addr:x")
+		configAddr_hex = get_var_from_worker_output(result, "config_addr:x")
 		fullConfigAddr = "-1:{configAddr_hex}".format(configAddr_hex=configAddr_hex)
 
 		# Set buffer
@@ -524,7 +431,7 @@ class MyTonCore:
 
 		# Get data
 		result = self.liteClient.run("getconfig 1")
-		electorAddr_hex = self.GetVarFromWorkerOutput(result, "elector_addr:x")
+		electorAddr_hex = get_var_from_worker_output(result, "elector_addr:x")
 		fullElectorAddr = "-1:{electorAddr_hex}".format(electorAddr_hex=electorAddr_hex)
 
 		# Set buffer
@@ -535,7 +442,7 @@ class MyTonCore:
 	def GetActiveElectionId(self, full_elector_addr: str) -> int:
 		cmd = "runmethodfull {fullElectorAddr} active_election_id".format(fullElectorAddr=full_elector_addr)
 		result = self.liteClient.run(cmd)
-		activeElectionId = self.GetVarFromWorkerOutput(result, "result")
+		activeElectionId = get_var_from_worker_output(result, "result")
 		if activeElectionId is None:
 			raise ValueError(f"result is not found: {result}")
 		activeElectionId = activeElectionId.replace(' ', '')
@@ -578,6 +485,8 @@ class MyTonCore:
 		cmd = cmd.format(workchain=workchain, shardchain=shardchain, seqno=seqno)
 		result = self.liteClient.run(cmd)
 		block_str =  parse(result, "block header of ", ' ')
+		if block_str is None:
+			raise ValueError(f"block is not found: {result}")
 		block = Block.from_str(block_str)
 		return block
 	#end define
@@ -1432,9 +1341,10 @@ class MyTonCore:
 	#end define
 
 	def GetValidatorConfig(self):
-		#self.local.add_log("start GetValidatorConfig function", "debug")
 		result = self.validatorConsole.run("getconfig")
 		text = parse(result, "---------", "--------")
+		if text is None:
+			raise ValueError(f"Could not get validator config: {result}")
 		vconfig = json.loads(text)
 		return Dict(vconfig)
 	#end define

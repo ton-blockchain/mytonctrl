@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Union, TypeVar
+from typing import Any, Iterable, List, Union, TypeVar
 
 import json
 import re
@@ -151,9 +151,11 @@ def get_var_from_text(text: str | None, search: str | None):
     return text
 
 
-def get_var_from_worker_output(text: str, search: str):
+def get_var_from_worker_output(text: str | None, search: str):
     if ':' not in search:
         search += ':'
+    if text is None:
+        return None
     if search not in text:
         return None
     start = text.find(search) + len(search)
@@ -212,3 +214,16 @@ def get_item_from_dict(data: dict[str, X] | None, search: str) -> X | None:
 
 def get_key_from_dict(data: dict[str, X] | None, search: str) -> str | None:
     return _find_in_dict(data, search)[0]
+
+
+def get_cell_body(buff: Iterable[str]):
+    body = ""
+    for item in buff:
+        if "x{" not in item:
+            continue
+        buff = item[item.index("x{") + 2 : item.index("}")]
+        buff = buff.replace("_", "")
+        if len(buff) % 2 == 1:
+            buff = "0" + buff
+        body += buff
+    return body
