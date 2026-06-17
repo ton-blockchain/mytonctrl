@@ -227,7 +227,7 @@ class Config:
     main_validators: int
     start_work_time: int
     end_work_time: int
-    total_weight: int | None
+    total_weight: int
     validators: list[ValidatorConfig]
 
 

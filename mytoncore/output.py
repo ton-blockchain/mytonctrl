@@ -150,6 +150,6 @@ def parse_validator_set(param: str) -> Config:
         main_validators=parse_int("main:", param),
         start_work_time=parse_int("utime_since:", param),
         end_work_time=parse_int("utime_until:", param),
-        total_weight=parse_int("total_weight:", param) if 'total_weight:' in param else None,
+        total_weight=parse_int("total_weight:", param),
         validators=validators,
     )
