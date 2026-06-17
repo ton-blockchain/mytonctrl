@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 import os
+import re
 from pathlib import Path
 import struct
 from dataclasses import dataclass, fields
 from typing import TypedDict, Any
 
+from mytoncore.output import parse_int, parse_nanograms
 from mytoncore.utils import raw_addr_to_b64
 
 
@@ -163,19 +165,54 @@ class CacheResult:
 
 
 @dataclass
+class WorkchainConfig:  # some useful data from config param 12
+    enabled_since: int
+    monitor_min_split: int
+    min_split: int
+    max_split: int
+
+    @classmethod
+    def from_str(cls, s: str):
+        return cls(
+            enabled_since=parse_int("enabled_since", s),
+            monitor_min_split=parse_int("monitor_min_split", s),
+            min_split=parse_int("min_split", s),
+            max_split=parse_int("max_split", s),
+        )
+
+
+@dataclass
 class Config15:
     validators_elected_for: int
     elections_start_before: int
     elections_end_before: int
     stake_held_for: int
 
+    @classmethod
+    def from_str(cls, s: str):
+        return cls(
+            validators_elected_for=parse_int("validators_elected_for", s),
+            elections_start_before=parse_int("elections_start_before", s),
+            elections_end_before=parse_int("elections_end_before", s),
+            stake_held_for=parse_int("stake_held_for", s),
+        )
+
 
 @dataclass
 class Config17:
     min_stake: float
     max_stake: float
-    max_stake_factor: int
     min_total_stake: float
+    max_stake_factor: int
+
+    @classmethod
+    def from_str(cls, s: str):
+        return cls(
+            min_stake=parse_nanograms("min_stake", s),
+            max_stake=parse_nanograms("max_stake", s),
+            min_total_stake=parse_nanograms("min_total_stake", s),
+            max_stake_factor=parse_int("max_stake_factor", s),
+        )
 
 
 class ElectionsParticipant(TypedDict):
@@ -229,6 +266,39 @@ class Config:
     end_work_time: int
     total_weight: int
     validators: list[ValidatorConfig]
+
+    @staticmethod
+    def _parse_validator_set(param: str):
+        lines = param.split("\n")
+        validator_re = re.compile(
+            r"pubkey:x([0-9A-Fa-f]+)"  # public key hex
+            + r".*?weight:(\d+)"  # weight digits
+            + r".*?adnl_addr:x([0-9A-Fa-f]+)"  # adnl address hex
+        )
+
+        validators: list[ValidatorConfig] = []
+        for line in lines:
+            if "public_key:" not in line:
+                continue
+            m = validator_re.search(line)
+            if not m:
+                continue
+            pubkey, weight, adnl_addr = m.groups()
+            validators.append(
+                ValidatorConfig(adnl_addr=adnl_addr, pubkey=pubkey, weight=int(weight))
+            )
+        return Config(
+            total_validators=parse_int("total", param),
+            main_validators=parse_int("main", param),
+            start_work_time=parse_int("utime_since", param),
+            end_work_time=parse_int("utime_until", param),
+            total_weight=parse_int("total_weight", param),
+            validators=validators,
+        )
+
+    @classmethod
+    def from_str(cls, s: str):
+        return cls._parse_validator_set(s)
 
 
 @dataclass(frozen=True)

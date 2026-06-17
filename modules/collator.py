@@ -64,7 +64,7 @@ class CollatorModule(MtcModule):
         node_shards = node_args['--add-shard']
         shards_need_to_add = [shard for shard in shards if shard not in node_shards]
         if not force and shards_need_to_add and '-M' in node_args:
-            monitor_min_split = self.ton.get_basechain_config()['monitor_min_split']
+            monitor_min_split = self.ton.get_basechain_config().monitor_min_split
             self._check_input_shards(node_shards, shards_need_to_add, monitor_min_split)
         if adnl_addr is None:
             adnl_addr = self.ton.CreateNewKey()
