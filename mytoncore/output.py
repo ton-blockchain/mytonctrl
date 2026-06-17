@@ -8,7 +8,6 @@ import json
 import re
 
 from mypylib.mypylib import parse
-from mytoncore.models import Config, ValidatorConfig
 
 
 T = List[Union[str, int, "T"]]
@@ -119,37 +118,17 @@ def tlb_to_json(text: str) -> dict[str, Any]:
 
 
 def parse_int(key: str, text: str):
-    m = re.search(rf"{re.escape(key)}(\d+)", text)
+    m = re.search(rf"\b{re.escape(key)}:(\d+)", text)
     if m is None:
         raise ValueError(f"Key {key} not found in text: {text}")
     return int(m.group(1))
 
 
-def parse_validator_set(param: str) -> Config:
-
-    lines = param.split('\n')
-    VALIDATOR_RE = re.compile(
-        r"pubkey:x([0-9A-Fa-f]+)" +  # public key hex
-        r".*?weight:(\d+)" +  # weight digits
-        r".*?adnl_addr:x([0-9A-Fa-f]+)"  # adnl address hex
+def parse_nanograms(key: str, text: str) -> float:
+    m = re.search(
+        rf"\b{re.escape(key)}:\(nanograms\s+amount:\(var_uint\s+len:\d+\s+value:(\d+)\)",
+        text,
     )
-
-    validators: list[ValidatorConfig] = []
-    for line in lines:
-        if "public_key:" not in line:
-            continue
-        m = VALIDATOR_RE.search(line)
-        if not m:
-            continue
-        pubkey, weight, adnl_addr = m.groups()
-        validators.append(
-            ValidatorConfig(adnl_addr=adnl_addr, pubkey=pubkey, weight=int(weight))
-        )
-    return Config(
-        total_validators=parse_int("total:", param),
-        main_validators=parse_int("main:", param),
-        start_work_time=parse_int("utime_since:", param),
-        end_work_time=parse_int("utime_until:", param),
-        total_weight=parse_int("total_weight:", param) if 'total_weight:' in param else None,
-        validators=validators,
-    )
+    if m is None:
+        raise ValueError(f"Key {key!r} not found in text: {text!r}")
+    return int(m.group(1)) / 10**9

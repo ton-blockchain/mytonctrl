@@ -27,21 +27,25 @@ from mytoncore.utils import (
 )
 from mytoncore.output import (
     lc_result_to_list,
-    parse_int,
     tlb_to_json,
-    parse_validator_set,
 )
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
-	Config,
-	Paths,
-	ValidatorConfigExt,
-	Wallet,
-	Account,
-	Block,
-	Transaction,
-	Message,
-	Pool, Config15, ElectionsParticipant, Config17, CacheResult, BlockHead,
+    Config,
+    Paths,
+    ValidatorConfigExt,
+    Wallet,
+    Account,
+    Block,
+    Transaction,
+    Message,
+    Pool,
+    Config15,
+    ElectionsParticipant,
+    Config17,
+    CacheResult,
+    BlockHead,
+    WorkchainConfig,
 )
 
 from mypylib.mypylib import (
@@ -694,31 +698,21 @@ class MyTonCore:
 		self.SetFunctionBuffer(bname, data)
 		return data
 
-	def get_basechain_config(self) -> dict:
-		config12 = self.get_config(12)
-		return config12["workchains"]["root"]["node"]["value"]
+	def get_basechain_config(self) -> WorkchainConfig:
+		result = self.liteClient.run("getconfig 12")
+		return WorkchainConfig.from_str(result)
 
 	def get_root_workchain_enabled_time(self) -> int:
-		enabled_time = self.get_basechain_config()["enabled_since"]
+		enabled_time = self.get_basechain_config().enabled_since
 		return enabled_time
 
 	def get_config_15(self) -> Config15:
 		result = self.liteClient.run("getconfig 15")
-		return Config15(
-			validators_elected_for=parse_int("validators_elected_for:", result),
-			elections_start_before=parse_int("elections_start_before:", result),
-			elections_end_before=parse_int("elections_end_before:", result),
-			stake_held_for=parse_int("stake_held_for:", result),
-		)
+		return Config15.from_str(result)
 
 	def get_config_17(self) -> Config17:
-		config = self.get_config(17)
-		return Config17(
-			min_stake=nano_ton_to_ton(config["min_stake"]["amount"]["value"]),
-			max_stake=nano_ton_to_ton(config["max_stake"]["amount"]["value"]),
-			max_stake_factor=config["max_stake_factor"],
-			min_total_stake=nano_ton_to_ton(config["min_total_stake"]["amount"]["value"])
-		)
+		result = self.liteClient.run("getconfig 17")
+		return Config17.from_str(result)
 
 	def get_config_32(self) -> Config:
 		bname = "typed_config32"
@@ -726,7 +720,7 @@ class MyTonCore:
 		if buff:
 			return buff
 		result = self.liteClient.run("getconfig 32")
-		config32 = parse_validator_set(result)
+		config32 = Config.from_str(result)
 		self.SetFunctionBuffer(bname, config32)
 		return config32
 
@@ -736,17 +730,15 @@ class MyTonCore:
 		if buff and not no_cache:
 			return buff
 		result = self.liteClient.run("getconfig 34")
-		config34 = parse_validator_set(result)
+		config34 = Config.from_str(result)
 		self.SetFunctionBuffer(bname, config34)
 		return config34
 
 	def get_config_36(self) -> Config | None:
 		result = self.liteClient.run("getconfig 36")
-		try:
-			config36 = parse_validator_set(result)
-		except Exception:
-			config36 = None
-		return config36
+		if 'ConfigParam(36) = (null)' in result:
+			return None
+		return Config.from_str(result)
 
 	def CreateNewKey(self):
 		self.local.add_log("start CreateNewKey function", "debug")

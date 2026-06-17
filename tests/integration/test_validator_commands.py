@@ -76,13 +76,13 @@ def test_check_ef(cli, monkeypatch, mocker: MockerFixture):
     config32 = Config(
         total_validators=100, main_validators=100,
         start_work_time=1000000, end_work_time=2000000,
-        total_weight=None, validators=[],
+        total_weight=50000, validators=[],
     )
 
     config34 = Config(
         total_validators=100, main_validators=100,
         start_work_time=2000000, end_work_time=3000000,
-        total_weight=None, validators=[],
+        total_weight=50000, validators=[],
     )
 
     monkeypatch.setattr(MyTonCore, "GetValidatorsList", lambda self, past=False: [prev_validator] if past else [curr_validator])
