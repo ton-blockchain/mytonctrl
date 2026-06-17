@@ -28,6 +28,11 @@ from mytoncore.utils import (
 from mytoncore.output import (
     lc_result_to_list,
     tlb_to_json,
+    get_var_from_text,
+    get_var_from_dict,
+    get_int_from_dict,
+    get_item_from_dict,
+    get_key_from_dict,
 )
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
@@ -272,40 +277,46 @@ class MyTonCore:
 		cmd = f"lasttransdump {addr} {lt} {transHash} {count}"
 		result = self.liteClient.run(cmd)
 		data = self.Result2Dict(result)
-		prevTrans = self.GetKeyFromDict(data, "previous transaction")
-		prevTransLt = self.GetVar(prevTrans, "lt")
-		prevTransHash = self.GetVar(prevTrans, "hash")
+		prevTrans = get_key_from_dict(data, "previous transaction")
+		prevTransLt = get_var_from_text(prevTrans, "lt")
+		prevTransHash = get_var_from_text(prevTrans, "hash")
 		for key, item in data.items():
 			if "transaction #" not in key:
 				continue
 			block_str = parse(key, "from block ", ' ')
-			description = self.GetKeyFromDict(item, "description")
-			type = self.GetVar(description, "trans_")
-			time = self.GetVarFromDict(item, "time")
-			#outmsg = self.GetVarFromDict(item, "outmsg_cnt")
-			total_fees = self.GetVarFromDict(item, "total_fees.grams.value")
+			if block_str is None:
+				raise ValueError(f'Invalid transaction block: {key}')
+			description = get_key_from_dict(item, "description")
+			type = get_var_from_text(description, "trans_")
+			time = get_int_from_dict(item, "time")
+			#outmsg = get_int_from_dict(item, "outmsg_cnt")
+			total_fees = get_int_from_dict(item, "total_fees.grams.value")
 			messages = self.GetMessagesFromTransaction(item)
 			tr = Transaction(block=Block.from_str(block_str), type=type, time=time, total_fees=ng2g(total_fees))
 			history += self.parse_messages(messages, tr)
 		return history, prevTransLt, prevTransHash
 	#end define
 
-	def parse_messages(self, messages: list[dict], tr: Transaction) -> list[Message]:
+	def parse_messages(self, messages: list[dict[str, Any]], tr: Transaction) -> list[Message]:
 		history = list()
 		for data in messages:
-			src_workchain = self.GetVarFromDict(data, "message.info.src.workchain_id")
-			address = self.GetVarFromDict(data, "message.info.src.address")
-			src_addr = xhex2hex(address)
+			src_addr, dest_addr = None, None
 
-			dest_workchain = self.GetVarFromDict(data, "message.info.dest.workchain_id")
-			address = self.GetVarFromDict(data, "message.info.dest.address")
-			dest_addr = xhex2hex(address)
+			src_workchain = get_int_from_dict(data, "message.info.src.workchain_id")
+			address = get_var_from_dict(data, "message.info.src.address")
+			if address is not None:
+				src_addr = xhex2hex(address)
 
-			grams = self.GetVarFromDict(data, "message.info.value.grams.value")
+			dest_workchain = get_int_from_dict(data, "message.info.dest.workchain_id")
+			address = get_var_from_dict(data, "message.info.dest.address")
+			if address is not None:
+				dest_addr = xhex2hex(address)
 
-			message = self.GetItemFromDict(data, "message")
-			body = self.GetItemFromDict(message, "body")
-			value = self.GetItemFromDict(body, "value")
+			grams = get_int_from_dict(data, "message.info.value.grams.value")
+
+			message = get_item_from_dict(data, "message")
+			body = get_item_from_dict(message, "body")
+			value = get_item_from_dict(body, "value")
 			body = self.GetBodyFromDict(value)
 
 			message = Message(
@@ -2178,60 +2189,6 @@ class MyTonCore:
 				break
 		#end for
 		return result
-	#end define
-
-	def GetVarFromDict(self, data, search):
-		arr = search.split('.')
-		search2 = arr.pop()
-		for search in arr:
-			data = self.GetItemFromDict(data, search)
-		text = self.GetKeyFromDict(data, search2)
-		result = self.GetVar(text, search2)
-		if result is not None:
-			try:
-				result = int(result)
-			except ValueError:
-				pass
-		return result
-	#end define
-
-	def GetVar(self, text, search) -> str | None:
-		if search is None or text is None:
-			return None
-		if search not in text:
-			return None
-		text = text[text.find(search) + len(search):]
-		if text[0] in [':', '=', ' ']:
-			text = text[1:]
-		search2 = ')'
-		if search2 in text:
-			text = text[:text.find(search2)]
-		search2 = ' '
-		if search2 in text:
-			text = text[:text.find(search2)]
-		return text
-	#end define
-
-	def GetKeyFromDict(self, data, search):
-		if data is None:
-			return None
-		for key, item in data.items():
-			if search in key:
-				return key
-			#end if
-		#end for
-		return None
-	#end define
-
-	def GetItemFromDict(self, data, search):
-		if data is None:
-			return None
-		for key, item in data.items():
-			if search in key:
-				return item
-			#end if
-		#end for
-		return None
 	#end define
 
 	def AddBookmark(self, bookmark):

@@ -542,7 +542,7 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         trs = self.ton.GetAccountHistory(self.ton.GetAccount(wallet_addr), limit=10)
 
         for tr in trs:
-            if tr.time >= config.end_work_time + FREEZE_PERIOD and tr.src_addr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body is not None and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
+            if tr.time is not None and tr.time >= config.end_work_time + FREEZE_PERIOD and tr.src_addr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body is not None and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
                 if tr.value is None:
                     raise Exception(f"Stake returned transaction has no value: {tr}")
                 self.send_alert("stake_returned", stake=round(tr.value), address=wallet_addr, reward=round(tr.value - stake, 2))

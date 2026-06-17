@@ -123,7 +123,7 @@ class Block:
 class Transaction:
     block: Block
     type: str | None
-    time: int
+    time: int | None
     total_fees: float | None
 
     def __str__(self):

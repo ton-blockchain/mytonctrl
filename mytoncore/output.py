@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Union
+from typing import Any, List, Union, TypeVar
 
 import json
 import re
@@ -132,3 +132,83 @@ def parse_nanograms(key: str, text: str) -> float:
     if m is None:
         raise ValueError(f"Key {key!r} not found in text: {text!r}")
     return int(m.group(1)) / 10**9
+
+
+def get_var_from_text(text: str | None, search: str | None):
+    if search is None or text is None:
+        return
+    if search not in text:
+        return
+    text = text[text.find(search) + len(search):]
+    if text and text[0] in ':= ':
+        text = text[1:]
+    search2 = ')'
+    if search2 in text:
+        text = text[:text.find(search2)]
+    search2 = ' '
+    if search2 in text:
+        text = text[:text.find(search2)]
+    return text
+
+
+def get_var_from_worker_output(text: str, search: str):
+    if ':' not in search:
+        search += ':'
+    if search not in text:
+        return None
+    start = text.find(search) + len(search)
+    count = 0
+    bcount = 0
+    text_len = len(text)
+    end = text_len
+    for i in range(start, text_len):
+        letter = text[i]
+        if letter == '(':
+            count += 1
+            bcount += 1
+        elif letter == ')':
+            count -= 1
+        if letter == ')' and count < 1:
+            end = i + 1
+            break
+        elif letter == '\n' and count < 1:
+            end = i
+            break
+    result = text[start:end]
+    if count != 0 and bcount == 0:
+        result = result.replace(')', '')
+    return result
+
+
+def get_var_from_dict(data: dict[str, Any], search: str) -> str | None:
+    arr = search.split('.')
+    search2 = arr.pop()
+    d = data
+    for search in arr:
+        d = get_item_from_dict(d, search)
+    text = get_key_from_dict(d, search2)
+    result = get_var_from_text(text, search2)
+    return result
+
+
+def get_int_from_dict(data: dict[str, Any], search: str) -> int | None:
+    result = get_var_from_dict(data, search)
+    return int(result) if result is not None else None
+
+
+X = TypeVar("X")
+def _find_in_dict(data: dict[str, X] | None, search: str):
+  if data is None:
+      return None, None
+  for key, item in data.items():
+      if search in key:
+          return key, item
+  return None, None
+
+
+def get_item_from_dict(data: dict[str, X] | None, search: str) -> X | None:
+    return _find_in_dict(data, search)[1]
+
+
+def get_key_from_dict(data: dict[str, X] | None, search: str) -> str | None:
+    return _find_in_dict(data, search)[0]
