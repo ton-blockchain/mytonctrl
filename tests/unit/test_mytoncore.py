@@ -68,8 +68,7 @@ def test_getaccounthistory_iterates(ton: MyTonCore, monkeypatch):
     assert hist[0].src_workchain == -1 and hist[0].dest_workchain == -1
     assert hist[0].src_addr == '0000000000000000000000000000000000000000000000000000000000000000' and hist[0].dest_addr == '3333333333333333333333333333333333333333333333333333333333333333'
     assert hist[0].value == 1.7
-    assert hist[0].body is None and hist[0].comment is None
-    assert hist[0].ihr_disabled == 1
+    assert hist[0].body is None
 
 
 def test_getaccounthistory_paginates(ton: MyTonCore, monkeypatch):
@@ -79,7 +78,7 @@ def test_getaccounthistory_paginates(ton: MyTonCore, monkeypatch):
     def make_msg(t):
         tr = Transaction(block=Block(-1, '8000000000000000', 1, 'r', 'f'), type='ord', time=t, total_fees=0.0)
         return Message(transaction=tr, src_workchain=-1, dest_workchain=-1, src_addr='', dest_addr='',
-                       value=0.0, body=None, comment=None, ihr_fee=0.0, fwd_fee=0.0, ihr_disabled=1)
+                       value=0.0, body=None)
 
     calls = []
     batches = [
@@ -109,7 +108,7 @@ def test_getaccounthistory_stops_at_limit(ton: MyTonCore, monkeypatch):
     def make_msg(t):
         tr = Transaction(block=Block(-1, '8000000000000000', 1, 'r', 'f'), type='ord', time=t, total_fees=0.0)
         return Message(transaction=tr, src_workchain=-1, dest_workchain=-1, src_addr='', dest_addr='',
-                       value=0.0, body=None, comment=None, ihr_fee=0.0, fwd_fee=0.0, ihr_disabled=1)
+                       value=0.0, body=None)
 
     calls = []
 

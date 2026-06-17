@@ -268,7 +268,7 @@ class MyTonCore:
 	#end define
 
 	def LastTransDump(self, addr, lt, transHash, count=10):
-		history = list()
+		history: list[Message] = list()
 		cmd = f"lasttransdump {addr} {lt} {transHash} {count}"
 		result = self.liteClient.run(cmd)
 		data = self.Result2Dict(result)
@@ -290,11 +290,9 @@ class MyTonCore:
 		return history, prevTransLt, prevTransHash
 	#end define
 
-	def parse_messages(self, messages: list[dict], tr: Transaction):
+	def parse_messages(self, messages: list[dict], tr: Transaction) -> list[Message]:
 		history = list()
 		for data in messages:
-			ihr_disabled = self.GetVarFromDict(data, "message.ihr_disabled")
-
 			src_workchain = self.GetVarFromDict(data, "message.info.src.workchain_id")
 			address = self.GetVarFromDict(data, "message.info.src.address")
 			src_addr = xhex2hex(address)
@@ -304,32 +302,23 @@ class MyTonCore:
 			dest_addr = xhex2hex(address)
 
 			grams = self.GetVarFromDict(data, "message.info.value.grams.value")
-			ihr_fee = self.GetVarFromDict(data, "message.info.ihr_fee.value")
-			fwd_fee = self.GetVarFromDict(data, "message.info.fwd_fee.value")
 
 			message = self.GetItemFromDict(data, "message")
 			body = self.GetItemFromDict(message, "body")
 			value = self.GetItemFromDict(body, "value")
 			body = self.GetBodyFromDict(value)
-			comment = self.GetComment(body)
 
 			message = Message(
 				transaction=tr,
-				ihr_disabled=ihr_disabled,
 				src_workchain=src_workchain,
 				dest_workchain=dest_workchain,
 				src_addr=src_addr,
 				dest_addr=dest_addr,
 				value=ng2g(grams),
 				body=body,
-				comment=comment,
-				ihr_fee=ng2g(ihr_fee),
-				fwd_fee=ng2g(fwd_fee)
 			)
 			history.append(message)
-		#end for
 		return history
-	#end define
 
 	def GetMessagesFromTransaction(self, data):
 		result = list()
