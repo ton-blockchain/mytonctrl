@@ -123,7 +123,7 @@ class Block:
 class Transaction:
     block: Block
     type: str | None
-    time: int
+    time: int | None
     total_fees: float | None
 
     def __str__(self):
@@ -142,10 +142,6 @@ class Message:
     dest_addr: str | None
     value: float | None
     body: str | None
-    comment: str | None
-    ihr_fee: float | None
-    fwd_fee: float | None
-    ihr_disabled: bool | None
 
     @property
     def time(self):

@@ -26,8 +26,14 @@ from mytoncore.utils import (
 	nano_ton_to_ton
 )
 from mytoncore.output import (
-    lc_result_to_list,
-    tlb_to_json,
+	get_cell_body,
+	lc_result_to_list,
+	tlb_to_json,
+	get_var_from_text,
+	get_var_from_dict,
+	get_int_from_dict,
+	get_item_from_dict,
+	get_key_from_dict, get_var_from_worker_output,
 )
 from mytoncore.clients import Fift, LiteClient, ValidatorConsole
 from mytoncore.models import (
@@ -52,7 +58,8 @@ from mypylib.mypylib import (
 	parse,
 	get_timestamp,
 	dec2hex,
-	Dict, int2ip, MyPyClass
+	Dict, int2ip, MyPyClass,
+	parse_int_forced
 )
 from mytoncore.vm_stack import parse_result_stack
 
@@ -173,36 +180,6 @@ class MyTonCore:
 			return Paths()
 		return Paths.from_dict(paths)
 
-	def GetVarFromWorkerOutput(self, text: str, search: str):
-		if ':' not in search:
-			search += ':'
-		if search is None or text is None:
-			return None
-		if search not in text:
-			return None
-		start = text.find(search) + len(search)
-		count = 0
-		bcount = 0
-		textLen = len(text)
-		end = textLen
-		for i in range(start, textLen):
-			letter = text[i]
-			if letter == '(':
-				count += 1
-				bcount += 1
-			elif letter == ')':
-				count -= 1
-			if letter == ')' and count < 1:
-				end = i + 1
-				break
-			elif letter == '\n' and count < 1:
-				end = i
-				break
-		result = text[start:end]
-		if count != 0 and bcount == 0:
-			result = result.replace(')', '')
-		return result
-
 	def run_get_method(self, addr: str, method: str):
 		cmd = f"runmethodfull {addr} {method}"
 		result = self.liteClient.run(cmd)
@@ -220,21 +197,20 @@ class MyTonCore:
 		account = Account(workchain, addr)
 		cmd = "getaccount {inputAddr}".format(inputAddr=inputAddr)
 		result = self.liteClient.run(cmd)
-		storage = self.GetVarFromWorkerOutput(result, "storage")
+		storage = get_var_from_worker_output(result, "storage")
 		if storage is None:
 			return account
-		addr = self.GetVarFromWorkerOutput(result, "addr")
-		balance = self.GetVarFromWorkerOutput(storage, "balance")
-		grams = self.GetVarFromWorkerOutput(balance, "grams")
-		value = self.GetVarFromWorkerOutput(grams, "value")
-		state = self.GetVarFromWorkerOutput(storage, "state")
-		code_buff = self.GetVarFromWorkerOutput(state, "code")
-		data_buff = self.GetVarFromWorkerOutput(state, "data")
-		code = self.GetVarFromWorkerOutput(code_buff, "value")
-		data = self.GetVarFromWorkerOutput(data_buff, "value")
-		code = self.GetBody(code)
-		data = self.GetBody(data)
-		codeHash = self.GetCodeHash(code)
+		balance = get_var_from_worker_output(storage, "balance")
+		grams = get_var_from_worker_output(balance, "grams")
+		value = get_var_from_worker_output(grams, "value")
+		state = get_var_from_worker_output(storage, "state")
+		code_buff = get_var_from_worker_output(state, "code")
+		code = get_var_from_worker_output(code_buff, "value")
+		code_hash = None
+		if code is not None:
+			code = get_cell_body(code.split('\n'))
+			code_bytes = bytes.fromhex(code)
+			code_hash = hashlib.sha256(code_bytes).hexdigest()
 		status = parse(state, "account_", '\n')
 		if status is not None:
 			account.status = status
@@ -242,17 +218,8 @@ class MyTonCore:
 			account.balance = nano_ton_to_ton(int(value))
 		account.lt = parse(result, "lt = ", ' ')
 		account.hash = parse(result, "hash = ", '\n')
-		account.codeHash = codeHash
+		account.codeHash = code_hash
 		return account
-	#end define
-
-	def GetCodeHash(self, code):
-		if code is None:
-			return
-		codeBytes = bytes.fromhex(code)
-		codeHash = hashlib.sha256(codeBytes).hexdigest()
-		return codeHash
-	#end define
 
 	def GetAccountHistory(self, account, limit) -> list[Message]:
 		self.local.add_log("start GetAccountHistory function", "debug")
@@ -268,68 +235,65 @@ class MyTonCore:
 	#end define
 
 	def LastTransDump(self, addr, lt, transHash, count=10):
-		history = list()
+		history: list[Message] = list()
 		cmd = f"lasttransdump {addr} {lt} {transHash} {count}"
 		result = self.liteClient.run(cmd)
 		data = self.Result2Dict(result)
-		prevTrans = self.GetKeyFromDict(data, "previous transaction")
-		prevTransLt = self.GetVar(prevTrans, "lt")
-		prevTransHash = self.GetVar(prevTrans, "hash")
+		prevTrans = get_key_from_dict(data, "previous transaction")
+		prevTransLt = get_var_from_text(prevTrans, "lt")
+		prevTransHash = get_var_from_text(prevTrans, "hash")
 		for key, item in data.items():
 			if "transaction #" not in key:
 				continue
 			block_str = parse(key, "from block ", ' ')
-			description = self.GetKeyFromDict(item, "description")
-			type = self.GetVar(description, "trans_")
-			time = self.GetVarFromDict(item, "time")
-			#outmsg = self.GetVarFromDict(item, "outmsg_cnt")
-			total_fees = self.GetVarFromDict(item, "total_fees.grams.value")
+			if block_str is None:
+				raise ValueError(f'Invalid transaction block: {key}')
+			description = get_key_from_dict(item, "description")
+			type = get_var_from_text(description, "trans_")
+			time = get_int_from_dict(item, "time")
+			#outmsg = get_int_from_dict(item, "outmsg_cnt")
+			total_fees = get_int_from_dict(item, "total_fees.grams.value")
 			messages = self.GetMessagesFromTransaction(item)
 			tr = Transaction(block=Block.from_str(block_str), type=type, time=time, total_fees=ng2g(total_fees))
 			history += self.parse_messages(messages, tr)
 		return history, prevTransLt, prevTransHash
 	#end define
 
-	def parse_messages(self, messages: list[dict], tr: Transaction):
+	def parse_messages(self, messages: list[dict[str, Any]], tr: Transaction) -> list[Message]:
 		history = list()
 		for data in messages:
-			ihr_disabled = self.GetVarFromDict(data, "message.ihr_disabled")
+			src_addr, dest_addr = None, None
 
-			src_workchain = self.GetVarFromDict(data, "message.info.src.workchain_id")
-			address = self.GetVarFromDict(data, "message.info.src.address")
-			src_addr = xhex2hex(address)
+			src_workchain = get_int_from_dict(data, "message.info.src.workchain_id")
+			address = get_var_from_dict(data, "message.info.src.address")
+			if address is not None:
+				src_addr = xhex2hex(address)
 
-			dest_workchain = self.GetVarFromDict(data, "message.info.dest.workchain_id")
-			address = self.GetVarFromDict(data, "message.info.dest.address")
-			dest_addr = xhex2hex(address)
+			dest_workchain = get_int_from_dict(data, "message.info.dest.workchain_id")
+			address = get_var_from_dict(data, "message.info.dest.address")
+			if address is not None:
+				dest_addr = xhex2hex(address)
 
-			grams = self.GetVarFromDict(data, "message.info.value.grams.value")
-			ihr_fee = self.GetVarFromDict(data, "message.info.ihr_fee.value")
-			fwd_fee = self.GetVarFromDict(data, "message.info.fwd_fee.value")
+			grams = get_int_from_dict(data, "message.info.value.grams.value")
 
-			message = self.GetItemFromDict(data, "message")
-			body = self.GetItemFromDict(message, "body")
-			value = self.GetItemFromDict(body, "value")
-			body = self.GetBodyFromDict(value)
-			comment = self.GetComment(body)
+			message = get_item_from_dict(data, "message")
+			body = get_item_from_dict(message, "body")
+			value = get_item_from_dict(body, "value")
+			body = None
+			if value is not None:
+				body = get_cell_body(value) or None
 
 			message = Message(
 				transaction=tr,
-				ihr_disabled=ihr_disabled,
 				src_workchain=src_workchain,
 				dest_workchain=dest_workchain,
 				src_addr=src_addr,
 				dest_addr=dest_addr,
 				value=ng2g(grams),
 				body=body,
-				comment=comment,
-				ihr_fee=ng2g(ihr_fee),
-				fwd_fee=ng2g(fwd_fee)
 			)
 			history.append(message)
-		#end for
 		return history
-	#end define
 
 	def GetMessagesFromTransaction(self, data):
 		result = list()
@@ -339,62 +303,6 @@ class MyTonCore:
 				result.append(item)
 		#end for
 		result.reverse()
-		return result
-	#end define
-
-	def GetBody(self, buff):
-		if buff is None:
-			return
-		#end if
-
-		body = ""
-		arr = buff.split('\n')
-		for item in arr:
-			if "x{" not in item:
-				continue
-			buff = parse(item, '{', '}')
-			buff = buff.replace('_', '')
-			if len(buff)%2 == 1:
-				buff = "0" + buff
-			body += buff
-		#end for
-		return body
-	#end define
-
-	def GetBodyFromDict(self, buff):
-		if buff is None:
-			return
-		#end if
-
-		body = ""
-		for item in buff:
-			if "x{" not in item:
-				continue
-			buff = parse(item, '{', '}')
-			buff = buff.replace('_', '')
-			if len(buff)%2 == 1:
-				buff = "0" + buff
-			body += buff
-		#end for
-		if body == "":
-			body = None
-		return body
-	#end define
-
-	def GetComment(self, body):
-		if body is None:
-			return
-		#end if
-
-		start = body[:8]
-		data = body[8:]
-		result = None
-		if start == "00000000":
-			buff = bytes.fromhex(data)
-			try:
-				result = buff.decode("utf-8")
-			except Exception:
-				pass
 		return result
 	#end define
 
@@ -506,7 +414,7 @@ class MyTonCore:
 		#end if
 
 		result = self.liteClient.run("getconfig 0")
-		configAddr_hex = self.GetVarFromWorkerOutput(result, "config_addr:x")
+		configAddr_hex = get_var_from_worker_output(result, "config_addr:x")
 		fullConfigAddr = "-1:{configAddr_hex}".format(configAddr_hex=configAddr_hex)
 
 		# Set buffer
@@ -524,7 +432,7 @@ class MyTonCore:
 
 		# Get data
 		result = self.liteClient.run("getconfig 1")
-		electorAddr_hex = self.GetVarFromWorkerOutput(result, "elector_addr:x")
+		electorAddr_hex = get_var_from_worker_output(result, "elector_addr:x")
 		fullElectorAddr = "-1:{electorAddr_hex}".format(electorAddr_hex=electorAddr_hex)
 
 		# Set buffer
@@ -535,7 +443,7 @@ class MyTonCore:
 	def GetActiveElectionId(self, full_elector_addr: str) -> int:
 		cmd = "runmethodfull {fullElectorAddr} active_election_id".format(fullElectorAddr=full_elector_addr)
 		result = self.liteClient.run(cmd)
-		activeElectionId = self.GetVarFromWorkerOutput(result, "result")
+		activeElectionId = get_var_from_worker_output(result, "result")
 		if activeElectionId is None:
 			raise ValueError(f"result is not found: {result}")
 		activeElectionId = activeElectionId.replace(' ', '')
@@ -578,6 +486,8 @@ class MyTonCore:
 		cmd = cmd.format(workchain=workchain, shardchain=shardchain, seqno=seqno)
 		result = self.liteClient.run(cmd)
 		block_str =  parse(result, "block header of ", ' ')
+		if block_str is None:
+			raise ValueError(f"block is not found: {result}")
 		block = Block.from_str(block_str)
 		return block
 	#end define
@@ -629,10 +539,10 @@ class MyTonCore:
 			# Parse
 			status.is_working = True
 			result = self.validatorConsole.run("getstats")
-			status.unixtime = int(parse(result, "unixtime", '\n'))
-			status.masterchainblocktime = int(parse(result, "masterchainblocktime", '\n'))
-			status.stateserializermasterchainseqno = int(parse(result, "stateserializermasterchainseqno", '\n'))
-			status.shardclientmasterchainseqno = int(parse(result, "shardclientmasterchainseqno", '\n'))
+			status.unixtime = parse_int_forced(result, "unixtime", '\n')
+			status.masterchainblocktime = parse_int_forced(result, "masterchainblocktime", '\n')
+			status.stateserializermasterchainseqno = parse_int_forced(result, "stateserializermasterchainseqno", '\n')
+			status.shardclientmasterchainseqno = parse_int_forced(result, "shardclientmasterchainseqno", '\n')
 			buff = parse(result, "masterchainblock", '\n')
 			status.masterchainblock = self.GVS_GetItemFromBuff(buff)
 			buff = parse(result, "gcmasterchainblock", '\n')
@@ -647,7 +557,7 @@ class MyTonCore:
 			status.masterchain_out_of_ser = status.masterchainblock - status.stateserializermasterchainseqno
 			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
 			status.out_of_ser = status.masterchain_out_of_ser
-			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
+			status.last_deleted_mc_state = parse_int_forced(result, "last_deleted_mc_state", '\n')
 			state_serializer_enabled = parse(result, "stateserializerenabled", '\n')
 			if state_serializer_enabled is not None:
 				status.stateserializerenabled = state_serializer_enabled.strip() == "true"
@@ -1126,6 +1036,8 @@ class MyTonCore:
 
 		# Get ADNL address
 		adnl_addr = self.GetAdnlAddr()
+		if adnl_addr is None:
+			raise Exception("Failed to get ADNL address")
 		adnl_addr_bytes = bytes.fromhex(adnl_addr)
 
 		# Check wether it is too early to participate
@@ -1432,9 +1344,10 @@ class MyTonCore:
 	#end define
 
 	def GetValidatorConfig(self):
-		#self.local.add_log("start GetValidatorConfig function", "debug")
 		result = self.validatorConsole.run("getconfig")
 		text = parse(result, "---------", "--------")
+		if text is None:
+			raise ValueError(f"Could not get validator config: {result}")
 		vconfig = json.loads(text)
 		return Dict(vconfig)
 	#end define
@@ -2189,60 +2102,6 @@ class MyTonCore:
 				break
 		#end for
 		return result
-	#end define
-
-	def GetVarFromDict(self, data, search):
-		arr = search.split('.')
-		search2 = arr.pop()
-		for search in arr:
-			data = self.GetItemFromDict(data, search)
-		text = self.GetKeyFromDict(data, search2)
-		result = self.GetVar(text, search2)
-		if result is not None:
-			try:
-				result = int(result)
-			except ValueError:
-				pass
-		return result
-	#end define
-
-	def GetVar(self, text, search) -> str | None:
-		if search is None or text is None:
-			return None
-		if search not in text:
-			return None
-		text = text[text.find(search) + len(search):]
-		if text[0] in [':', '=', ' ']:
-			text = text[1:]
-		search2 = ')'
-		if search2 in text:
-			text = text[:text.find(search2)]
-		search2 = ' '
-		if search2 in text:
-			text = text[:text.find(search2)]
-		return text
-	#end define
-
-	def GetKeyFromDict(self, data, search):
-		if data is None:
-			return None
-		for key, item in data.items():
-			if search in key:
-				return key
-			#end if
-		#end for
-		return None
-	#end define
-
-	def GetItemFromDict(self, data, search):
-		if data is None:
-			return None
-		for key, item in data.items():
-			if search in key:
-				return item
-			#end if
-		#end for
-		return None
 	#end define
 
 	def AddBookmark(self, bookmark):

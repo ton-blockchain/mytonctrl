@@ -612,6 +612,12 @@ def parse(text: str | None, search: str | None, search2: str | None = None) -> s
 		text = text[:text.find(search2)]
 	return text
 
+def parse_int_forced(text: str | None, search: str, search2: str | None = None) -> int:
+	value = parse(text, search, search2)
+	if value is None:
+		raise ValueError(f"{search!r} not found in validator console output")
+	return int(value)
+
 def b2mb(item: int | str) -> float:
 	return round(int(item) / 1000 / 1000, 2)
 

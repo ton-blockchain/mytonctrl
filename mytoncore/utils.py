@@ -61,13 +61,10 @@ def b642hex(inp: str):
     return hex_string
 
 
-def xhex2hex(x: str) -> str | None:
-    try:
-        b = x[1:]
-        h = b.lower()
-        return h
-    except Exception:
-        return None
+def xhex2hex(x: str) -> str:
+    b = x[1:]
+    h = b.lower()
+    return h
 
 
 def hex2base64(h: str):  # TODO: remove duplicates
