@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Union, TypeVar
+from typing import Any, Iterable, TypeVar
 
 import json
 import re
@@ -10,9 +10,7 @@ import re
 from mypylib.mypylib import parse
 
 
-T = List[Union[str, int, "T"]]
-
-def lc_result_to_list(text: str) -> T:
+def lc_result_to_list(text: str) -> list[Any]:
     buff = parse(text, "result:", "\n")
     if buff is None or "error" in buff:
         raise Exception(f'Failed to parse liteclient result: {text}')

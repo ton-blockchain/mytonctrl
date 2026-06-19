@@ -58,7 +58,8 @@ from mypylib.mypylib import (
 	parse,
 	get_timestamp,
 	dec2hex,
-	Dict, int2ip, MyPyClass
+	Dict, int2ip, MyPyClass,
+	parse_int_forced
 )
 from mytoncore.vm_stack import parse_result_stack
 
@@ -538,10 +539,10 @@ class MyTonCore:
 			# Parse
 			status.is_working = True
 			result = self.validatorConsole.run("getstats")
-			status.unixtime = int(parse(result, "unixtime", '\n'))
-			status.masterchainblocktime = int(parse(result, "masterchainblocktime", '\n'))
-			status.stateserializermasterchainseqno = int(parse(result, "stateserializermasterchainseqno", '\n'))
-			status.shardclientmasterchainseqno = int(parse(result, "shardclientmasterchainseqno", '\n'))
+			status.unixtime = parse_int_forced(result, "unixtime", '\n')
+			status.masterchainblocktime = parse_int_forced(result, "masterchainblocktime", '\n')
+			status.stateserializermasterchainseqno = parse_int_forced(result, "stateserializermasterchainseqno", '\n')
+			status.shardclientmasterchainseqno = parse_int_forced(result, "shardclientmasterchainseqno", '\n')
 			buff = parse(result, "masterchainblock", '\n')
 			status.masterchainblock = self.GVS_GetItemFromBuff(buff)
 			buff = parse(result, "gcmasterchainblock", '\n')
@@ -556,7 +557,7 @@ class MyTonCore:
 			status.masterchain_out_of_ser = status.masterchainblock - status.stateserializermasterchainseqno
 			status.out_of_sync = status.masterchain_out_of_sync if status.masterchain_out_of_sync > status.shardchain_out_of_sync else status.shardchain_out_of_sync
 			status.out_of_ser = status.masterchain_out_of_ser
-			status.last_deleted_mc_state = int(parse(result, "last_deleted_mc_state", '\n'))
+			status.last_deleted_mc_state = parse_int_forced(result, "last_deleted_mc_state", '\n')
 			state_serializer_enabled = parse(result, "stateserializerenabled", '\n')
 			if state_serializer_enabled is not None:
 				status.stateserializerenabled = state_serializer_enabled.strip() == "true"
@@ -1035,6 +1036,8 @@ class MyTonCore:
 
 		# Get ADNL address
 		adnl_addr = self.GetAdnlAddr()
+		if adnl_addr is None:
+			raise Exception("Failed to get ADNL address")
 		adnl_addr_bytes = bytes.fromhex(adnl_addr)
 
 		# Check wether it is too early to participate

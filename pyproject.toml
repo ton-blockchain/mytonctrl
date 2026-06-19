@@ -50,6 +50,14 @@ mytonctrl = [
 ]
 
 [tool.pyright]
+include = [
+    "mytoncore",
+    "mytonctrl",
+    "mytoninstaller",
+    "mypyconsole",
+    "mypylib",
+    "modules",
+]
 exclude = [
     "mytonctrl/scripts/**",
 ]
