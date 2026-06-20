@@ -6,6 +6,7 @@ import os
 from modules.module import MtcModule
 from mypylib.mypylib import color_print, print_table, parse
 from mytoncore.models import Wallet
+from mytoncore.utils import get_package_resource_path
 from mytonctrl.console_cmd import (check_usage_no_args, check_usage_one_arg, check_usage_two_args,
     add_command, check_usage_args_len, check_usage_args_min_len, check_usage_args_lens
 )
@@ -39,9 +40,11 @@ class WalletModule(MtcModule):
         return wallet_name
 
     def create_new_wallet(self, args):
-        if not check_usage_args_lens("nw", args, [0, 2, 3, 4]):
+        if not check_usage_args_lens("nw", args, [0, 2, 3, 4, 5]):
             return
         version = "v1"
+        treasury_addr = None
+        liquid_pool_addr = None
         if len(args) == 0:
             wallet_name = self.generate_wallet_name()
             workchain = 0
@@ -50,11 +53,23 @@ class WalletModule(MtcModule):
             wallet_name = args[1]
         if len(args) > 2:
             version = args[2]
-        if len(args) == 4:
-            subwallet = int(args[3])
+        if version == "lst_restricted":
+            if len(args) != 5:
+                raise Exception("CreateWallet error: usage for lst_restricted wallet is `nw <workchain> <wallet_name> lst_restricted <treasury_addr> <liquid_pool_addr>`")
+            treasury_addr = args[3]
+            liquid_pool_addr = args[4]
+            subwallet = 698983191 + workchain  # unused for lst_restricted wallet, kept for signature compatibility
         else:
-            subwallet = 698983191 + workchain  # 0x29A9A317 + workchain
-        wallet = self.create_wallet(wallet_name, workchain, version, subwallet=subwallet)
+            if len(args) > 4:
+                raise Exception(f"CreateWallet error: unexpected extra arguments for wallet version `{version}`")
+            if len(args) == 4:
+                subwallet = int(args[3])
+            else:
+                subwallet = 698983191 + workchain  # 0x29A9A317 + workchain
+        wallet = self.create_wallet(
+            wallet_name, workchain, version, subwallet=subwallet,
+            treasury_addr=treasury_addr, liquid_pool_addr=liquid_pool_addr,
+        )
         table = list()
         table += [["Name", "Workchain", "Address"]]
         table += [[wallet.name, wallet.workchain, wallet.addrB64_init]]
@@ -169,20 +184,37 @@ class WalletModule(MtcModule):
         wallet.delete()
         color_print("DeleteWallet - {green}OK{endc}")
 
-    @staticmethod
-    def get_new_wallet_fift_args(version: str, workchain: int, wallet_path: str, subwallet: int) -> list[str]:
+    def run_new_wallet_fift_args(self, version: str, workchain: int, wallet_path: str, subwallet: int) -> list[str]:
         if "v1" in version:
             fift_script = "new-wallet.fif"
-            args = [fift_script, workchain, wallet_path]
+            args = [fift_script, str(workchain), wallet_path]
         elif "v2" in version:
             fift_script = "new-wallet-v2.fif"
-            args = [fift_script, workchain, wallet_path]
+            args = [fift_script, str(workchain), wallet_path]
         elif "v3" in version:
             fift_script = "new-wallet-v3.fif"
-            args = [fift_script, workchain, subwallet, wallet_path]
+            args = [fift_script, str(workchain), str(subwallet), wallet_path]
         else:
             raise Exception(f"get_wallet_fift error: fift script for `{version}` not found")
-        return list(map(str, args))
+
+        return self.ton.fift.run(args)
+
+    def run_new_lst_restricted_wallet_fift_args(self, workchain: int, wallet_path: str, treasury_addr: str, liquid_pool_addr: str) -> list[str]:
+        deploy_data = self.ton.get_liquid_pool_deploy_data(liquid_pool_addr)
+        with get_package_resource_path('mytoncore', 'contracts/lst-restricted-wallet/wallet-code.boc') as wallet_code_path:
+            with get_package_resource_path('mytoncore', 'contracts/lst-restricted-wallet/new-wallet.fif') as fift_script:
+                args = [
+                    fift_script,
+                    wallet_code_path,
+                    deploy_data["controller_code_path"],
+                    treasury_addr,
+                    liquid_pool_addr,
+                    self.ton.GetFullConfigAddr(),
+                    self.ton.GetFullElectorAddr(),
+                    str(workchain),
+                    wallet_path,
+                ]
+                return self.ton.fift.run(args)
 
     def _get_wallet_id(self, wallet: Wallet):
         subwallet = 698983191 + wallet.workchain  # 0x29A9A317 + workchain
@@ -192,7 +224,7 @@ class WalletModule(MtcModule):
             self.local.add_log(f"Error getting wallet id: {e}", "error")
         return int(subwallet)
 
-    def create_wallet(self, name: str, workchain: int = 0, version: str = "v1", subwallet: int | None = None) -> Wallet:
+    def create_wallet(self, name: str, workchain: int = 0, version: str = "v1", subwallet: int | None = None, treasury_addr: str | None = None, liquid_pool_addr: str | None = None) -> Wallet:
         subwallet_default = 698983191 + workchain  # 0x29A9A317 + workchain
         if subwallet is None:
             subwallet = subwallet_default
@@ -200,9 +232,16 @@ class WalletModule(MtcModule):
         if os.path.isfile(wallet_path + ".pk") and "v3" not in version:
             self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
         else:
-            fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
-                                                      wallet_path=wallet_path, subwallet=subwallet)
-            result = self.ton.fift.run(fift_args)
+            if version == "lst_restricted":
+                if treasury_addr is None or liquid_pool_addr is None:
+                    raise Exception("CreateWallet error: lst_restricted wallet requires explicit treasury_addr and liquid_pool_addr")
+                result = self.run_new_lst_restricted_wallet_fift_args(
+                    workchain=workchain, wallet_path=wallet_path,
+                    treasury_addr=treasury_addr, liquid_pool_addr=liquid_pool_addr,
+                )
+            else:
+                result = self.run_new_wallet_fift_args(version, workchain=workchain,
+                                                          wallet_path=wallet_path, subwallet=subwallet)
             if "Creating new" not in result:
                 raise Exception(f"CreateWallet error: {result}")
         wallet = self.ton.GetLocalWallet(name, version)
@@ -240,7 +279,7 @@ class WalletModule(MtcModule):
 
         seqno = str(self.ton.get_seqno(wallet))
         result_file_path = self.local.my_temp_dir + wallet.name + "_wallet-query"
-        if "v1" in wallet.version:
+        if wallet.version == "lst_restricted" or "v1" in wallet.version:
             fift_script = "wallet.fif"
             args = [fift_script, wallet.path, dest, seqno, str(coins), "-m", str(mode), result_file_path]
         elif "v2" in wallet.version:

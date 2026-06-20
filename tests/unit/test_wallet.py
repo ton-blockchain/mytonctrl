@@ -70,7 +70,6 @@ def test_create_wallet(ton: MyTonCore, module: WalletModule, monkeypatch, tmp_pa
     if os.path.isfile(wallet_path + '.addr'):
         os.remove(wallet_path + '.addr')
     wallet_obj = types.SimpleNamespace(addrB64='ADDR', name=name)
-    monkeypatch.setattr(module, 'get_new_wallet_fift_args', lambda version, workchain, wallet_path, subwallet: ['script.fif'])
     monkeypatch.setattr(ton.fift, 'run', lambda args: '... Creating new wallet ...')
     monkeypatch.setattr(ton, 'GetLocalWallet', lambda n, version='v1': wallet_obj)
     called = {}

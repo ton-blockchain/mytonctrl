@@ -46,6 +46,7 @@ SETTINGS = {
     'liquid_pool_addr': Setting('liquid-staking', None, 'Liquid staking pool address'),
     'min_loan': Setting('liquid-staking', 41000, 'Min loan amount'),
     'max_loan': Setting('liquid-staking', 43000, 'Max loan amount'),
+    'tonHttpApiUrl': Setting('liquid-staking', 'http://127.0.0.1:8801', 'Ton HTTP API url used for running get methods'),
     'max_interest_percent': Setting('liquid-staking', 10, 'Max interest percent'),
     'duplicateSendfile': Setting(None, True, 'Duplicate external to public Liteservers'),
     'sendTelemetry': Setting(None, True, 'Send node telemetry'),

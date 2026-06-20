@@ -1,0 +1,64 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <wallet-code-boc> <controller-code-boc> <treasury-addr> <pool-addr> <config-addr> <elector-addr> <workchain-id> [<filename-base>]" cr
+  ."Creates a new lst_restricted_wallet and saves private key to or loads it from <filename-base>.pk" cr
+  ."('new-wallet' by default)" cr 1 halt
+} : usage
+$# dup 7 < swap 8 > or ' usage if
+
+$1 =: wallet-code-file
+$2 =: controller-code-file
+$3 parse-smc-addr drop 2=: treasury-addr
+$4 parse-smc-addr drop 2=: pool-addr
+$5 parse-smc-addr drop 2=: config-addr
+$6 parse-smc-addr drop 2=: elector-addr
+$7 parse-int =: wc
+def? $8 { @' $8 } { "new-wallet" } cond constant file-base
+
+wallet-code-file file>B dup
+8 B| drop B>$ "b5ee9c72" $= { B>$ x>B? drop } if
+B>boc =: wallet-code
+
+controller-code-file file>B dup
+8 B| drop B>$ "b5ee9c72" $= { B>$ x>B? drop } if
+B>boc =: controller-code
+
+."Creating new lst_restricted_wallet in workchain " wc . cr
+
+file-base +".pk" load-generate-keypair
+constant wallet_pk
+constant wallet_pubkey
+controller-code hashu constant controller_code_hash
+
+<b null dict, b> =: allowlist
+<b config-addr Addr,
+   elector-addr Addr,
+   controller_code_hash 256 u,
+   allowlist ref,
+ b> =: policy-data
+<b pool-addr Addr,
+   policy-data ref,
+ b> =: extra-data
+<b 0 32 u,
+   wallet_pubkey B,
+   treasury-addr Addr,
+   extra-data ref,
+ b> =: wallet-data
+wallet-code wallet-data null // code data libs
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>
+dup ."StateInit: " <s csr. cr
+dup hashu wc swap 2dup 2constant wallet_addr
+."new wallet address = " 2dup .addr cr
+2dup file-base +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+<b 0 32 u, b>
+dup ."signing message: " <s csr. cr
+dup hashu wallet_pk ed25519_sign_uint rot
+<b b{1000100} s, wallet_addr addr, b{000010} s, swap <s s, b{0} s, swap B, swap <s s, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+file-base +"-query.boc" tuck B>file
+."(Saved wallet creating query to file " type .")" cr
