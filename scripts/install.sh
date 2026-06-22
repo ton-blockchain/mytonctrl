@@ -182,13 +182,15 @@ fi
 if [ "${mode}" = "none" ] && [ "$backup" = "none" ]; then  # no mode or backup was provided
     echo "Running cli installer"
     wget https://raw.githubusercontent.com/${author}/${repo}/${branch}/scripts/install.py
-    if ! command -v pip3 &> /dev/null; then
-        echo "pip not found. Installing pip..."
-        python3 -m pip install --upgrade pip
+    if command -v apt-get >/dev/null 2>&1; then
+        apt-get update
+        apt-get install -y python3-venv
     fi
-    pip3 install questionary==2.1.1 --break-system-packages
-    python3 install.py "$@"
-    pip3 uninstall questionary -y
+    cli_venv="$(mktemp -d)"
+    trap 'rm -rf "${cli_venv}"' EXIT
+    python3 -m venv "${cli_venv}"
+    "${cli_venv}/bin/pip" install -U pip questionary==2.1.1 requests==2.32.4
+    "${cli_venv}/bin/python3" install.py "$@"
     exit
 fi
 
@@ -232,12 +234,9 @@ TON_WORK_DIR=$(abspath "${TON_WORK_DIR}")
 
 mkdir -p "${SOURCES_DIR}"
 
-if [ ! -f ~/.config/pip/pip.conf ]; then  # create pip config
-    mkdir -p ~/.config/pip
-cat > ~/.config/pip/pip.conf <<EOF
-[global]
-break-system-packages = true
-EOF
+if command -v apt-get >/dev/null 2>&1; then
+    apt-get update
+    apt-get install -y python3-venv
 fi
 
 # check TON components
@@ -257,20 +256,6 @@ fi
 echo -e "${COLOR}[3/5]${ENDC} Installing MyTonCtrl"
 echo "https://github.com/${author}/${repo}.git -> ${branch}"
 
-# remove previous installation
-cd "$SOURCES_DIR"
-rm -rf "$SOURCES_DIR/mytonctrl"
-pip3 uninstall -y mytonctrl
-
-git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git ${repo}  # TODO: return --recursive back when fix libraries
-git config --global --add safe.directory $SOURCES_DIR/${repo}
-cd "$SOURCES_DIR/${repo}"
-
-pip3 install -U .  # TODO: make installation from git directly
-
-echo -e "${COLOR}[4/5]${ENDC} Running mytoninstaller"
-# DEBUG
-
 if [ "${user}" = "" ]; then  # no user
     parent_name=$(ps -p $PPID -o comm=)
     user=$(whoami)
@@ -279,7 +264,30 @@ if [ "${user}" = "" ]; then  # no user
     fi
 fi
 echo "User: $user"
-python3 -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode} --only-mtc ${only_mtc} --backup ${backup} --only-node ${only_node} --bin-dir "${BIN_DIR}" --src-dir "${SOURCES_DIR}" --ton-work-dir "${TON_WORK_DIR}"
+
+# remove previous installation
+cd "$SOURCES_DIR"
+rm -rf "$SOURCES_DIR/mytonctrl"
+
+git clone --branch ${branch} --recursive https://github.com/${author}/${repo}.git ${repo}  # TODO: return --recursive back when fix libraries
+git config --global --add safe.directory $SOURCES_DIR/${repo}
+cd "$SOURCES_DIR/${repo}"
+
+if [ "${user}" = "root" ]; then
+    MTC_DATA_DIR="/usr/local/bin/mytoncore"
+else
+    MTC_DATA_DIR="/home/${user}/.local/share/mytoncore"
+fi
+VENV_DIR="${MTC_DATA_DIR}/venv"
+mkdir -p "${MTC_DATA_DIR}"
+rm -rf "${VENV_DIR}"
+python3 -m venv "${VENV_DIR}"
+"${VENV_DIR}/bin/pip" install -U pip "setuptools>=64"
+"${VENV_DIR}/bin/pip" install -U .
+chown -R "${user}:${user}" "${MTC_DATA_DIR}"
+
+echo -e "${COLOR}[4/5]${ENDC} Running mytoninstaller"
+"${VENV_DIR}/bin/python" -m mytoninstaller -u ${user} -t ${telemetry} --dump ${dump} -m ${mode} --only-mtc ${only_mtc} --backup ${backup} --only-node ${only_node} --bin-dir "${BIN_DIR}" --src-dir "${SOURCES_DIR}" --ton-work-dir "${TON_WORK_DIR}"
 
 # create symbolic link if branch not eq mytonctrl
 if [ "${repo}" != "mytonctrl" ]; then

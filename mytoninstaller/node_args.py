@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 from mypylib.mypylib import run_as_root
 
 from mytoncore.utils import get_package_resource_path
@@ -48,6 +50,6 @@ def set_node_argument(args: list[str]) -> None:
     script_args = [arg_name, " ".join(args[1:])]
 
     with get_package_resource_path("mytoninstaller.scripts", "set_node_argument.py") as script_path:
-        run_as_root(["python3", str(script_path)] + script_args)
+        run_as_root([sys.executable, str(script_path)] + script_args)
 
     color_print("set_node_argument - {green}OK{endc}")

@@ -10,6 +10,7 @@ import base64
 import pathlib
 import subprocess
 import os
+import sys
 import shutil
 
 from mypylib.mypylib import (
@@ -870,6 +871,8 @@ class GeneralModule(MtcModule):
                 branch,
                 "-S",
                 str(paths.mtc_src),
+                "-p",
+                sys.executable,
             ]
             exitCode = run_as_root(runArgs)
         if exitCode == 0:

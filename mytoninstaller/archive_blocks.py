@@ -4,6 +4,7 @@ import datetime
 import json
 import os
 import subprocess
+import sys
 import typing
 
 import requests
@@ -164,7 +165,7 @@ def run_process_hardforks(local: MyPyClass, from_seqno: int, mtc_src_dir: str, g
     log_file = open(log_path, "a")
 
     p = subprocess.Popen([
-            "python3", script_path,
+            sys.executable, script_path,
             "--from-seqno", str(from_seqno),
             "--config-path", global_config_path,
         ],

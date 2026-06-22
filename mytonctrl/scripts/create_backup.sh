@@ -30,6 +30,7 @@ cp $ton_dir/db/config.json ${tmp_dir}/db
 cp -r $ton_dir/db/keyring ${tmp_dir}/db
 cp -r $keys_dir ${tmp_dir}
 cp -r $mtc_dir $tmp_dir
+rm -rf "$tmp_dir/mytoncore/venv"
 
 python3 -c "import json;f=open('${tmp_dir}/db/config.json');json.load(f);f.close()" || exit 1  # Check if config.json is copied correctly
 python3 -c "import json;f=open('${tmp_dir}/mytoncore/mytoncore.db');json.load(f);f.close()" || exit 2  # Check if mytoncore.db is copied correctly
