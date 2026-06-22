@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import os
 import json
-import subprocess
 import tempfile
 from typing import final, TypedDict, Callable
 
@@ -64,12 +63,10 @@ class InstallerCtrl:
 		console.add_item("status", self._print_status, "Print TON component status")
 		console.add_item("set_node_argument", self._set_node_argument, "Set node argument", "<arg_name> [arg_value1] [arg_value2] [-d (to delete)]")
 		console.add_item("enable", self.enable, "Enable some function", "<mode_name>")
-		console.add_item("update", self.enable, "Update some function: 'JR' - jsonrpc.  Example: 'update JR'", "<mode_name>")
 		console.add_item("plsc", self._print_ls_config, "Print lite-server config")
 		console.add_item("clcf", self.create_local_config_file, "Create lite-server config file", "[path]")
 		console.add_item("print_ls_proxy_config", self._print_ls_proxy_config, "Print ls-proxy config")
 		console.add_item("drvcf", self._drvcf, "Dangerous recovery validator config file")
-		console.add_item("setwebpass", self._set_web_password, "Set a password for the web admin interface")
 		console.add_item("ton_storage_list", self.ton_storage_list, "Print result of /list method at Ton Storage API")
 
 	def _print_status(self, _: list[str]):
@@ -113,8 +110,6 @@ class InstallerCtrl:
 		if name == "DS":
 			with get_package_resource_path('mytoninstaller.scripts', 'dht_server.py') as script_path:
 				run_as_root(['python3', str(script_path), self._validator_user, str(self._paths.ton_bin), str(self._paths.global_config_path)])
-		elif name == "JR":
-			self._enable_json_rpc()
 		elif name == "THA":
 			self.create_local_config_file([])
 			self.enable_ton_http_api(update=True)
@@ -129,28 +124,13 @@ class InstallerCtrl:
 		else:
 			color_print("{red}Bad args{endc}")
 			print("'DS' - DHT-Server")
-			print("'JR' - jsonrpc")
 			print("'THA' - ton-http-api")
 			print("'LSP' - ls-proxy")
 			print("'TS' - ton-storage")
 
-	def _enable_json_rpc(self):
-		user = get_current_user()
-		with get_package_resource_path('mytoninstaller.scripts', 'jsonrpcinstaller.sh') as jsonrpcinstaller_path:
-			exit_code = run_as_root(["bash", str(jsonrpcinstaller_path), "-u", user, "-s", str(self._paths.src_dir)])
-		if exit_code == 0:
-			text = "EnableJsonRpc - {green}OK{endc}"
-		else:
-			text = "EnableJsonRpc - {red}Error{endc}"
-		color_print(text)
-
 	def _drvcf(self, _: list[str]):
 		with get_package_resource_path('mytoninstaller.scripts', 'drvcf.py') as script_path:
 			run_as_root(['python3', str(script_path), str(self._paths.keyring_dir), self.mconfig_path, str(self._paths.ton_db)])
-
-	def _set_web_password(self, _: list[str]):
-		args = ["python3", str(self._paths.src_dir / "mtc-jsonrpc" / "mtc-jsonrpc.py"), "-p"]
-		subprocess.run(args)
 
 	def ton_storage_list(self, args: list[str]):
 		if len(args) > 0:
