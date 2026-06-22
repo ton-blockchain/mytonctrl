@@ -56,7 +56,6 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 		if pubkey == ls_pubkey:
 			ls_id = hex2b64(item)
 			keys.remove(ls_id)
-	#end for
 
 	# Create LS object
 	buff = Dict()
@@ -89,7 +88,6 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 		if pubkey == vPubkey:
 			vcId = hex2b64(item)
 			keys.remove(vcId)
-	#end for
 
 	# Create VC object
 	buff = Dict()
@@ -112,7 +110,6 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 			dhtS = dhtS.replace('_', '/')
 			dhtS = dhtS.replace('-', '+')
 			break
-	#end for
 
 	# Get ght from keys
 	dhtId = None
@@ -120,7 +117,6 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 		if dhtS and dhtS in item:
 			dhtId = item
 			keys.remove(dhtId)
-	#end for
 
 	# Create dht object
 	buff = Dict()
@@ -159,7 +155,6 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 	for item in dumpsList:
 		if "ElectionEntry.json" in item:
 			dumps.append(item)
-	#end for
 
 	# Create validators object
 	validators = list()
@@ -192,8 +187,6 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 		if vkey in keys:
 			validators.append(validator)
 			keys.remove(vkey)
-		#end if
-	#end while
 
 	# Add validators object to vconfig
 	vconfig.validators = validators

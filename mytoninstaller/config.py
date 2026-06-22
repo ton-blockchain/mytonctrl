@@ -34,7 +34,6 @@ def BackupMconfig(local: MyPyClass, ctx: InstallerContext):
 	backupPath = mconfig_path + ".backup"
 	args = ["cp", mconfig_path, backupPath]
 	subprocess.run(args)
-#end define
 
 def get_own_ip():
 	from urllib3.util import connection
@@ -46,7 +45,6 @@ def get_own_ip():
 		if not pat.fullmatch(ip):
 			raise Exception('Cannot get own IP address')
 	return ip
-#end define
 
 
 def get_ls_proxy_config():

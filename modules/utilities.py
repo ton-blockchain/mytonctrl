@@ -37,7 +37,6 @@ class UtilitiesModule(MtcModule):
         print_table(codeHashTable)
         print()
         print_table(historyTable)
-    # end define
 
     def get_history_table(self, addr, limit):
         addr = self.ton.get_destination_addr(addr)
@@ -88,7 +87,6 @@ class UtilitiesModule(MtcModule):
         bookmark["addr"] = addr
         self.ton.AddBookmark(bookmark)
         color_print("CreatNewBookmark - {green}OK{endc}")
-    # end define
 
     def print_bookmarks_list(self, args):
         data = self.ton.GetBookmarks()
@@ -103,7 +101,6 @@ class UtilitiesModule(MtcModule):
             bookmark_data = item.get("data")
             table += [[name, addr, bookmark_data]]
         print_table(table)
-    # end define
 
     def delete_bookmark(self, args):
         if not check_usage_one_arg("db", args):
@@ -111,7 +108,6 @@ class UtilitiesModule(MtcModule):
         name = args[0]
         self.ton.DeleteBookmark(name)
         color_print("DeleteBookmark - {green}OK{endc}")
-    # end define
 
     @staticmethod
     def reduct(item):
@@ -122,7 +118,6 @@ class UtilitiesModule(MtcModule):
             end = len(item)
             result = item[0:6] + "..." + item[end - 6:end]
         return result
-    # end define
 
     def print_offers_list(self, args):
         data = self.ton.GetOffers()
@@ -152,7 +147,6 @@ class UtilitiesModule(MtcModule):
                     isPassed = bcolors.red_text("false")
                 table += [[hash, item.config.id, votedValidators, wl, approvedPercent_text, isPassed]]
             print_table(table)
-    # end define
 
     def get_offer_diff(self, offer_hash):
         self.local.add_log("start GetOfferDiff function", "debug")
@@ -167,7 +161,6 @@ class UtilitiesModule(MtcModule):
             start = config_value.find('{') + 1
             end = config_value.find('}')
             config_value = config_value[start:end]
-        # end if
 
         args = [self.ton.liteClient.app_path, "--global-config", self.ton.liteClient.config_path, "--verbosity", "0"]
         process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -199,7 +192,6 @@ class UtilitiesModule(MtcModule):
             if "dumping cells as values of TLB type" in line:
                 a = i + 2
                 break
-        # end for
 
         if a is None:
             raise Exception("Cannot find dumping cells as values of TLB type")
@@ -210,14 +202,12 @@ class UtilitiesModule(MtcModule):
             if '(' in line:
                 start = i
                 break
-        # end for
 
         for i in range(a, b):
             line = lines[i]
             if '>' in line:
                 end = i
                 break
-        # end for
 
         if start is None or end is None:
             raise Exception("Cannot find start and end of dumping cells as values of TLB type")
@@ -241,7 +231,6 @@ class UtilitiesModule(MtcModule):
         print(oldText)
         args = ["diff", "--color", oldFileName, newFileName]
         subprocess.run(args)
-    # end define
 
     def offer_diff(self, args):
         if not check_usage_one_arg("od", args):
@@ -279,7 +268,6 @@ class UtilitiesModule(MtcModule):
                     isPassed = bcolors.red_text("false")
                 table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
             print_table(table)
-    # end define
 
     def print_election_entries_list(self, args):
         past = "past" in args
@@ -307,7 +295,6 @@ class UtilitiesModule(MtcModule):
                     walletAddr = self.reduct(walletAddr)
                 table += [[adnl, pubkey, walletAddr, stake, maxFactor]]
             print_table(table)
-    # end define
 
     def print_validator_list(self, args):
         past = "past" in args
@@ -344,7 +331,6 @@ class UtilitiesModule(MtcModule):
                     online = bcolors.red_text("false")
                 table += [[str(i), adnl, pubkey, walletAddr, stake, efficiency, online]]
             print_table(table)
-    # end define
 
     def check_adnl_connection(self):
         telemetry = self.ton.local.db.get("sendTelemetry", False)
@@ -386,7 +372,6 @@ class UtilitiesModule(MtcModule):
             pool_addr = pool.addrB64
         pool_data = self.ton.GetPoolData(pool_addr)
         print(json.dumps(pool_data, indent=4))
-    # end define
 
     def add_console_commands(self, console):
         add_command(self.local, console, "vas", self.view_account_status)

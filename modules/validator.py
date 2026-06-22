@@ -120,7 +120,6 @@ class ValidatorModule(MtcModule):
                 color_print(f"Current round efficiency: {color_efficiency} {{yellow}}({created} blocks created / {round(expected, 1)} blocks expected){{endc}}")
         else:
             print("Couldn't find this validator in the current round")
-    # end define
 
     def get_my_complaint(self):
         config32 = self.ton.get_config_32()

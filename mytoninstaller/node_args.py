@@ -13,7 +13,6 @@ def get_validator_service():
     path = '/etc/systemd/system/validator.service'
     with open(path, 'r') as file:
         return file.read()
-#end define
 
 
 def get_node_start_command():
@@ -21,7 +20,6 @@ def get_node_start_command():
     for line in service.split('\n'):
         if line.startswith('ExecStart'):
             return line.split('=')[1].strip()
-#end define
 
 def get_node_args(start_command: str | None = None):
     if start_command is None:
@@ -40,7 +38,6 @@ def get_node_args(start_command: str | None = None):
         else:
             result[key].append(item)
     return result
-#end define
 
 def set_node_argument(args: list[str]) -> None:
     if len(args) < 1:

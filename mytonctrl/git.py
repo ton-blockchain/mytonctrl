@@ -88,7 +88,6 @@ def check_git(
         raise Exception(
             f"{text} error: You are on {local_branch} branch, to update to the tip of {local_branch} branch use `{text} {local_branch}` command"
         )
-    # end if
 
     if need_author is None:
         need_author = local_author

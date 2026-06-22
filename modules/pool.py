@@ -40,7 +40,6 @@ class PoolModule(MtcModule):
         pool_path = self.ton.poolsDir + pool_name
         with open(pool_path + ".addr", 'wb') as file:
             file.write(addr_bytes)
-    # end define
 
     def import_pool(self, args):
         if not check_usage_two_args("import_pool", args):

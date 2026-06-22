@@ -62,7 +62,6 @@ def FirstNodeSettings(local: MyPyClass, ctx: InstallerContext):
 	if os.path.isfile(vconfig_path):
 		local.add_log(f"Validators config '{vconfig_path}' already exist. Break FirstNodeSettings fuction", "warning")
 		return
-	#end if
 
 	# Создать пользователя
 	file = open("/etc/passwd", 'rt')
@@ -72,7 +71,6 @@ def FirstNodeSettings(local: MyPyClass, ctx: InstallerContext):
 		local.add_log("Creating new user: " + vuser, "debug")
 		args = ["/usr/sbin/useradd", "-d", "/dev/null", "-s", "/dev/null", vuser]
 		subprocess.run(args)
-	#end if
 
 	# Подготовить папки валидатора
 	os.makedirs(ton_db_dir, exist_ok=True)
@@ -279,7 +277,6 @@ def DownloadDump(local: MyPyClass, ctx: InstallerContext):
     diskSpace = psutil.disk_usage(ctx.paths.ton_db_dir)
     if needSpace > diskSpace.free:
         return
-    #end if
 
     # apt install
     cmd = "apt install plzip pv aria2 curl -y"
@@ -298,8 +295,6 @@ def DownloadDump(local: MyPyClass, ctx: InstallerContext):
     if os.path.exists(temp_file):
         os.remove(temp_file)
         local.add_log(f"Temporary file {temp_file} removed", "debug")
-    #end if
-#end define
 
 def FirstMytoncoreSettings(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start FirstMytoncoreSettings fuction", "debug")
@@ -312,13 +307,11 @@ def FirstMytoncoreSettings(local: MyPyClass, ctx: InstallerContext):
 	if os.path.isfile(path):
 		local.add_log(f"{path} already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
-	#end if
 
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
 	if os.path.isfile(path2):
 		local.add_log(f"{path2}.db already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
-	#end if
 
 	#amazon bugfix
 	path1 = "/home/{user}/.local/".format(user=user)
@@ -367,7 +360,6 @@ def FirstMytoncoreSettings(local: MyPyClass, ctx: InstallerContext):
 
 	# start mytoncore
 	StartMytoncore(local)
-#end define
 
 def EnableValidatorConsole(local: MyPyClass, ctx: InstallerContext):
 	if ctx.only_mtc:
@@ -392,12 +384,10 @@ def EnableValidatorConsole(local: MyPyClass, ctx: InstallerContext):
 	if os.path.isfile(server_key):
 		local.add_log(f"Server key '{server_key}' already exist. Break EnableValidatorConsole fuction", "warning")
 		return
-	#end if
 
 	if os.path.isfile(client_key):
 		local.add_log(f"Client key '{client_key}' already exist. Break EnableValidatorConsole fuction", "warning")
 		return
-	#end if
 
 	# generate server key
 	args = [generate_random_id, "--mode", "keys", "--name", server_key]
@@ -471,7 +461,6 @@ def EnableValidatorConsole(local: MyPyClass, ctx: InstallerContext):
 
 	# restart mytoncore
 	StartMytoncore(local)
-#end define
 
 def EnableLiteServer(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start EnableLiteServer function", "debug")
@@ -492,7 +481,6 @@ def EnableLiteServer(local: MyPyClass, ctx: InstallerContext):
 	if os.path.isfile(liteserver_pubkey):
 		local.add_log(f"Liteserver key '{liteserver_pubkey}' already exist. Break EnableLiteServer fuction", "warning")
 		return
-	#end if
 
 	# generate liteserver key
 	local.add_log("generate liteserver key", "debug")
@@ -557,7 +545,6 @@ def EnableLiteServer(local: MyPyClass, ctx: InstallerContext):
 
 	# restart mytoncore
 	StartMytoncore(local)
-#end define
 
 def CreateSymlinks(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start CreateSymlinks fuction", "debug")
@@ -593,7 +580,6 @@ def CreateSymlinks(local: MyPyClass, ctx: InstallerContext):
 	if fiftpath not in text:
 		file.write(fiftpath + '\n')
 	file.close()
-#end define
 
 
 def EnableMode(local: MyPyClass, ctx: InstallerContext):

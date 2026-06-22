@@ -47,7 +47,6 @@ def GetColorInt(data, border, logic, ending=None):
     return result
 
 
-# end define
 
 
 def get_current_user():

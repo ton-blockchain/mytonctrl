@@ -22,7 +22,6 @@ class NominatorPoolModule(PoolModule):
         if os.path.isfile(file_path + ".addr"):
             self.ton.local.add_log("CreatePool warning: Pool already exists: " + file_path, "warning")
             return
-        # end if
 
         fift_script = self.ton.contractsDir + "nominator-pool/func/new-pool.fif"
         wallet = self.ton.GetValidatorWallet()
@@ -31,7 +30,6 @@ class NominatorPoolModule(PoolModule):
         result = self.ton.fift.run(args)
         if "Saved pool" not in result:
             raise Exception("CreatePool error: " + result)
-        # end if
 
         pools = self.ton.GetPools()
         new_pool = self.ton.GetLocalPool(pool_name)
@@ -66,7 +64,6 @@ class NominatorPoolModule(PoolModule):
             validator_wallet = self.ton.GetValidatorWallet()
             self.ton.check_account_active(validator_wallet.addrB64)
             self.ton.SendFile(pool.bocFilePath, timeout=False, remove=False)
-    #end define
 
     def activate_pool(self, args):
         if not check_usage_one_arg("activate_pool", args):
