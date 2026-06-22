@@ -47,8 +47,6 @@ def GetColorInt(data, border, logic, ending=None):
     return result
 
 
-
-
 def get_current_user():
     return pwd.getpwuid(os.getuid()).pw_name
 
