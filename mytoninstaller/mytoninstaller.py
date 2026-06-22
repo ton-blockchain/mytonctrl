@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import os
 import json
+import sys
 import tempfile
 from typing import final, TypedDict, Callable
 
@@ -109,18 +110,18 @@ class InstallerCtrl:
 		name = args[0]
 		if name == "DS":
 			with get_package_resource_path('mytoninstaller.scripts', 'dht_server.py') as script_path:
-				run_as_root(['python3', str(script_path), self._validator_user, str(self._paths.ton_bin), str(self._paths.global_config_path)])
+				run_as_root([sys.executable, str(script_path), self._validator_user, str(self._paths.ton_bin), str(self._paths.global_config_path)])
 		elif name == "THA":
 			self.create_local_config_file([])
 			self.enable_ton_http_api(update=True)
 		elif name == "LSP":
 			user = get_current_user()
 			with get_package_resource_path('mytoninstaller.scripts', 'ls_proxy.py') as script_path:
-				run_as_root(['python3', str(script_path), user, self.mconfig_path, str(self._paths.src_dir)])
+				run_as_root([sys.executable, str(script_path), user, self.mconfig_path, str(self._paths.src_dir)])
 		elif name == "TS":
 			user = get_current_user()
 			with get_package_resource_path('mytoninstaller.scripts', 'ton_storage.py') as script_path:
-				run_as_root(['python3', str(script_path), user, self.mconfig_path, str(self._paths.global_config_path), str(self._paths.src_dir)])
+				run_as_root([sys.executable, str(script_path), user, self.mconfig_path, str(self._paths.global_config_path), str(self._paths.src_dir)])
 		else:
 			color_print("{red}Bad args{endc}")
 			print("'DS' - DHT-Server")
@@ -130,7 +131,7 @@ class InstallerCtrl:
 
 	def _drvcf(self, _: list[str]):
 		with get_package_resource_path('mytoninstaller.scripts', 'drvcf.py') as script_path:
-			run_as_root(['python3', str(script_path), str(self._paths.keyring_dir), self.mconfig_path, str(self._paths.ton_db)])
+			run_as_root([sys.executable, str(script_path), str(self._paths.keyring_dir), self.mconfig_path, str(self._paths.ton_db)])
 
 	def ton_storage_list(self, args: list[str]):
 		if len(args) > 0:
@@ -159,7 +160,7 @@ class InstallerCtrl:
 		user = get_current_user()
 		with get_package_resource_path('mytoninstaller.scripts',
 		                               'ton_http_api_installer.sh') as ton_http_api_installer_path:
-			exit_code = run_as_root(["bash", str(ton_http_api_installer_path), "-u", user, "-b", str(self._paths.ton_bin), "-c", str(self._paths.local_config_path)])
+			exit_code = run_as_root(["bash", str(ton_http_api_installer_path), "-u", user, "-b", str(self._paths.ton_bin), "-c", str(self._paths.local_config_path), "-p", sys.executable])
 		if exit_code == 0:
 			text = "do_enable_ton_http_api - {green}OK{endc}"
 		else:

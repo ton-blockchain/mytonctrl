@@ -65,7 +65,7 @@ def test_update(cli, monkeypatch, mocker):
     with get_package_resource_path('mytonctrl', 'scripts/update.sh') as upd_path:
         assert upd_path.is_file()
     assert "Error" not in output
-    assert calls["run_args"] == ['bash', str(upd_path), '-a', 'author', '-r', 'repo', '-b', 'branch', '-S', '/usr/src/mytonctrl']
+    assert calls["run_args"] == ['bash', str(upd_path), '-a', 'author', '-r', 'repo', '-b', 'branch', '-S', '/usr/src/mytonctrl', '-p', sys.executable]
     exit_mock.assert_called_once()
 
 

@@ -12,15 +12,17 @@ author="ton-blockchain"
 repo="mytonctrl"
 branch="master"
 tmpdir="/tmp/mytonctrl_src/"
+python_bin="python3"
 
 # Get arguments
-while getopts a:r:b:S: flag
+while getopts a:r:b:S:p: flag
 do
 	case "${flag}" in
 		a) author=${OPTARG};;
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
     S) srcdir=${OPTARG};;
+    p) python_bin=${OPTARG};;
     *) echo "Unknown arg"
        exit 1;;
 	esac
@@ -48,8 +50,8 @@ rm -rf ${srcdir}
 mkdir -p ${srcdir}
 cp -rfT ${tmpdir}/${repo} ${srcdir}
 cd ${srcdir}
-python3 -m pip install -U "setuptools>=64"
-python3 -m pip install -U .
+"${python_bin}" -m pip install -U "setuptools>=64"
+"${python_bin}" -m pip install -U .
 
 systemctl daemon-reload
 systemctl restart mytoncore

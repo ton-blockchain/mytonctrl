@@ -305,7 +305,7 @@ def FirstMytoncoreSettings(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start FirstMytoncoreSettings fuction", "debug")
 	user = ctx.user
 
-	add2systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m mytoncore")
+	add2systemd(name="mytoncore", user=user, start=f"{sys.executable} -m mytoncore", force=True)
 
 	# Проверить конфигурацию
 	path = ctx.mconfig_path
@@ -465,7 +465,7 @@ def EnableValidatorConsole(local: MyPyClass, ctx: InstallerContext):
 	if ctx.ports.quic is not None:
 		event_name += f'_{ctx.ports.quic}'
 
-	cmd = f'python3 -m mytoncore -e "{event_name}"'
+	cmd = f'{sys.executable} -m mytoncore -e "{event_name}"'
 	args = ["su", "-l", user, "-c", cmd]
 	subprocess.run(args)
 
@@ -569,7 +569,7 @@ def CreateSymlinks(local: MyPyClass, ctx: InstallerContext):
 	validator_console_file = "/usr/bin/validator-console"
 	env_file = "/etc/environment"
 	file = open(mytonctrl_file, 'wt')
-	file.write('/usr/bin/python3 -m mytonctrl "$@"')  # TODO: fix path
+	file.write(f'{sys.executable} -m mytonctrl "$@"')
 	file.close()
 	file = open(fift_file, 'wt')
 	file.write(ctx.paths.ton_bin_dir + 'crypto/fift "$@"')
@@ -597,7 +597,7 @@ def CreateSymlinks(local: MyPyClass, ctx: InstallerContext):
 
 
 def EnableMode(local: MyPyClass, ctx: InstallerContext):
-	args = ["python3", "-m", "mytoncore", "-e"]
+	args = [sys.executable, "-m", "mytoncore", "-e"]
 	if ctx.mode and ctx.mode != "none" and not ctx.backup:
 		args.append("enable_mode_" + ctx.mode)
 	else:
@@ -652,7 +652,7 @@ def ConfigureFromBackup(local: MyPyClass, ctx: InstallerContext):
 			return
 		set_external_ip(local, node_ip, ctx.mconfig_path)
 
-	args = ["python3", "-m", "mytoncore", "-e", "enable_btc_teleport"]
+	args = [sys.executable, "-m", "mytoncore", "-e", "enable_btc_teleport"]
 	args = ["su", "-l", ctx.user, "-c", ' '.join(args)]
 	subprocess.run(args)
 
@@ -697,7 +697,7 @@ def SetupCollator(local: MyPyClass, ctx: InstallerContext):
 	if not shards:
 		shards = ['0:8000000000000000']
 	local.add_log(f"Setting up collator for shards: {shards}", "info")
-	args = ["python3", "-m", "mytoncore", "-e", "setup_collator_" + '_'.join(shards)]
+	args = [sys.executable, "-m", "mytoncore", "-e", "setup_collator_" + '_'.join(shards)]
 	args = ["su", "-l", ctx.user, "-c", ' '.join(args)]
 	subprocess.run(args)
 
