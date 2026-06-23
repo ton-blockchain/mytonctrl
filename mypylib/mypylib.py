@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import shutil
 import sys
 import time
@@ -16,16 +15,14 @@ import platform
 import threading
 import traceback
 import subprocess
-import datetime as date_time_library
 from contextlib import contextmanager
 from types import FrameType
-from typing import Any, Callable, Literal, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from mypylib.colors import bcolors
 from mypylib.logger import (
     ERROR,
     INFO,
-    WARNING,
     get_logger,
     level_for_mode,
 )
@@ -77,10 +74,6 @@ class MyPyClass:
 		self.db.config = Dict()
 
 		self.old_db = Dict()
-		self.thread_count: int | None = None
-		self.thread_count_old: int | None = None
-		self.memory_using: float | None = None
-		self.free_space_memory: float | None = None
 
 		self.my_name: str = self.get_my_name()
 		self.my_full_name: str = self.get_my_full_name()
@@ -115,10 +108,8 @@ class MyPyClass:
 			self.start_only_one_process()
 
 		# Start other threads
-		self.start_cycle(self.self_test, sec=1)
 		if self.db.config.isLocaldbSaving is True:
 			self.start_cycle(self.save_db, sec=1)
-		self.thread_count_old = threading.active_count()
 
 		# Logging the start of the program
 		self.add_log(f"Start program `{self.my_path}`", "debug")
@@ -132,8 +123,6 @@ class MyPyClass:
 			self.db.config.isDeleteOldLogFile = False
 		if self.db.config.isStartOnlyOneProcess is None:
 			self.db.config.isStartOnlyOneProcess = True
-		if self.db.config.memoryUsinglimit is None:
-			self.db.config.memoryUsinglimit = 50
 		if self.db.config.isLocaldbSaving is None:
 			self.db.config.isLocaldbSaving = False
 		if self.db.config.isWritingLogFile is None:
@@ -165,22 +154,10 @@ class MyPyClass:
 		with open(pid_file_path, 'w') as file:
 			file.write(pid_str)
 
-	def self_test(self):
-		process = psutil.Process(os.getpid())
-		memory_using = b2mb(process.memory_info().rss)
-		free_space_memory = b2mb(psutil.virtual_memory().available)
-		thread_count = threading.active_count()
-		self.free_space_memory = free_space_memory
-		self.memory_using = memory_using
-		self.thread_count = thread_count
-		if memory_using > self.db.config.memoryUsinglimit:
-			self.db.config.memoryUsinglimit += 50
-			self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb", WARNING)
-
 	def get_my_full_name(self):
 		'''return "test.py"'''
 		my_path = self.get_my_path()
-		my_full_name = get_full_name_from_path(my_path)
+		my_full_name = my_path[my_path.rfind('/') + 1:]
 		if len(my_full_name) == 0:
 			my_full_name = "empty"
 		return my_full_name
@@ -473,46 +450,6 @@ def parse_int_forced(text: str | None, search: str, search2: str | None = None) 
 		raise ValueError(f"{search!r} not found in validator console output")
 	return int(value)
 
-def b2mb(item: int | str) -> float:
-	return round(int(item) / 1000 / 1000, 2)
-
-def search_file_in_dir(path: str, file_name: str) -> str | None:
-	result = None
-	for entry in os.scandir(path):
-		if entry.name.startswith('.'):
-			continue
-		if entry.is_dir():
-			buff = search_file_in_dir(entry.path, file_name)
-			if buff is not None:
-				result = buff
-				break
-		elif entry.is_file():
-			if entry.name == file_name:
-				result = entry.path
-				break
-	return result
-
-def search_dir_in_dir(path: str, dir_name: str) -> str | None:
-	result = None
-	for entry in os.scandir(path):
-		if entry.name.startswith('.'):
-			continue
-		if entry.is_dir():
-			if entry.name == dir_name:
-				result = entry.path
-				break
-			buff = search_dir_in_dir(entry.path, dir_name)
-			if buff is not None:
-				result = buff
-				break
-	return result
-
-def get_dir_from_path(path: str) -> str:
-	return path[:path.rfind('/') + 1]
-
-def get_full_name_from_path(path: str) -> str:
-	return path[path.rfind('/') + 1:]
-
 def print_table(arr: Sequence[Sequence[Any]]) -> None:
 	buff = dict()
 	for i in range(len(arr[0])):
@@ -543,105 +480,6 @@ def color_print(text: str) -> None:
 	text = color_text(text)
 	print(text)
 
-def get_load_avg() -> list[float]:
-	psys = platform.system()
-	if psys in ["FreeBSD", "Darwin", "OpenBSD"]:
-		loadavg = subprocess.check_output(["sysctl", "-n", "vm.loadavg"]).decode('utf-8')
-		if psys != "OpenBSD":
-			m = re.match(r"{ (\d+\.\d+) (\d+\.\d+) (\d+\.\d+).+", loadavg)
-		else:
-			m = re.match(r"(\d+\.\d+) (\d+\.\d+) (\d+\.\d+)", loadavg)
-		if m:
-			loadavg_arr = [m.group(1), m.group(2), m.group(3)]
-		else:
-			loadavg_arr = ["0.00", "0.00", "0.00"]
-	else:
-		file = open("/proc/loadavg")
-		loadavg = file.read()
-		file.close()
-		loadavg_arr = loadavg.split(' ')
-
-	return [float(item) for item in loadavg_arr[:3]]
-
-def get_internet_interface_name() -> str:
-	if platform.system() == "OpenBSD":
-		cmd = "ifconfig egress"
-		text = subprocess.getoutput(cmd)
-		lines = text.split('\n')
-		items = lines[0].split(' ')
-		interface_name = items[0][:-1]
-	else:
-		cmd = "ip --json route"
-		text = subprocess.getoutput(cmd)
-		try:
-			arr = json.loads(text)
-			interface_name = arr[0]["dev"]
-		except Exception:
-			lines = text.split('\n')
-			items = lines[0].split(' ')
-			buff = items.index("dev")
-			interface_name = items[buff + 1]
-	return interface_name
-
-def timeago(timestamp: int | date_time_library.datetime | Literal[False] = False) -> str:
-	"""
-	Get a datetime object or a int() Epoch timestamp and return a
-	pretty string like 'an hour ago', 'Yesterday', '3 months ago',
-	'just now', etc
-	"""
-	now = date_time_library.datetime.now()
-	diff = date_time_library.timedelta(0)
-	if type(timestamp) is int:
-		diff = now - date_time_library.datetime.fromtimestamp(timestamp)
-	elif isinstance(timestamp, date_time_library.datetime):
-		diff = now - timestamp
-	elif not timestamp:
-		diff = now - now
-	second_diff = diff.seconds
-	day_diff = diff.days
-
-	if day_diff < 0:
-		return ''
-
-	if day_diff == 0:
-		if second_diff < 10:
-			return "just now"
-		if second_diff < 60:
-			return str(second_diff) + " seconds ago"
-		if second_diff < 120:
-			return "a minute ago"
-		if second_diff < 3600:
-			return str(second_diff // 60) + " minutes ago"
-		if second_diff < 7200:
-			return "an hour ago"
-		if second_diff < 86400:
-			return str(second_diff // 3600) + " hours ago"
-	if day_diff < 31:
-		return str(day_diff) + " days ago"
-	if day_diff < 365:
-		return str(day_diff // 30) + " months ago"
-	return str(day_diff // 365) + " years ago"
-
-def time2human(diff: int | float) -> str:
-	dt = date_time_library.timedelta(seconds=diff)
-	if dt.days < 0:
-		return ''
-
-	if dt.days == 0:
-		if dt.seconds < 60:
-			return str(dt.seconds) + " seconds"
-		if dt.seconds < 3600:
-			return str(dt.seconds // 60) + " minutes"
-		if dt.seconds < 86400:
-			return str(dt.seconds // 3600) + " hours"
-	return str(dt.days) + " days"
-
-def dec2hex(dec: int) -> str:
-	h = hex(dec)[2:]
-	if len(h) % 2 > 0:
-		h = '0' + h
-	return h
-
 def run_as_root(args: list[str]) -> int:
 	psys = platform.system()
 	if os.geteuid() != 0:
@@ -658,132 +496,8 @@ def run_as_root(args: list[str]) -> int:
 	exit_code = subprocess.call(args)
 	return exit_code
 
-def add2systemd(**kwargs):
-	name = kwargs.get("name")
-	start = kwargs.get("start")
-	pre = kwargs.get("pre")
-	post = kwargs.get("post", "/bin/echo service down")
-	user = kwargs.get("user", "root")
-	group = kwargs.get("group", user)
-	workdir = kwargs.get("workdir")
-	force = kwargs.get("force")
-	pversion = platform.version()
-	psys = platform.system()
-	path = "/etc/systemd/system/{name}.service".format(name=name)
-
-	if psys == "OpenBSD":
-		path = "/etc/rc.d/{name}".format(name=name)
-	if name is None or start is None:
-		raise Exception("Bad args. Need 'name' and 'start'.")
-	if os.path.isfile(path):
-		if force:
-			print("Unit exist, force rewrite")
-		else:
-			print("Unit exist.")
-			return
-
-	text = f"""
-[Unit]
-Description = {name} service
-After = network.target
-
-[Service]
-Type = simple
-Restart = always
-RestartSec = 30
-ExecStart = {start}
-{f"ExecStartPre = {pre}" if pre else '# ExecStartPre not set'}
-ExecStopPost = {post}
-User = {user}
-Group = {group} 
-{f"WorkingDirectory = {workdir}" if workdir else '# WorkingDirectory not set'}
-LimitNOFILE = infinity
-LimitNPROC = infinity
-LimitMEMLOCK = infinity
-
-[Install]
-WantedBy = multi-user.target
-"""
-
-	if psys == "OpenBSD" and 'APRENDIENDODEJESUS' in pversion:
-		text = f"""
-#!/bin/ksh
-servicio="{start}"
-servicio_user="{user}"
-servicio_timeout="3"
-
-. /etc/rc.d/rc.subr
-
-rc_cmd $1
-"""
-
-	file = open(path, 'wt')
-	file.write(text)
-	file.close()
-
-	# Изменить права
-	args = ["chmod", "664", path]
-	subprocess.run(args)
-
-	# Разрешить запуск
-	args = ["chmod", "+x", path]
-	subprocess.run(args)
-
-	if psys != "OpenBSD":
-		# Перезапустить systemd
-		args = ["systemctl", "daemon-reload"]
-		subprocess.run(args)
-
-	# Включить автозапуск
-	if psys == "OpenBSD":
-		args = ["rcctl", "enable", name]
-	else:
-		args = ["systemctl", "enable", name]
-	subprocess.run(args)
-
 def ip2int(addr: str) -> int:
 	return struct.unpack("!i", socket.inet_aton(addr))[0]
 
 def int2ip(dec: int) -> str:
 	return socket.inet_ntoa(struct.pack("!i", dec))
-
-def get_service_status(name: str) -> bool:
-	status = False
-	psys = platform.system()
-	if psys == "OpenBSD":
-		result = os.system(f"rcctl check {name}")
-	else:
-		result = os.system(f"systemctl is-active --quiet {name}")
-	if result == 0:
-		status = True
-	return status
-
-def get_service_uptime(name: str) -> int | None:
-	property = "ExecMainStartTimestampMonotonic"
-	args = ["systemctl", "show", name, "--property=" + property]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(err) > 0:
-		return
-	start_timestamp_monotonic = parse(output, f"{property}=", '\n') or 0
-	start_timestamp_monotonic = int(start_timestamp_monotonic) / 10 ** 6
-	boot_timestamp = psutil.boot_time()
-	time_now = time.time()
-	start_timestamp = boot_timestamp + start_timestamp_monotonic
-	uptime = int(time_now - start_timestamp)
-	return uptime
-
-def get_service_pid(name: str) -> int | None:
-	property = "MainPID"
-	args = ["systemctl", "show", name, "--property=" + property]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
-	if len(err) > 0:
-		return
-	pid_text = parse(output, f"{property}=", '\n')
-	if pid_text is None:
-		return None
-	pid = int(pid_text)
-	return pid

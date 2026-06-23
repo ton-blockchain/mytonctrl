@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import platform
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -11,7 +13,7 @@ import psutil
 from mytoncore import MyTonCore
 from mytoncore.utils import parse_db_stats
 from mytoninstaller.node_args import get_node_args
-from mypylib.mypylib import get_service_pid, MyPyClass, get_load_avg
+from mypylib.mypylib import MyPyClass, parse
 from mytonctrl.git import fix_git_config, get_git_hash
 
 
@@ -88,6 +90,41 @@ def get_swap_info():
     result["usage"] = round(data.used / 10**9, 2)
     result["usagePercent"] = data.percent
     return result
+
+
+def get_load_avg() -> list[float]:
+    psys = platform.system()
+    if psys in ["FreeBSD", "Darwin", "OpenBSD"]:
+        loadavg = subprocess.check_output(["sysctl", "-n", "vm.loadavg"]).decode('utf-8')
+        if psys != "OpenBSD":
+            m = re.match(r"{ (\d+\.\d+) (\d+\.\d+) (\d+\.\d+).+", loadavg)
+        else:
+            m = re.match(r"(\d+\.\d+) (\d+\.\d+) (\d+\.\d+)", loadavg)
+        if m:
+            loadavg_arr = [m.group(1), m.group(2), m.group(3)]
+        else:
+            loadavg_arr = ["0.00", "0.00", "0.00"]
+    else:
+        file = open("/proc/loadavg")
+        loadavg = file.read()
+        file.close()
+        loadavg_arr = loadavg.split(' ')
+    return [float(item) for item in loadavg_arr[:3]]
+
+
+def get_service_pid(name: str) -> int | None:
+    property = "MainPID"
+    args = ["systemctl", "show", name, "--property=" + property]
+    process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+    output = process.stdout.decode("utf-8")
+    err = process.stderr.decode("utf-8")
+    if len(err) > 0:
+        return
+    pid_text = parse(output, f"{property}=", '\n')
+    if pid_text is None:
+        return None
+    pid = int(pid_text)
+    return pid
 
 
 def get_validator_process_info():

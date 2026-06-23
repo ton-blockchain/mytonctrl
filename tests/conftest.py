@@ -43,16 +43,6 @@ class TestLocal(MyPyClass):
     def get_my_temp_dir(self):
         return self._temp_dir
 
-    def self_test(self):
-        pass
-
-    # def write_db(self, data):
-    #     self.buffer.old_db = Dict(self.db)
-    #
-    # def load_db(self, db_path=False):
-    #     self.set_default_config()
-    #     return True
-
 
 @pytest.fixture()
 def local(tmp_path):

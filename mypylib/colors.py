@@ -4,7 +4,6 @@ from typing import Any
 
 
 class bcolors:
-    '''This class is designed to display text in color format'''
     red = "\033[31m"
     green = "\033[32m"
     yellow = "\033[33m"
@@ -77,5 +76,15 @@ class bcolors:
         text = bcolors.underline + text + bcolors.endc
         return text
 
-    colors = {"red": red, "green": green, "yellow": yellow, "blue": blue, "magenta": magenta, "cyan": cyan,
-              "endc": endc, "bold": bold, "underline": underline, "dim": dim}
+    colors = {
+        "red": red,
+        "green": green,
+        "yellow": yellow,
+        "blue": blue,
+        "magenta": magenta,
+        "cyan": cyan,
+        "endc": endc,
+        "bold": bold,
+        "underline": underline,
+        "dim": dim,
+    }

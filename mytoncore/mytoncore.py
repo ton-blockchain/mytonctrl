@@ -23,7 +23,8 @@ from mytoncore.utils import (
     ng2g,
     get_package_resource_path,
     raw_addr_to_b64,
-	nano_ton_to_ton
+	nano_ton_to_ton,
+	dec2hex
 )
 from mytoncore.output import (
 	get_cell_body,
@@ -57,7 +58,6 @@ from mytoncore.models import (
 from mypylib.mypylib import (
 	parse,
 	get_timestamp,
-	dec2hex,
 	Dict, int2ip, MyPyClass,
 	parse_int_forced
 )

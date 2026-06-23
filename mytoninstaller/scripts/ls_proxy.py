@@ -4,8 +4,7 @@ import subprocess
 import sys
 import time
 
-from mypylib.mypylib import add2systemd
-
+from mytoninstaller.utils import add2systemd
 from mytoncore.utils import get_package_resource_path
 from mytoninstaller.config import GetConfig, SetConfig
 

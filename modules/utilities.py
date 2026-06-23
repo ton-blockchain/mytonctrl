@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import asdict
+import datetime
 import json
 import random
 import subprocess
@@ -6,7 +9,7 @@ import time
 
 import requests
 
-from mypylib.mypylib import color_print, print_table, color_text, timeago, bcolors
+from mypylib.mypylib import color_print, print_table, color_text, bcolors
 from modules.module import MtcModule
 from mytoncore.utils import raw_addr_to_b64
 from mytoncore.output import tlb_to_json
@@ -38,6 +41,38 @@ class UtilitiesModule(MtcModule):
         print()
         print_table(historyTable)
 
+    @staticmethod
+    def _timeago(
+        timestamp: int | None,
+    ) -> str:
+        now = datetime.datetime.now()
+        if timestamp is None:
+            diff = now - now
+        else:
+            diff = now - datetime.datetime.fromtimestamp(timestamp)
+        second_diff = diff.seconds
+        day_diff = diff.days
+        if day_diff < 0:
+            return ""
+        if day_diff == 0:
+            if second_diff < 10:
+                return "just now"
+            if second_diff < 60:
+                return str(second_diff) + " seconds ago"
+            if second_diff < 120:
+                return "a minute ago"
+            if second_diff < 3600:
+                return str(second_diff // 60) + " minutes ago"
+            if second_diff < 7200:
+                return "an hour ago"
+            if second_diff < 86400:
+                return str(second_diff // 3600) + " hours ago"
+        if day_diff < 31:
+            return str(day_diff) + " days ago"
+        if day_diff < 365:
+            return str(day_diff // 30) + " months ago"
+        return str(day_diff // 365) + " years ago"
+
     def get_history_table(self, addr, limit):
         addr = self.ton.get_destination_addr(addr)
         account = self.ton.GetAccount(addr)
@@ -63,7 +98,7 @@ class UtilitiesModule(MtcModule):
             # datetime = timestamp2datetime(message.time, "%Y.%m.%d %H:%M:%S")
             datetime = 'n/a'
             if message.time is not None:
-                datetime = timeago(message.time)
+                datetime = self._timeago(message.time)
             table += [[datetime, type, message.value, fromto]]
         return table
 
