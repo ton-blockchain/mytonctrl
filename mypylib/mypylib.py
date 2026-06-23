@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 import shutil
@@ -20,10 +21,14 @@ from contextlib import contextmanager
 from types import FrameType
 from typing import Any, Callable, Literal, Mapping, Sequence
 
-INFO = "info"
-WARNING = "warning"
-ERROR = "error"
-DEBUG = "debug"
+from mypylib.colors import bcolors
+from mypylib.logger import (
+    ERROR,
+    INFO,
+    WARNING,
+    get_logger,
+    level_for_mode,
+)
 
 Callback = Callable[..., Any]
 
@@ -64,84 +69,6 @@ class Dict(dict):
 		return self.get(key)
 
 
-class bcolors:
-	'''This class is designed to display text in color format'''
-	red = "\033[31m"
-	green = "\033[32m"
-	yellow = "\033[33m"
-	blue = "\033[34m"
-	magenta = "\033[35m"
-	cyan = "\033[36m"
-	endc = "\033[0m"
-	bold = "\033[1m"
-	underline = "\033[4m"
-	default = "\033[39m"
-	dim = "\033[2m"
-
-	DEBUG = magenta
-	INFO = blue
-	OKGREEN = green
-	WARNING = yellow
-	ERROR = red
-	ENDC = endc
-	BOLD = bold
-	UNDERLINE = underline
-
-	@staticmethod
-	def get_args(*args: Any) -> str:
-		text = ""
-		for item in args:
-			if item is None:
-				continue
-			text += str(item)
-		return text
-
-	@staticmethod
-	def magenta_text(*args: Any) -> str:
-		text = bcolors.get_args(*args)
-		text = bcolors.magenta + text + bcolors.endc
-		return text
-
-	@staticmethod
-	def blue_text(*args: Any) -> str:
-		text = bcolors.get_args(*args)
-		text = bcolors.blue + text + bcolors.endc
-		return text
-
-	@staticmethod
-	def green_text(*args: Any) -> str:
-		text = bcolors.get_args(*args)
-		text = bcolors.green + text + bcolors.endc
-		return text
-
-	@staticmethod
-	def yellow_text(*args: Any) -> str:
-		text = bcolors.get_args(*args)
-		text = bcolors.yellow + text + bcolors.endc
-		return text
-
-	@staticmethod
-	def red_text(*args: Any) -> str:
-		text = bcolors.get_args(*args)
-		text = bcolors.red + text + bcolors.endc
-		return text
-
-	@staticmethod
-	def bold_text(*args: Any) -> str:
-		text = bcolors.get_args(*args)
-		text = bcolors.bold + text + bcolors.endc
-		return text
-
-	@staticmethod
-	def underline_text(*args: Any) -> str:
-		text = bcolors.get_args(*args)
-		text = bcolors.underline + text + bcolors.endc
-		return text
-
-	colors = {"red": red, "green": green, "yellow": yellow, "blue": blue, "magenta": magenta, "cyan": cyan,
-			  "endc": endc, "bold": bold, "underline": underline, "dim": dim}
-
-
 class MyPyClass:
 	def __init__(self, file: str) -> None:
 		self.working: bool = True
@@ -150,7 +77,6 @@ class MyPyClass:
 		self.db.config = Dict()
 
 		self.old_db = Dict()
-		self.log_list = list()
 		self.thread_count: int | None = None
 		self.thread_count_old: int | None = None
 		self.memory_using: float | None = None
@@ -170,6 +96,8 @@ class MyPyClass:
 		os.makedirs(self.my_work_dir, exist_ok=True)
 		os.makedirs(self.my_temp_dir, exist_ok=True)
 
+		self.logger: logging.Logger = get_logger(self.my_name)
+
 		self.load_db()
 		self.set_default_config()
 
@@ -188,8 +116,6 @@ class MyPyClass:
 
 		# Start other threads
 		self.start_cycle(self.self_test, sec=1)
-		if self.db.config.isWritingLogFile is True:
-			self.start_cycle(self.write_log, sec=1)
 		if self.db.config.isLocaldbSaving is True:
 			self.start_cycle(self.save_db, sec=1)
 		self.thread_count_old = threading.active_count()
@@ -204,8 +130,6 @@ class MyPyClass:
 			self.db.config.isLimitLogFile = True
 		if self.db.config.isDeleteOldLogFile is None:
 			self.db.config.isDeleteOldLogFile = False
-		if self.db.config.isIgnorLogWarning is None:
-			self.db.config.isIgnorLogWarning = False
 		if self.db.config.isStartOnlyOneProcess is None:
 			self.db.config.isStartOnlyOneProcess = True
 		if self.db.config.memoryUsinglimit is None:
@@ -252,9 +176,6 @@ class MyPyClass:
 		if memory_using > self.db.config.memoryUsinglimit:
 			self.db.config.memoryUsinglimit += 50
 			self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb", WARNING)
-
-	def get_thread_name(self):
-		return threading.current_thread().name
 
 	def get_my_full_name(self):
 		'''return "test.py"'''
@@ -308,73 +229,8 @@ class MyPyClass:
 			result = False
 		return result
 
-	def add_log(self, input_text: str, mode=INFO):
-		input_text = f"{input_text}"
-		time_text = date_time_library.datetime.utcnow().strftime("%d.%m.%Y, %H:%M:%S.%f")[:-3]
-		time_text = "{0} (UTC)".format(time_text).ljust(32, ' ')
-
-		# Pass if set log level
-		if self.db.config.logLevel != DEBUG and mode == DEBUG:
-			return
-		elif self.db.config.isIgnorLogWarning and mode == WARNING:
-			return
-
-		# Set color mode
-		if mode == INFO:
-			color_start = bcolors.INFO + bcolors.BOLD
-		elif mode == WARNING:
-			color_start = bcolors.WARNING + bcolors.BOLD
-		elif mode == ERROR:
-			color_start = bcolors.ERROR + bcolors.BOLD
-		elif mode == DEBUG:
-			color_start = bcolors.DEBUG + bcolors.BOLD
-		else:
-			color_start = bcolors.UNDERLINE + bcolors.BOLD
-		mode_text = "{0}{1}{2}".format(color_start, "[{0}]".format(mode).ljust(10, ' '), bcolors.ENDC)
-
-		# Set color thread
-		if mode == ERROR:
-			color_start = bcolors.ERROR + bcolors.BOLD
-		else:
-			color_start = bcolors.OKGREEN + bcolors.BOLD
-		thread_text = "{0}{1}{2}".format(color_start, "<{0}>".format(self.get_thread_name()).ljust(14, ' '), bcolors.ENDC)
-		log_text = mode_text + time_text + thread_text + input_text
-
-		# Queue for recording
-		self.log_list.append(log_text)
-
-		# Print log text
-		print(log_text)
-
-	def write_log(self):
-		log_file_name = self.log_file_name
-
-		with open(log_file_name, 'a') as file:
-			while len(self.log_list) > 0:
-				log_text = self.log_list.pop(0)
-				file.write(log_text + '\n')
-
-		# Control log size
-		if self.db.config.isLimitLogFile is False:
-			return
-		log_size = self.db.config.logFileSizeLines or 16384
-		allline = self.count_lines(log_file_name)
-		if allline > log_size + 256:
-			delline = allline - log_size
-			f = open(log_file_name).readlines()
-			i = 0
-			while i < delline:
-				f.pop(0)
-				i = i + 1
-			with open(log_file_name, 'w') as F:
-				F.writelines(f)
-
-	def count_lines(self, filename, chunk_size=1 << 13):
-		if not os.path.isfile(filename):
-			return 0
-		with open(filename) as file:
-			return sum(chunk.count('\n')
-				for chunk in iter(lambda: file.read(chunk_size), ''))
+	def add_log(self, input_text: str, mode: str = INFO) -> None:
+		self.logger.log(level_for_mode(mode), str(input_text))
 
 	def exit(self, signum: int | None = None, frame: FrameType | None = None) -> None:
 		self.working = False
@@ -531,7 +387,6 @@ class MyPyClass:
 
 	def save(self) -> None:
 		self.save_db()
-		self.write_log()
 
 	def load_db(self, db_path: str | None = None) -> bool:
 		result = False

@@ -7,6 +7,7 @@ from pathlib import Path
 from mytoncore.utils import str2bool
 
 from mypylib.mypylib import MyPyClass
+from mypylib.logger import setup_logging
 from mytonctrl.utils import get_current_user
 
 from mytoninstaller.context import InstallerContext, InstallerPaths, InstallerPorts
@@ -121,6 +122,11 @@ def get_context(args) -> InstallerContext:
 def mytoninstaller():
     local = MyPyClass(__file__)
     local.db.config.logLevel = "debug"
+    setup_logging(
+        local.db.config.logLevel,
+        local.log_file_name if local.db.config.isWritingLogFile else None,
+        local.db.config.logFileSizeLines if local.db.config.isLimitLogFile else None,
+    )
     args = _parse_general_args()
     ctx = get_context(args)
     FirstMytoncoreSettings(local, ctx)
