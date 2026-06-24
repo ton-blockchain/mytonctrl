@@ -115,7 +115,10 @@ class CustomOverlayModule(MtcModule):
         with open(path, 'w') as f:
             json.dump(config, f)
         result = self.ton.validatorConsole.run(f"addcustomoverlay {path}")
-        return 'success' in result
+        if 'success' not in result:
+            self.ton.local.add_log(f"Failed to add custom overlay {config.get('name')} to validator-console: {result}", "error")
+            return False
+        return True
 
     def custom_overlays(self):
         config = self.get_default_custom_overlay()
