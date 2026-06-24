@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -9,7 +10,7 @@ from mytonctrl.utils import pop_arg_from_args, GetItemFromList, is_hex
 import subprocess
 
 
-def fix_git_config(git_path: str):
+def fix_git_config(git_path: str | Path):
     args = ["git", "status"]
     try:
         process = subprocess.run(
@@ -37,9 +38,14 @@ def fix_git_config(git_path: str):
             raise Exception(f"Failed to check git status: {err}")
 
 
-def check_git(input_args, default_repo, text, default_branch="master"):
-    src_dir = "/usr/src"
-    git_path = f"{src_dir}/{default_repo}"
+def check_git(
+    input_args: list[str],
+    src_dir: Path,
+    default_repo: str,
+    text: str,
+    default_branch: str = "master",
+):
+    git_path = str(src_dir)
     fix_git_config(git_path)
     default_author = "ton-blockchain"
 
@@ -82,7 +88,6 @@ def check_git(input_args, default_repo, text, default_branch="master"):
         raise Exception(
             f"{text} error: You are on {local_branch} branch, to update to the tip of {local_branch} branch use `{text} {local_branch}` command"
         )
-    # end if
 
     if need_author is None:
         need_author = local_author
@@ -132,7 +137,7 @@ def GetAuthorRepoBranchFromArgs(args: list[str]):
     return data
 
 
-def get_git_url(git_path: str) -> str | None:
+def get_git_url(git_path: str | Path) -> str | None:
     args = ["git", "remote", "-v"]
     output = ""
     try:
@@ -159,7 +164,7 @@ def get_git_url(git_path: str) -> str | None:
     return url
 
 
-def get_git_author_and_repo(git_path: str) -> tuple[str | None, str | None]:
+def get_git_author_and_repo(git_path: str | Path) -> tuple[str | None, str | None]:
     author = None
     repo = None
     url = get_git_url(git_path)
@@ -180,7 +185,9 @@ def _get_request(url: str) -> str:
     return text
 
 
-def get_git_last_remote_commit(git_path: str, branch: str = "master") -> str | None:
+def get_git_last_remote_commit(
+    git_path: str | Path, branch: str = "master"
+) -> str | None:
     author, repo = get_git_author_and_repo(git_path)
     if author is None or repo is None:
         return
@@ -195,7 +202,7 @@ def get_git_last_remote_commit(git_path: str, branch: str = "master") -> str | N
     return sha
 
 
-def check_git_update(git_path: str) -> bool | None:
+def check_git_update(git_path: str | Path) -> bool | None:
     branch = get_git_branch(git_path)
     if branch is None:
         return None
@@ -209,7 +216,7 @@ def check_git_update(git_path: str) -> bool | None:
     return result
 
 
-def get_git_hash(git_path: str, short: bool = False) -> str | None:
+def get_git_hash(git_path: Path | str, short: bool = False) -> str | None:
     args = ["git", "rev-parse", "HEAD"]
     if short is True:
         args.insert(2, "--short")
@@ -229,7 +236,7 @@ def get_git_hash(git_path: str, short: bool = False) -> str | None:
     return buff[0]
 
 
-def get_git_branch(git_path: str) -> str | None:
+def get_git_branch(git_path: str | Path) -> str | None:
     args = ["git", "branch", "-v"]
     process = subprocess.run(
         args,

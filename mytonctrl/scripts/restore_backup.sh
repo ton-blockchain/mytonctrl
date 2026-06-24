@@ -2,14 +2,16 @@ name="backup.tar.gz"
 mtc_dir="$HOME/.local/share/mytoncore"
 ip=0
 user=${SUDO_USER:-$(logname)}
+ton_dir="/var/ton-work"
 # Get arguments
-while getopts n:m:i:u: flag
+while getopts n:m:i:u:t: flag
 do
 	case "${flag}" in
 		n) name=${OPTARG};;
     m) mtc_dir=${OPTARG};;
     i) ip=${OPTARG};;
     u) user=${OPTARG};;
+    t) ton_dir=${OPTARG};;
     *)
         echo "Flag -${flag} is not recognized. Aborting"
         exit 1 ;;
@@ -43,26 +45,26 @@ if [ ! -d ${tmp_dir}/db ]; then
 
 fi
 
-rm -rf /var/ton-work/db/keyring
+rm -rf ${ton_dir}/db/keyring
 
 chown -R $user:$user ${tmp_dir}/mytoncore
 chown -R $user:$user ${tmp_dir}/keys
 chown validator:validator ${tmp_dir}/keys
 chown -R validator:validator ${tmp_dir}/db
 
-cp -rfp ${tmp_dir}/db /var/ton-work
-cp -rfp ${tmp_dir}/keys /var/ton-work
+cp -rfp ${tmp_dir}/db ${ton_dir}
+cp -rfp ${tmp_dir}/keys ${ton_dir}
 cp -rfpT ${tmp_dir}/mytoncore $mtc_dir
 
-chown -R validator:validator /var/ton-work/db/keyring
+chown -R validator:validator ${ton_dir}/db/keyring
 
 echo -e "${COLOR}[2/4]${ENDC} Extracted files from archive"
 
-rm -r /var/ton-work/db/dht-*
+rm -r ${ton_dir}/db/dht-*
 
 if [ $ip -ne 0 ]; then
     echo "Replacing IP in node config"
-    python3 -c "import json;path='/var/ton-work/db/config.json';f=open(path);d=json.load(f);f.close();d['addrs'][0]['ip']=int($ip);f=open(path, 'w');f.write(json.dumps(d, indent=4));f.close()"
+    python3 -c "import json;path='${ton_dir}/db/config.json';f=open(path);d=json.load(f);f.close();d['addrs'][0]['ip']=int($ip);f=open(path, 'w');f.write(json.dumps(d, indent=4));f.close()"
 else
     echo "IP is not provided, skipping IP replacement"
 fi

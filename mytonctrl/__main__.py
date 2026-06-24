@@ -1,10 +1,12 @@
 import argparse
+import logging
 import os
 import shutil
 
 from mypyconsole.mypyconsole import MyPyConsole
 
 from mypylib.mypylib import MyPyClass, color_text, bcolors
+from mypylib.logger import setup_logging
 from mytoncore import MyTonCore
 from mytonctrl.mytonctrl import MyTonCtrl
 
@@ -92,12 +94,19 @@ def _main():
             print(welcome_text)
 
     debug = ton.GetSettings("debug")
+    mc_config = mytoncore_local.db.config
+    config = local.db.config
+    setup_logging(
+        mc_config.logLevel,
+        local.log_file_name if config.isWritingLogFile else None,
+        config.logFileSizeLines if config.isLimitLogFile else None,
+    )
+    local.logger.setLevel(logging.DEBUG if debug else logging.INFO)
     console = MyPyConsole(local, "MyTonCtrl", debug)
 
     mtc = MyTonCtrl(local, ton, console)
 
     mtc.run(
-        debug,
         skip_startup_checks=args.no_startup_checks or args.cmd is not None,
         cmd=args.cmd,
     )

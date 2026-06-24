@@ -60,7 +60,11 @@ if $full; then
 fi
 rm -rf /usr/bin/mytonctrl
 
+
 pip3 uninstall -y mytonctrl
 pip3 uninstall -y ton-http-api
+rm -rf /usr/local/bin/mytoncore/venv
+rm -rf /home/${user}/.local/share/mytoncore/venv
+rm -rf /opt/virtualenv/ton_http_api
 
 echo -e "${COLOR}Uninstall Complete${ENDC}"

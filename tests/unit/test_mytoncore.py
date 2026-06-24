@@ -1,7 +1,9 @@
 import os
 import struct
 import types
+from typing import Any
 
+from mytoncore.models import Config, ValidatorConfig, WorkchainConfig
 import pytest
 
 from mytoncore.mytoncore import MyTonCore, Account, raw_addr_to_b64
@@ -66,8 +68,7 @@ def test_getaccounthistory_iterates(ton: MyTonCore, monkeypatch):
     assert hist[0].src_workchain == -1 and hist[0].dest_workchain == -1
     assert hist[0].src_addr == '0000000000000000000000000000000000000000000000000000000000000000' and hist[0].dest_addr == '3333333333333333333333333333333333333333333333333333333333333333'
     assert hist[0].value == 1.7
-    assert hist[0].body is None and hist[0].comment is None
-    assert hist[0].ihr_disabled == 1
+    assert hist[0].body is None
 
 
 def test_getaccounthistory_paginates(ton: MyTonCore, monkeypatch):
@@ -77,7 +78,7 @@ def test_getaccounthistory_paginates(ton: MyTonCore, monkeypatch):
     def make_msg(t):
         tr = Transaction(block=Block(-1, '8000000000000000', 1, 'r', 'f'), type='ord', time=t, total_fees=0.0)
         return Message(transaction=tr, src_workchain=-1, dest_workchain=-1, src_addr='', dest_addr='',
-                       value=0.0, body=None, comment=None, ihr_fee=0.0, fwd_fee=0.0, ihr_disabled=1)
+                       value=0.0, body=None)
 
     calls = []
     batches = [
@@ -107,7 +108,7 @@ def test_getaccounthistory_stops_at_limit(ton: MyTonCore, monkeypatch):
     def make_msg(t):
         tr = Transaction(block=Block(-1, '8000000000000000', 1, 'r', 'f'), type='ord', time=t, total_fees=0.0)
         return Message(transaction=tr, src_workchain=-1, dest_workchain=-1, src_addr='', dest_addr='',
-                       value=0.0, body=None, comment=None, ihr_fee=0.0, fwd_fee=0.0, ihr_disabled=1)
+                       value=0.0, body=None)
 
     calls = []
 
@@ -464,21 +465,150 @@ def test_get_returned_stake(ton: MyTonCore, monkeypatch):
 
 
 def test_get_basechain_config(ton: MyTonCore, monkeypatch):
-    testnet_result = 'ConfigParam(12) = (\n  workchains:(hme_root\n    root:(hm_edge\n      label:(hml_same v:0 n:32)\n      node:(hmn_leaf\n        value:(workchain enabled_since:1573821854 monitor_min_split:2 min_split:2 max_split:4 basic:1 active:1 accept_msgs:1 flags:0 zerostate_root_hash:x55B13F6D0E1D0C34C9C2160F6F918E92D82BF9DDCF8DE2E4C94A3FDF39D15446 zerostate_file_hash:xEE0BEDFE4B32761FB35E9E1D8818EA720CAD1A0E7B4D2ED673C488E72E910342 version:0\n          format:(wfmt_basic vm_version:-1 vm_mode:0))))))\n\nx{C_}\n x{D0532EE74ECF01010270002AD89FB6870E861A64E10B07B7C8C7496C15FCEEE7C6F17264A51FEF9CE8AA237705F6FF25993B0FD9AF4F0EC40C753906568D073DA6976B39E24473974881A1000000000FFFFFFFF80000000000000004_}'
+    testnet_result = 'ConfigParam(12) = (\n  workchains:(hme_root\n    root:(hm_edge\n      label:(hml_same v:0 n:32)\n      node:(hmn_leaf\n        value:(workchain enabled_since:1573821854 monitor_min_split:2 min_split:1 max_split:4 basic:1 active:1 accept_msgs:1 flags:0 zerostate_root_hash:x55B13F6D0E1D0C34C9C2160F6F918E92D82BF9DDCF8DE2E4C94A3FDF39D15446 zerostate_file_hash:xEE0BEDFE4B32761FB35E9E1D8818EA720CAD1A0E7B4D2ED673C488E72E910342 version:0\n          format:(wfmt_basic vm_version:-1 vm_mode:0))))))\n\nx{C_}\n x{D0532EE74ECF01010270002AD89FB6870E861A64E10B07B7C8C7496C15FCEEE7C6F17264A51FEF9CE8AA237705F6FF25993B0FD9AF4F0EC40C753906568D073DA6976B39E24473974881A1000000000FFFFFFFF80000000000000004_}'
     monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: testnet_result)
     basechain_config = ton.get_basechain_config()
     print(basechain_config)
-    assert basechain_config["enabled_since"] == 1573821854
-    assert basechain_config["min_split"] == 2
-    assert basechain_config["max_split"] == 4
-    assert basechain_config["monitor_min_split"] == 2
+    assert basechain_config.enabled_since == 1573821854
+    assert basechain_config.min_split == 1
+    assert basechain_config.max_split == 4
+    assert basechain_config.monitor_min_split == 2
 
     ton.SetFunctionBuffer('config12', None)
 
     mainnet_result = 'ConfigParam(12) = (\n  workchains:(hme_root\n    root:(hm_edge\n      label:(hml_same v:0 n:32)\n      node:(hmn_leaf\n        value:(workchain_v2 enabled_since:1573821854 monitor_min_split:0 min_split:0 max_split:4 basic:1 active:1 accept_msgs:1 flags:0 zerostate_root_hash:x55B13F6D0E1D0C34C9C2160F6F918E92D82BF9DDCF8DE2E4C94A3FDF39D15446 zerostate_file_hash:xEE0BEDFE4B32761FB35E9E1D8818EA720CAD1A0E7B4D2ED673C488E72E910342 version:0\n          format:(wfmt_basic vm_version:-1 vm_mode:0)\n          split_merge_timings:(wc_split_merge_timings split_merge_delay:100 split_merge_interval:100 min_split_merge_interval:30 max_split_merge_delay:1000) persistent_state_split_depth:4)))))\nx{C_}\n x{D053AEE74ECF00000270002AD89FB6870E861A64E10B07B7C8C7496C15FCEEE7C6F17264A51FEF9CE8AA237705F6FF25993B0FD9AF4F0EC40C753906568D073DA6976B39E24473974881A1000000000FFFFFFFF8000000000000000000000032000000320000000F000001F4024_}\n'
     monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: mainnet_result)
     basechain_config = ton.get_basechain_config()
-    assert basechain_config["enabled_since"] == 1573821854
-    assert basechain_config["min_split"] == 0
-    assert basechain_config["max_split"] == 4
-    assert basechain_config["monitor_min_split"] == 0
+    assert basechain_config.enabled_since == 1573821854
+    assert basechain_config.min_split == 0
+    assert basechain_config.max_split == 4
+    assert basechain_config.monitor_min_split == 0
+
+
+def test_getconfig(ton: MyTonCore, monkeypatch):
+    result = '\nConfigParam(15) = ( validators_elected_for:65536 elections_start_before:32768 elections_end_before:8192 stake_held_for:32768)\nx{00010000000080000000200000008000}'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config(15)
+    assert cfg == {'validators_elected_for': 65536, 'elections_start_before': 32768, 'elections_end_before': 8192, 'stake_held_for': 32768}
+
+    result = '\nConfigParam(8) = (\n  (capabilities version:11 capabilities:494))\n\nx{C40000000B00000000000001EE}'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config(8)
+    assert cfg == {'_': {'_': 'capabilities', 'version': 11, 'capabilities': 494}}
+
+    result = 'ConfigParam(9) = (\n  mandatory_params:(hm_edge\n    label:(hml_same v:0 n:26)\n    node:(hmn_fork\n      left:(hm_edge\n        label:(hml_short\n          len:unary_zero s:x)\n        node:(hmn_fork\n          left:(hm_edge\n            label:(hml_short\n              len:unary_zero s:x)\n            node:(hmn_fork\n              left:(hm_edge\n                label:(hml_same v:0 n:2)\n                node:(hmn_fork\n                  left:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_leaf\n                      value:true))\n                  right:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_leaf\n                      value:true))))\n              right:(hm_edge\n                label:(hml_short\n                  len:unary_zero s:x)\n                node:(hmn_fork\n                  left:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:(unary_succ\n                            x:unary_zero) s:xC_)\n                        node:(hmn_leaf\n                          value:true))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:(unary_succ\n                            x:unary_zero) s:x4_)\n                        node:(hmn_leaf\n                          value:true))))\n                  right:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:(unary_succ\n                            x:unary_zero) s:x4_)\n                        node:(hmn_leaf\n                          value:true))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:true))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:true))))))))))\n          right:(hm_edge\n            label:(hml_short\n              len:unary_zero s:x)\n            node:(hmn_fork\n              left:(hm_edge\n                label:(hml_short\n                  len:unary_zero s:x)\n                node:(hmn_fork\n                  left:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:true))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:true))))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:(unary_succ\n                            x:unary_zero) s:x4_)\n                        node:(hmn_leaf\n                          value:true))))\n                  right:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:true))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:true))))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:true))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:true))))))))\n              right:(hm_edge\n                label:(hml_short\n                  len:unary_zero s:x)\n                node:(hmn_fork\n                  left:(hm_edge\n                    label:(hml_short\n                      len:(unary_succ\n                        x:unary_zero) s:x4_)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_leaf\n                          value:true))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_leaf\n                          value:true))))\n                  right:(hm_edge\n                    label:(hml_same v:0 n:2)\n                    node:(hmn_leaf\n                      value:true))))))))\n      right:(hm_edge\n        label:(hml_long n:5 s:x14_)\n        node:(hmn_leaf\n          value:true)))))'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config(9)
+    assert 'mandatory_params' in cfg
+    assert isinstance(cfg['mandatory_params'], dict)
+
+    result = '  ConfigParam(20) = (config_mc_gas_prices\n  (gas_flat_pfx flat_gas_limit:100 flat_gas_price:1000000\n    other:(gas_prices_ext gas_price:655360000 gas_limit:1000000 special_gas_limit:70000000 gas_credit:10000 block_gas_limit:2500000 freeze_due_limit:100000000 delete_due_limit:1000000000)))\n\nx{D1000000000000006400000000000F4240DE000000002710000000000000000F424000000000042C1D80000000000000271000000000002625A00000000005F5E100000000003B9ACA00}\n\n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config(20)
+    assert cfg == {'_': {'_': 'gas_flat_pfx', 'flat_gas_limit': 100, 'flat_gas_price': 1000000, 'other': {'_': 'gas_prices_ext', 'gas_price': 655360000, 'gas_limit': 1000000, 'special_gas_limit': 70000000, 'gas_credit': 10000, 'block_gas_limit': 2500000, 'freeze_due_limit': 100000000, 'delete_due_limit': 1000000000}}}
+
+    value = 'x{01BC53C758DC041462D4D98A17CEA2187EF45174209271E6538CE04C2E3D5C873D}\n x{8017547C8C5C21BA3B8FAE2726D1ED60CFBD711550B5BA79923013531790F0BD4E074B6C878C9BF88531980D6876F3BF82E13F907CB129670DE92E3D3416695893E000100000BB8000003E8}\n x{9FFD5AFB47137BC62F8BF650B00F9CA0F755A6386BFCAA69678830F0BD203EC98D1765645DB798D73D99F07D19960718C92317EFD5D6E6D188E300D8F5755F345AC}\n x{80023F91FCA84DCE1388F1F040A14FC5420A0B66B79BAB0C4856A54BBACA807C4160000000000000000000000000000000000000000000000000000000000000000}\n x{801A97FEA1958FEE5DBA364D0278872D88D7A2F8808713C7E478539AC0A5FE8D631002EA8F918B84374771F5C4E4DA3DAC19F7AE22AA16B74F3246026A62F21E17A9C0D46593342D49ED49648021DD7812E635DADB4BABA598A641B1B50D56471BA4FE_}'
+    result = f'ConfigParam(-90) = {value}'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config(-90)
+    assert cfg['_'] == value
+
+    result = '\nConfigParam(-900) = (null)\n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config(-900)
+    assert cfg == {'_': 'null'}
+
+
+def test_getrootworkchainsenabledtime(ton: MyTonCore, monkeypatch):
+    monkeypatch.setattr(ton, 'get_basechain_config', lambda: WorkchainConfig(enabled_since=12345, monitor_min_split=0, min_split=0, max_split=0))
+    enabled_time = ton.get_root_workchain_enabled_time()
+    assert enabled_time == 12345
+
+
+def test_getconfig15(ton: MyTonCore, monkeypatch):
+    result = '\nConfigParam(15) = ( validators_elected_for:65536 elections_start_before:32768 elections_end_before:8192 stake_held_for:32768)\nx{00010000000080000000200000008000}'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config_15()
+    assert cfg.validators_elected_for == 65536
+    assert cfg.elections_start_before == 32768
+    assert cfg.elections_end_before == 8192
+    assert cfg.stake_held_for == 32768
+
+
+
+def test_getconfig17(ton: MyTonCore, monkeypatch):
+    result = 'ConfigParam(17) = (\n  min_stake:(nanograms\n    amount:(var_uint len:6 value:10000000000000))\n  max_stake:(nanograms\n    amount:(var_uint len:7 value:10000000000000000))\n  min_total_stake:(nanograms\n    amount:(var_uint len:6 value:200000000000000)) max_stake_factor:1966080)\n\nx{609184E72A00072386F26FC100006B5E620F48000001E0000}'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config_17()
+    assert cfg.min_stake == 10_000.0
+    assert cfg.max_stake == 10_000_000.0
+    assert cfg.max_stake_factor == 1_966_080
+    assert cfg.min_total_stake == 200_000.0
+
+    ton.SetFunctionBuffer("config17", None)
+    result = 'ConfigParam(17) = (\n  min_stake:(nanograms\n    amount:(var_uint len:7 value:300000000000000))\n  max_stake:(nanograms\n    amount:(var_uint len:7 value:10000000000000000))\n  min_total_stake:(nanograms\n    amount:(var_uint len:8 value:75000000000000000)) max_stake_factor:196608)\n\nx{70110D9316EC00072386F26FC100008010A741A4627800000030000}'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config_17()
+    assert cfg.min_stake == 300_000.0
+    assert cfg.max_stake == 10_000_000.0
+    assert cfg.max_stake_factor == 196_608
+    assert cfg.min_total_stake == 75_000_000.0
+
+
+_VALIDATORS_EXT = 'validators_ext utime_since:1756784978 utime_until:1756799378 total:22 main:15 total_weight:1152921504606846963\n    list:(hme_root\n      root:(hm_edge\n        label:(hml_same v:0 n:11)\n        node:(hmn_fork\n          left:(hm_edge\n            label:(hml_short\n              len:unary_zero s:x)\n            node:(hmn_fork\n              left:(hm_edge\n                label:(hml_short\n                  len:unary_zero s:x)\n                node:(hmn_fork\n                  left:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:x46AD98CE0D7E345D5669015A75FD835BC8B138682E5E62638284FAA3F536AE42) weight:124039862731926336 adnl_addr:x151CDD00CCA9C3A4A2D7E4FED39DACBF3A0738AF17A892CFF2854DDA5A112718)))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:xB48347D8C4CAE43443D38209B7431EF96D8ACE91BE8A6221E5212B7F232D30B9) weight:124039862731926336 adnl_addr:x63D851287431C3B28EC2CBF29ADCB05E5135A6FEEE32CDFF96CE99ED6BF7C73C)))))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:x39F62B968BD7ACB92CCF7494C8AA8848AF1DC7757AEF78DA4E328F602E179D07) weight:124039862731926336 adnl_addr:x9835BBF9637BD12A50B1F5F90DEB4E0C53A95BACE3081C7B7037FA13EAC48A92)))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:xD08C12162561B2785E717352DE2B38921B7EFD3AE70CB8E4FD8786B80E708A5A) weight:124039862731926336 adnl_addr:x56AB95B527438348FC6E64A9A5D63F012A7B0393CCD6261C9AC7499D9668CA83)))))))\n                  right:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:xDE3BA96EA592F890A691D68AB65EED4ABF5A5406446CAF375982B37768567FD6) weight:124039862731926336 adnl_addr:xD41D1269D0035B68A402C2E810FC00591032ED60D15BA9DEFDA3807F81B268E1)))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:x32D6DE480EA6E614FA511F9D71019B0E1F7ACE64716E31550A0BB8CC9FC62235) weight:124039862731926336 adnl_addr:x255801D2220221957B7E954C908E69DD779D2D7A67882C177B589C238D605E20)))))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:x61A7DD0C4C2B8DD9C5F170A4CCC6C082C6D221F994D6AE777190A51A2498AE86) weight:124039862731926336 adnl_addr:x794993420B1B72C6F73B26C577FEAF63936B2AABF4548A2C1B7D2C9028C3E681)))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:xDA229AA39C81414C52EB21FB002B2B8E38A6CD71B6946E06D831C38FAE1C335D) weight:124039821385305426 adnl_addr:xA63F5117B93AF660A7BF990F38241FBAE74E4B8A3E0386F372F03E171DC73217)))))))))\n              right:(hm_edge\n                label:(hml_short\n                  len:unary_zero s:x)\n                node:(hmn_fork\n                  left:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:xDE8AC477AF70069F93B0E5876CDF30A70C66401496AE53111FD7B5B2FDD1E91C) weight:57885227928278046 adnl_addr:x9FCAAFF3B35DDC22FF4D7EC2EE4DFD2A9913EF79E23F30884CE99C52D7364374)))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:x42A418FA2F1E8CAE45330D46438A2D2916382024D519DB87646DEE7406BC2B7C) weight:12460072769944933 adnl_addr:xA46E8662F24DEEBC973E21725A0D7832D9D3DD06ED198254E670F9E49F357844)))))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:x2877F6A9002C682FCA64CCED7F7EC93D591FCABBA774B1102B44AE1A5095362B) weight:10244102642115605 adnl_addr:x6E4E253523B5A3B59811A492E9A0B9461CA6FBF797D4156C198B2F93399080C6)))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:xBD685EE2C6E7C13F54E29DED42218065A2CA16F8827C3401F7EDCC3EF58CC0FA) weight:8346479657513567 adnl_addr:x523AB850585AA93A7AC45DE8D2E7C3C691ECEDCB483C5859A50297BDA8ADA084)))))))\n                  right:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:x94BED6A1D43A5F3AEBDE0CCCA3E140A417201BBFF8288820F0869AA41D55985C) weight:8269373881593689 adnl_addr:x98C8552B9D35CB2FC820086E23B234F6268FF3091B994C8D52E462DE132040C2)))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:xE2CB33BC29526191E68320575EB91C1561BA02DE253381DD1DAD911EAC5862C0) weight:8269324182128422 adnl_addr:xD8A5A4F1CA99802D3A280A6185FCC4DD571E416B69A401846F26E4D3AB333BD2)))))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_fork\n                          left:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:x46DF027B734BB596B45439E24C31B90CDE318C752702679811BAFF64C67A764F) weight:8269324182128422 adnl_addr:x1F84AAA426CA904EAFEB48F26B038461F55624380783990368B316ABB916432E)))\n                          right:(hm_edge\n                            label:(hml_short\n                              len:unary_zero s:x)\n                            node:(hmn_leaf\n                              value:(validator_addr\n                                public_key:(ed25519_pubkey pubkey:x219FD27A9C4882D8C91CE748873D93AFDF107A70ADF444D5F15B5B16F67F5817) weight:8269324182128422 adnl_addr:x9660710D3D90261A0431FF104DA3760E852AE84C9EADD0280ACB0A4AB1B6E43C)))))))))))\n          right:(hm_edge\n            label:(hml_short\n              len:(unary_succ\n                x:unary_zero) s:x4_)\n            node:(hmn_fork\n              left:(hm_edge\n                label:(hml_short\n                  len:unary_zero s:x)\n                node:(hmn_fork\n                  left:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_leaf\n                          value:(validator_addr\n                            public_key:(ed25519_pubkey pubkey:x0017FECB093AF638CAD0B0BB130B133AEDC12830B136CBFAF84982D8029B6502) weight:8269324182128422 adnl_addr:xA6EA2902ED5CF2246980DA2AFBA907C10EC450D6A6E31A24956A69F8F0E21E2C)))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_leaf\n                          value:(validator_addr\n                            public_key:(ed25519_pubkey pubkey:x22D61B5FC0DDC5F54CC586B23CD03D56A0F6AAD632F25545FE8231BB814865A2) weight:7677793672279361 adnl_addr:x654EF8D2DFF3CA6F13075E70C77E91D164C0360EC951D942D78B3883314C86B2)))))\n                  right:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_fork\n                      left:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_leaf\n                          value:(validator_addr\n                            public_key:(ed25519_pubkey pubkey:x5D6C7818405AD8DC13D3A87A9FE5D727B045D9B8A166B59F8A1E99AF66D22074) weight:7114955125701191 adnl_addr:x60F6ADB0FF08A0BE4B271F02265AAEA111397212BCB3BBA604D93E31DD0CB2D0)))\n                      right:(hm_edge\n                        label:(hml_short\n                          len:unary_zero s:x)\n                        node:(hmn_leaf\n                          value:(validator_addr\n                            public_key:(ed25519_pubkey pubkey:xCE1C47205C8D522A435BC1515E8514D93D787E1C117149F71D8DA948456DC5D6) weight:5692273333090652 adnl_addr:x458AF768CB916259B14561D119BE61D922FD80DBEBCC495C92D69EF723530A64)))))))\n              right:(hm_edge\n                label:(hml_short\n                  len:(unary_succ\n                    x:unary_zero) s:x4_)\n                node:(hmn_fork\n                  left:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_leaf\n                      value:(validator_addr\n                        public_key:(ed25519_pubkey pubkey:xA471BBDD592E71CD372BD3EC616981E0C0FFE9D5B1F774849669366F70848BC1) weight:5113641242815115 adnl_addr:xDD7565355FFCD1C879B84740017F18FA066DCEF6F3DA0A2F4471361C8446930F)))\n                  right:(hm_edge\n                    label:(hml_short\n                      len:unary_zero s:x)\n                    node:(hmn_leaf\n                      value:(validator_addr\n                        public_key:(ed25519_pubkey pubkey:x96718F0822DE60B35FCA345A6419CE109DBEDC8DCEE1DE0E8A091DE414A29132) weight:4721427116211338 adnl_addr:x10C9715D89ABC8D32C490BB5A5788E04EBE5FD193EC11860BBEC5029967C9737))))))))))'
+
+
+def _test_config(cfg: Config):
+    assert cfg.total_validators == 22
+    assert cfg.main_validators == 15
+    assert cfg.start_work_time == 1756784978
+    assert cfg.end_work_time == 1756799378
+    assert cfg.total_weight == 1152921504606846963
+    assert isinstance(cfg.validators, list) and len(cfg.validators) == 22
+    assert cfg.validators[0] == ValidatorConfig(
+        adnl_addr="151CDD00CCA9C3A4A2D7E4FED39DACBF3A0738AF17A892CFF2854DDA5A112718", pubkey="46AD98CE0D7E345D5669015A75FD835BC8B138682E5E62638284FAA3F536AE42", weight=124039862731926336)
+    assert cfg.validators[21] == ValidatorConfig(
+        adnl_addr="10C9715D89ABC8D32C490BB5A5788E04EBE5FD193EC11860BBEC5029967C9737", pubkey="96718F0822DE60B35FCA345A6419CE109DBEDC8DCEE1DE0E8A091DE414A29132", weight=4721427116211338)
+
+
+def test_getconfig32(ton: MyTonCore, monkeypatch):
+    result = f'ConfigParam(32) = (\n  prev_validators:({_VALIDATORS_EXT}))\n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config_32()
+    _test_config(cfg)
+
+    result = f'ConfigParam(32) = (null)\n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg_new = ton.get_config_32()
+    assert cfg_new == cfg
+
+    ton.SetFunctionBuffer("typed_config32", None)
+    with pytest.raises(Exception):
+        ton.get_config_32()
+
+
+def test_getconfig34(ton: MyTonCore, monkeypatch):
+    result = f'ConfigParam(34) = (\n  cur_validators:({_VALIDATORS_EXT}))\n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config_34()
+    _test_config(cfg)
+
+    result = f'ConfigParam(34) = (null)\n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg_new = ton.get_config_34()
+    assert cfg_new == cfg
+
+    ton.SetFunctionBuffer("typed_config34", None)
+    with pytest.raises(Exception):
+        ton.get_config_34()
+
+def test_getconfig36(ton: MyTonCore, monkeypatch):
+    result = f'ConfigParam(36) = (\n  next_validators:({_VALIDATORS_EXT}))\n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config_36()
+    _test_config(cfg)
+
+    result = f'ConfigParam(36) = (null)\n'
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
+    cfg = ton.get_config_36()
+    assert cfg is None

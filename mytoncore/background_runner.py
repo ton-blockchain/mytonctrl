@@ -65,8 +65,8 @@ class BackgroundRunner:
             return
 
         # Voting for complaints
-        config32 = self._ton.GetConfig32()
-        election_id = config32.get("startWorkTime")
+        config32 = self._ton.get_config_32()
+        election_id = config32.start_work_time
         complaints = self._ton.GetComplaints(election_id)  # get complaints from Elector
         if not complaints:
             return
@@ -82,13 +82,13 @@ class BackgroundRunner:
             return
 
         # Creating complaints
-        config32 = self._ton.GetConfig32()
-        start = config32.get("startWorkTime")
-        end = config32.get("endWorkTime")
-        config15 = self._ton.GetConfig15()
+        config32 = self._ton.get_config_32()
+        start = config32.start_work_time
+        end = config32.end_work_time
+        config15 = self._ton.get_config_15()
         ts = get_timestamp()
         if not (
-            end < ts < end + config15["stakeHeldFor"]
+            end < ts < end + config15.stake_held_for
         ):  # check that currently is freeze time
             return
         self._local.add_log(
@@ -140,7 +140,7 @@ class BackgroundRunner:
         if not self._ton.local.db.get("importGc", False):
             return
         self._local.add_log("GC import is running", "debug")
-        import_path = "/var/ton-work/db/import"
+        import_path = self._ton.get_paths().ton_db / "import"
         files = os.listdir(import_path)
         if not files:
             self._local.add_log("No files left to import", "debug")

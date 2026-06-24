@@ -1,8 +1,13 @@
 import base64
+import json
 import os
 import pathlib
 import subprocess
 
+from mytoncore.models import Config15, Config17, Paths, Config
+from mytoninstaller import mytoninstaller as installer_module
+from mytoninstaller.context import InstallerPaths
+from mytoninstaller.mytoninstaller import InstallerCtrl
 import pytest
 import requests
 from pytest_mock import MockerFixture
@@ -48,7 +53,7 @@ def test_update(cli, monkeypatch, mocker):
     exit_mock = mocker.Mock()
     monkeypatch.setattr(MyPyClass, "exit", exit_mock)
 
-    monkeypatch.setattr(general_module, "check_git", lambda args, default_repo, text: ("author", "repo", "branch", None))
+    monkeypatch.setattr(general_module, "check_git", lambda args, src_dir, default_repo, text: ("author", "repo", "branch", None))
 
     calls = {}
     def fake_run_as_root(run_args):
@@ -60,12 +65,12 @@ def test_update(cli, monkeypatch, mocker):
     with get_package_resource_path('mytonctrl', 'scripts/update.sh') as upd_path:
         assert upd_path.is_file()
     assert "Error" not in output
-    assert calls["run_args"] == ['bash', str(upd_path), '-a', 'author', '-r', 'repo', '-b', 'branch']
+    assert calls["run_args"] == ['bash', str(upd_path), '-a', 'author', '-r', 'repo', '-b', 'branch', '-S', '/usr/src/mytonctrl', '-p', sys.executable]
     exit_mock.assert_called_once()
 
 
 def test_upgrade(cli, monkeypatch):
-    monkeypatch.setattr(general_module, "check_git", lambda args, default_repo, text: ("author", "repo", "branch", None))
+    monkeypatch.setattr(general_module, "check_git", lambda args, src_dir, default_repo, text: ("author", "repo", "branch", None))
 
     calls = {}
     def fake_run_as_root(run_args):
@@ -95,9 +100,7 @@ def test_upgrade(cli, monkeypatch):
     output = cli.execute("upgrade")
     assert "Upgrade - \x1b[32mOK\x1b" in output
     assert "Error" not in output
-    assert captured_settings["liteClient"]["configPath"] == "global.config.json"
-    assert captured_settings["liteClient"]["liteServer"]["pubkeyPath"] == "/var/ton-work/keys/liteserver.pub"
-    assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch"]
+    assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch", "-B", "/usr/bin/ton", "-S", "/usr/src/ton"]
 
     # clang version is < 21, abort
     calls = {}
@@ -113,7 +116,7 @@ def test_upgrade(cli, monkeypatch):
     output = cli.execute("upgrade")
     assert "Upgrade - \x1b[32mOK\x1b" in output
     assert "Error" not in output
-    assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch"]
+    assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch", "-B", "/usr/bin/ton", "-S", "/usr/src/ton"]
 
     # call upgrade_btc_teleport if using validator
     monkeypatch.setattr(general_module, "get_clang_major_version", lambda: 21)
@@ -131,7 +134,7 @@ def test_upgrade(cli, monkeypatch):
     assert teleport_calls.get("reinstall") is False
     assert "Upgrade - OK" in output
     assert "Error" not in output
-    assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch"]
+    assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch", "-B", "/usr/bin/ton", "-S", "/usr/src/ton"]
 
     monkeypatch.setattr(general_module, "run_as_root", lambda _: 1)
     output = cli.execute("upgrade", no_color=True)
@@ -167,14 +170,67 @@ def test_upgrade_btc_teleport(cli, monkeypatch, mocker: MockerFixture):
 
 def test_installer(cli, monkeypatch):
     calls = {}
-    def fake_run(args):
-        calls["args"] = args
+    def fake_run(self, cmd):
+        calls["cmd"] = cmd
         return 0
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(InstallerCtrl, "run", fake_run)
 
     output = cli.execute("installer cmd arg1 arg2")
-    assert calls["args"] == ["python3", "-m", "mytoninstaller", '-c',  "cmd arg1 arg2"]
+    assert calls["cmd"] == "cmd arg1 arg2"
     assert "Error" not in output
+
+
+def test_create_local_config_root_fallback_sets_readable_mode(local, tmp_path, monkeypatch):
+    ton_bin_dir = tmp_path / "ton"
+    ton_bin_dir.mkdir()
+    global_config_path = ton_bin_dir / "global.config.json"
+    local_config_path = ton_bin_dir / "local.config.json"
+    pubkey_path = tmp_path / "liteserver.pub"
+
+    global_config_path.write_text(json.dumps({
+        "validator": {
+            "init_block": {
+                "seqno": 1,
+                "root_hash": "",
+                "file_hash": "",
+            }
+        },
+        "liteservers": [],
+    }))
+    pubkey_path.write_bytes(b"\0\0\0\0" + b"a" * 32)
+
+    real_open = open
+
+    def fake_open(file, mode="r", *args, **kwargs):
+        if file == str(local_config_path) and "w" in mode:
+            raise PermissionError
+        return real_open(file, mode, *args, **kwargs)
+
+    root_calls = []
+
+    def fake_run_as_root(args):
+        root_calls.append(args)
+        assert pathlib.Path(args[3]).is_file()
+        return 0
+
+    monkeypatch.setattr("builtins.open", fake_open)
+    monkeypatch.setattr(installer_module, "run_as_root", fake_run_as_root)
+
+    installer = InstallerCtrl(
+        local=local,
+        mconfig_path=str(tmp_path / "mytoncore.db"),
+        paths=Paths(ton_bin=ton_bin_dir),
+        ls_data={"pubkeyPath": str(pubkey_path), "ip": "1.2.3.4", "port": 33333},
+        get_init_block=None,
+    )
+    installer._create_local_config(
+        {"seqno": 42, "rootHash": "00" * 32, "fileHash": "11" * 32},
+        str(local_config_path),
+    )
+
+    assert len(root_calls) == 1
+    assert root_calls[0][:3] == ["install", "-m", "0644"]
+    assert root_calls[0][4] == str(local_config_path)
 
 
 def test_status(cli, monkeypatch, mocker: MockerFixture):
@@ -253,16 +309,14 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda *_: 'mainnet')
     monkeypatch.setattr(MyTonCore, "get_root_workchain_enabled_time", lambda *_: 1234, raising=False)
     monkeypatch.setattr(MyTonCore, "GetRootWorkchainEnabledTime", lambda *_: 1234, raising=False)
-    monkeypatch.setattr(MyTonCore, "get_config_34", lambda _: {"totalValidators": 100, "startWorkTime": 0}, raising=False)
-    monkeypatch.setattr(MyTonCore, "GetConfig34", lambda _: {"totalValidators": 100, "startWorkTime": 0}, raising=False)
-    monkeypatch.setattr(MyTonCore, "get_config_36", lambda _: {"startWorkTime": None}, raising=False)
-    monkeypatch.setattr(MyTonCore, "GetConfig36", lambda _: {"startWorkTime": None}, raising=False)
+    monkeypatch.setattr(MyTonCore, "get_config_34", lambda _: Config(total_validators=100, main_validators=100, start_work_time=0, end_work_time=0, total_weight=None, validators=[]), raising=False)
+    monkeypatch.setattr(MyTonCore, "get_config_36", lambda _: None, raising=False)
     monkeypatch.setattr(MyTonCore, "get_shards", lambda *_: [1, 2, 3], raising=False)
     monkeypatch.setattr(MyTonCore, "GetShards", lambda *_: [1, 2, 3], raising=False)
     monkeypatch.setattr(MyTonCore, "get_config", lambda *_: {'validators_elected_for': 65536, 'elections_start_before': 32768, 'elections_end_before': 8192, 'stake_held_for': 32768}, raising=False)
     monkeypatch.setattr(MyTonCore, "GetConfig", lambda *_: {'validators_elected_for': 65536, 'elections_start_before': 32768, 'elections_end_before': 8192, 'stake_held_for': 32768}, raising=False)
-    monkeypatch.setattr(MyTonCore, "get_config_17", lambda *_: {'minStake': 10000.0, 'maxStake': 10000000.0, 'maxStakeFactor': 1966080, 'minTotalStake': 200000.0}, raising=False)
-    monkeypatch.setattr(MyTonCore, "GetConfig17", lambda *_: {'minStake': 10000.0, 'maxStake': 10000000.0, 'maxStakeFactor': 1966080, 'minTotalStake': 200000.0}, raising=False)
+    monkeypatch.setattr(MyTonCore, "get_config_17", lambda *_: Config17(min_stake=10000.0, max_stake=10000000.0, max_stake_factor=1966080, min_total_stake=200000.0), raising=False)
+    monkeypatch.setattr(MyTonCore, "get_config_15", lambda *_: Config15(validators_elected_for=65536, elections_start_before=32768, elections_end_before=8192, stake_held_for=32768), raising=False)
     monkeypatch.setattr(MyTonCore, "get_full_config_addr", lambda *_: 'config_addr', raising=False)
     monkeypatch.setattr(MyTonCore, "GetFullConfigAddr", lambda *_: 'config_addr', raising=False)
     monkeypatch.setattr(MyTonCore, "get_full_elector_addr", lambda *_: 'elector_addr', raising=False)
@@ -459,32 +513,27 @@ def test_download_archive_blocks(cli, monkeypatch):
     output = cli.execute('download_archive_blocks test/ 1')
 
     assert 'Error' not in output
-    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 1, None, False)
-    assert calls[0].buffer.ton_storage.api_port == 3334
+    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 3334, False, 1, None, False)
 
     output = cli.execute('download_archive_blocks test/ 1 2')
 
     assert 'Error' not in output
-    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 1, 2, False)
-    assert calls[0].buffer.ton_storage.api_port == 3334
+    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 3334, False, 1, 2, False)
 
     output = cli.execute('download_archive_blocks test/ 1 2 --only-master')
 
     assert 'Error' not in output
-    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 1, 2, True)
-    assert calls[0].buffer.ton_storage.api_port == 3334
+    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 3334, False, 1, 2, True)
 
     output = cli.execute('download_archive_blocks 123 test/ 1 2 --only-master')
 
     assert 'Error' not in output
-    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 1, 2, True)
-    assert calls[0].buffer.ton_storage.api_port == 123
+    assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 123, False, 1, 2, True)
 
     output = cli.execute('download_archive_blocks 123 /test/ 1')
 
     assert 'Error' not in output
-    assert calls[1:] == ('/test', 1, None, False)
-    assert calls[0].buffer.ton_storage.api_port == 123
+    assert calls[1:] == ('/test', 123, False, 1, None, False)
 
 
 def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):

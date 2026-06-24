@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
 import os
+import platform
+import subprocess
+import time
 from collections import deque
 
 import psutil
 
-from mypylib.mypylib import MyPyClass, get_timestamp, b2mb, get_internet_interface_name
+from mypylib.mypylib import MyPyClass
 
 from typing import TYPE_CHECKING
 
@@ -13,6 +17,31 @@ if TYPE_CHECKING:
     from mytoncore import MyTonCore
 
 BUFFER_SIZE = 15 * 6
+
+
+def _b2mb(item: int | str) -> float:
+    return round(int(item) / 1000 / 1000, 2)
+
+
+def _get_internet_interface_name() -> str:
+    if platform.system() == "OpenBSD":
+        cmd = "ifconfig egress"
+        text = subprocess.getoutput(cmd)
+        lines = text.split('\n')
+        items = lines[0].split(' ')
+        interface_name = items[0][:-1]
+    else:
+        cmd = "ip --json route"
+        text = subprocess.getoutput(cmd)
+        try:
+            arr = json.loads(text)
+            interface_name = arr[0]["dev"]
+        except Exception:
+            lines = text.split('\n')
+            items = lines[0].split(' ')
+            buff = items.index("dev")
+            interface_name = items[buff + 1]
+    return interface_name
 
 
 class StatsCollector:
@@ -29,13 +58,12 @@ class StatsCollector:
         self.save_disk_statistics()
 
     def read_disk_data(self):
-        timestamp = get_timestamp()
         disks = self.get_disks_list()
         buff = psutil.disk_io_counters(perdisk=True)
         data = dict()
         for name in disks:
             data[name] = dict()
-            data[name]["timestamp"] = timestamp
+            data[name]["timestamp"] = int(time.time())
             data[name]["busyTime"] = buff[name].busy_time  # pyright: ignore[reportAttributeAccessIssue]
             data[name]["readBytes"] = buff[name].read_bytes
             data[name]["writeBytes"] = buff[name].write_bytes
@@ -105,7 +133,7 @@ class StatsCollector:
         disk_write = disk_write_diff / time_diff
         disk_read_count = disk_read_count_diff / time_diff
         disk_write_count = disk_write_count_diff / time_diff
-        disk_load = b2mb(disk_read + disk_write)
+        disk_load = _b2mb(disk_read + disk_write)
         iops = round(disk_read_count + disk_write_count, 2)
         return disk_load, disk_load_percent, iops
 
@@ -121,13 +149,12 @@ class StatsCollector:
         return data
 
     def read_network_data(self):
-        timestamp = get_timestamp()
-        interface_name = get_internet_interface_name()
+        interface_name = _get_internet_interface_name()
         counters = psutil.net_io_counters(pernic=True)
         counters = counters[interface_name]
 
         data = {
-            "timestamp": timestamp,
+            "timestamp": int(time.time()),
             "bytesRecv": counters.bytes_recv,
             "bytesSent": counters.bytes_sent,
             "packetsSent": counters.packets_sent,
@@ -173,7 +200,7 @@ class StatsCollector:
         bites_sent_avg = bytes_sent_diff / time_diff * 8
         packets_recv_avg = packets_recv_diff / time_diff
         packets_sent_avg = packets_sent_diff / time_diff
-        net_load_avg = b2mb(bites_recv_avg + bites_sent_avg)
+        net_load_avg = _b2mb(bites_recv_avg + bites_sent_avg)
         pps_avg = round(packets_recv_avg + packets_sent_avg, 2)
         return net_load_avg, pps_avg
 
@@ -231,7 +258,7 @@ class StatsCollector:
 
         # statistics['node']: [stats_from_election_id, stats_from_prev_min, stats_now]
 
-        election_id = self._ton.GetConfig34(no_cache=True)["startWorkTime"]
+        election_id = self._ton.get_config_34(no_cache=True).start_work_time
         if len(statistics["node"]) == 0:
             statistics["node"] = [None, data]
         elif len(statistics["node"]) < 3:

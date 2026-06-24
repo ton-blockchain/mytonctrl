@@ -1,10 +1,16 @@
+from __future__ import annotations
+
+import datetime
 import os
+import platform
 import pwd
 import subprocess
 import time
 import typing
 
-from mypylib.mypylib import bcolors
+import psutil
+
+from mypylib.mypylib import bcolors, parse
 
 
 def timestamp2utcdatetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
@@ -13,6 +19,20 @@ def timestamp2utcdatetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
     datetime = time.gmtime(timestamp)
     result = time.strftime(format, datetime) + " UTC"
     return result
+
+
+def ts_diff_to_human(diff: int | float) -> str:
+    dt = datetime.timedelta(seconds=diff)
+    if dt.days < 0:
+        return ""
+    if dt.days == 0:
+        if dt.seconds < 60:
+            return str(dt.seconds) + " seconds"
+        if dt.seconds < 3600:
+            return str(dt.seconds // 60) + " minutes"
+        if dt.seconds < 86400:
+            return str(dt.seconds // 3600) + " hours"
+    return str(dt.days) + " days"
 
 
 def GetItemFromList(data, index):
@@ -45,9 +65,6 @@ def GetColorInt(data, border, logic, ending=None):
         else:
             result = bcolors.red_text(data, ending)
     return result
-
-
-# end define
 
 
 def get_current_user():
@@ -145,3 +162,38 @@ def get_os_version() -> typing.Tuple[typing.Optional[str], typing.Optional[str]]
     version = data.get("VERSION_ID") or data.get("BUILD_ID") or data.get("VERSION")
 
     return distro, version
+
+
+def get_service_status(name: str) -> bool:
+    status = False
+    psys = platform.system()
+    if psys == "OpenBSD":
+        result = os.system(f"rcctl check {name}")
+    else:
+        result = os.system(f"systemctl is-active --quiet {name}")
+    if result == 0:
+        status = True
+    return status
+
+
+def get_service_uptime(name: str) -> int | None:
+    property = "ExecMainStartTimestampMonotonic"
+    args = ["systemctl", "show", name, "--property=" + property]
+    process = subprocess.run(
+        args,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=3,
+    )
+    output = process.stdout.decode("utf-8")
+    err = process.stderr.decode("utf-8")
+    if len(err) > 0:
+        return
+    start_timestamp_monotonic = parse(output, f"{property}=", "\n") or 0
+    start_timestamp_monotonic = int(start_timestamp_monotonic) / 10**6
+    boot_timestamp = psutil.boot_time()
+    time_now = time.time()
+    start_timestamp = boot_timestamp + start_timestamp_monotonic
+    uptime = int(time_now - start_timestamp)
+    return uptime

@@ -8,11 +8,18 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 user=${SUDO_USER:-}
+bindir="/usr/bin/ton"
+ls_config="/usr/bin/ton/local.config.json"
+mtc_python="python3"
 
-while getopts u: flag
+
+while getopts u:b:c:p: flag
 do
 	case "${flag}" in
     u) user=${OPTARG};;
+    b) bindir=${OPTARG};;
+    c) ls_config=${OPTARG};;
+    p) mtc_python=${OPTARG};;
     *) echo "Flag -${flag} is not recognized. Aborting"; exit 1 ;;
 	esac
 done
@@ -25,27 +32,25 @@ fi
 COLOR='\033[92m'
 ENDC='\033[0m'
 
-# install python3 packages
-pip3 install virtualenv==20.27.1
-
 # prepare the virtual environment
 echo -e "${COLOR}[1/4]${ENDC} Preparing the virtual environment"
 venv_path="/opt/virtualenv/ton_http_api"
-virtualenv ${venv_path}
+apt-get install -y python3-venv
+python3 -m venv ${venv_path}
 
 # install python3 packages
 echo -e "${COLOR}[2/4]${ENDC} Installing required packages"
 venv_pip3="${venv_path}/bin/pip3"
+${venv_pip3} install -U pip
 ${venv_pip3} install ton-http-api -U
 chown -R ${user}:${user} ${venv_path}
 
 # add to startup
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
 venv_ton_http_api="${venv_path}/bin/ton-http-api"
-tonlib_path="/usr/bin/ton/tonlib/libtonlibjson.so"
-ls_config="/usr/bin/ton/local.config.json"
-cmd="from sys import path; path.append('/usr/src/mytonctrl/'); from mypylib.mypylib import add2systemd; add2systemd(name='ton_http_api', user='${user}', start='${venv_ton_http_api} --logs-level=INFO --host 127.0.0.1 --port 8801 --liteserver-config ${ls_config} --cdll-path ${tonlib_path} --tonlib-keystore /tmp/tonlib_keystore/')"
-python3 -c "${cmd}"
+tonlib_path="${bindir}/tonlib/libtonlibjson.so"
+cmd="from mytoninstaller.utils import add2systemd; add2systemd(name='ton_http_api', user='${user}', start='${venv_ton_http_api} --logs-level=INFO --host 127.0.0.1 --port 8801 --liteserver-config ${ls_config} --cdll-path ${tonlib_path} --tonlib-keystore /tmp/tonlib_keystore/')"
+"${mtc_python}" -c "${cmd}"
 systemctl daemon-reload
 systemctl restart ton_http_api
 

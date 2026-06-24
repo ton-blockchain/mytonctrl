@@ -50,6 +50,25 @@ mytonctrl = [
 ]
 
 [tool.pyright]
+include = [
+    "mytoncore",
+    "mytonctrl",
+    "mytoninstaller",
+    "mypyconsole",
+    "mypylib",
+    "modules",
+]
 exclude = [
     "mytonctrl/scripts/**",
 ]
+
+[tool.ruff]
+exclude = [
+    "tests",
+]
+
+[tool.ruff.lint]
+ignore = ["E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"_build_backend.py" = ["F403"]

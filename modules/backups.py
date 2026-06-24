@@ -10,6 +10,7 @@ from mypylib.mypylib import color_print, ip2int, run_as_root, parse
 from mytoncore.utils import get_package_resource_path
 from mytonctrl.utils import get_current_user, pop_user_from_args
 from mytoninstaller.config import get_own_ip
+from mytoninstaller.settings import update_client_path_settings
 
 
 class BackupModule(MtcModule):
@@ -42,7 +43,7 @@ class BackupModule(MtcModule):
         if not check_usage_args_min_max_len("create_backup", args, 0, 3):
             return
         tmp_dir = self.create_tmp_ton_dir()
-        command_args = ["-m", self.ton.local.my_work_dir, "-t", tmp_dir]
+        command_args = ["-m", self.ton.local.my_work_dir, "-t", tmp_dir, "-k", str(self.ton.get_paths().ton_keys)]
         user = pop_user_from_args(args)
         if len(args) == 1:
             command_args += ["-d", args[0]]
@@ -84,10 +85,20 @@ class BackupModule(MtcModule):
                 color_print(f"{{red}}Could not create backup: {e}{{endc}}")
 
         ip = str(ip2int(get_own_ip()))
-        command_args = ["-m", self.ton.local.my_work_dir, "-n", args[0], "-i", ip]
+        command_args = ["-m", self.ton.local.my_work_dir, "-n", args[0], "-i", ip, "-t", str(self.ton.get_paths().ton_work)]
+        paths = self.ton.local.db.get("paths")
 
         if self.run_restore_backup(command_args, user=user) == 0:
             self.ton.local.load_db()
+            # the restored db may carry the donor's paths — keep this installation's ones
+            if paths is not None:
+                self.ton.local.db["paths"] = paths
+            else:
+                self.ton.local.db.pop("paths", None)
+            update_client_path_settings(self.ton.local.db, self.ton.get_paths())
+            self.ton.local.save()
+            # the restore script started mytoncore with the donor's settings
+            run_as_root(["systemctl", "restart", "mytoncore"])
             if self.ton.using_validator():
                 from modules.btc_teleport import BtcTeleportModule
                 BtcTeleportModule(self.ton, self.local).init(reinstall=True)

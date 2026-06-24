@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 import os
+import re
+from pathlib import Path
 import struct
-from dataclasses import dataclass
-from typing import TypedDict
+from dataclasses import dataclass, fields
+from typing import TypedDict, Any
 
+from mytoncore.output import parse_int, parse_nanograms
 from mytoncore.utils import raw_addr_to_b64
 
 
@@ -139,10 +142,6 @@ class Message:
     dest_addr: str | None
     value: float | None
     body: str | None
-    comment: str | None
-    ihr_fee: float | None
-    fwd_fee: float | None
-    ihr_disabled: bool | None
 
     @property
     def time(self):
@@ -155,30 +154,61 @@ class Message:
         return self.__str__()
 
 
-class Config12(TypedDict):
+@dataclass
+class CacheResult:
+    time: int
+    data: Any
+
+
+@dataclass
+class WorkchainConfig:  # some useful data from config param 12
     enabled_since: int
     monitor_min_split: int
     min_split: int
     max_split: int
-    basic: int
-    active: int
-    accept_msgs: int
-    flags: int
-    zerostate_root_hash: str
-    zerostate_file_hash: str
+
+    @classmethod
+    def from_str(cls, s: str):
+        return cls(
+            enabled_since=parse_int("enabled_since", s),
+            monitor_min_split=parse_int("monitor_min_split", s),
+            min_split=parse_int("min_split", s),
+            max_split=parse_int("max_split", s),
+        )
 
 
-class Config15(TypedDict):
-    validatorsElectedFor: int
-    electionsStartBefore: int
-    electionsEndBefore: int
-    stakeHeldFor: int
+@dataclass
+class Config15:
+    validators_elected_for: int
+    elections_start_before: int
+    elections_end_before: int
+    stake_held_for: int
+
+    @classmethod
+    def from_str(cls, s: str):
+        return cls(
+            validators_elected_for=parse_int("validators_elected_for", s),
+            elections_start_before=parse_int("elections_start_before", s),
+            elections_end_before=parse_int("elections_end_before", s),
+            stake_held_for=parse_int("stake_held_for", s),
+        )
 
 
-class Config17(TypedDict):
-    minStake: float
-    maxStake: float
-    maxStakeFactor: int
+@dataclass
+class Config17:
+    min_stake: float
+    max_stake: float
+    min_total_stake: float
+    max_stake_factor: int
+
+    @classmethod
+    def from_str(cls, s: str):
+        return cls(
+            min_stake=parse_nanograms("min_stake", s),
+            max_stake=parse_nanograms("max_stake", s),
+            min_total_stake=parse_nanograms("min_total_stake", s),
+            max_stake_factor=parse_int("max_stake_factor", s),
+        )
 
 
 class ElectionsParticipant(TypedDict):
@@ -188,3 +218,112 @@ class ElectionsParticipant(TypedDict):
     maxFactor: float
     walletAddr: str
 
+
+class BlockHead(TypedDict):
+    seqno: int
+    rootHash: str
+    fileHash: str
+
+
+@dataclass
+class ValidatorConfig:
+    adnl_addr: str
+    pubkey: str
+    weight: int
+
+
+@dataclass
+class ValidatorConfigExt(ValidatorConfig):
+    mr: float
+    wr: float
+    efficiency: float
+    online: bool
+    master_blocks_created: float
+    master_blocks_expected: float
+    blocks_created: float
+    blocks_expected: float
+    is_masterchain: bool
+    wallet_addr: str | None = None
+    stake: float | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ValidatorConfigExt:
+        legacy_aliases = {"adnlAddr": "adnl_addr", "walletAddr": "wallet_addr"}
+        names = {f.name for f in fields(cls)}
+        return cls(**{name: value for key, value in data.items()
+                      if (name := legacy_aliases.get(key, key)) in names})
+
+
+@dataclass
+class Config:
+    total_validators: int
+    main_validators: int
+    start_work_time: int
+    end_work_time: int
+    total_weight: int
+    validators: list[ValidatorConfig]
+
+    @staticmethod
+    def _parse_validator_set(param: str):
+        lines = param.split("\n")
+        validator_re = re.compile(
+            r"pubkey:x([0-9A-Fa-f]+)"  # public key hex
+            + r".*?weight:(\d+)"  # weight digits
+            + r".*?adnl_addr:x([0-9A-Fa-f]+)"  # adnl address hex
+        )
+
+        validators: list[ValidatorConfig] = []
+        for line in lines:
+            if "public_key:" not in line:
+                continue
+            m = validator_re.search(line)
+            if not m:
+                continue
+            pubkey, weight, adnl_addr = m.groups()
+            validators.append(
+                ValidatorConfig(adnl_addr=adnl_addr, pubkey=pubkey, weight=int(weight))
+            )
+        return Config(
+            total_validators=parse_int("total", param),
+            main_validators=parse_int("main", param),
+            start_work_time=parse_int("utime_since", param),
+            end_work_time=parse_int("utime_until", param),
+            total_weight=parse_int("total_weight", param),
+            validators=validators,
+        )
+
+    @classmethod
+    def from_str(cls, s: str):
+        return cls._parse_validator_set(s)
+
+
+@dataclass(frozen=True)
+class Paths:
+    ton_work: Path = Path('/var/ton-work/')
+    ton_db: Path = Path('/var/ton-work/db/')
+    ton_keys: Path = Path('/var/ton-work/keys/')
+    ton_src: Path = Path('/usr/src/ton/')
+    ton_bin: Path = Path('/usr/bin/ton/')
+    mtc_src: Path = Path('/usr/src/mytonctrl/')
+    src_dir: Path = Path('/usr/src/')
+
+    @classmethod
+    def from_dict(cls, data: dict[str, str]) -> Paths:
+        names = {f.name for f in fields(cls)}
+        return cls(**{key: Path(value) for key, value in data.items() if key in names})
+
+    @property
+    def keyring_dir(self) -> Path:
+        return self.ton_db / "keyring"
+
+    @property
+    def vconfig_path(self) -> Path:
+        return self.ton_db / "config.json"
+
+    @property
+    def global_config_path(self) -> Path:
+        return self.ton_bin / "global.config.json"
+
+    @property
+    def local_config_path(self) -> Path:
+        return self.ton_bin / "local.config.json"

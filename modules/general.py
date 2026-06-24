@@ -10,14 +10,11 @@ import base64
 import pathlib
 import subprocess
 import os
+import sys
 import shutil
 
 from mypylib.mypylib import (
-    get_service_status,
-    get_service_uptime,
-    get_load_avg,
     run_as_root,
-    time2human,
     get_timestamp,
     print_table,
     color_print,
@@ -26,7 +23,7 @@ from mypylib.mypylib import (
     Dict,
     int2ip,
 )
-from mytoncore.telemetry import get_memory_info, get_swap_info, get_bin_git_hash
+from mytoncore.telemetry import get_memory_info, get_swap_info, get_bin_git_hash, get_load_avg
 from mytonctrl.git import (
     fix_git_config,
     check_git,
@@ -46,7 +43,11 @@ from mytonctrl.utils import (
     timestamp2utcdatetime,
     GetColorInt,
     pop_user_from_args,
-    get_clang_major_version, pop_arg_from_args,
+    get_clang_major_version,
+    pop_arg_from_args,
+    ts_diff_to_human,
+    get_service_status,
+    get_service_uptime,
 )
 from mytoncore.models import Config15, Config17
 from modules.module import MtcModule
@@ -106,9 +107,9 @@ class GeneralModule(MtcModule):
 
         if all_status:
             try:
-                config34 = self.ton.GetConfig34()
-                total_validators = config34["totalValidators"]
-                config36 = self.ton.GetConfig36()
+                config34 = self.ton.get_config_34()
+                total_validators = config34.total_validators
+                config36 = self.ton.get_config_36()
                 full_elector_addr = self.ton.GetFullElectorAddr()
                 start_work_time = self.ton.GetActiveElectionId(full_elector_addr)
                 self.print_ton_status(start_work_time, total_validators)
@@ -119,21 +120,21 @@ class GeneralModule(MtcModule):
 
         if all_status and self.ton.using_validator():
             full_config_addr = self.ton.GetFullConfigAddr()
-            config15 = self.ton.GetConfig15()
-            config17 = self.ton.GetConfig17()
+            config15 = self.ton.get_config_15()
+            config17 = self.ton.get_config_17()
             self.print_ton_config(
                 full_config_addr, full_elector_addr, config15, config17
             )
             if (
                 config34 is not None
-                and config36 is not None
                 and start_work_time is not None
             ):
-                old_start_work_time = config36.get("startWorkTime")
-                if old_start_work_time is None:
-                    old_start_work_time = config34.get("startWorkTime")
+                if config36 is not None:
+                    old_start_work_time = config36.start_work_time
+                else:
+                    old_start_work_time = config34.start_work_time
                 root_workchain_enabled_time_int = self.local.try_function(
-                    self.ton.GetRootWorkchainEnabledTime
+                    self.ton.get_root_workchain_enabled_time
                 )
                 self.print_network_times(
                     root_workchain_enabled_time_int,
@@ -391,7 +392,7 @@ class GeneralModule(MtcModule):
         mytoncore_status_bool = get_service_status("mytoncore")
         mytoncore_uptime = get_service_uptime("mytoncore")
         if mytoncore_uptime is not None:
-            mytoncore_uptime_text = bcolors.green_text(time2human(mytoncore_uptime))
+            mytoncore_uptime_text = bcolors.green_text(ts_diff_to_human(mytoncore_uptime))
             mytoncore_status_color = _get_color_status(mytoncore_status_bool)
             mytoncore_status_text = self.local.translate(
                 "local_status_mytoncore_status"
@@ -402,7 +403,7 @@ class GeneralModule(MtcModule):
             validator_status_bool = get_service_status("validator")
             validator_uptime = get_service_uptime("validator")
             if validator_uptime is not None:
-                validator_uptime_text = bcolors.green_text(time2human(validator_uptime))
+                validator_uptime_text = bcolors.green_text(ts_diff_to_human(validator_uptime))
                 validator_status_color = _get_color_status(validator_status_bool)
                 validator_status_text = self.local.translate(
                     "local_status_validator_status"
@@ -417,7 +418,7 @@ class GeneralModule(MtcModule):
                     "local_status_btc_teleport_status"
                 ).format(
                     _get_color_status(btc_teleport_status_bool),
-                    bcolors.green_text(time2human(btc_teleport_status_uptime))
+                    bcolors.green_text(ts_diff_to_human(btc_teleport_status_uptime))
                     if btc_teleport_status_bool
                     else "n/a",
                 )
@@ -523,7 +524,8 @@ class GeneralModule(MtcModule):
         )
         print(db_status_text)
 
-        mtc_git_path = "/usr/src/mytonctrl"
+        paths = self.ton.get_paths()
+        mtc_git_path = paths.mtc_src
         try:
             fix_git_config(mtc_git_path)
             mtc_git_hash = get_git_hash(mtc_git_path, short=True)
@@ -537,10 +539,10 @@ class GeneralModule(MtcModule):
         except Exception:
             pass
 
-        validator_git_path = "/usr/src/ton"
+        validator_git_path = paths.ton_src
         try:
             fix_git_config(validator_git_path)
-            validator_bin_git_path = "/usr/bin/ton/validator-engine/validator-engine"
+            validator_bin_git_path = paths.ton_bin / "validator-engine" / "validator-engine"
             validator_git_branch = get_git_branch(validator_git_path)
             validator_git_hash = get_bin_git_hash(validator_bin_git_path, short=True)
             validator_git_hash_text = bcolors.yellow_text(validator_git_hash)
@@ -553,7 +555,7 @@ class GeneralModule(MtcModule):
             pass
 
         if self.ton.using_validator():
-            btc_teleport_path = "/usr/src/ton-teleport-btc-periphery/"
+            btc_teleport_path = paths.src_dir / "ton-teleport-btc-periphery"
             if os.path.exists(btc_teleport_path):
                 btc_teleport_git_hash = get_git_hash(btc_teleport_path, short=True)
                 btc_teleport_git_branch = get_git_branch(btc_teleport_path)
@@ -589,13 +591,13 @@ class GeneralModule(MtcModule):
         print(full_elector_addr_text)
 
         validators_elected_for_text = bcolors.yellow_text(
-            config15["validatorsElectedFor"]
+            config15.validators_elected_for
         )
         elections_start_before_text = bcolors.yellow_text(
-            config15["electionsStartBefore"]
+            config15.elections_start_before
         )
-        elections_end_before_text = bcolors.yellow_text(config15["electionsEndBefore"])
-        stake_held_for_text = bcolors.yellow_text(config15["stakeHeldFor"])
+        elections_end_before_text = bcolors.yellow_text(config15.elections_end_before)
+        stake_held_for_text = bcolors.yellow_text(config15.stake_held_for)
         elections_text = self.local.translate("ton_config_elections").format(
             validators_elected_for_text,
             elections_start_before_text,
@@ -604,8 +606,8 @@ class GeneralModule(MtcModule):
         )
         print(elections_text)
 
-        min_stake_text = bcolors.yellow_text(config17["minStake"])
-        max_stake_text = bcolors.yellow_text(config17["maxStake"])
+        min_stake_text = bcolors.yellow_text(config17.min_stake)
+        max_stake_text = bcolors.yellow_text(config17.max_stake)
         stake_text = self.local.translate("ton_config_stake").format(
             min_stake_text, max_stake_text
         )
@@ -629,9 +631,9 @@ class GeneralModule(MtcModule):
         ).format(bcolors.yellow_text(root_workchain_enabled_time))
         print(root_workchain_enabled_time_text)
 
-        validators_elected_for = config15["validatorsElectedFor"]
-        elections_start_before = config15["electionsStartBefore"]
-        elections_end_before = config15["electionsEndBefore"]
+        validators_elected_for = config15.validators_elected_for
+        elections_start_before = config15.elections_start_before
+        elections_end_before = config15.elections_end_before
 
         if start_work_time == 0:
             start_work_time = old_start_work_time
@@ -776,11 +778,8 @@ class GeneralModule(MtcModule):
             )
             return
 
-        self.local.buffer.ton_storage = Dict()
-        self.local.buffer.ton_storage.api_port = api_port
-        self.local.buffer.global_config_path = "/usr/bin/ton/global.config.json"
         download_blocks(
-            self.local, str(path.absolute()), from_block, to_block, only_master
+            self.local, str(path.absolute()), api_port, self.ton.IsTestnet(), from_block, to_block, only_master
         )
 
     def set_quic_port(self, args: list[str]):
@@ -853,8 +852,9 @@ class GeneralModule(MtcModule):
 
     def Update(self, args: list[str]):
         repo = "mytonctrl"
+        paths = self.ton.get_paths()
         author, repo, branch, _ = check_git(
-            args, repo, "update"
+            args, paths.mtc_src, repo, "update"
         )  # todo: implement --url for update
         # Run script
         with get_package_resource_path(
@@ -869,6 +869,10 @@ class GeneralModule(MtcModule):
                 repo,
                 "-b",
                 branch,
+                "-S",
+                str(paths.mtc_src),
+                "-p",
+                sys.executable,
             ]
             exitCode = run_as_root(runArgs)
         if exitCode == 0:
@@ -887,29 +891,11 @@ class GeneralModule(MtcModule):
             self.upgrade_btc_teleport(reinstall=True, branch=branch, user=user)
             return
 
-        author, repo, branch, git_url = check_git(
-            args, default_repo="ton", text="upgrade"
-        )
+        paths = self.ton.get_paths()
 
-        # bugfix if the files are in the wrong place
-        liteClient = self.ton.GetSettings("liteClient")
-        configPath = liteClient.get("configPath")
-        pubkeyPath = liteClient.get("liteServer").get("pubkeyPath")
-        if "ton-lite-client-test1" in configPath:
-            liteClient["configPath"] = configPath.replace(
-                "lite-client/ton-lite-client-test1.config.json", "global.config.json"
-            )
-        if "/usr/bin/ton" in pubkeyPath:
-            liteClient["liteServer"]["pubkeyPath"] = "/var/ton-work/keys/liteserver.pub"
-        self.ton.SetSettings("liteClient", liteClient)
-        validatorConsole = self.ton.GetSettings("validatorConsole")
-        privKeyPath = validatorConsole.get("privKeyPath")
-        pubKeyPath = validatorConsole.get("pubKeyPath")
-        if "/usr/bin/ton" in privKeyPath:
-            validatorConsole["privKeyPath"] = "/var/ton-work/keys/client"
-        if "/usr/bin/ton" in pubKeyPath:
-            validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
-        self.ton.SetSettings("validatorConsole", validatorConsole)
+        author, repo, branch, git_url = check_git(
+            args, paths.ton_src, default_repo="ton", text="upgrade"
+        )
 
         clang_version = get_clang_major_version()
         if clang_version is None or clang_version < self.CLANG_VERSION_REQUIRED:
@@ -945,6 +931,7 @@ class GeneralModule(MtcModule):
                     "-b",
                     branch,
                 ]
+            runArgs += ["-B", str(paths.ton_bin), "-S", str(paths.ton_src)]
             exitCode = run_as_root(runArgs)
         if self.ton.using_validator():
             self.upgrade_btc_teleport()
@@ -998,7 +985,7 @@ class GeneralModule(MtcModule):
             tmp_parent_dir = os.path.expanduser(tmp_parent_dir)
             os.makedirs(tmp_parent_dir, exist_ok=True)
         else:
-            tmp_parent_dir = "/var/ton-work/tmp"
+            tmp_parent_dir = str(self.ton.get_paths().ton_work / "tmp")
             try:
                 st = os.lstat(tmp_parent_dir)
             except FileNotFoundError:
@@ -1017,6 +1004,7 @@ class GeneralModule(MtcModule):
             with get_package_resource_path(
                 "mytonctrl", "scripts/benchmark.py"
             ) as benchmark_path:
+                paths = self.ton.get_paths()
                 shutil.copy(benchmark_path, tmp_dir / "benchmark.py")
 
                 subprocess.run(
@@ -1033,7 +1021,7 @@ class GeneralModule(MtcModule):
                     check=True,
                 )
 
-                src_dir = Path("/usr/src/ton")
+                src_dir = paths.ton_src
                 test_dir = tmp_dir / "test"
                 tontester_dir = test_dir / "tontester"
 
@@ -1058,9 +1046,9 @@ class GeneralModule(MtcModule):
                     "run",
                     "benchmark.py",
                     "--build-dir",
-                    "/usr/bin/ton",
+                    paths.ton_bin,
                     "--source-dir",
-                    "/usr/src/ton",
+                    paths.ton_src,
                     "--work-dir",
                     str(tmp_dir / "test" / "integration" / ".network"),
                 ] + args
@@ -1093,16 +1081,19 @@ class GeneralModule(MtcModule):
                 f"  {{bold}}{setting_name}{{endc}}: {setting.description}.\n    Default value: {setting.default_value}"
             )
 
-    def Installer(self, args: list[str]):
-        cmd = ["python3", "-m", "mytoninstaller"]
-        if args:
-            cmd += ["-c", " ".join(args)]
-        subprocess.run(cmd)
+    def run_installer(self, args: list[str]):
+        from mytoninstaller.mytoninstaller import InstallerCtrl
+        installer = InstallerCtrl.from_ton(self.ton)
+        try:
+            installer.run(' '.join(args))
+        except SystemExit:
+            self.local.add_log("Exited MyTonInstaller")
+            pass
 
     def add_console_commands(self, console):
         add_command(self.local, console, "update", self.Update)
         add_command(self.local, console, "upgrade", self.Upgrade)
-        add_command(self.local, console, "installer", self.Installer)
+        add_command(self.local, console, "installer", self.run_installer)
         add_command(self.local, console, "status", self.print_status)
         add_command(self.local, console, "status_modes", self.mode_status)
         add_command(self.local, console, "status_settings", self.settings_status)

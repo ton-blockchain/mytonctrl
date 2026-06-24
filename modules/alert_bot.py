@@ -6,6 +6,7 @@ import requests
 
 from modules.module import MtcModule
 from mypylib.mypylib import get_timestamp, print_table, color_print
+from mytoncore.models import Config
 from mytoncore.utils import get_hostname, signed_int_to_hex64
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
 from mytonctrl.utils import timestamp2utcdatetime
@@ -278,11 +279,11 @@ Severity: <code>{alert.severity}</code>
 
     def set_global_vars(self):
         # set global vars for correct alerts timeouts for current network
-        config15 = self.ton.GetConfig15()
+        config15 = self.ton.get_config_15()
         global VALIDATION_PERIOD, FREEZE_PERIOD, ELECTIONS_START_BEFORE
-        VALIDATION_PERIOD = config15["validatorsElectedFor"]
-        FREEZE_PERIOD = config15["stakeHeldFor"]
-        ELECTIONS_START_BEFORE = config15["electionsStartBefore"]
+        VALIDATION_PERIOD = config15.validators_elected_for
+        FREEZE_PERIOD = config15.stake_held_for
+        ELECTIONS_START_BEFORE = config15.elections_start_before
 
     def init(self):
         if not self.ton.get_mode_value('alert-bot'):
@@ -430,10 +431,10 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
             return
         assert self.validator_module is not None, "Validator module is not initialized"
         validator = self.validator_module.find_myself(self.ton.GetValidatorsList())
-        if validator is None or validator.efficiency is None:
+        if validator is None:
             return
-        config34 = self.ton.GetConfig34()
-        if (time.time() - config34.startWorkTime) / (config34.endWorkTime - config34.startWorkTime) < 0.8:
+        config34 = self.ton.get_config_34()
+        if (time.time() - config34.start_work_time) / (config34.end_work_time - config34.start_work_time) < 0.8:
             return  # less than 80% of round passed
         if validator.is_masterchain is False:
             if validator.efficiency != 0:
@@ -461,8 +462,8 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         ts = get_timestamp()
         period = int(VALIDATION_PERIOD / 2.3)  # ~ 8h for mainnet, 100m for testnet
         start, end = ts - period, ts - 60
-        config34 = self.ton.GetConfig34()
-        if start < config34.startWorkTime:  # round started recently
+        config34 = self.ton.get_config_34()
+        if start < config34.start_work_time:  # round started recently
             return
         validators = self.ton.GetValidatorsList(start=start, end=end)
         validator = self.validator_module.find_myself(validators)
@@ -490,53 +491,63 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         else:
             self.resolve_alert("adnl_connection_failed", ok_alert_name="adnl_connection_ok")
 
-    def get_myself_from_election(self, config: dict):
-        if not config["validators"]:
-            return
-        adnl = self.ton.GetAdnlAddr()
-        save_elections = self.ton.GetSaveElections()
-        elections = save_elections.get(str(config["startWorkTime"]))
+    def get_myself_from_election(self, config: Config):
+        if not config.validators:
+            return None, None, None
+        elections = self.ton.get_saved_election_entries(config.start_work_time)
         if elections is None:
-            return
-        if adnl not in elections:  # didn't participate in elections
-            return
-        validator = self.validator_module.find_myself(config["validators"])
+            return None, None, None
+        election = None
+        key = self.ton.get_validator_key_by_time(config.start_work_time)
+        if key is not None:
+            election = elections.get(self.ton.get_clean_pubkey_hex(key))
+        if not election:  # key expired or rotated
+            adnl_addr = self.ton.GetAdnlAddr()
+            for entry in sorted(elections.values(), key=lambda x: x.get('stake', 0), reverse=True):
+                if entry.get('adnlAddr') == adnl_addr:
+                    election = entry
+                    break
+        if not election:
+            return None, None, None
+        validator = self.validator_module.find_myself(config.validators)
         if validator is None:
-            return False
-        validator['stake'] = elections[adnl].get('stake')
-        validator['walletAddr'] = elections[adnl].get('walletAddr')
-        return validator
+            return False, None, None
+        return validator, election.get('stake'), election.get('walletAddr')
 
     def check_stake_sent(self):
         if not self.ton.using_validator():
             return
-        config = self.ton.GetConfig36()
-        res = self.get_myself_from_election(config)
+        config = self.ton.get_config_36()
+        if config is None:
+            return
+        res, stake, _ = self.get_myself_from_election(config)
         if res is None:
             return
         if res is False:
             self.send_alert("stake_not_accepted")
             return
-        self.send_alert("stake_accepted", stake=round(res.get('stake')))
+        if stake is None:
+            return
+        self.send_alert("stake_accepted", stake=round(stake))
 
     def check_stake_returned(self):
         if not self.ton.using_validator():
             return
-        config = self.ton.GetConfig32()
-        if not (config['endWorkTime'] + FREEZE_PERIOD + 1800 <= time.time() < config['endWorkTime'] + FREEZE_PERIOD + 1860):  # check between 30th and 31st minutes after stakes have been unfrozen
+        config = self.ton.get_config_32()
+        if not (config.end_work_time + FREEZE_PERIOD + 1800 <= time.time() < config.end_work_time + FREEZE_PERIOD + 1860):  # check between 30th and 31st minutes after stakes have been unfrozen
             return
-        res = self.get_myself_from_election(config)
-        if not res:
+        res, stake, wallet_addr = self.get_myself_from_election(config)
+        if not res or not wallet_addr or not stake:
             return
-        trs = self.ton.GetAccountHistory(self.ton.GetAccount(res["walletAddr"]), limit=10)
+        trs = self.ton.GetAccountHistory(self.ton.GetAccount(wallet_addr), limit=10)
 
         for tr in trs:
-            if tr.time >= config['endWorkTime'] + FREEZE_PERIOD and tr.src_addr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body is not None and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
+            if tr.time is not None and tr.time >= config.end_work_time + FREEZE_PERIOD and tr.src_addr == '3333333333333333333333333333333333333333333333333333333333333333' and tr.body is not None and tr.body.startswith('F96F7324'):  # Elector Recover Stake Response
                 if tr.value is None:
                     raise Exception(f"Stake returned transaction has no value: {tr}")
-                self.send_alert("stake_returned", stake=round(tr.value), address=res["walletAddr"], reward=round(tr.value - res.get('stake', 0), 2))
+                self.send_alert("stake_returned", stake=round(tr.value), address=wallet_addr, reward=round(tr.value - stake, 2))
                 return
-        self.send_alert("stake_not_returned", address=res["walletAddr"])
+        self.send_alert("stake_not_returned", address=wallet_addr)
 
     def check_voting(self):
         if not self.ton.using_validator():
@@ -544,8 +555,8 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         validator_index = self.ton.GetValidatorIndex()
         if validator_index == -1:
             return
-        config = self.ton.GetConfig34()
-        if time.time() - config['startWorkTime'] < 600:  # less than 10 minutes passed since round start
+        config = self.ton.get_config_34()
+        if time.time() - config.start_work_time < 600:  # less than 10 minutes passed since round start
             return
         need_to_vote = []
         offers = self.ton.GetOffers()
