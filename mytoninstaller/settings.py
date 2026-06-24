@@ -15,8 +15,6 @@ import json
 
 from mypylib import MyPyClass
 from mypylib.mypylib import (
-	add2systemd,
-	get_dir_from_path,
 	ip2int,
 	Dict, int2ip
 )
@@ -26,8 +24,12 @@ from mytoninstaller.archive_blocks import run_process_hardforks, parse_block_val
 	download_blocks_bag, download_master_blocks_bag
 from mytoninstaller.context import InstallerContext, InstallerPaths
 from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, \
-	is_testnet, disable_service
+	is_testnet, disable_service, add2systemd
 from mytoninstaller.config import SetConfig, GetConfig, get_own_ip
+
+
+def _get_dir_from_path(path: str) -> str:
+	return path[:path.rfind('/') + 1]
 
 
 def FirstNodeSettings(local: MyPyClass, ctx: InstallerContext):
@@ -324,7 +326,7 @@ def FirstMytoncoreSettings(local: MyPyClass, ctx: InstallerContext):
 
 	# Подготовить папку mytoncore
 	mconfig_path = ctx.mconfig_path
-	mconfigDir = get_dir_from_path(mconfig_path)
+	mconfigDir = _get_dir_from_path(mconfig_path)
 	os.makedirs(mconfigDir, exist_ok=True)
 
 	# create variables
@@ -608,7 +610,7 @@ def ConfigureFromBackup(local: MyPyClass, ctx: InstallerContext):
 		return
 	from modules.backups import BackupModule
 	mconfig_path = ctx.mconfig_path
-	mconfig_dir = get_dir_from_path(mconfig_path)
+	mconfig_dir = _get_dir_from_path(mconfig_path)
 	local.add_log("start ConfigureFromBackup function", "info")
 	backup_file = ctx.backup
 
@@ -648,7 +650,7 @@ def ConfigureOnlyNode(local: MyPyClass, ctx: InstallerContext):
 		return
 	from modules.backups import BackupModule
 	mconfig_path = ctx.mconfig_path
-	mconfig_dir = get_dir_from_path(mconfig_path)
+	mconfig_dir = _get_dir_from_path(mconfig_path)
 	local.add_log("start ConfigureOnlyNode function", "info")
 
 	ton_work_dir = ctx.paths.ton_work_dir.rstrip('/')

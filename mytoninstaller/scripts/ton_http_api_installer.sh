@@ -49,7 +49,7 @@ chown -R ${user}:${user} ${venv_path}
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
 venv_ton_http_api="${venv_path}/bin/ton-http-api"
 tonlib_path="${bindir}/tonlib/libtonlibjson.so"
-cmd="from mypylib.mypylib import add2systemd; add2systemd(name='ton_http_api', user='${user}', start='${venv_ton_http_api} --logs-level=INFO --host 127.0.0.1 --port 8801 --liteserver-config ${ls_config} --cdll-path ${tonlib_path} --tonlib-keystore /tmp/tonlib_keystore/')"
+cmd="from mytoninstaller.utils import add2systemd; add2systemd(name='ton_http_api', user='${user}', start='${venv_ton_http_api} --logs-level=INFO --host 127.0.0.1 --port 8801 --liteserver-config ${ls_config} --cdll-path ${tonlib_path} --tonlib-keystore /tmp/tonlib_keystore/')"
 "${mtc_python}" -c "${cmd}"
 systemctl daemon-reload
 systemctl restart ton_http_api

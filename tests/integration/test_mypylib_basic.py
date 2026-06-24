@@ -52,12 +52,12 @@ def test_mypyclass_save_db_syncs_local_and_disk_changes(local):
     db_path = Path(local.db_path)
 
     local.db.runtime = Dict(enabled=True)
-    local.db.config.memoryUsinglimit = 123
+    local.db.config.logFileSizeLines = 123
     local.save_db()
 
     persisted = json.loads(db_path.read_text())
     assert persisted["runtime"]["enabled"] is True
-    assert persisted["config"]["memoryUsinglimit"] == 123
+    assert persisted["config"]["logFileSizeLines"] == 123
     assert local.old_db.runtime.enabled is True
 
     persisted["external"] = {"source": "disk"}

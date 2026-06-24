@@ -14,11 +14,7 @@ import sys
 import shutil
 
 from mypylib.mypylib import (
-    get_service_status,
-    get_service_uptime,
-    get_load_avg,
     run_as_root,
-    time2human,
     get_timestamp,
     print_table,
     color_print,
@@ -27,7 +23,7 @@ from mypylib.mypylib import (
     Dict,
     int2ip,
 )
-from mytoncore.telemetry import get_memory_info, get_swap_info, get_bin_git_hash
+from mytoncore.telemetry import get_memory_info, get_swap_info, get_bin_git_hash, get_load_avg
 from mytonctrl.git import (
     fix_git_config,
     check_git,
@@ -47,7 +43,11 @@ from mytonctrl.utils import (
     timestamp2utcdatetime,
     GetColorInt,
     pop_user_from_args,
-    get_clang_major_version, pop_arg_from_args,
+    get_clang_major_version,
+    pop_arg_from_args,
+    ts_diff_to_human,
+    get_service_status,
+    get_service_uptime,
 )
 from mytoncore.models import Config15, Config17
 from modules.module import MtcModule
@@ -392,7 +392,7 @@ class GeneralModule(MtcModule):
         mytoncore_status_bool = get_service_status("mytoncore")
         mytoncore_uptime = get_service_uptime("mytoncore")
         if mytoncore_uptime is not None:
-            mytoncore_uptime_text = bcolors.green_text(time2human(mytoncore_uptime))
+            mytoncore_uptime_text = bcolors.green_text(ts_diff_to_human(mytoncore_uptime))
             mytoncore_status_color = _get_color_status(mytoncore_status_bool)
             mytoncore_status_text = self.local.translate(
                 "local_status_mytoncore_status"
@@ -403,7 +403,7 @@ class GeneralModule(MtcModule):
             validator_status_bool = get_service_status("validator")
             validator_uptime = get_service_uptime("validator")
             if validator_uptime is not None:
-                validator_uptime_text = bcolors.green_text(time2human(validator_uptime))
+                validator_uptime_text = bcolors.green_text(ts_diff_to_human(validator_uptime))
                 validator_status_color = _get_color_status(validator_status_bool)
                 validator_status_text = self.local.translate(
                     "local_status_validator_status"
@@ -418,7 +418,7 @@ class GeneralModule(MtcModule):
                     "local_status_btc_teleport_status"
                 ).format(
                     _get_color_status(btc_teleport_status_bool),
-                    bcolors.green_text(time2human(btc_teleport_status_uptime))
+                    bcolors.green_text(ts_diff_to_human(btc_teleport_status_uptime))
                     if btc_teleport_status_bool
                     else "n/a",
                 )

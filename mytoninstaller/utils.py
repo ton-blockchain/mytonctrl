@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import base64
 import json
+import os
+import platform
 import time
 import subprocess
 import typing
@@ -80,3 +84,79 @@ def tha_exists():
 	if resp.status_code == 200 and resp.text == '"OK"':
 		return True
 	return False
+
+
+def add2systemd(
+		*,
+		name: str,
+		user: str,
+		start: str,
+		pre: str | None = None,
+		post: str = "/bin/echo service down",
+		group: str | None = None,
+		workdir: str | None = None,
+		force: bool = False
+) -> None:
+	group = group or user
+	pversion = platform.version()
+	psys = platform.system()
+	path = f"/etc/systemd/system/{name}.service"
+
+	if psys == "OpenBSD":
+		path = f"/etc/rc.d/{name}"
+	if os.path.isfile(path):
+		if force:
+			print("Unit exist, force rewrite")
+		else:
+			print("Unit exist.")
+			return
+
+	text = f"""
+[Unit]
+Description = {name} service
+After = network.target
+
+[Service]
+Type = simple
+Restart = always
+RestartSec = 30
+ExecStart = {start}
+{f"ExecStartPre = {pre}" if pre else '# ExecStartPre not set'}
+ExecStopPost = {post}
+User = {user}
+Group = {group} 
+{f"WorkingDirectory = {workdir}" if workdir else '# WorkingDirectory not set'}
+LimitNOFILE = infinity
+LimitNPROC = infinity
+LimitMEMLOCK = infinity
+
+[Install]
+WantedBy = multi-user.target
+"""
+
+	if psys == "OpenBSD" and 'APRENDIENDODEJESUS' in pversion:
+		text = f"""
+#!/bin/ksh
+servicio="{start}"
+servicio_user="{user}"
+servicio_timeout="3"
+
+. /etc/rc.d/rc.subr
+
+rc_cmd $1
+"""
+
+	with open(path, 'w') as f:
+		f.write(text)
+
+	subprocess.run(["chmod", "664", path])
+	subprocess.run(["chmod", "+x", path])
+
+	if psys != "OpenBSD":
+		subprocess.run(["systemctl", "daemon-reload"])
+
+	if psys == "OpenBSD":
+		args = ["rcctl", "enable", name]
+	else:
+		args = ["systemctl", "enable", name]
+	subprocess.run(args)

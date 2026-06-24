@@ -3,8 +3,8 @@ import subprocess
 import sys
 import time
 
-from mypylib.mypylib import add2systemd, Dict
-
+from mypylib.mypylib import Dict
+from mytoninstaller.utils import add2systemd
 from mytoncore.utils import get_package_resource_path
 from mytoninstaller.config import GetConfig, get_own_ip, SetConfig
 

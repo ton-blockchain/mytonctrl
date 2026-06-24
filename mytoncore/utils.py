@@ -80,6 +80,13 @@ def str2bool(s: str):
     return False
 
 
+def dec2hex(dec: int) -> str:
+    h = hex(dec)[2:]
+    if len(h) % 2 > 0:
+        h = '0' + h
+    return h
+
+
 def nano_ton_to_ton(nano: int) -> float:
     return nano / 10**9
 

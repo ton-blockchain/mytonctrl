@@ -4,8 +4,9 @@ import random
 import subprocess
 import sys
 
-from mypylib.mypylib import add2systemd, ip2int
+from mypylib.mypylib import ip2int
 from mytoninstaller.config import get_own_ip
+from mytoninstaller.utils import add2systemd
 
 
 def EnableDhtServer(validator_user: str, ton_bin_dir: str, global_config_path: str):
