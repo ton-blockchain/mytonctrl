@@ -17,7 +17,6 @@ USAGES = {
     "restore_backup": " <filename> [-y] [--skip-create-backup] [-u <user>]",
     "add_custom_overlay": "<name> <path_to_config>",
     "delete_custom_overlay": "<name>",
-    "remove_btc_teleport": "[--force]",
     "vo": "<offer_hash>[ <offer_hash> ...]",
     "vc": "<election_id> <complaint_hash>",
     "add_collator": "<adnl> <shard> [--self-collate <true/false>] [--select-mode <random|ordered|round_robin>]",

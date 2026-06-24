@@ -42,7 +42,6 @@ from mytonctrl.console_cmd import (
 from mytonctrl.utils import (
     timestamp2utcdatetime,
     GetColorInt,
-    pop_user_from_args,
     get_clang_major_version,
     pop_arg_from_args,
     ts_diff_to_human,
@@ -410,20 +409,6 @@ class GeneralModule(MtcModule):
                 ).format(validator_status_color, validator_uptime_text)
                 print(validator_status_text)
 
-        if self.ton.using_validator():
-            btc_teleport_status_bool = get_service_status("btc_teleport")
-            btc_teleport_status_uptime = get_service_uptime("btc_teleport")
-            if btc_teleport_status_uptime is not None:
-                btc_teleport_status_text = self.local.translate(
-                    "local_status_btc_teleport_status"
-                ).format(
-                    _get_color_status(btc_teleport_status_bool),
-                    bcolors.green_text(ts_diff_to_human(btc_teleport_status_uptime))
-                    if btc_teleport_status_bool
-                    else "n/a",
-                )
-                print(btc_teleport_status_text)
-
         if validator_status.initial_sync:
             validator_initial_sync_text = self.local.translate(
                 "local_status_validator_initial_sync"
@@ -553,21 +538,6 @@ class GeneralModule(MtcModule):
             print(validator_version_text)
         except Exception:
             pass
-
-        if self.ton.using_validator():
-            btc_teleport_path = paths.src_dir / "ton-teleport-btc-periphery"
-            if os.path.exists(btc_teleport_path):
-                btc_teleport_git_hash = get_git_hash(btc_teleport_path, short=True)
-                btc_teleport_git_branch = get_git_branch(btc_teleport_path)
-            else:
-                btc_teleport_git_hash = "n/a"
-                btc_teleport_git_branch = "n/a"
-            btc_teleport_git_hash_text = bcolors.yellow_text(btc_teleport_git_hash)
-            btc_teleport_git_branch_text = bcolors.yellow_text(btc_teleport_git_branch)
-            btc_teleport_version_text = self.local.translate(
-                "local_status_version_teleport"
-            ).format(btc_teleport_git_hash_text, btc_teleport_git_branch_text)
-            print(btc_teleport_version_text)
 
         print()
 
@@ -883,14 +853,6 @@ class GeneralModule(MtcModule):
         self.local.exit()
 
     def Upgrade(self, args: list[str]):
-        if "--btc-teleport" in args:  # upgrade --btc-teleport [branch] [-u <user>]
-            branch = "master"
-            user = pop_user_from_args(args)
-            if len(args) > args.index("--btc-teleport") + 1:
-                branch = args[args.index("--btc-teleport") + 1]
-            self.upgrade_btc_teleport(reinstall=True, branch=branch, user=user)
-            return
-
         paths = self.ton.get_paths()
 
         author, repo, branch, git_url = check_git(
@@ -933,19 +895,11 @@ class GeneralModule(MtcModule):
                 ]
             runArgs += ["-B", str(paths.ton_bin), "-S", str(paths.ton_src)]
             exitCode = run_as_root(runArgs)
-        if self.ton.using_validator():
-            self.upgrade_btc_teleport()
         if exitCode == 0:
             text = "Upgrade - {green}OK{endc}"
         else:
             text = "Upgrade - {red}Error{endc}"
         color_print(text)
-
-    def upgrade_btc_teleport(self, reinstall=False, branch: str = "master", user=None):
-        from modules.btc_teleport import BtcTeleportModule
-
-        module = BtcTeleportModule(self.ton, self.local)
-        self.local.try_function(module.init, args=[reinstall, branch, user])
 
     def run_benchmark(self, args: list[str]):
         if shutil.which("uv") is None:

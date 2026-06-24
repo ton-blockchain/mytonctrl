@@ -99,9 +99,6 @@ class BackupModule(MtcModule):
             self.ton.local.save()
             # the restore script started mytoncore with the donor's settings
             run_as_root(["systemctl", "restart", "mytoncore"])
-            if self.ton.using_validator():
-                from modules.btc_teleport import BtcTeleportModule
-                BtcTeleportModule(self.ton, self.local).init(reinstall=True)
             color_print("restore_backup - {green}OK{endc}")
             self.local.exit()
         else:

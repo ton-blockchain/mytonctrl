@@ -2,7 +2,6 @@ from __future__ import annotations
 import json
 import time
 
-from modules.btc_teleport import BtcTeleportModule
 from mypylib.mypylib import color_print, get_timestamp
 from modules.module import MtcModule
 from mytoncore.utils import hex_shard_to_int, hex2b64
@@ -139,7 +138,6 @@ class ValidatorModule(MtcModule):
         if ton.using_collator():
             raise Exception('Cannot enable validator mode while collator mode is enabled. '
                             'Use `disable_mode collator` first.')
-        BtcTeleportModule(ton, ton.local).init()
 
     @staticmethod
     def _parse_collators_list(output: str) -> dict:

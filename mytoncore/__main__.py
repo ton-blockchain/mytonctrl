@@ -11,7 +11,7 @@ def _main():
         "-e",
         type=str,
         metavar="EVENT",
-        help="event to run (enableVC, enable_mode*, enable_btc_teleport, setup_collator*)",
+        help="event to run (enableVC, enable_mode*, setup_collator*)",
     )
     args = parser.parse_args()
 
