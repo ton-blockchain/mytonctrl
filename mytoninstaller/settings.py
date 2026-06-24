@@ -26,6 +26,7 @@ from mytoninstaller.context import InstallerContext, InstallerPaths
 from mytoninstaller.utils import StartValidator, StartMytoncore, start_service, stop_service, \
 	is_testnet, disable_service, add2systemd
 from mytoninstaller.config import SetConfig, GetConfig, get_own_ip
+from mytoninstaller.dump import download_dump
 
 
 def _get_dir_from_path(path: str) -> str:
@@ -117,7 +118,9 @@ def FirstNodeSettings(local: MyPyClass, ctx: InstallerContext):
 	subprocess.run(args)
 
 	if ctx.dump:
-		DownloadDump(local, ctx)
+		if download_dump(local, ctx) is False:
+			local.add_log("Dump download or extraction failed. Aborting node setup", "error")
+			sys.exit(1)
 	if ctx.archive_blocks:
 		download_archive_from_ts(local, ctx)
 
@@ -266,37 +269,6 @@ def download_archive_from_ts(local: MyPyClass, ctx: InstallerContext):
 	mconfig.importGc = True
 	SetConfig(path=mconfig_path, data=mconfig)
 
-
-def DownloadDump(local: MyPyClass, ctx: InstallerContext):
-
-    local.add_log("start DownloadDump function", "debug")
-    url = "https://dump.ton.org/dumps/latest"
-    if is_testnet(ctx.paths.global_config_path):
-        url += '_testnet'
-    dumpSize = requests.get(url + ".tar.size.archive.txt", timeout=3).text
-    print("dumpSize:", dumpSize)
-    needSpace = int(dumpSize) * 3
-    diskSpace = psutil.disk_usage(ctx.paths.ton_db_dir)
-    if needSpace > diskSpace.free:
-        return
-
-    # apt install
-    cmd = "apt install plzip pv aria2 curl -y"
-    os.system(cmd)
-
-    # download dump using aria2c to a temporary file
-    temp_file = "/tmp/latest.tar.lz"
-    cmd = f"aria2c -x 8 -s 8 -c {url}.tar.lz -d / -o {temp_file}"
-    os.system(cmd)
-
-    # process the downloaded file
-    cmd = f"pv {temp_file} | plzip -d -n8 | tar -xC {ctx.paths.ton_db_dir}"
-    os.system(cmd)
-
-    # clean up the temporary file after processing
-    if os.path.exists(temp_file):
-        os.remove(temp_file)
-        local.add_log(f"Temporary file {temp_file} removed", "debug")
 
 def FirstMytoncoreSettings(local: MyPyClass, ctx: InstallerContext):
 	local.add_log("start FirstMytoncoreSettings fuction", "debug")
