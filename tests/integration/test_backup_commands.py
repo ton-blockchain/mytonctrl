@@ -141,22 +141,6 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     assert_happy_run_args(output, 'abc')
     create_backup_mock.assert_not_called()
 
-    # check btc teleport installment
-    exit_mock.reset_mock()
-    create_backup_mock.reset_mock()
-    monkeypatch.setattr(MyTonCore, "using_validator", lambda self: True)
-
-    from modules import btc_teleport
-    btc_teleport_mock = mocker.Mock()
-    monkeypatch.setattr(btc_teleport, "BtcTeleportModule", btc_teleport_mock)
-
-    output = cli.execute("restore_backup backup.tar.gz --skip-create-backup -u abc -y", no_color=True)
-
-    assert_happy_run_args(output, 'abc')
-    create_backup_mock.assert_not_called()
-    btc_teleport_mock.assert_called_once()
-    btc_teleport_mock.return_value.init.assert_called_once_with(reinstall=True)
-
     # Failed to restore backup
     return_code = 1
     output = cli.execute("restore_backup backup.tar.gz --skip-create-backup -y", no_color=True)

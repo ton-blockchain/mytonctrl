@@ -14,7 +14,6 @@ from pytest_mock import MockerFixture
 
 from mytoncore.utils import get_package_resource_path
 from modules import general as general_module
-from modules.general import GeneralModule
 from mypylib.mypylib import MyPyClass
 from mypylib.mypylib import Dict
 from mytoncore.mytoncore import MyTonCore
@@ -118,20 +117,10 @@ def test_upgrade(cli, monkeypatch):
     assert "Error" not in output
     assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch", "-B", "/usr/bin/ton", "-S", "/usr/src/ton"]
 
-    # call upgrade_btc_teleport if using validator
     monkeypatch.setattr(general_module, "get_clang_major_version", lambda: 21)
     calls = {}
     monkeypatch.setattr(MyTonCore, "using_validator", lambda self: True)
-    teleport_calls = {}
-    def fake_upgrade_btc_teleport(self, reinstall=False, branch="master", user=None):
-        teleport_calls["called"] = True
-        teleport_calls["reinstall"] = reinstall
-        teleport_calls["branch"] = branch
-        teleport_calls["user"] = user
-    monkeypatch.setattr(GeneralModule, "upgrade_btc_teleport", fake_upgrade_btc_teleport)
     output = cli.execute("upgrade", no_color=True)
-    assert teleport_calls.get("called") is True
-    assert teleport_calls.get("reinstall") is False
     assert "Upgrade - OK" in output
     assert "Error" not in output
     assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch", "-B", "/usr/bin/ton", "-S", "/usr/src/ton"]
@@ -139,33 +128,6 @@ def test_upgrade(cli, monkeypatch):
     monkeypatch.setattr(general_module, "run_as_root", lambda _: 1)
     output = cli.execute("upgrade", no_color=True)
     assert "Upgrade - Error" in output
-
-
-def test_upgrade_btc_teleport(cli, monkeypatch, mocker: MockerFixture):
-    teleport_calls = {}
-    def fake_upgrade_btc_teleport(self, reinstall=False, branch="master", user=None):
-        teleport_calls["called"] = True
-        teleport_calls["reinstall"] = reinstall
-        teleport_calls["branch"] = branch
-        teleport_calls["user"] = user
-
-    monkeypatch.setattr(GeneralModule, "upgrade_btc_teleport", fake_upgrade_btc_teleport)
-
-    run_as_root_mocker = mocker.Mock()
-    monkeypatch.setattr(general_module, "run_as_root", run_as_root_mocker)
-    check_git_mocker = mocker.Mock()
-    monkeypatch.setattr(general_module, "check_git", check_git_mocker)
-
-    output = cli.execute("upgrade --btc-teleport dev -u alice")
-
-    run_as_root_mocker.assert_not_called()
-
-    assert teleport_calls["reinstall"] is True
-    assert teleport_calls["branch"] == "dev"
-    assert teleport_calls["user"] == "alice"
-    check_git_mocker.assert_not_called()
-
-    assert "Error" not in output
 
 
 def test_installer(cli, monkeypatch):
@@ -292,7 +254,6 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     assert 'Local validator wallet address: WALLET_ADDR' in output
     assert 'Mytoncore status: working, 16 minutes' in output
     assert 'Local validator status: working, 16 minutes' in output
-    assert 'BTC Teleport status: working, 16 minutes' in output
     assert 'Local validator out of sync: 30' in output
     assert 'Masterchain out of sync: 30 sec' in output
     assert 'Shardchain out of sync: 3 blocks' in output
@@ -301,7 +262,6 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     assert 'Local validator database size: 123456 Gb, 123456%' in output
     assert 'Version mytonctrl: abcd (master)' in output
     assert 'Version validator: abcd (master)' in output
-    assert 'Version BTC Teleport: n/a (n/a)' in output
 
     # all status
     status_mocker.out_of_sync = 10

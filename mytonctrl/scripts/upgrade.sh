@@ -88,6 +88,14 @@ rm -rf .ninja_*
 cp -r ${tmp_bin_dir}/${repo}/. .
 systemctl restart validator
 
+# stop BTC Teleport
+systemctl stop btc_teleport 2>/dev/null || true
+systemctl disable btc_teleport 2>/dev/null || true
+if [ -f /etc/systemd/system/btc_teleport.service ]; then
+    rm -f /etc/systemd/system/btc_teleport.service
+    systemctl daemon-reload
+fi
+
 echo -e "${COLOR}[1/1]${ENDC} TON components update completed"
 
 # Patch wrappers

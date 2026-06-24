@@ -67,7 +67,6 @@ SETTINGS = {
     'prometheus_url': Setting('prometheus', None, 'Prometheus pushgateway url'),
     'onlyNode': Setting(None, None, 'MyTonCtrl will work only for collecting validator telemetry (if `sendTelemetry` is True), without participating in Elections and etc.'),
     'importGc': Setting(None, None, 'Delete imported archive blocks files. Restart mytoncore to apply this setting'),
-    'btcTeleportDisabled': Setting('validator', False, 'Do not automatically install BTC teleport'),
     'updateCheckDisabled': Setting(None, False, 'Disable mytonctrl update check on startup'),
 }
 

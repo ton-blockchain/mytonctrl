@@ -640,10 +640,6 @@ def ConfigureFromBackup(local: MyPyClass, ctx: InstallerContext):
 			return
 		set_external_ip(local, node_ip, ctx.mconfig_path)
 
-	args = [sys.executable, "-m", "mytoncore", "-e", "enable_btc_teleport"]
-	args = ["su", "-l", ctx.user, "-c", ' '.join(args)]
-	subprocess.run(args)
-
 
 def ConfigureOnlyNode(local: MyPyClass, ctx: InstallerContext):
 	if not ctx.only_node:
