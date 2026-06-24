@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
+from mypylib import color_print
 from mytonctrl.utils import pop_arg_from_args, GetItemFromList, is_hex
 
 import subprocess
@@ -46,8 +47,11 @@ def check_git(
     default_branch: str = "master",
 ):
     git_path = str(src_dir)
-    fix_git_config(git_path)
     default_author = "ton-blockchain"
+    if src_dir.exists():
+        if not (src_dir / ".git").exists():
+            raise Exception(f"{text} error: {git_path} is not a git repository")
+        fix_git_config(git_path)
 
     branch = pop_arg_from_args(input_args, "--branch")
 
@@ -67,8 +71,15 @@ def check_git(
             git_url = git_url.split("#", 1)[0]
         return None, None, branch, git_url
 
-    local_author, local_repo = get_git_author_and_repo(git_path)
-    local_branch = get_git_branch(git_path)
+    if src_dir.exists():
+        local_author, local_repo = get_git_author_and_repo(git_path)
+        local_branch = get_git_branch(git_path)
+    else:
+        defaults = f"{default_author}/{default_repo}#{default_branch}"
+        color_print(
+            f"{{red}}{git_path} is not a git repository, falling back to defaults: {defaults}{{endc}}"
+        )
+        local_author = local_repo = local_branch = None
 
     # Set author, repo, branch
     data = GetAuthorRepoBranchFromArgs(input_args)
@@ -76,25 +87,25 @@ def check_git(
     need_repo = data.get("repo")
     need_branch = data.get("branch") or branch
 
-    # Check if remote repo is different from default
-    if (need_author is None and local_author != default_author) or (
-        need_repo is None and local_repo != default_repo
-    ):
-        remote_url = f"https://github.com/{local_author}/{local_repo}/tree/{need_branch if need_branch else local_branch}"
-        raise Exception(
-            f"{text} error: You are on {remote_url} remote url, to update to the tip use `{text} {remote_url}` command"
-        )
-    elif need_branch is None and local_branch != default_branch:
-        raise Exception(
-            f"{text} error: You are on {local_branch} branch, to update to the tip of {local_branch} branch use `{text} {local_branch}` command"
-        )
+    if src_dir.exists():
+        if (need_author is None and local_author != default_author) or (
+            need_repo is None and local_repo != default_repo
+        ):
+            remote_url = f"https://github.com/{local_author}/{local_repo}/tree/{need_branch if need_branch else local_branch}"
+            raise Exception(
+                f"{text} error: You are on {remote_url} remote url, to update to the tip use `{text} {remote_url}` command"
+            )
+        elif need_branch is None and local_branch != default_branch:
+            raise Exception(
+                f"{text} error: You are on {local_branch} branch, to update to the tip of {local_branch} branch use `{text} {local_branch}` command"
+            )
 
     if need_author is None:
-        need_author = local_author
+        need_author = local_author or default_author
     if need_repo is None:
-        need_repo = local_repo
+        need_repo = local_repo or default_repo
     if need_branch is None:
-        need_branch = local_branch
+        need_branch = local_branch or default_branch
     check_branch_exists(need_author, need_repo, need_branch)
     return need_author, need_repo, need_branch, None
 
