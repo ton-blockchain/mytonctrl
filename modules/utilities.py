@@ -373,8 +373,7 @@ class UtilitiesModule(MtcModule):
         if not check_adnl:
             return True, ''
         self.local.add_log('Checking ADNL connection to local node', 'info')
-        hosts = ['45.129.96.53', '5.154.181.153', '2.56.126.137', '91.194.11.68', '45.12.134.214', '138.124.184.27',
-                 '103.106.3.171']
+        hosts = ['45.129.96.53', '5.154.181.153', '91.194.11.68', '45.12.134.214', '103.106.3.171']
         hosts = random.sample(hosts, k=3)
         data = self.ton.get_local_adnl_data()
         error = ''
