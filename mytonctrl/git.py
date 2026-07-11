@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
+from mypylib import color_print
 from mytonctrl.utils import pop_arg_from_args, GetItemFromList, is_hex
 
 import subprocess
 
 
-def fix_git_config(git_path: str):
+def fix_git_config(git_path: str | Path):
     args = ["git", "status"]
     try:
         process = subprocess.run(
@@ -37,11 +39,19 @@ def fix_git_config(git_path: str):
             raise Exception(f"Failed to check git status: {err}")
 
 
-def check_git(input_args, default_repo, text, default_branch="master"):
-    src_dir = "/usr/src"
-    git_path = f"{src_dir}/{default_repo}"
-    fix_git_config(git_path)
+def check_git(
+    input_args: list[str],
+    src_dir: Path,
+    default_repo: str,
+    text: str,
+    default_branch: str = "master",
+):
+    git_path = str(src_dir)
     default_author = "ton-blockchain"
+    if src_dir.exists():
+        if not (src_dir / ".git").exists():
+            raise Exception(f"{text} error: {git_path} is not a git repository")
+        fix_git_config(git_path)
 
     branch = pop_arg_from_args(input_args, "--branch")
 
@@ -61,8 +71,15 @@ def check_git(input_args, default_repo, text, default_branch="master"):
             git_url = git_url.split("#", 1)[0]
         return None, None, branch, git_url
 
-    local_author, local_repo = get_git_author_and_repo(git_path)
-    local_branch = get_git_branch(git_path)
+    if src_dir.exists():
+        local_author, local_repo = get_git_author_and_repo(git_path)
+        local_branch = get_git_branch(git_path)
+    else:
+        defaults = f"{default_author}/{default_repo}#{default_branch}"
+        color_print(
+            f"{{red}}{git_path} is not a git repository, falling back to defaults: {defaults}{{endc}}"
+        )
+        local_author = local_repo = local_branch = None
 
     # Set author, repo, branch
     data = GetAuthorRepoBranchFromArgs(input_args)
@@ -70,26 +87,25 @@ def check_git(input_args, default_repo, text, default_branch="master"):
     need_repo = data.get("repo")
     need_branch = data.get("branch") or branch
 
-    # Check if remote repo is different from default
-    if (need_author is None and local_author != default_author) or (
-        need_repo is None and local_repo != default_repo
-    ):
-        remote_url = f"https://github.com/{local_author}/{local_repo}/tree/{need_branch if need_branch else local_branch}"
-        raise Exception(
-            f"{text} error: You are on {remote_url} remote url, to update to the tip use `{text} {remote_url}` command"
-        )
-    elif need_branch is None and local_branch != default_branch:
-        raise Exception(
-            f"{text} error: You are on {local_branch} branch, to update to the tip of {local_branch} branch use `{text} {local_branch}` command"
-        )
-    # end if
+    if src_dir.exists():
+        if (need_author is None and local_author != default_author) or (
+            need_repo is None and local_repo != default_repo
+        ):
+            remote_url = f"https://github.com/{local_author}/{local_repo}/tree/{need_branch if need_branch else local_branch}"
+            raise Exception(
+                f"{text} error: You are on {remote_url} remote url, to update to the tip use `{text} {remote_url}` command"
+            )
+        elif need_branch is None and local_branch != default_branch:
+            raise Exception(
+                f"{text} error: You are on {local_branch} branch, to update to the tip of {local_branch} branch use `{text} {local_branch}` command"
+            )
 
     if need_author is None:
-        need_author = local_author
+        need_author = local_author or default_author
     if need_repo is None:
-        need_repo = local_repo
+        need_repo = local_repo or default_repo
     if need_branch is None:
-        need_branch = local_branch
+        need_branch = local_branch or default_branch
     check_branch_exists(need_author, need_repo, need_branch)
     return need_author, need_repo, need_branch, None
 
@@ -132,7 +148,7 @@ def GetAuthorRepoBranchFromArgs(args: list[str]):
     return data
 
 
-def get_git_url(git_path: str) -> str | None:
+def get_git_url(git_path: str | Path) -> str | None:
     args = ["git", "remote", "-v"]
     output = ""
     try:
@@ -159,7 +175,7 @@ def get_git_url(git_path: str) -> str | None:
     return url
 
 
-def get_git_author_and_repo(git_path: str) -> tuple[str | None, str | None]:
+def get_git_author_and_repo(git_path: str | Path) -> tuple[str | None, str | None]:
     author = None
     repo = None
     url = get_git_url(git_path)
@@ -180,7 +196,9 @@ def _get_request(url: str) -> str:
     return text
 
 
-def get_git_last_remote_commit(git_path: str, branch: str = "master") -> str | None:
+def get_git_last_remote_commit(
+    git_path: str | Path, branch: str = "master"
+) -> str | None:
     author, repo = get_git_author_and_repo(git_path)
     if author is None or repo is None:
         return
@@ -195,7 +213,7 @@ def get_git_last_remote_commit(git_path: str, branch: str = "master") -> str | N
     return sha
 
 
-def check_git_update(git_path: str) -> bool | None:
+def check_git_update(git_path: str | Path) -> bool | None:
     branch = get_git_branch(git_path)
     if branch is None:
         return None
@@ -209,7 +227,7 @@ def check_git_update(git_path: str) -> bool | None:
     return result
 
 
-def get_git_hash(git_path: str, short: bool = False) -> str | None:
+def get_git_hash(git_path: Path | str, short: bool = False) -> str | None:
     args = ["git", "rev-parse", "HEAD"]
     if short is True:
         args.insert(2, "--short")
@@ -229,7 +247,7 @@ def get_git_hash(git_path: str, short: bool = False) -> str | None:
     return buff[0]
 
 
-def get_git_branch(git_path: str) -> str | None:
+def get_git_branch(git_path: str | Path) -> str | None:
     args = ["git", "branch", "-v"]
     process = subprocess.run(
         args,

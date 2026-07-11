@@ -48,8 +48,8 @@ class CollatorModule(MtcModule):
                     f'If you are sure you want to add new collator use option `--force`.'
                 )
 
-    def setup_collator(self, args: list):
-        from mytoninstaller.mytoninstaller import set_node_argument
+    def setup_collator(self, args: list[str]):
+        from mytoninstaller.node_args import set_node_argument
         from mytoninstaller.node_args import get_node_args
         if not check_usage_args_min_len("setup_collator", args, 1):
             return
@@ -64,7 +64,7 @@ class CollatorModule(MtcModule):
         node_shards = node_args['--add-shard']
         shards_need_to_add = [shard for shard in shards if shard not in node_shards]
         if not force and shards_need_to_add and '-M' in node_args:
-            monitor_min_split = self.ton.get_basechain_config()['monitor_min_split']
+            monitor_min_split = self.ton.get_basechain_config().monitor_min_split
             self._check_input_shards(node_shards, shards_need_to_add, monitor_min_split)
         if adnl_addr is None:
             adnl_addr = self.ton.CreateNewKey()
@@ -76,9 +76,9 @@ class CollatorModule(MtcModule):
         self.local.add_log(f'Collator added for shards {shards} with ADNL address {adnl_addr}\n'
                            f'Editing monitoring shards.')
         if '-M' not in node_args:
-            set_node_argument(self.local, ['-M'])
+            set_node_argument(['-M'])
         if shards_need_to_add:
-            set_node_argument(self.local, ['--add-shard', ' '.join(node_args['--add-shard'] + shards_need_to_add)])
+            set_node_argument(['--add-shard', ' '.join(node_args['--add-shard'] + shards_need_to_add)])
         commands_text = [f'`add_collator {adnl_addr} {s}`' for s in shards]
         self.local.add_log(f'Collator enabled for shards {shards}\n'
                            f'To add this collator to validator use command:\n'

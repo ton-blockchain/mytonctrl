@@ -149,7 +149,7 @@ class WarningChecker:
         )
         username = process.stdout.decode("utf-8").strip()
 
-        args = ["ls", "-lh", "/var/ton-work/keys/"]
+        args = ["ls", "-lh", self.ton.get_paths().ton_keys]
         process = subprocess.run(
             args,
             stdin=subprocess.PIPE,
@@ -182,7 +182,7 @@ class WarningChecker:
     def check_mytonctrl_update(self):
         if self.ton.local.db.get("updateCheckDisabled"):
             return
-        git_path = "/usr/src/mytonctrl"
+        git_path = self.ton.get_paths().mtc_src
         if not os.path.exists(git_path):
             return
         result = check_git_update(git_path)

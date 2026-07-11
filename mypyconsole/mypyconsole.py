@@ -1,8 +1,8 @@
 # pyright: strict
 
 from __future__ import annotations
+import subprocess
 import traceback
-import os
 import sys
 import readline
 from typing import Callable
@@ -125,7 +125,7 @@ class MyPyConsole:
             print(f"{i + 1}  {cmd}")
 
     def clear(self, _: list[str]):
-        os.system("clear")
+        subprocess.run(["clear"])
 
     def exit(self, _: list[str]):
         print("Bye.")

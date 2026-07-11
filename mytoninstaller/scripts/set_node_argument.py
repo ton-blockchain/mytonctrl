@@ -1,3 +1,4 @@
+import os
 import sys
 import subprocess
 from mytoninstaller.node_args import get_node_args, get_node_start_command, get_validator_service
@@ -15,9 +16,8 @@ def set_node_arg(arg_name: str, arg_value: str = ''):
     if start_command is None:
         raise Exception('Cannot find node start command in service file')
     first_arg = start_command.split(' ')[0]
-    if first_arg != '/usr/bin/ton/validator-engine/validator-engine':
+    if os.path.basename(first_arg) != 'validator-engine':
         raise Exception('Invalid node start command in service file')
-    #end if
     
     node_args = get_node_args(start_command)
     if arg_value == '-d':
@@ -27,7 +27,6 @@ def set_node_arg(arg_name: str, arg_value: str = ''):
             node_args[arg_name] = arg_value.split()
         else:
             node_args[arg_name] = [arg_value]
-    #end if
 
     buffer = list()
     buffer.append(first_arg)
@@ -41,7 +40,6 @@ def set_node_arg(arg_name: str, arg_value: str = ''):
     with open('/etc/systemd/system/validator.service', 'w') as file:
         file.write(new_service)
     restart_node()
-#end define
 
 
 def restart_node():
@@ -51,7 +49,6 @@ def restart_node():
     exit_code = subprocess.run(["systemctl", "restart", "validator"]).returncode
     if exit_code:
         raise Exception(f"`systemctl restart validator` failed with exit code {exit_code}")
-#end define
 
 
 if __name__ == '__main__':

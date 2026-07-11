@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import os
+import platform
+import re
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 import psutil
@@ -10,7 +13,7 @@ import psutil
 from mytoncore import MyTonCore
 from mytoncore.utils import parse_db_stats
 from mytoninstaller.node_args import get_node_args
-from mypylib.mypylib import get_service_pid, MyPyClass, get_load_avg
+from mypylib.mypylib import MyPyClass, parse
 from mytonctrl.git import fix_git_config, get_git_hash
 
 
@@ -19,6 +22,7 @@ def build_overlay_telemetry_payload(ton: MyTonCore) -> dict[str, Any]:
 
 
 def build_telemetry_payload(local: MyPyClass, ton: MyTonCore):
+    paths = ton.get_paths()
     data: dict[str, Any] = {
         "adnlAddr": ton.GetAdnlAddr(),
         "validatorStatus": ton.GetValidatorStatus(),
@@ -34,24 +38,24 @@ def build_telemetry_payload(local: MyPyClass, ton: MyTonCore):
         "swap": get_swap_info(),
         "uname": get_uname(),
         "vprocess": get_validator_process_info(),
-        "dbStats": local.try_function(get_db_stats),
+        "dbStats": local.try_function(get_db_stats, args=[paths.ton_db]),
         "nodeArgs": local.try_function(get_node_args),
         "modes": local.try_function(ton.get_modes),
         "cpuInfo": {
             "cpuName": local.try_function(get_cpu_name),
             "virtual": local.try_function(is_host_virtual),
         },
-        "validatorDiskName": local.try_function(get_validator_disk_name),
+        "validatorDiskName": local.try_function(get_validator_disk_name, args=[paths.ton_work]),
         "pings": local.try_function(get_pings_values),
         "pythonVersion": sys.version,
     }
 
-    mtc_path = "/usr/src/mytonctrl"
+    mtc_path = paths.mtc_src
     local.try_function(fix_git_config, args=[mtc_path])
 
     data["gitHashes"] = {
         "mytonctrl": get_git_hash(mtc_path),
-        "validator": get_bin_git_hash("/usr/bin/ton/validator-engine/validator-engine"),
+        "validator": get_bin_git_hash(paths.ton_bin / "validator-engine" / "validator-engine"),
     }
     data["stake"] = local.db.get("stake")
 
@@ -88,6 +92,41 @@ def get_swap_info():
     return result
 
 
+def get_load_avg() -> list[float]:
+    psys = platform.system()
+    if psys in ["FreeBSD", "Darwin", "OpenBSD"]:
+        loadavg = subprocess.check_output(["sysctl", "-n", "vm.loadavg"]).decode('utf-8')
+        if psys != "OpenBSD":
+            m = re.match(r"{ (\d+\.\d+) (\d+\.\d+) (\d+\.\d+).+", loadavg)
+        else:
+            m = re.match(r"(\d+\.\d+) (\d+\.\d+) (\d+\.\d+)", loadavg)
+        if m:
+            loadavg_arr = [m.group(1), m.group(2), m.group(3)]
+        else:
+            loadavg_arr = ["0.00", "0.00", "0.00"]
+    else:
+        file = open("/proc/loadavg")
+        loadavg = file.read()
+        file.close()
+        loadavg_arr = loadavg.split(' ')
+    return [float(item) for item in loadavg_arr[:3]]
+
+
+def get_service_pid(name: str) -> int | None:
+    property = "MainPID"
+    args = ["systemctl", "show", name, "--property=" + property]
+    process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+    output = process.stdout.decode("utf-8")
+    err = process.stderr.decode("utf-8")
+    if len(err) > 0:
+        return
+    pid_text = parse(output, f"{property}=", '\n')
+    if pid_text is None:
+        return None
+    pid = int(pid_text)
+    return pid
+
+
 def get_validator_process_info():
     pid = get_service_pid("validator")
     if not pid:
@@ -108,13 +147,13 @@ def get_validator_process_info():
     return result
 
 
-def get_db_stats():
+def get_db_stats(ton_db_path: Path):
     result = {
         "rocksdb": {"ok": True, "message": "", "data": {}},
         "celldb": {"ok": True, "message": "", "data": {}},
     }
-    rocksdb_stats_path = "/var/ton-work/db/db_stats.txt"
-    celldb_stats_path = "/var/ton-work/db/celldb/db_stats.txt"
+    rocksdb_stats_path = ton_db_path / "db_stats.txt"
+    celldb_stats_path = ton_db_path / "celldb/db_stats.txt"
     if os.path.exists(rocksdb_stats_path):
         try:
             result["rocksdb"]["data"] = parse_db_stats(rocksdb_stats_path)
@@ -188,20 +227,20 @@ def get_pings_values():
     }
 
 
-def get_validator_disk_name():
+def get_validator_disk_name(ton_work_path: Path) -> str:
     process = subprocess.run(
-        "df -h /var/ton-work/ | sed -n '2 p' | awk '{print $1}'",
-        stdin=subprocess.PIPE,
+        ["df", "-h", str(ton_work_path)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         timeout=3,
-        shell=True,
     )
-    output = process.stdout.decode("utf-8")
-    return output.strip()
+    lines = process.stdout.decode("utf-8").splitlines()
+    if len(lines) < 2:
+        return ""
+    fields = lines[1].split()
+    return fields[0] if fields else ""
 
-
-def get_bin_git_hash(path: str, short: bool = False) -> str | None:
+def get_bin_git_hash(path: str | Path, short: bool = False) -> str | None:
     if not os.path.isfile(path):
         return None
     args = [path, "--version"]

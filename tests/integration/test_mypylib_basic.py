@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from mypylib.mypylib import DEBUG, INFO, Dict, MyPyClass
+from mypylib.mypylib import Dict, MyPyClass
+from mypylib.logger import setup_logging, DEBUG, INFO
 
 
 @pytest.fixture
@@ -51,12 +52,12 @@ def test_mypyclass_save_db_syncs_local_and_disk_changes(local):
     db_path = Path(local.db_path)
 
     local.db.runtime = Dict(enabled=True)
-    local.db.config.memoryUsinglimit = 123
+    local.db.config.logFileSizeLines = 123
     local.save_db()
 
     persisted = json.loads(db_path.read_text())
     assert persisted["runtime"]["enabled"] is True
-    assert persisted["config"]["memoryUsinglimit"] == 123
+    assert persisted["config"]["logFileSizeLines"] == 123
     assert local.old_db.runtime.enabled is True
 
     persisted["external"] = {"source": "disk"}
@@ -72,21 +73,23 @@ def test_mypyclass_save_db_syncs_local_and_disk_changes(local):
     assert local.old_db.config.logLevel == DEBUG
 
 
-def test_mypyclass_write_log_flushes_queue_and_trims_file(local):
-    local.db.config.logFileSizeLines = 2
+def test_mypyclass_file_logging_writes_and_rotates(local):
+    local.db.config.logFileSizeLines = 1  # tiny budget forces rotation
+    setup_logging(local.db.config.logLevel, local.log_file_name, local.db.config.logFileSizeLines)
 
-    for i in range(260):
+    for i in range(500):
         local.add_log(f"log line {i}")
 
-    assert len(local.log_list) == 260
+    log_path = Path(local.log_file_name)
+    contents = log_path.read_text()
 
-    local.write_log()
-
-    lines = Path(local.log_file_name).read_text().splitlines()
-    assert local.log_list == []
-    assert len(lines) == 2
-    assert "log line 258" in lines[0]
-    assert "log line 259" in lines[1]
+    assert log_path.is_file()
+    # The most recent line stays in the active log file...
+    assert "log line 499" in contents
+    # ...the size cap triggered rotation into a backup file...
+    assert Path(str(log_path) + ".1").exists()
+    # ...and the file keeps the ANSI color codes (colored output, as before).
+    assert "\033" in contents
 
 
 def test_mypyclass_exit_persists_state_and_cleans_up_pid_file(local, monkeypatch):
@@ -95,6 +98,7 @@ def test_mypyclass_exit_persists_state_and_cleans_up_pid_file(local, monkeypatch
     pid_path = Path(local.pid_file_path)
 
     local.db.shutdown = "graceful"
+    setup_logging(local.db.config.logLevel, local.log_file_name, local.db.config.logFileSizeLines)
     local.add_log("shutting down")
     local.write_pid()
     assert pid_path.is_file()

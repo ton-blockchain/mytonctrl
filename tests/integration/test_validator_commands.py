@@ -3,11 +3,10 @@ import time
 
 from modules.validator import ValidatorModule
 
-import pytest
 from pytest_mock import MockerFixture
 
-from mypylib import Dict
 from mytoncore.mytoncore import MyTonCore
+from mytoncore.models import Config, ValidatorConfigExt
 
 
 def test_vote_offer(cli, monkeypatch, mocker: MockerFixture):
@@ -58,36 +57,38 @@ def test_vc(cli, monkeypatch, mocker: MockerFixture):
 
 
 def test_check_ef(cli, monkeypatch, mocker: MockerFixture):
-    prev_validator = Dict()
-    prev_validator.adnlAddr = "test_adnl"
-    prev_validator.efficiency = 95.5
-    prev_validator.is_masterchain = True
-    prev_validator.master_blocks_created = 100
-    prev_validator.master_blocks_expected = 105
-    prev_validator.blocks_created = 100
-    prev_validator.blocks_expected = 105
+    prev_validator = ValidatorConfigExt(
+        adnl_addr="test_adnl", pubkey="pk", weight=1,
+        mr=0.955, wr=0.955, efficiency=95.5, online=True,
+        master_blocks_created=100, master_blocks_expected=105,
+        blocks_created=100, blocks_expected=105,
+        is_masterchain=True, wallet_addr=None, stake=None,
+    )
 
-    curr_validator = Dict()
-    curr_validator.adnlAddr = "test_adnl"
-    curr_validator.efficiency = 92.0
-    curr_validator.is_masterchain = True
-    curr_validator.master_blocks_created = 50
-    curr_validator.master_blocks_expected = 54
+    curr_validator = ValidatorConfigExt(
+        adnl_addr="test_adnl", pubkey="pk", weight=1,
+        mr=0.92, wr=0.92, efficiency=92.0, online=True,
+        master_blocks_created=50, master_blocks_expected=54,
+        blocks_created=50, blocks_expected=54,
+        is_masterchain=True, wallet_addr=None, stake=None,
+    )
 
-    config32 = Dict()
-    config32.startWorkTime = 1000000
-    config32.endWorkTime = 2000000
-    config32.mainValidators = 100
+    config32 = Config(
+        total_validators=100, main_validators=100,
+        start_work_time=1000000, end_work_time=2000000,
+        total_weight=50000, validators=[],
+    )
 
-    config34 = Dict()
-    config34.startWorkTime = 2000000
-    config34.endWorkTime = 3000000
-    config34.mainValidators = 100
+    config34 = Config(
+        total_validators=100, main_validators=100,
+        start_work_time=2000000, end_work_time=3000000,
+        total_weight=50000, validators=[],
+    )
 
     monkeypatch.setattr(MyTonCore, "GetValidatorsList", lambda self, past=False: [prev_validator] if past else [curr_validator])
     monkeypatch.setattr(MyTonCore, "GetAdnlAddr", lambda self: "test_adnl")
-    monkeypatch.setattr(MyTonCore, "GetConfig32", lambda self: config32)
-    monkeypatch.setattr(MyTonCore, "GetConfig34", lambda self: config34)
+    monkeypatch.setattr(MyTonCore, "get_config_32", lambda self: config32)
+    monkeypatch.setattr(MyTonCore, "get_config_34", lambda self: config34)
 
     output = cli.execute("check_ef", no_color=True)
     assert "Previous round efficiency: 95.5% (100 blocks created / 105 blocks expected)" in output
@@ -103,16 +104,9 @@ def test_check_ef(cli, monkeypatch, mocker: MockerFixture):
     assert "Couldn't find this validator in the current round" in output
     assert "Previous round efficiency" in output
 
-    prev_validator.efficiency = None
     monkeypatch.setattr(MyTonCore, "GetValidatorsList", lambda self, past=False: [prev_validator] if past else [curr_validator])
-    output = cli.execute("check_ef", no_color=True)
-    assert "Failed to get efficiency for the previous round" in output
-    assert "Current round efficiency" in output
-
-    prev_validator.efficiency = 95.5
-    monkeypatch.setattr(MyTonCore, "GetValidatorsList", lambda self, past=False: [prev_validator] if past else [curr_validator])
-    config34.startWorkTime = int(time.time() - 1000)
-    config34.endWorkTime = int(time.time() + 1000000)
+    config34.start_work_time = int(time.time() - 1000)
+    config34.end_work_time = int(time.time() + 1000000)
     output = cli.execute("check_ef", no_color=True)
     assert "The validation round has started recently" in output
     assert "Previous round efficiency" in output

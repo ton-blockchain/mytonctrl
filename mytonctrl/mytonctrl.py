@@ -107,7 +107,6 @@ class MyTonCtrl:
 
     def run(
         self,
-        debug: bool = False,
         skip_startup_checks: bool = False,
         cmd: str | None = None,
     ):
@@ -118,7 +117,6 @@ class MyTonCtrl:
 
         self._add_console_commands()
 
-        self.local.db.config.logLevel = "debug" if debug else "info"
         self.local.db.config.isLocaldbSaving = False
         self.local.run()
 

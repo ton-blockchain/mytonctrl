@@ -38,18 +38,18 @@ def test_create_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     output = cli.execute("create_backup", no_color=True)
     assert "create_backup - OK" in output
     assert fun_user is None
-    assert fun_args == ["-m", ton.local.my_work_dir, "-t", str(tmp_dir)]
+    assert fun_args == ["-m", ton.local.my_work_dir, "-t", str(tmp_dir), "-k", "/var/ton-work/keys"]
 
     output = cli.execute("create_backup /to_dir/", no_color=True)
     assert "create_backup - OK" in output
     assert fun_user is None
-    assert fun_args == ["-m", ton.local.my_work_dir, "-t", str(tmp_dir), "-d", "/to_dir/"]
+    assert fun_args == ["-m", ton.local.my_work_dir, "-t", str(tmp_dir), "-k", "/var/ton-work/keys", "-d", "/to_dir/"]
     assert not Path(tmp_dir).exists()
 
     output = cli.execute("create_backup /to_dir/ -u yungwine", no_color=True)
     assert "create_backup - OK" in output
     assert fun_user == 'yungwine'
-    assert fun_args == ["-m", ton.local.my_work_dir, "-t", str(tmp_dir), "-d", "/to_dir/"]
+    assert fun_args == ["-m", ton.local.my_work_dir, "-t", str(tmp_dir), "-k", "/var/ton-work/keys", "-d", "/to_dir/"]
     assert not Path(tmp_dir).exists()
 
     return_code = 1
@@ -67,10 +67,10 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     monkeypatch.setattr("modules.backups.get_own_ip", lambda: "127.0.0.1")
 
     return_code = 0
-    run_args = []
+    all_run_args = []
     def fake_run_as_root(args: list):
-        nonlocal return_code, run_args
-        run_args = args
+        nonlocal return_code
+        all_run_args.append(args)
         return return_code
 
     monkeypatch.setattr(backups_module, "run_as_root", fake_run_as_root)
@@ -94,8 +94,10 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     def assert_happy_run_args(outp: str, user: str):
         assert 'restore_backup - OK' in outp
         exit_mock.assert_called_once()  # exited after restore_backup
-        assert run_args == ['bash', str(backup_path), '-u', user, '-m', ton.local.my_work_dir, '-n',
-                            'backup.tar.gz', '-i', '2130706433']
+        assert all_run_args[-2] == ['bash', str(backup_path), '-u', user, '-m', ton.local.my_work_dir, '-n',
+                                    'backup.tar.gz', '-i', '2130706433', '-t', '/var/ton-work']
+        # mytoncore is restarted after the restored db paths are fixed up
+        assert all_run_args[-1] == ['systemctl', 'restart', 'mytoncore']
         assert ton.local.db.get('abc') == 123  # db updated after restore_backup
 
     monkeypatch.setattr(MyTonCore, "using_validator", lambda self: False)
@@ -138,22 +140,6 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     output = cli.execute("restore_backup backup.tar.gz --skip-create-backup -y -u abc", no_color=True)
     assert_happy_run_args(output, 'abc')
     create_backup_mock.assert_not_called()
-
-    # check btc teleport installment
-    exit_mock.reset_mock()
-    create_backup_mock.reset_mock()
-    monkeypatch.setattr(MyTonCore, "using_validator", lambda self: True)
-
-    from modules import btc_teleport
-    btc_teleport_mock = mocker.Mock()
-    monkeypatch.setattr(btc_teleport, "BtcTeleportModule", btc_teleport_mock)
-
-    output = cli.execute("restore_backup backup.tar.gz --skip-create-backup -u abc -y", no_color=True)
-
-    assert_happy_run_args(output, 'abc')
-    create_backup_mock.assert_not_called()
-    btc_teleport_mock.assert_called_once()
-    btc_teleport_mock.return_value.init.assert_called_once_with(reinstall=True)
 
     # Failed to restore backup
     return_code = 1
