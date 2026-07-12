@@ -901,6 +901,47 @@ class GeneralModule(MtcModule):
             text = "Upgrade - {red}Error{endc}"
         color_print(text)
 
+    def reload_global_config(self, args: list[str]):
+        if not check_usage_args_min_max_len("reload_global_config", args, 0, 1):
+            return
+        if len(args) == 1:
+            url = args[0]
+        else:
+            network_name = self.ton.GetNetworkName()
+            if network_name == "mainnet":
+                url = "https://ton-blockchain.github.io/global.config.json"
+            elif network_name == "testnet":
+                url = "https://ton-blockchain.github.io/testnet-global.config.json"
+            else:
+                raise Exception(
+                    "could not detect the network, please provide the config url explicitly"
+                )
+
+        self.local.add_log(f"Downloading global config from {url}", "info")
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            config_text = response.text
+            json.loads(config_text)  # make sure the downloaded config is valid json before replacing
+        except Exception as e:
+            color_print(
+                f"reload_global_config error: {{red}}failed to download config from {url}: {e}{{endc}}"
+            )
+            return
+
+        global_config_path = self.ton.get_paths().global_config_path
+        with tempfile.NamedTemporaryFile("w", suffix=".json") as tmp_file:
+            tmp_file.write(config_text)
+            tmp_file.flush()
+            exit_code = run_as_root(
+                ["install", "-m", "0644", tmp_file.name, str(global_config_path)]
+            )
+
+        if exit_code == 0:
+            color_print("reload_global_config - {green}OK{endc}")
+        else:
+            color_print("reload_global_config - {red}Error{endc}")
+
     def run_benchmark(self, args: list[str]):
         if shutil.which("uv") is None:
             answer = input("uv is not installed. Install it? [y/n] ").strip().lower()
@@ -1047,6 +1088,9 @@ class GeneralModule(MtcModule):
     def add_console_commands(self, console):
         add_command(self.local, console, "update", self.Update)
         add_command(self.local, console, "upgrade", self.Upgrade)
+        add_command(
+            self.local, console, "reload_global_config", self.reload_global_config
+        )
         add_command(self.local, console, "installer", self.run_installer)
         add_command(self.local, console, "status", self.print_status)
         add_command(self.local, console, "status_modes", self.mode_status)

@@ -130,6 +130,83 @@ def test_upgrade(cli, monkeypatch):
     assert "Upgrade - Error" in output
 
 
+def test_reload_global_config(cli, monkeypatch):
+    # the cli fixture pins GetNetworkName to "mainnet"
+    valid_config = json.dumps({"validator": {}, "liteservers": []})
+
+    class FakeResponse:
+        def __init__(self, text, status=200):
+            self.text = text
+            self._status = status
+
+        def raise_for_status(self):
+            if self._status >= 400:
+                raise Exception(f"HTTP {self._status}")
+
+    requested = {}
+
+    def fake_get(url, timeout=None):
+        requested["url"] = url
+        requested["timeout"] = timeout
+        return FakeResponse(valid_config)
+
+    monkeypatch.setattr(general_module.requests, "get", fake_get)
+
+    copied = {}
+
+    def fake_run_as_root(run_args):
+        copied["args"] = run_args
+        # the temp source file must still exist when we install it into place
+        assert pathlib.Path(run_args[3]).is_file()
+        return 0
+
+    monkeypatch.setattr(general_module, "run_as_root", fake_run_as_root)
+
+    # no url -> mainnet default url, installed to the global config path
+    output = cli.execute("reload_global_config", no_color=True)
+    assert requested["url"] == "https://ton-blockchain.github.io/global.config.json"
+    assert copied["args"][:3] == ["install", "-m", "0644"]
+    assert copied["args"][4] == "/usr/bin/ton/global.config.json"
+    assert not pathlib.Path(copied["args"][3]).exists()  # temp file cleaned up
+    assert "reload_global_config - OK" in output
+
+    # explicit url arg overrides the default
+    output = cli.execute(
+        "reload_global_config https://example.com/custom.json", no_color=True
+    )
+    assert requested["url"] == "https://example.com/custom.json"
+    assert "reload_global_config - OK" in output
+
+    # too many args -> usage error, nothing downloaded
+    requested.clear()
+    output = cli.execute("reload_global_config a b", no_color=True)
+    assert "Bad args" in output
+    assert requested == {}
+
+    # non-json response -> error, config is not touched
+    copied.clear()
+    monkeypatch.setattr(
+        general_module.requests,
+        "get",
+        lambda url, timeout=None: FakeResponse("<html>not json</html>"),
+    )
+    output = cli.execute("reload_global_config", no_color=True)
+    assert "reload_global_config error" in output
+    assert copied == {}
+
+    # network unknown and no url -> ask for explicit url
+    monkeypatch.setattr(general_module.requests, "get", fake_get)
+    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "unknown")
+    output = cli.execute("reload_global_config", no_color=True)
+    assert "could not detect the network" in output
+
+    # root install fails -> Error
+    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
+    monkeypatch.setattr(general_module, "run_as_root", lambda _: 1)
+    output = cli.execute("reload_global_config", no_color=True)
+    assert "reload_global_config - Error" in output
+
+
 def test_installer(cli, monkeypatch):
     calls = {}
     def fake_run(self, cmd):

@@ -6,6 +6,7 @@ from mypylib import MyPyClass, color_print
 USAGES = {
     "update": "[repo_url|repo_owner] [branch]",
     "upgrade": "[repo_url|repo_owner] [branch]",
+    "reload_global_config": "[url]",
     "installer": "[command]",
     "status": "[fast]",
     "enable_mode": "<mode_name>",

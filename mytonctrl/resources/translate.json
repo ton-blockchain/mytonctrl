@@ -9,6 +9,11 @@
 		"ru": "Подтянуть исходный код и перекомпилировать компоненты TON",
 		"zh_TW": "拉取源碼並重新編譯 TON 組件"
 	},
+	"reload_global_config_cmd": {
+		"en": "Re-download the network global config",
+		"ru": "Переустановить глобальный конфиг сети",
+		"zh_TW": "重新下載網路全域設定檔"
+	},
 	"status_cmd": {
 		"en": "Show TON status",
 		"ru": "Показать статус TON",
