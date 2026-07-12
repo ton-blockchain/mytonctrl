@@ -373,7 +373,7 @@ class UtilitiesModule(MtcModule):
         if not check_adnl:
             return True, ''
         self.local.add_log('Checking ADNL connection to local node', 'info')
-        hosts = ['45.129.96.53', '5.154.181.153', '91.194.11.68', '45.12.134.214', '103.106.3.171']
+        hosts = ['45.129.96.53', '5.154.181.153', '45.12.134.214']
         hosts = random.sample(hosts, k=3)
         data = self.ton.get_local_adnl_data()
         error = ''
@@ -381,7 +381,7 @@ class UtilitiesModule(MtcModule):
         for host in hosts:
             url = f'http://{host}/adnl_check'
             try:
-                response = requests.post(url, json=data, timeout=5).json()
+                response = requests.post(url, json=data, timeout=3).json()
             except Exception as e:
                 ok = False
                 error = f'Failed to check ADNL connection to local node: {type(e)}: {e}'
