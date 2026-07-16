@@ -38,7 +38,7 @@ if systemctl is-active --quiet validator; then
 	exit 1
 fi
 
-TMP_DIR="$(mktemp -d)"
+TMP_DIR="$(realpath "$(mktemp -d)")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 #   crypto/create-state, utils/generate-random-id,
@@ -85,7 +85,7 @@ mkdir -p "$TL_DEST"
 cp "$SRC_DIR/tl/generate/scheme/"*.tl "$TL_DEST/"
 
 cd "$TMP_DIR"
-uv add "$TONTESTER_DIR"
+uv add --editable "$TONTESTER_DIR"
 uv run "$TONTESTER_DIR/generate_tl.py"
 
 set +e
