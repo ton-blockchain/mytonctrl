@@ -185,8 +185,10 @@ class MyTonCore:
 		result = self.liteClient.run(cmd)
 		return parse_result_stack(result)
 
-	def run_get_method_local(self, addr: str, method: str) -> list[str]:
+	def run_get_method_local(self, addr: str, method: str, params: list | None = None) -> list[str]:
 		cmd = f"runmethod {addr} {method}"
+		if params:
+			cmd += " " + " ".join(map(str, params))
 		result = self.liteClient.run_local(cmd)
 		return parse_remote_result_stack(result)
 
@@ -2536,7 +2538,7 @@ class MyTonCore:
 			return
 
 		# Проверить наличие средств у ликвидного пула
-		if self.CalculateLoanAmount(min_loan, max_loan, max_interest) == '-0x1':
+		if self.calculate_loan_amount(min_loan, max_loan, max_interest) == -1:
 			raise Exception("CreateLoanRequest error: The liquid pool cannot issue the required amount of credit")
 
 		# Проверить хватает ли ставки валидатора
@@ -2553,17 +2555,22 @@ class MyTonCore:
 		self.SendFile(resultFilePath, wallet)
 		self.WaitLoan(controllerAddr)
 
-	def CalculateLoanAmount(self, min_loan, max_loan, max_interest):
-		data = dict()
-		data["address"] = self.GetLiquidPoolAddr()
-		data["method"] = "calculate_loan_amount"
-		data["stack"] = [
-			["num", min_loan*10**9],
-			["num", max_loan*10**9],
-			["num", max_interest],
-		]
-		print(f"CalculateLoanAmount data: {data}")
+	def calculate_loan_amount(self, min_loan: int, max_loan: int, max_interest: int) -> int:
+		pool_addr = self.GetLiquidPoolAddr()
+		params = [min_loan*10**9, max_loan*10**9, max_interest]
+		try:
+			result = self.run_get_method_local(pool_addr, "calculate_loan_amount", params)
+			return int(result[-1])
+		except Exception as e:
+			self.local.add_log(f"Failed to calculate loan amount: {e}, params: {params}. Falling back to local ton-http-api", "warning")
+			return self.calculate_loan_amount_tha(pool_addr, params)
 
+	def calculate_loan_amount_tha(self, pool_addr: str, params: list) -> int:
+		data = {
+			"address": pool_addr,
+			"method": "calculate_loan_amount",
+			"stack": [["num", param] for param in params],
+		}
 		url = "http://127.0.0.1:8801/runGetMethod"
 		res = requests.post(url, json=data, timeout=3)
 		res_data = res.json()
@@ -2571,7 +2578,7 @@ class MyTonCore:
 			error = res_data.get("error")
 			raise Exception(error)
 		result = res_data.get("result").get("stack").pop().pop()
-		return result
+		return int(result, 16)
 
 	def WaitLoan(self, controllerAddr):
 		self.local.add_log("start WaitLoan function", "debug")
