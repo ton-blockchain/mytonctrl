@@ -61,7 +61,7 @@ from mypylib.mypylib import (
 	Dict, int2ip, MyPyClass,
 	parse_int_forced
 )
-from mytoncore.vm_stack import parse_result_stack
+from mytoncore.vm_stack import parse_result_stack, parse_remote_result_stack
 
 
 class MyTonCore:
@@ -180,10 +180,15 @@ class MyTonCore:
 			return Paths()
 		return Paths.from_dict(paths)
 
-	def run_get_method(self, addr: str, method: str):
+	def run_get_method(self, addr: str, method: str) -> list[str]:
 		cmd = f"runmethodfull {addr} {method}"
 		result = self.liteClient.run(cmd)
 		return parse_result_stack(result)
+
+	def run_get_method_local(self, addr: str, method: str) -> list[str]:
+		cmd = f"runmethod {addr} {method}"
+		result = self.liteClient.run_local(cmd)
+		return parse_remote_result_stack(result)
 
 	def get_seqno(self, wallet: Wallet) -> int:
 		seqno = int(self.run_get_method(wallet.addrB64, "seqno")[0])

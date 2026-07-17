@@ -20,6 +20,25 @@ def test_getseqno(ton: MyTonCore, monkeypatch):
     assert ton.get_seqno(wallet) == 297
 
 
+def test_run_get_method_local(ton: MyTonCore, monkeypatch):
+    seen = {}
+
+    def fake_run_local(cmd, **kw):
+        seen['cmd'] = cmd
+        return (
+            'arguments:  [ 104128 ] \n'
+            'gas used: 0\n'
+            'result: error -1001\n'
+            'remote result (not to be trusted):  [ 297 ] \n'
+        )
+
+    monkeypatch.setattr(ton.liteClient, 'run_local', fake_run_local)
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: pytest.fail('must not fall back to public liteservers'))
+
+    assert ton.run_get_method_local('addr', 'seqno') == ['297']
+    assert seen['cmd'] == 'runmethod addr seqno'
+
+
 def test_getaccount(ton: MyTonCore, monkeypatch):
     hex_addr = 'A' * 64
     addr_b64 = raw_addr_to_b64(f"0:{hex_addr}")

@@ -69,11 +69,18 @@ class LiteClient(CliTool):
         if index is not None:
             args += ["-i", str(index)]
         elif use_local and self.pub_key_path and self.addr and out_of_sync is not None and out_of_sync < 20:
-            args = ["--addr", self.addr, "--pub", self.pub_key_path, "--verbosity", "0", "--cmd", cmd]
+            return self.run_local(cmd, timeout)
         else:
             ls_list = self.local.db.get("liteServers")
             if ls_list:
                 args += ["-i", str(random.choice(ls_list))]
+        return self._run(args, timeout)
+
+    def run_local(self, cmd: str, timeout: int | None = None) -> str:
+        """Connect only to the local liteserver, with no fallback to public ones."""
+        if not self.pub_key_path or not self.addr:
+            raise Exception(f"{self.tool_name} error: local liteserver is not configured")
+        args = ["--addr", self.addr, "--pub", self.pub_key_path, "--verbosity", "0", "--cmd", cmd]
         return self._run(args, timeout)
 
 
