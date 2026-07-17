@@ -20,6 +20,69 @@ def test_getseqno(ton: MyTonCore, monkeypatch):
     assert ton.get_seqno(wallet) == 297
 
 
+def test_run_get_method_local(ton: MyTonCore, monkeypatch):
+    seen = {}
+
+    def fake_run_local(cmd, **kw):
+        seen['cmd'] = cmd
+        return (
+            'arguments:  [ 104128 ] \n'
+            'gas used: 0\n'
+            'result: error -1001\n'
+            'remote result (not to be trusted):  [ 297 ] \n'
+        )
+
+    monkeypatch.setattr(ton.liteClient, 'run_local', fake_run_local)
+    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: pytest.fail('must not fall back to public liteservers'))
+
+    assert ton.run_get_method_local('addr', 'seqno') == ['297']
+    assert seen['cmd'] == 'runmethod addr seqno'
+
+    assert ton.run_get_method_local('addr', 'method', [1, 2, 3]) == ['297']
+    assert seen['cmd'] == 'runmethod addr method 1 2 3'
+
+
+def test_calculate_loan_amount(ton: MyTonCore, monkeypatch):
+    ton.local.db['liquid_pool_addr'] = 'pool_addr'
+    seen = {}
+
+    def fake_run_local(cmd, **kw):
+        seen['cmd'] = cmd
+        return 'remote result (not to be trusted):  [ 42000000000000 ] \n'
+
+    monkeypatch.setattr(ton.liteClient, 'run_local', fake_run_local)
+    monkeypatch.setattr('mytoncore.mytoncore.requests.post',
+                        lambda *a, **kw: pytest.fail('must not fall back to ton-http-api'))
+
+    assert ton.calculate_loan_amount(41000, 43000, 251658) == 42000000000000
+    assert seen['cmd'] == 'runmethod pool_addr calculate_loan_amount 41000000000000 43000000000000 251658'
+
+
+def test_calculate_loan_amount_tha_fallback(ton: MyTonCore, monkeypatch):
+    ton.local.db['liquid_pool_addr'] = 'pool_addr'
+
+    class Resp:
+        def json(self):
+            return {'ok': True, 'result': {'stack': [['num', '-0x1']]}}
+
+    captured = {}
+
+    def fake_post(url, json, timeout):
+        captured['url'] = url
+        captured['json'] = json
+        return Resp()
+
+    monkeypatch.setattr(ton.liteClient, 'run_local',
+                        lambda cmd, **kw: (_ for _ in ()).throw(Exception('liteclient down')))
+    monkeypatch.setattr('mytoncore.mytoncore.requests.post', fake_post)
+
+    assert ton.calculate_loan_amount(41000, 43000, 251658) == -1
+    assert captured['url'] == 'http://127.0.0.1:8801/runGetMethod'
+    assert captured['json']['address'] == 'pool_addr'
+    assert captured['json']['stack'] == [
+        ['num', 41000000000000], ['num', 43000000000000], ['num', 251658]]
+
+
 def test_getaccount(ton: MyTonCore, monkeypatch):
     hex_addr = 'A' * 64
     addr_b64 = raw_addr_to_b64(f"0:{hex_addr}")

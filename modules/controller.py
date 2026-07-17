@@ -9,10 +9,6 @@ from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_
 from mytonctrl.utils import GetItemFromList
 from modules.module import MtcModule
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from mytoncore import MyTonCore
-
 
 class ControllerModule(MtcModule):
 
@@ -229,17 +225,11 @@ class ControllerModule(MtcModule):
         max_loan = self.ton.local.db.get("max_loan", 43000)
         max_interest_percent = self.ton.local.db.get("max_interest_percent", 1.5)
         max_interest = int(max_interest_percent / 100 * 16777216)
-        return self.ton.CalculateLoanAmount(min_loan, max_loan, max_interest)
+        return self.ton.calculate_loan_amount(min_loan, max_loan, max_interest)
 
     def calculate_loan_amount_test(self, args):
         t = self.do_calculate_loan_amount_test()
         print(t)
-
-    @classmethod
-    def check_enable(cls, ton: "MyTonCore"):
-        from mytoninstaller.mytoninstaller import InstallerCtrl
-        installer = InstallerCtrl.from_ton(ton)
-        installer.enable_ton_http_api()
 
     def add_console_commands(self, console):
         add_command(self.local, console, "create_controllers", self.create_controllers)
