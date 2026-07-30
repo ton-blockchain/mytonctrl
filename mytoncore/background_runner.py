@@ -58,10 +58,9 @@ class BackgroundRunner:
                     self._ton.VoteOffer(offer)
 
     def _complaints(self):
+        return
         validator_index = self._ton.GetValidatorIndex()
         if validator_index < 0:
-            return
-        if time.time() < 1776643200:
             return
 
         # Voting for complaints
