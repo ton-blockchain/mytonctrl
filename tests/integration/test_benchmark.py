@@ -73,6 +73,72 @@ def test_benchmark_tmp_rejects_symlink(cli, monkeypatch):
     assert root_calls == []
 
 
+def test_benchmark_resolves_symlinked_tmp_dir(cli, monkeypatch, tmp_path):
+    # Regression: when the temp dir path contains a symlink (e.g. ton_work is a
+    # symlink like /var/ton-work -> /mnt/data/ton-work), the cwd passed to uv must be
+    # resolved. Otherwise uv's getcwd() (real path) differs from the symlink-prefixed
+    # tontester_dir argument, its in-tree workspace-member check fails, and tontester
+    # installs non-editable -- hiding the generated `tonapi` package (ModuleNotFoundError).
+    # Real filesystem setup FIRST, before Path.mkdir is patched to a no-op below,
+    # otherwise real_dir is never created and `link` becomes a dangling symlink.
+    real_dir = tmp_path / "real"
+    real_dir.mkdir()
+    link_dir = tmp_path / "link"
+    link_dir.symlink_to(real_dir)  # symlink prefix, like a symlinked ton_work
+
+    monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/uv" if name == "uv" else None)
+    monkeypatch.setattr(shutil, "copytree", lambda src, dst: None)
+    monkeypatch.setattr(shutil, "copy", lambda src, dst: None)
+
+    # Only pretend the benchmark temp parent is missing; delegate every other path to the
+    # real lstat, otherwise a globally-broken os.lstat would also break Path.resolve()
+    # (which follows symlinks via lstat) -- the very behavior under test.
+    real_lstat = general_module.os.lstat
+
+    def fake_lstat(path):
+        if str(path) == "/var/ton-work/tmp":
+            raise FileNotFoundError
+        return real_lstat(path)
+
+    monkeypatch.setattr(general_module.os, "lstat", fake_lstat)
+    monkeypatch.setattr(general_module, "run_as_root", lambda args: 0)
+    monkeypatch.setattr(Path, "mkdir", lambda *a, **kw: None)
+    monkeypatch.setattr(Path, "glob", lambda self, pattern: [])
+
+    class FakeTemporaryDirectory:
+        def __init__(self, dir=None):
+            pass
+
+        def __enter__(self):
+            return str(link_dir)
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+    monkeypatch.setattr(general_module.tempfile, "TemporaryDirectory", FakeTemporaryDirectory)
+
+    calls = []
+
+    def fake_subprocess_run(args, **kwargs):
+        calls.append({"args": [str(a) for a in args], "kwargs": kwargs})
+        return subprocess.CompletedProcess(args, 0)
+
+    monkeypatch.setattr(subprocess, "run", fake_subprocess_run)
+
+    cli.execute("benchmark", no_color=True)
+
+    resolved = str(real_dir.resolve())
+    assert resolved != str(link_dir)  # sanity: symlink path really differs from its target
+    # every uv invocation must run from the resolved real path, never the symlink prefix
+    for call in calls:
+        assert str(call["kwargs"].get("cwd")) == resolved
+    # and the tontester path argument lives under that same resolved dir, so uv's
+    # in-tree containment check succeeds and it installs editable
+    add_args = calls[1]["args"]
+    assert add_args[:3] == ["uv", "add", "--editable"]
+    assert add_args[3].startswith(resolved)
+
+
 def test_benchmark_runs(cli, monkeypatch, tmp_path):
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/uv" if name == "uv" else None)
     monkeypatch.setattr(shutil, "copytree", lambda src, dst: None)
@@ -134,10 +200,10 @@ def test_benchmark_runs(cli, monkeypatch, tmp_path):
     assert "cwd" in calls[0]["kwargs"]
     tmp_dir = str(calls[0]["kwargs"]["cwd"])
 
-    # uv add tontester
+    # uv add --editable tontester
     add_args = calls[1]["args"]
-    assert add_args[:2] == ["uv", "add"]
-    assert "tontester" in add_args[2]
+    assert add_args[:3] == ["uv", "add", "--editable"]
+    assert "tontester" in add_args[3]
 
     # uv run generate_tl.py
     assert calls[2]["args"][:2] == ["uv", "run"]

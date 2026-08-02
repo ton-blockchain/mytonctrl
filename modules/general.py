@@ -995,7 +995,7 @@ class GeneralModule(MtcModule):
                     return
 
         with tempfile.TemporaryDirectory(dir=tmp_parent_dir) as tmp_dir:
-            tmp_dir = Path(tmp_dir)
+            tmp_dir = Path(tmp_dir).resolve()
             with get_package_resource_path(
                 "mytonctrl", "scripts/benchmark.py"
             ) as benchmark_path:
@@ -1028,7 +1028,9 @@ class GeneralModule(MtcModule):
                 for f in (src_dir / "tl" / "generate" / "scheme").glob("*.tl"):
                     shutil.copy(f, tl_dest)
 
-                subprocess.run(["uv", "add", tontester_dir], cwd=tmp_dir, check=True)
+                subprocess.run(
+                    ["uv", "add", "--editable", tontester_dir], cwd=tmp_dir, check=True
+                )
 
                 subprocess.run(
                     ["uv", "run", tontester_dir / "generate_tl.py"],

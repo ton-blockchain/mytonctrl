@@ -98,6 +98,30 @@ def test_liteclient_run_falls_back_to_db_liteservers_when_out_of_sync(ton, mocke
     assert run_mock.call_args.args[0][-2:] == ["-i", "7"]
 
 
+def test_liteclient_run_local_connects_only_to_local_liteserver(ton, mocker: MockerFixture):
+    run_mock = mocker.patch(
+        "mytoncore.clients.subprocess.run", return_value=_completed(stdout=b"ok")
+    )
+
+    output = ton.liteClient.run_local("runmethodx addr method")
+
+    assert output == "ok"
+    assert run_mock.call_args.args[0] == [
+        ton.liteClient.app_path,
+        "--addr", ton.liteClient.addr,
+        "--pub", ton.liteClient.pub_key_path,
+        "--verbosity", "0",
+        "--cmd", "runmethodx addr method",
+    ]
+
+
+def test_liteclient_run_local_raises_when_local_liteserver_not_configured(ton):
+    ton.liteClient.addr = None
+
+    with pytest.raises(Exception, match="local liteserver is not configured"):
+        ton.liteClient.run_local("last")
+
+
 def test_liteclient_run_raises_on_stderr(ton, mocker: MockerFixture):
     _stub_status(ton, 0)
     mocker.patch(

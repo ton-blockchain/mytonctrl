@@ -3,21 +3,33 @@ from __future__ import annotations
 import re
 
 
+_RESULT_RE = re.compile(r"(?m)^[^\S\n]*result:[^\S\n]*")
+_REMOTE_RESULT_RE = re.compile(r"(?m)^[^\S\n]*remote result(?: \(not to be trusted\))?:[^\S\n]*")
+
+
 def parse_result_stack(output: str) -> list[str]:
-    match = re.compile(r"(?m)^[^\S\n]*result:[^\S\n]*").search(output)
+    return _parse_section_stack(output, _RESULT_RE, "result")
+
+
+def parse_remote_result_stack(output: str) -> list[str]:
+    return _parse_section_stack(output, _REMOTE_RESULT_RE, "remote result")
+
+
+def _parse_section_stack(output: str, section_re: re.Pattern[str], section_name: str) -> list[str]:
+    match = section_re.search(output)
     if not match:
-        raise ValueError("'result' section was not found")
+        raise ValueError(f"'{section_name}' section was not found")
 
     pos = _skip_ws(output, match.end())
     if output.startswith("error", pos):
         raise ValueError(output[pos:].splitlines()[0].strip())
     if output.startswith("<none>", pos):
-        raise ValueError("result section does not contain a stack")
+        raise ValueError(f"{section_name} section does not contain a stack")
 
     values, pos = _parse_stack_as_strings(output, pos)
     pos = _skip_ws(output, pos)
     if pos != len(output):
-        raise ValueError(f"unexpected text after result stack: {output[pos:pos + 40]!r}")
+        raise ValueError(f"unexpected text after {section_name} stack: {output[pos:pos + 40]!r}")
     return values
 
 
