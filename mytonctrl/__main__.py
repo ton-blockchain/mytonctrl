@@ -80,7 +80,7 @@ def _main():
         mytoncore_local.load_db()
     ton = MyTonCore(mytoncore_local)
     if args.wallets is not None:
-        ton.walletsDir = os.path.join(args.wallets, '')
+        ton.walletsDir = args.wallets
 
     if args.cmd is None:
         try:

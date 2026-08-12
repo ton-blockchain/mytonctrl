@@ -135,32 +135,15 @@ def test_do_import_wallet_does_not_overwrite_partial_wallet(ton: MyTonCore, modu
         assert file.read() == b'old key'
 
 
-def test_do_import_wallet_removes_temporary_files_on_error(ton: MyTonCore, module: WalletModule, monkeypatch):
+def test_do_import_wallet_removes_files_on_key_error(ton: MyTonCore, module: WalletModule, monkeypatch):
     monkeypatch.setattr(ton, 'addr_b64_to_bytes', lambda _: b'\x00' * 36)
 
-    def fail_link(source, destination):
-        raise OSError('link failed')
+    def fail_chmod(fd, mode):
+        raise OSError('chmod failed')
 
-    monkeypatch.setattr(os, 'link', fail_link)
+    monkeypatch.setattr(os, 'fchmod', fail_chmod)
 
-    with pytest.raises(OSError, match='link failed'):
-        module.do_import_wallet('address', base64.b64encode(b'\x01' * 32).decode())
-
-    assert os.listdir(ton.walletsDir) == []
-
-
-def test_do_import_wallet_removes_private_key_when_address_publication_fails(ton: MyTonCore, module: WalletModule, monkeypatch):
-    monkeypatch.setattr(ton, 'addr_b64_to_bytes', lambda _: b'\x00' * 36)
-    original_link = os.link
-
-    def fail_address_link(source, destination):
-        if destination.endswith('.addr'):
-            raise OSError('address link failed')
-        return original_link(source, destination)
-
-    monkeypatch.setattr(os, 'link', fail_address_link)
-
-    with pytest.raises(OSError, match='address link failed'):
+    with pytest.raises(OSError, match='chmod failed'):
         module.do_import_wallet('address', base64.b64encode(b'\x01' * 32).decode())
 
     assert os.listdir(ton.walletsDir) == []

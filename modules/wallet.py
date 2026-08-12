@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import os
-import tempfile
 
 from modules.module import MtcModule
 from mypylib.mypylib import color_print, print_table, parse
@@ -129,49 +128,29 @@ class WalletModule(MtcModule):
         addr_bytes = self.ton.addr_b64_to_bytes(addr_b64)
         pk_bytes = base64.b64decode(key)
         wallet_name = self.generate_wallet_name()
-        while True:
-            wallet_path = self.ton.walletsDir + wallet_name
-            pk_path = wallet_path + ".pk"
-            addr_path = wallet_path + ".addr"
-            addr_fd = pk_fd = None
-            addr_temp_path = pk_temp_path = None
-            pk_linked = False
-            try:
-                addr_fd, addr_temp_path = tempfile.mkstemp(
-                    suffix=".addr", prefix=f".{wallet_name}.", dir=self.ton.walletsDir
-                )
-                pk_fd, pk_temp_path = tempfile.mkstemp(
-                    suffix=".pk", prefix=f".{wallet_name}.", dir=self.ton.walletsDir
-                )
-                addr_file = os.fdopen(addr_fd, 'wb')
-                addr_fd = None
-                with addr_file:
-                    addr_file.write(addr_bytes)
-                os.fchmod(pk_fd, 0o600)
-                pk_file = os.fdopen(pk_fd, 'wb')
-                pk_fd = None
-                with pk_file:
-                    pk_file.write(pk_bytes)
-                os.link(pk_temp_path, pk_path)
-                pk_linked = True
-                os.link(addr_temp_path, addr_path)
-            except FileExistsError:
-                if pk_linked:
-                    os.remove(pk_path)
-                wallet_name = self.generate_wallet_name()
-            except Exception:
-                if pk_linked:
-                    os.remove(pk_path)
-                raise
-            else:
-                return wallet_name
-            finally:
-                for fd in (addr_fd, pk_fd):
-                    if fd is not None:
-                        os.close(fd)
-                for path in (addr_temp_path, pk_temp_path):
-                    if path is not None and os.path.lexists(path):
-                        os.remove(path)
+        wallet_path = self.ton.walletsDir + wallet_name
+        addr_path = wallet_path + ".addr"
+        pk_path = wallet_path + ".pk"
+        with open(addr_path, 'xb') as file:
+            file.write(addr_bytes)
+        try:
+            pk_fd = os.open(pk_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except Exception:
+            os.remove(addr_path)
+            raise
+        try:
+            os.fchmod(pk_fd, 0o600)
+            pk_file = os.fdopen(pk_fd, 'wb')
+            pk_fd = None
+            with pk_file:
+                pk_file.write(pk_bytes)
+        except Exception:
+            if pk_fd is not None:
+                os.close(pk_fd)
+            os.remove(pk_path)
+            os.remove(addr_path)
+            raise
+        return wallet_name
 
     def import_wallet(self, args):
         if not check_usage_two_args("iw", args):
