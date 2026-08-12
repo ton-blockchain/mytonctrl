@@ -112,7 +112,7 @@ def test_init_with_wallets_arg_sets_ton_walletsdir(
     main_module._main()
 
     assert len(captured) == 1
-    assert captured[0].walletsDir == wallets_dir
+    assert captured[0].walletsDir == os.path.join(wallets_dir, "")
 
 
 def test_init_with_unreadable_config_exits(
