@@ -349,6 +349,21 @@
 		"ru": "Удалить коллатор из списка коллаторов этого валидатора",
 		"zh_TW": "從此驗證者協作者列表中刪除協作者"
 	},
+	"add_register_collator_cmd": {
+		"en": "Register collator in the validator registry",
+		"ru": "Зарегистрировать коллатор в реестре валидаторов",
+		"zh_TW": "在驗證者註冊表中註冊協作者"
+	},
+	"delete_register_collator_cmd": {
+		"en": "Remove collator from the validator registry",
+		"ru": "Удалить коллатор из реестра валидаторов",
+		"zh_TW": "從驗證者註冊表中刪除協作者"
+	},
+	"set_self_collate_cmd": {
+		"en": "Set whether this validator collates blocks itself in addition to its collators",
+		"ru": "Указать, собирает ли этот валидатор блоки сам, помимо своих коллаторов",
+		"zh_TW": "設置此驗證者是否除了其協作者之外自行彙編區塊"
+	},
 	"print_collators_cmd": {
 		"en": "Print collators of this validator",
 		"ru": "Показать коллаторы этого валидатора",

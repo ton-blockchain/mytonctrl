@@ -81,7 +81,6 @@ class InstallerContext:
     public_ip: str | None
     add_shard: str | None
     archive_blocks: str | None
-    collate_shard: str = ""
 
     @property
     def mconfig_path(self) -> str:

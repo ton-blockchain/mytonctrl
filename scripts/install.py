@@ -153,15 +153,8 @@ def run_cli():
             "This reduces synchronization time but requires to download a large file"
         ).unsafe_ask()
 
-    collate_shard, add_shard = None, None
-    if mode == "collator":
-        collate_shard = questionary.text(
-            "Set shards node will sync and collate blocks for. Press Enter to collate blocks for all shards.\n"
-            "Format: <workchain>:<shard>. Divide multiple shards with space.\n"
-            "Example: `0:2000000000000000 0:6000000000000000`",
-            validate=validate_shard_format
-        ).unsafe_ask()
-    else:
+    add_shard = None
+    if mode != "collator":
         add_shard = questionary.text(
             "Set shards node will sync. Press Enter to sync all shards.\n"
             "Format: <workchain>:<shard>. Divide multiple shards with space.\n"
@@ -183,7 +176,6 @@ def run_cli():
         'state-ttl': state_ttl,
         "dump": dump,
         "add-shard": add_shard,
-        'collate-shard': collate_shard,
         "background": background
     }
     print(answers)
@@ -197,7 +189,6 @@ def run_install(answers: dict):
     archive_ttl = answers["archive-ttl"]
     state_ttl = answers["state-ttl"]
     add_shard = answers["add-shard"]
-    collate_shard = answers["collate-shard"]
     validator_mode = answers["validator-mode"]
     archive_blocks = answers["archive-blocks"]
     dump = answers["dump"]
@@ -218,8 +209,6 @@ def run_install(answers: dict):
         CONFIG['STATE_TTL'] = state_ttl
     if add_shard:
         CONFIG['ADD_SHARD'] = add_shard
-    if collate_shard:
-        CONFIG['COLLATE_SHARD'] = collate_shard
     if archive_blocks:
         CONFIG['ARCHIVE_BLOCKS'] = archive_blocks
 

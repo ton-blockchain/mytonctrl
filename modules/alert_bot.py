@@ -7,7 +7,7 @@ import requests
 from modules.module import MtcModule
 from mypylib.mypylib import get_timestamp, print_table, color_print
 from mytoncore.models import Config
-from mytoncore.utils import get_hostname, signed_int_to_hex64
+from mytoncore.utils import get_hostname
 from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
 from mytonctrl.utils import timestamp2utcdatetime
 from modules.validator import ValidatorModule
@@ -167,18 +167,6 @@ def init_alerts():
             "info",
             "Initial sync has been completed (info alert with no sound)",
             "Node initial sync has been completed",
-            0
-        ),
-        "shard_collators_offline": Alert(
-            "high",
-            "All collators for specific shards are offline",
-            "All collators for shards <code>{shards}</code> are offline.",
-            3600
-        ),
-        "shard_collators_ok": Alert(
-            "info",
-            "Shards have online collators again",
-            "All required shards have online collators again.",
             0
         ),
     }
@@ -576,29 +564,6 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
             self.initial_sync = False
             self.send_alert("initial_sync_completed")
 
-    def check_online_collators(self):
-        if not self.ton.using_validator():
-            return
-        collators_list = self.validator_module.get_collators_list()
-        if not collators_list or not collators_list['shards']:
-            return
-        collators_stats = self.validator_module.get_collators_stats()
-        offline_shards = []
-
-        for shard in collators_list['shards']:
-            if not shard['collators']:
-                continue
-            collators_alive = []
-            for c in shard['collators']:
-                collators_alive.append(collators_stats.get(c['adnl_id']))
-            if not any(collators_alive):
-                offline_shards.append(f"{shard['shard_id']['workchain']}:{signed_int_to_hex64(int(shard['shard_id']['shard']))}")
-
-        if offline_shards:
-            self.send_alert("shard_collators_offline", shards=' '.join(offline_shards))
-        else:
-            self.resolve_alert("shard_collators_offline", ok_alert_name="shard_collators_ok")
-
     def check_status(self):
         if not self.ton.using_alert_bot():
             return
@@ -618,7 +583,6 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         self.local.try_function(self.check_stake_returned)
         self.local.try_function(self.check_voting)
         self.local.try_function(self.check_initial_sync)
-        self.local.try_function(self.check_online_collators)
 
     def add_console_commands(self, console):
         add_command(self.local, console, "enable_alert", self.enable_alert)
