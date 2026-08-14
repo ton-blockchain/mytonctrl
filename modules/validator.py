@@ -1,6 +1,9 @@
 from __future__ import annotations
+import base64
 import json
 import time
+
+import requests
 
 from mypylib.mypylib import color_print, get_timestamp, print_table
 from modules.module import MtcModule
@@ -153,8 +156,10 @@ class ValidatorModule(MtcModule):
                 result['disable_self_collate'] = line.split('Disable self collate = ')[1] == 'true'
         return result
 
-    def get_collators_list(self):
+    def get_collators_list(self) -> dict:
         result = self.ton.validatorConsole.run('show-collators-list')
+        if 'unknown command' in result:
+            raise Exception('node does not support collators list commands (old node version)')
         if 'collators list is empty' in result:
             return {}
         return self._parse_collators_list(result)
@@ -286,6 +291,51 @@ class ValidatorModule(MtcModule):
         if 'success' not in result:
             raise Exception(f'Failed to reset collators list: {result}')
         color_print("reset_collators - {green}OK{endc}")
+
+    def get_default_collators_list(self) -> list[str] | None:
+        network = self.ton.GetNetworkName()
+        if network == 'unknown':
+            return None
+        prefix = 'testnet-' if network == 'testnet' else ''
+        default_url = f'https://ton-blockchain.github.io/{prefix}collators-list.json'
+        url = self.ton.local.db.get('defaultCollatorsUrl', default_url)
+        resp = requests.get(url, timeout=3)
+        resp.raise_for_status()
+        config = resp.json()
+        if not isinstance(config, dict) or not isinstance(config.get('collators'), list):
+            raise ValueError(f"Malformed remote config from {url}: {config}")
+        result: list[str] = []
+        for item in config['collators']:
+            try:
+                adnl_id = item['adnl_id']
+                if len(base64.b64decode(adnl_id, validate=True)) != 32:
+                    raise ValueError('adnl_id must be 32 bytes')
+            except (KeyError, TypeError, ValueError) as e:
+                raise ValueError(f"Could not parse adnl_id in the remote config: {item}: {config}") from e
+            if adnl_id not in result:
+                result.append(adnl_id)
+        return result
+
+    def apply_default_collators(self) -> None:
+        if not self.ton.using_validator():
+            return
+        if not self.ton.local.db.get('useDefaultCollators', True):
+            return
+        default_collators = self.get_default_collators_list()
+        if not default_collators:
+            return
+        collators_list = self.get_collators_list()
+        existing = {c['adnl_id'] for c in collators_list.get('collators', [])}
+        to_add = [adnl for adnl in default_collators if adnl not in existing]
+        if not to_add:
+            return
+        collators = collators_list.setdefault('collators', [])
+        collators_list.setdefault('register_collators', [])
+        collators_list.setdefault('disable_self_collate', False)
+        for adnl in to_add:
+            collators.append({'adnl_id': adnl})
+        self.set_collators_list(collators_list)
+        self.local.add_log(f'apply_default_collators: added {len(to_add)} default collators: {to_add}', 'info')
 
     def add_console_commands(self, console):
         add_command(self.local, console, "vo", self.vote_offer)
