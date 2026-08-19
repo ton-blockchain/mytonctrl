@@ -274,11 +274,6 @@
 		"ru": "Добавить контроллер liquid staking к валидатору",
 		"zh_TW": "將流動質押控制器添加到驗證者"
 	},
-	"check_liquid_pool_cmd": {
-		"en": "Check liquid staking pool",
-		"ru": "Проверить пул liquid staking",
-		"zh_TW": "檢查流動質押池"
-	},
 	"test_calculate_loan_amount_cmd": {
 		"en": "Test calculate loan amount for liquid staking controller",
 		"ru": "Тест рассчета суммы займа для контроллера liquid staking",
