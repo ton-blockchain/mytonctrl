@@ -25,8 +25,10 @@ class CustomOverlayModule(MtcModule):
             "nodes": [],
             "use_quic": config.get('use_quic', use_quic_default),
         }
+        if 'send_queries' in config:
+            result["send_queries"] = config['send_queries']
         for k, v in config.items():
-            if k == 'use_quic':
+            if k in ('use_quic', 'send_queries'):
                 continue
             if k == '@validators' and v:
                 if vset is None:
@@ -37,20 +39,18 @@ class CustomOverlayModule(MtcModule):
                         "msg_sender": False,
                     })
             else:
+                if not any(f in v for f in ("block_sender", "msg_sender", "accept_queries")):
+                    raise Exception(f"Unknown node type: {k}: {v}")
+                node = {"adnl_id": hex2base64(k)}
                 if "block_sender" in v:
-                    result["nodes"].append({
-                        "adnl_id": hex2base64(k),
-                        "block_sender": v["block_sender"],
-                    })
+                    node["block_sender"] = v["block_sender"]
                 elif "msg_sender" in v:
-                    result["nodes"].append({
-                        "adnl_id": hex2base64(k),
-                        "msg_sender": v["msg_sender"],
-                    })
+                    node["msg_sender"] = v["msg_sender"]
                     if v["msg_sender"]:
-                        result["nodes"][-1]["msg_sender_priority"] = v["msg_sender_priority"]
-                else:
-                    raise Exception("Unknown node type")
+                        node["msg_sender_priority"] = v["msg_sender_priority"]
+                if "accept_queries" in v:
+                    node["accept_queries"] = v["accept_queries"]
+                result["nodes"].append(node)
         return result
 
     def add_custom_overlay(self, args):

@@ -806,7 +806,7 @@ class GeneralModule(MtcModule):
             collators = CollatorModule(self.ton, self.local).get_collators()
             collator_adnls = []
             for collator in collators:
-                collator_adnls.append(b642hex(collator["adnl_id"]).upper())
+                collator_adnls.append(b642hex(collator).upper())
             for collator_adnl in set(collator_adnls):
                 self.ton.update_adnl_category(
                     adnl_addr=collator_adnl, category=category

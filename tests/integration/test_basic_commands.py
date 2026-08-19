@@ -644,11 +644,12 @@ def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
     validator_console_mock.run.reset_mock()
     monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: {
         "addrs": [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [2]}],
-        "collators": [{"adnl_id": base64.b64encode(b"\xaa" * 32).decode()}],
+        "collators": [base64.b64encode(b"\xaa" * 32).decode()],
     })
     output = cli.execute("set_quic_port 1234", no_color=True)
     assert update_adnl_mock.call_count == 2
     update_adnl_mock.assert_any_call(adnl_addr="TEST_ADNL_ADDR", category=2)
+    update_adnl_mock.assert_any_call(adnl_addr="AA" * 32, category=2)
 
     # Port 0 - should not call add-quic-addr
     update_adnl_mock.reset_mock()

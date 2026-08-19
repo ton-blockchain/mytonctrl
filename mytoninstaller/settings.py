@@ -649,11 +649,8 @@ def SetInitialSync(local: MyPyClass, ctx: InstallerContext):
 def SetupCollator(local: MyPyClass, ctx: InstallerContext):
 	if ctx.mode != "collator":
 		return
-	shards = ctx.collate_shard.split()
-	if not shards:
-		shards = ['0:8000000000000000']
-	local.add_log(f"Setting up collator for shards: {shards}", "info")
-	args = [sys.executable, "-m", "mytoncore", "-e", "setup_collator_" + '_'.join(shards)]
+	local.add_log("Setting up collator", "info")
+	args = [sys.executable, "-m", "mytoncore", "-e", "setup_collator"]
 	args = ["su", "-l", ctx.user, "-c", ' '.join(args)]
 	subprocess.run(args)
 

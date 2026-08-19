@@ -1,12 +1,16 @@
 from __future__ import annotations
+import base64
 import json
 import time
 
-from mypylib.mypylib import color_print, get_timestamp
+import requests
+
+from mypylib.mypylib import color_print, get_timestamp, print_table
 from modules.module import MtcModule
-from mytoncore.utils import hex_shard_to_int, hex2b64
+from mytoncore.utils import b642hex, hex2b64
 from mytoncore.models import ValidatorConfig
-from mytonctrl.console_cmd import check_usage_two_args, add_command, check_usage_args_min_max_len
+from mytonctrl.console_cmd import (add_command, check_usage_args_len, check_usage_args_min_max_len,
+                                   check_usage_one_arg, check_usage_two_args)
 
 from mytonctrl.utils import timestamp2utcdatetime, GetColorInt, pop_arg_from_args, is_hex
 
@@ -141,31 +145,21 @@ class ValidatorModule(MtcModule):
 
     @staticmethod
     def _parse_collators_list(output: str) -> dict:
-        result = {'shards': []}
-        lines = output.strip().split('\n')
-        current_shard = None
-        for line in lines:
+        result = {'collators': [], 'register_collators': [], 'disable_self_collate': False}
+        for line in output.strip().split('\n'):
             line = line.strip()
-            if line.startswith('Shard ('):
-                shard_id = line.split('Shard (')[1].replace(',', ':').replace(')', '')
-                current_shard = {
-                    'shard_id': hex_shard_to_int(shard_id),
-                    'self_collate': None,
-                    'select_mode': None,
-                    'collators': []
-                }
-                result['shards'].append(current_shard)
-            elif line.startswith('Self collate = ') and current_shard:
-                current_shard['self_collate'] = line.split('Self collate = ')[1] == 'true'
-            elif line.startswith('Select mode = ') and current_shard:
-                current_shard['select_mode'] = line.split('Select mode = ')[1]
-            elif line.startswith('Collator ') and current_shard:
-                collator_id = line.split('Collator ')[1]
-                current_shard['collators'].append({'adnl_id': collator_id})
+            if line.startswith('Register collator '):
+                result['register_collators'].append({'adnl_id': line.split('Register collator ')[1]})
+            elif line.startswith('Collator '):
+                result['collators'].append({'adnl_id': line.split('Collator ')[1]})
+            elif line.startswith('Disable self collate = '):
+                result['disable_self_collate'] = line.split('Disable self collate = ')[1] == 'true'
         return result
 
-    def get_collators_list(self):
+    def get_collators_list(self) -> dict:
         result = self.ton.validatorConsole.run('show-collators-list')
+        if 'unknown command' in result:
+            raise Exception('node does not support collators list commands (old node version)')
         if 'collators list is empty' in result:
             return {}
         return self._parse_collators_list(result)
@@ -179,108 +173,115 @@ class ValidatorModule(MtcModule):
             raise Exception(f'Failed to set collators list: {result}')
 
     def add_collator(self, args: list):
-        if not check_usage_args_min_max_len("add_collator", args, min_len=2, max_len=6):
+        if not check_usage_args_min_max_len("add_collator", args, min_len=1, max_len=3):
+            return
+        self_collate = pop_arg_from_args(args, '--self-collate')
+        if self_collate not in (None, 'true', 'false'):
+            color_print("{red}Bad args. Self collate must be one of: true, false{endc}")
+            return
+        if not check_usage_args_len("add_collator", args, 1):
             return
         adnl = args[0]
-        shard = args[1]
-        shard_id = hex_shard_to_int(shard)
         if is_hex(adnl):
             adnl = hex2b64(adnl)
-        self_collate = pop_arg_from_args(args, '--self-collate') == 'true' if '--self-collate' in args else None
-        select_mode = pop_arg_from_args(args, '--select-mode')
-        if select_mode not in [None, 'random', 'ordered', 'round_robin']:
-            color_print("{red}Bad args. Select mode must be one of: random, ordered, round_robin{endc}")
-            return
 
         collators_list = self.get_collators_list()
-        if 'shards' not in collators_list:
-            collators_list['shards'] = []
-
-        shard_exists = False
-        for sh in collators_list['shards']:
-            if sh['shard_id'] == shard_id:
-                if any(c['adnl_id'] == adnl for c in sh['collators']):
-                    raise Exception(f"Сollator {adnl} already exists in this shard {shard_id}.")
-                sh['collators'].append({'adnl_id': adnl})
-                shard_exists = True
-                if self_collate is not None:
-                    sh['self_collate'] = self_collate
-                if select_mode is not None:
-                    sh['select_mode'] = select_mode
-        if not shard_exists:
-            self_collate = self_collate if self_collate is not None else True
-            select_mode = select_mode or 'random'
-            self.local.add_log(f'Adding new shard {shard_id} to collators list. self_collate: {self_collate}, select_mode: {select_mode}', 'info')
-            collators_list['shards'].append({
-            'shard_id': shard_id,
-            'self_collate': self_collate,
-            'select_mode': select_mode,
-            'collators': [{'adnl_id': adnl}]
-        })
+        collators = collators_list.setdefault('collators', [])
+        collators_list.setdefault('register_collators', [])
+        collators_list.setdefault('disable_self_collate', False)
+        if any(c['adnl_id'] == adnl for c in collators):
+            raise Exception(f"Сollator {adnl} already exists in the collators list.")
+        collators.append({'adnl_id': adnl})
+        if self_collate is not None:
+            collators_list['disable_self_collate'] = self_collate == 'false'
+        self.local.add_log(f'Adding collator {adnl} to collators list. '
+                           f'self_collate: {not collators_list["disable_self_collate"]}', 'info')
         self.set_collators_list(collators_list)
         color_print("add_collator - {green}OK{endc}")
 
-    def delete_collator(self, args: list):
-        if not check_usage_args_min_max_len("delete_collator", args, min_len=1, max_len=2):
+    def add_register_collator(self, args: list):
+        if not check_usage_one_arg("add_register_collator", args):
             return
-
-        shard_id = None
-        if ':' in args[0]:
-            shard_id = hex_shard_to_int(args[0])
-            args.pop(0)
         adnl = args[0]
         if is_hex(adnl):
             adnl = hex2b64(adnl)
 
         collators_list = self.get_collators_list()
-        if 'shards' not in collators_list or not collators_list['shards']:
+        collators_list.setdefault('collators', [])
+        register_collators = collators_list.setdefault('register_collators', [])
+        collators_list.setdefault('disable_self_collate', False)
+        if any(c['adnl_id'] == adnl for c in register_collators):
+            raise Exception(f"Сollator {adnl} already exists in the register collators list.")
+        register_collators.append({'adnl_id': adnl})
+        self.local.add_log(f'Adding collator {adnl} to register collators list', 'info')
+        self.set_collators_list(collators_list)
+        color_print("add_register_collator - {green}OK{endc}")
+
+    def _delete_collator(self, args: list, name: str, key: str):
+        if not check_usage_one_arg(name, args):
+            return
+
+        adnl = args[0]
+        if is_hex(adnl):
+            adnl = hex2b64(adnl)
+
+        collators_list = self.get_collators_list()
+        if not collators_list.get(key):
             color_print("{red}No collators found.{endc}")
             return
 
         deleted = False
-        for sh in collators_list['shards'].copy():
-            if shard_id is None or sh['shard_id'] == shard_id:
-                for c in sh['collators'].copy():
-                    if c['adnl_id'] == adnl:
-                        sh['collators'].remove(c)
-                        self.local.add_log(f'Removing collator {adnl} from shard {sh["shard_id"]}', 'info')
-                        if not sh['collators']:
-                            collators_list['shards'].remove(sh)
-                            self.local.add_log(f'Removing shard {sh["shard_id"]} from collators list because it has no collators left', 'info')
-                        deleted = True
+        for c in collators_list[key].copy():
+            if c['adnl_id'] == adnl:
+                collators_list[key].remove(c)
+                self.local.add_log(f'Removing collator {adnl} from {key}', 'info')
+                deleted = True
         if deleted:
             self.set_collators_list(collators_list)
-        color_print("delete_collator - {green}OK{endc}")
+        color_print(f"{name} - {{green}}OK{{endc}}")
 
-    def get_collators_stats(self):
-        output = self.ton.validatorConsole.run('collation-manager-stats')
-        if 'No stats' in output:
-            return {}
-        result = {}
-        lines = output.split('\n')
-        prev_line = lines[0].strip()
-        for line in lines[1:]:
-            line = line.strip()
-            if line.startswith('alive'):
-                result[prev_line] = bool(int(line.split()[0].split('=')[1]))
-            prev_line = line
-        return result
+    def delete_collator(self, args: list):
+        self._delete_collator(args, "delete_collator", "collators")
+
+    def delete_register_collator(self, args: list):
+        self._delete_collator(args, "delete_register_collator", "register_collators")
+
+    def set_self_collate(self, args: list):
+        if not check_usage_one_arg("set_self_collate", args):
+            return
+        if args[0] not in ('true', 'false'):
+            color_print("{red}Bad args. Self collate must be one of: true, false{endc}")
+            return
+        collators_list = self.get_collators_list()
+        collators_list.setdefault('collators', [])
+        collators_list.setdefault('register_collators', [])
+        collators_list['disable_self_collate'] = args[0] == 'false'
+        self.set_collators_list(collators_list)
+        color_print("set_self_collate - {green}OK{endc}")
+
+    @staticmethod
+    def _print_collators_table(collators: list):
+        table = [['ADNL Address']]
+        for c in collators:
+            table.append([b642hex(c['adnl_id']).upper()])
+        print_table(table)
 
     def print_collators(self, args: list):
+        collators_list = self.get_collators_list()
         if '--json' in args:
-            print(json.dumps(self.get_collators_list(), indent=2))
-        else:
-            result = self.ton.validatorConsole.run('show-collators-list')
-            result = result.split('conn ready')[1].strip()
-            if 'collators list is empty' in result:
-                print("No collators found")
-                return
-            collators_stats = self.get_collators_stats()
-            for adnl, alive in collators_stats.items():
-                if adnl in result:
-                    status = '{green}online{endc}' if alive else '{red}offline{endc}'
-                    result = result.replace(adnl, f"{adnl} ({status})")
-            color_print(result)
+            print(json.dumps(collators_list, indent=2))
+            return
+        collators = collators_list.get('collators')
+        register_collators = collators_list.get('register_collators')
+        if not collators and not register_collators:
+            print("No collators found")
+        if collators:
+            print("Collators list:")
+            self._print_collators_table(collators)
+        if register_collators:
+            print("Register collators list:")
+            self._print_collators_table(register_collators)
+        print(f"Self collate: {not collators_list.get('disable_self_collate', False)}")
 
     def reset_collators(self, args: list):
         if not self.get_collators_list():
@@ -291,6 +292,51 @@ class ValidatorModule(MtcModule):
             raise Exception(f'Failed to reset collators list: {result}')
         color_print("reset_collators - {green}OK{endc}")
 
+    def get_default_collators_list(self) -> list[str] | None:
+        network = self.ton.GetNetworkName()
+        if network == 'unknown':
+            return None
+        prefix = 'testnet-' if network == 'testnet' else ''
+        default_url = f'https://ton-blockchain.github.io/{prefix}collators-list.json'
+        url = self.ton.local.db.get('defaultCollatorsUrl', default_url)
+        resp = requests.get(url, timeout=3)
+        resp.raise_for_status()
+        config = resp.json()
+        if not isinstance(config, dict) or not isinstance(config.get('collators'), list):
+            raise ValueError(f"Malformed remote config from {url}: {config}")
+        result: list[str] = []
+        for item in config['collators']:
+            try:
+                adnl_id = item['adnl_id']
+                if len(base64.b64decode(adnl_id, validate=True)) != 32:
+                    raise ValueError('adnl_id must be 32 bytes')
+            except (KeyError, TypeError, ValueError) as e:
+                raise ValueError(f"Could not parse adnl_id in the remote config: {item}: {config}") from e
+            if adnl_id not in result:
+                result.append(adnl_id)
+        return result
+
+    def apply_default_collators(self) -> None:
+        if not self.ton.using_validator():
+            return
+        if not self.ton.local.db.get('useDefaultCollators', True):
+            return
+        default_collators = self.get_default_collators_list()
+        if not default_collators:
+            return
+        collators_list = self.get_collators_list()
+        existing = {c['adnl_id'] for c in collators_list.get('collators', [])}
+        to_add = [adnl for adnl in default_collators if adnl not in existing]
+        if not to_add:
+            return
+        collators = collators_list.setdefault('collators', [])
+        collators_list.setdefault('register_collators', [])
+        collators_list.setdefault('disable_self_collate', False)
+        for adnl in to_add:
+            collators.append({'adnl_id': adnl})
+        self.set_collators_list(collators_list)
+        self.local.add_log(f'apply_default_collators: added {len(to_add)} default collators: {to_add}', 'info')
+
     def add_console_commands(self, console):
         add_command(self.local, console, "vo", self.vote_offer)
         add_command(self.local, console, "ve", self.vote_election_entry)
@@ -298,5 +344,8 @@ class ValidatorModule(MtcModule):
         add_command(self.local, console, "check_ef", self.check_efficiency)
         add_command(self.local, console, "add_collator", self.add_collator)
         add_command(self.local, console, "delete_collator", self.delete_collator)
+        add_command(self.local, console, "add_register_collator", self.add_register_collator)
+        add_command(self.local, console, "delete_register_collator", self.delete_register_collator)
+        add_command(self.local, console, "set_self_collate", self.set_self_collate)
         add_command(self.local, console, "print_collators", self.print_collators)
         add_command(self.local, console, "reset_collators", self.reset_collators)
