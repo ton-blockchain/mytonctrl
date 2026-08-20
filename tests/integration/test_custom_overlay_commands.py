@@ -98,6 +98,68 @@ def test_parse_config_use_quic_with_validators(overlay_module, ton):
     assert len(result["nodes"]) == 1
 
 
+def test_parse_config_accept_queries_only_node(overlay_module):
+    config = {STATIC_NODE_HEX: {"accept_queries": True}}
+    result = overlay_module.parse_config("o", config)
+    assert result["nodes"] == [{
+        "adnl_id": hex2base64(STATIC_NODE_HEX),
+        "accept_queries": True,
+    }]
+
+
+def test_parse_config_accept_queries_with_msg_sender(overlay_module):
+    config = {STATIC_NODE_HEX: {"msg_sender": True, "msg_sender_priority": 2, "accept_queries": True}}
+    result = overlay_module.parse_config("o", config)
+    assert result["nodes"] == [{
+        "adnl_id": hex2base64(STATIC_NODE_HEX),
+        "msg_sender": True,
+        "msg_sender_priority": 2,
+        "accept_queries": True,
+    }]
+
+
+def test_parse_config_send_queries_omitted_when_absent(overlay_module):
+    config = {STATIC_NODE_HEX: {"msg_sender": True, "msg_sender_priority": 1}}
+    result = overlay_module.parse_config("o", config)
+    assert "send_queries" not in result
+
+
+def test_parse_config_send_queries_from_config(overlay_module):
+    config = {
+        "send_queries": True,
+        STATIC_NODE_HEX: {"accept_queries": True},
+    }
+    result = overlay_module.parse_config("o", config)
+    assert result["send_queries"] is True
+    assert result["nodes"] == [{
+        "adnl_id": hex2base64(STATIC_NODE_HEX),
+        "accept_queries": True,
+    }]
+
+
+def test_parse_config_unknown_node_type_raises(overlay_module):
+    with pytest.raises(Exception, match="Unknown node type"):
+        overlay_module.parse_config("o", {STATIC_NODE_HEX: {}})
+
+
+def test_add_custom_overlay_emits_queries_fields(cli, ton, tmp_path, monkeypatch, mocker: MockerFixture):
+    config = {
+        "send_queries": True,
+        STATIC_NODE_HEX: {"msg_sender": False},
+        "cc" * 32: {"accept_queries": True},
+    }
+    path = _write_config(tmp_path, "queries_cfg", config)
+    _mock_validator_console(mocker, ton)
+    _mock_validator_config(monkeypatch, [hex2base64(STATIC_NODE_HEX)])
+
+    output = cli.execute(f"add_custom_overlay queries {path}", no_color=True)
+    assert "add_custom_overlay - OK" in output
+    emitted = _read_emitted_vc_config(ton, "queries")
+    assert emitted["send_queries"] is True
+    accept_node = next(n for n in emitted["nodes"] if n["adnl_id"] == hex2base64("cc" * 32))
+    assert accept_node["accept_queries"] is True
+
+
 def test_add_custom_overlay_bad_args(cli):
     output = cli.execute("add_custom_overlay", no_color=True)
     assert "Bad args" in output

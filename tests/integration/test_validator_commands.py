@@ -1,3 +1,4 @@
+import base64
 import json
 import time
 
@@ -111,7 +112,6 @@ def test_check_ef(cli, monkeypatch, mocker: MockerFixture):
     assert "The validation round has started recently" in output
     assert "Previous round efficiency" in output
 
-
 def test_add_collator(cli, ton, monkeypatch, mocker: MockerFixture):
     get_collators_mock = mocker.Mock(return_value={})
     set_collators_mock = mocker.Mock()
@@ -123,84 +123,126 @@ def test_add_collator(cli, ton, monkeypatch, mocker: MockerFixture):
     assert "Bad args" in output
     get_collators_mock.assert_not_called()
     set_collators_mock.assert_not_called()
-    output = cli.execute("add_collator test_adnl", no_color=True)
+    output = cli.execute("add_collator test_adnl extra_arg", no_color=True)
     assert "Bad args" in output
     get_collators_mock.assert_not_called()
     set_collators_mock.assert_not_called()
 
-    # Bad args - invalid select mode
-    output = cli.execute("add_collator test_adnl 0:8000000000000000 --select-mode invalid", no_color=True)
+    # Bad args - invalid self collate value
+    output = cli.execute("add_collator test_adnl --self-collate invalid", no_color=True)
     get_collators_mock.assert_not_called()
     set_collators_mock.assert_not_called()
     assert "Bad args" in output
-    assert "Select mode must be one of" in output
+    assert "Self collate must be one of" in output
 
-    # add collator to new shard with default values
+    # add collator to empty list with default values
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
-    output = cli.execute("add_collator test_adnl 0:8000000000000000", no_color=True)
+    output = cli.execute("add_collator test_adnl", no_color=True)
     assert "add_collator - OK" in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_called_once()
     call_args = set_collators_mock.call_args[0][0]
-    assert len(call_args['shards']) == 1
-    assert call_args['shards'][0]['shard_id'] == {'workchain': 0, 'shard': -9223372036854775808}
-    assert call_args['shards'][0]['self_collate'] is True
-    assert call_args['shards'][0]['select_mode'] == 'random'
-    assert len(call_args['shards'][0]['collators']) == 1
-    assert call_args['shards'][0]['collators'][0]['adnl_id'] == 'test_adnl'
+    assert call_args['disable_self_collate'] is False
+    assert call_args['collators'] == [{'adnl_id': 'test_adnl'}]
+    assert call_args['register_collators'] == []  # add_collator does not register the collator
 
     # add collator with custom parameters
     get_collators_mock.return_value = {}
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
-    output = cli.execute("add_collator test_adnl2 0:8000000000000000 --self-collate false --select-mode ordered", no_color=True)
+    output = cli.execute("add_collator test_adnl2 --self-collate false", no_color=True)
     assert "add_collator - OK" in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_called_once()
     call_args = set_collators_mock.call_args[0][0]
-    assert call_args['shards'][0]['self_collate'] is False
-    assert call_args['shards'][0]['select_mode'] == 'ordered'
-    assert call_args['shards'][0]['collators'][0]['adnl_id'] == 'test_adnl2'
+    assert call_args['disable_self_collate'] is True
+    assert call_args['collators'][0]['adnl_id'] == 'test_adnl2'
 
-    # add collator to existing shard
+    # add collator to existing list
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
-    existing_collators = {
-        'shards': [{
-            'shard_id': {'workchain': 0, 'shard': -9223372036854775808},
-            'self_collate': True,
-            'select_mode': 'random',
-            'collators': [{'adnl_id': 'test_adnl'}]
-        }]
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': 'test_adnl'}],
+        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'disable_self_collate': True,
     }
-    get_collators_mock.return_value = existing_collators
 
-    output = cli.execute("add_collator new_adnl 0:8000000000000000", no_color=True)
+    output = cli.execute("add_collator new_adnl", no_color=True)
     assert "add_collator - OK" in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_called_once()
     call_args = set_collators_mock.call_args[0][0]
-    assert len(call_args['shards']) == 1
-    assert len(call_args['shards'][0]['collators']) == 2
-    assert call_args['shards'][0]['collators'][0]['adnl_id'] == 'test_adnl'
-    assert call_args['shards'][0]['collators'][1]['adnl_id'] == 'new_adnl'
+    assert call_args['disable_self_collate'] is True  # not changed
+    assert call_args['collators'] == [{'adnl_id': 'test_adnl'}, {'adnl_id': 'new_adnl'}]
+    assert call_args['register_collators'] == [{'adnl_id': 'test_adnl'}]  # untouched
 
     # add duplicate collator
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
     get_collators_mock.return_value = {
-        'shards': [{
-            'shard_id': {'workchain': 0, 'shard': -9223372036854775808},
-            'self_collate': True,
-            'select_mode': 'random',
-            'collators': [{'adnl_id': 'test_adnl'}]
-        }]
+        'collators': [{'adnl_id': 'test_adnl'}],
+        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'disable_self_collate': False,
     }
 
-    output = cli.execute("add_collator test_adnl 0:8000000000000000", no_color=True)
+    output = cli.execute("add_collator test_adnl", no_color=True)
     assert "already exists" in output
     get_collators_mock.assert_called_once()
+    set_collators_mock.assert_not_called()
+
+
+def test_add_register_collator(cli, ton, monkeypatch, mocker: MockerFixture):
+    get_collators_mock = mocker.Mock(return_value={})
+    set_collators_mock = mocker.Mock()
+    monkeypatch.setattr(ValidatorModule, 'get_collators_list', get_collators_mock)
+    monkeypatch.setattr(ValidatorModule, 'set_collators_list', set_collators_mock)
+
+    # Bad args
+    output = cli.execute("add_register_collator", no_color=True)
+    assert "Bad args" in output
+    set_collators_mock.assert_not_called()
+    output = cli.execute("add_register_collator test_adnl extra_arg", no_color=True)
+    assert "Bad args" in output
+    set_collators_mock.assert_not_called()
+
+    # register collator with no list set yet - delegation list is left alone
+    get_collators_mock.reset_mock()
+    set_collators_mock.reset_mock()
+    output = cli.execute("add_register_collator test_adnl", no_color=True)
+    assert "add_register_collator - OK" in output
+    get_collators_mock.assert_called_once()
+    set_collators_mock.assert_called_once()
+    call_args = set_collators_mock.call_args[0][0]
+    assert call_args['collators'] == []
+    assert call_args['register_collators'] == [{'adnl_id': 'test_adnl'}]
+    assert call_args['disable_self_collate'] is False
+
+    # register collator to existing list
+    get_collators_mock.reset_mock()
+    set_collators_mock.reset_mock()
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': 'test_adnl'}],
+        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'disable_self_collate': True,
+    }
+    output = cli.execute("add_register_collator new_adnl", no_color=True)
+    assert "add_register_collator - OK" in output
+    call_args = set_collators_mock.call_args[0][0]
+    assert call_args['collators'] == [{'adnl_id': 'test_adnl'}]  # untouched
+    assert call_args['register_collators'] == [{'adnl_id': 'test_adnl'}, {'adnl_id': 'new_adnl'}]
+    assert call_args['disable_self_collate'] is True
+
+    # register duplicate collator
+    get_collators_mock.reset_mock()
+    set_collators_mock.reset_mock()
+    get_collators_mock.return_value = {
+        'collators': [],
+        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'disable_self_collate': False,
+    }
+    output = cli.execute("add_register_collator test_adnl", no_color=True)
+    assert "already exists" in output
     set_collators_mock.assert_not_called()
 
 
@@ -214,94 +256,54 @@ def test_delete_collator(cli, ton, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(ValidatorModule, 'get_collators_list', get_collators_mock)
     monkeypatch.setattr(ValidatorModule, 'set_collators_list', set_collators_mock)
 
-    # no collators
+    # no collators list
     get_collators_mock.return_value = {}
     output = cli.execute("delete_collator test_adnl", no_color=True)
     assert "No collators found" in output
     set_collators_mock.assert_not_called()
 
-    # collators list has no shards
-    get_collators_mock.return_value = {'shards': []}
+    # collators list is empty
+    get_collators_mock.return_value = {'collators': [], 'register_collators': [], 'disable_self_collate': False}
     set_collators_mock.reset_mock()
     output = cli.execute("delete_collator test_adnl", no_color=True)
     assert "No collators found" in output
     set_collators_mock.assert_not_called()
 
-    # delete collator without specifying shard
+    # delete collator - registry list is left alone
     get_collators_mock.return_value = {
-        'shards': [{
-            'shard_id': {'workchain': 0, 'shard': -9223372036854775808},
-            'self_collate': True,
-            'select_mode': 'random',
-            'collators': [
-                {'adnl_id': 'test_adnl'},
-                {'adnl_id': 'other_adnl'}
-            ]
-        },
-            {
-                'shard_id': {'workchain': -1, 'shard': -9223372036854775808},
-                'self_collate': True,
-                'select_mode': 'random',
-                'collators': [
-                    {'adnl_id': 'test_adnl'},
-                ]
-            }
-        ]
+        'collators': [{'adnl_id': 'test_adnl'}, {'adnl_id': 'other_adnl'}],
+        'register_collators': [{'adnl_id': 'test_adnl'}, {'adnl_id': 'other_adnl'}],
+        'disable_self_collate': True,
     }
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
 
     output = cli.execute("delete_collator test_adnl", no_color=True)
     assert "delete_collator - OK" in output
-    assert 'Removing shard' in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_called_once()
 
     call_args = set_collators_mock.call_args[0][0]
-    assert len(call_args['shards']) == 1
-    assert len(call_args['shards'][0]['collators']) == 1
-    assert call_args['shards'][0]['collators'][0]['adnl_id'] == 'other_adnl'
+    assert call_args['disable_self_collate'] is True
+    assert call_args['collators'] == [{'adnl_id': 'other_adnl'}]
+    assert call_args['register_collators'] == [{'adnl_id': 'test_adnl'}, {'adnl_id': 'other_adnl'}]
 
-    # delete collator from specific shard
+    # only registered collators, nothing to delegate
     get_collators_mock.return_value = {
-        'shards': [
-            {
-                'shard_id': {'workchain': 0, 'shard': -9223372036854775808},
-                'self_collate': True,
-                'select_mode': 'random',
-                'collators': [{'adnl_id': 'test_adnl'}, {'adnl_id': 'other_adnl'}]
-            },
-            {
-                'shard_id': {'workchain': -1, 'shard': -9223372036854775808},
-                'self_collate': True,
-                'select_mode': 'random',
-                'collators': [{'adnl_id': 'test_adnl'}]
-            }
-        ]
+        'collators': [],
+        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'disable_self_collate': False,
     }
     set_collators_mock.reset_mock()
-    get_collators_mock.reset_mock()
-
-    output = cli.execute("delete_collator 0:8000000000000000 test_adnl", no_color=True)
-    assert "delete_collator - OK" in output
-    set_collators_mock.assert_called_once()
-    get_collators_mock.assert_called_once()
-
-    call_args = set_collators_mock.call_args[0][0]
-    assert len(call_args['shards']) == 2
-    assert len(call_args['shards'][0]['collators']) == 1
-    assert call_args['shards'][0]['collators'][0]['adnl_id'] == 'other_adnl'
-    assert len(call_args['shards'][1]['collators']) == 1
-    assert call_args['shards'][1]['collators'][0]['adnl_id'] == 'test_adnl'
+    output = cli.execute("delete_collator test_adnl", no_color=True)
+    assert "No collators found" in output
+    set_collators_mock.assert_not_called()
 
     # delete non-existent collator
     get_collators_mock.return_value = {
-        'shards': [{
-            'shard_id': {'workchain': 0, 'shard': -9223372036854775808},
-            'self_collate': True,
-            'select_mode': 'random',
-            'collators': [{'adnl_id': 'other_adnl'}]
-        }]
+        'collators': [{'adnl_id': 'other_adnl'}],
+        'register_collators': [{'adnl_id': 'other_adnl'}],
+        'disable_self_collate': False,
     }
     set_collators_mock.reset_mock()
     get_collators_mock.reset_mock()
@@ -312,64 +314,140 @@ def test_delete_collator(cli, ton, monkeypatch, mocker: MockerFixture):
     get_collators_mock.assert_called_once()
 
 
+def test_delete_register_collator(cli, ton, monkeypatch, mocker: MockerFixture):
+    # Bad args
+    output = cli.execute("delete_register_collator")
+    assert "Bad args" in output
+
+    get_collators_mock = mocker.Mock()
+    set_collators_mock = mocker.Mock()
+    monkeypatch.setattr(ValidatorModule, 'get_collators_list', get_collators_mock)
+    monkeypatch.setattr(ValidatorModule, 'set_collators_list', set_collators_mock)
+
+    # no collators list
+    get_collators_mock.return_value = {}
+    output = cli.execute("delete_register_collator test_adnl", no_color=True)
+    assert "No collators found" in output
+    set_collators_mock.assert_not_called()
+
+    # delete registered collator - delegation list is left alone
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': 'test_adnl'}],
+        'register_collators': [{'adnl_id': 'test_adnl'}, {'adnl_id': 'other_adnl'}],
+        'disable_self_collate': False,
+    }
+    set_collators_mock.reset_mock()
+    output = cli.execute("delete_register_collator test_adnl", no_color=True)
+    assert "delete_register_collator - OK" in output
+    call_args = set_collators_mock.call_args[0][0]
+    assert call_args['collators'] == [{'adnl_id': 'test_adnl'}]
+    assert call_args['register_collators'] == [{'adnl_id': 'other_adnl'}]
+
+    # delete non-existent collator
+    get_collators_mock.return_value = {
+        'collators': [],
+        'register_collators': [{'adnl_id': 'other_adnl'}],
+        'disable_self_collate': False,
+    }
+    set_collators_mock.reset_mock()
+    output = cli.execute("delete_register_collator abcd", no_color=True)
+    assert "delete_register_collator - OK" in output
+    set_collators_mock.assert_not_called()
+
+
+def test_set_self_collate(cli, ton, monkeypatch, mocker: MockerFixture):
+    get_collators_mock = mocker.Mock(return_value={})
+    set_collators_mock = mocker.Mock()
+    monkeypatch.setattr(ValidatorModule, 'get_collators_list', get_collators_mock)
+    monkeypatch.setattr(ValidatorModule, 'set_collators_list', set_collators_mock)
+
+    # Bad args
+    output = cli.execute("set_self_collate", no_color=True)
+    assert "Bad args" in output
+    set_collators_mock.assert_not_called()
+
+    output = cli.execute("set_self_collate maybe", no_color=True)
+    assert "Bad args" in output
+    assert "Self collate must be one of" in output
+    set_collators_mock.assert_not_called()
+
+    # disable self collate keeping the collators
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': 'test_adnl'}],
+        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'disable_self_collate': False,
+    }
+    output = cli.execute("set_self_collate false", no_color=True)
+    assert "set_self_collate - OK" in output
+    set_collators_mock.assert_called_once()
+    call_args = set_collators_mock.call_args[0][0]
+    assert call_args['disable_self_collate'] is True
+    assert call_args['collators'] == [{'adnl_id': 'test_adnl'}]
+    assert call_args['register_collators'] == [{'adnl_id': 'test_adnl'}]
+
+    # enable self collate when no list is set yet
+    get_collators_mock.return_value = {}
+    set_collators_mock.reset_mock()
+    output = cli.execute("set_self_collate true", no_color=True)
+    assert "set_self_collate - OK" in output
+    call_args = set_collators_mock.call_args[0][0]
+    assert call_args == {'collators': [], 'register_collators': [], 'disable_self_collate': False}
+
+
 def test_print_collators(cli, ton, monkeypatch, mocker: MockerFixture):
     get_collators_mock = mocker.Mock()
-    get_collators_stats_mock = mocker.Mock()
-    validator_console_mock = mocker.Mock()
-
     monkeypatch.setattr(ValidatorModule, 'get_collators_list', get_collators_mock)
-    monkeypatch.setattr(ValidatorModule, 'get_collators_stats', get_collators_stats_mock)
-    ton._validator_console = validator_console_mock
 
     # --json flag
-    collators_data = {"some_data": "some_value", 1: 2}
+    collators_data = {"some_data": "some_value", "1": 2}
     get_collators_mock.return_value = collators_data
 
     output = cli.execute("print_collators --json", no_color=True)
     assert json.dumps(collators_data, indent=2) in output
-    get_collators_stats_mock.assert_not_called()
-    validator_console_mock.run.assert_not_called()
 
     # happy path
-    console_output = """some header
-conn ready
-show-collators-list
-Collators list:
-Shard (0,8000000000000000)
-  Self collate = true
-  Select mode = random
-  Collator test_adnl1
-  Collator test_adnl2
-  """
-
-    validator_console_mock.run.return_value = console_output
-    get_collators_stats_mock.return_value = {
-        'adnl1': True,
-        'adnl2': False
+    adnl1 = base64.b64encode(b"\xaa" * 32).decode()
+    adnl2 = base64.b64encode(b"\xbb" * 32).decode()
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': adnl1}, {'adnl_id': adnl2}],
+        'register_collators': [{'adnl_id': adnl1}, {'adnl_id': adnl2}],
+        'disable_self_collate': True,
     }
 
     output = cli.execute("print_collators", no_color=True)
+    assert "Collators list:" in output
+    assert "Register collators list:" in output
+    assert "AA" * 32 in output
+    assert "BB" * 32 in output
+    assert "Self collate: False" in output
 
-    validator_console_mock.run.assert_called_once_with('show-collators-list')
-    get_collators_stats_mock.assert_called_once()
+    # only registered collators - the delegation table is not printed
+    get_collators_mock.return_value = {
+        'collators': [],
+        'register_collators': [{'adnl_id': adnl2}],
+        'disable_self_collate': False,
+    }
+    output = cli.execute("print_collators", no_color=True)
+    assert "Collators list:" not in output
+    assert "Register collators list:" in output
+    assert "BB" * 32 in output
+    assert "Self collate: True" in output
 
-    assert """
-Collators list:
-Shard (0,8000000000000000)
-  Self collate = true
-  Select mode = random
-  Collator test_adnl1 (online)
-  Collator test_adnl2 (offline)
-""" in output
+    # empty lists - self collate is still reported, it applies without collators
+    get_collators_mock.return_value = {
+        'collators': [],
+        'register_collators': [],
+        'disable_self_collate': True,
+    }
+    output = cli.execute("print_collators", no_color=True)
+    assert "No collators found" in output
+    assert "Self collate: False" in output
 
     # collators list empty
-    validator_console_mock.run.reset_mock()
-    get_collators_stats_mock.reset_mock()
-    validator_console_mock.run.return_value = "some header\nconn ready\ncollators list is empty"
+    get_collators_mock.return_value = {}
     output = cli.execute("print_collators", no_color=True)
-    validator_console_mock.run.assert_called_once_with('show-collators-list')
     assert "No collators found" in output
-    get_collators_stats_mock.assert_not_called()
+    assert "Self collate: True" in output  # node default when no list is set
 
 
 def test_reset_collators(cli, ton, monkeypatch, mocker: MockerFixture):
@@ -388,12 +466,9 @@ def test_reset_collators(cli, ton, monkeypatch, mocker: MockerFixture):
     get_collators_mock.reset_mock()
     validator_console_mock.run.reset_mock()
     get_collators_mock.return_value = {
-        'shards': [{
-            'shard_id': {'workchain': 0, 'shard': -9223372036854775808},
-            'self_collate': True,
-            'select_mode': 'random',
-            'collators': [{'adnl_id': 'test_adnl'}]
-        }]
+        'collators': [{'adnl_id': 'test_adnl'}],
+        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'disable_self_collate': False,
     }
     validator_console_mock.run.return_value = "success"
     output = cli.execute("reset_collators", no_color=True)
@@ -405,12 +480,9 @@ def test_reset_collators(cli, ton, monkeypatch, mocker: MockerFixture):
     get_collators_mock.reset_mock()
     validator_console_mock.run.reset_mock()
     get_collators_mock.return_value = {
-        'shards': [{
-            'shard_id': {'workchain': 0, 'shard': -9223372036854775808},
-            'self_collate': True,
-            'select_mode': 'random',
-            'collators': [{'adnl_id': 'test_adnl'}]
-        }]
+        'collators': [{'adnl_id': 'test_adnl'}],
+        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'disable_self_collate': False,
     }
     validator_console_mock.run.return_value = "error: failed to clear"
 
@@ -418,3 +490,31 @@ def test_reset_collators(cli, ton, monkeypatch, mocker: MockerFixture):
     assert "Failed to reset collators list" in output
     validator_console_mock.run.assert_called_once_with('clear-collators-list')
     get_collators_mock.assert_called_once()
+
+
+def test_parse_collators_list():
+    output = """some header
+conn ready
+Collators list:
+Collator qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=
+Register collator u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7s=
+Disable self collate = true
+"""
+    assert ValidatorModule._parse_collators_list(output) == {
+        'collators': [{'adnl_id': 'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo='}],
+        'register_collators': [{'adnl_id': 'u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7s='}],
+        'disable_self_collate': True,
+    }
+
+    # both lists empty - the node still reports self collate, it applies on its own
+    empty_output = """some header
+conn ready
+Collators list:
+List is empty
+Disable self collate = true
+"""
+    assert ValidatorModule._parse_collators_list(empty_output) == {
+        'collators': [],
+        'register_collators': [],
+        'disable_self_collate': True,
+    }

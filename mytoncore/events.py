@@ -49,5 +49,4 @@ def setup_collator(local: MyPyClass, event_name: str):
     ton = MyTonCore(local)
     from modules.collator import CollatorModule
 
-    shards = event_name.split("_")[2:]
-    CollatorModule(ton, local).setup_collator(shards)
+    CollatorModule(ton, local).setup_collator([])

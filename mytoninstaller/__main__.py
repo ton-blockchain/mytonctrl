@@ -100,7 +100,6 @@ def get_context(args) -> InstallerContext:
     public_ip = os.getenv('PUBLIC_IP')
     add_shard = os.getenv('ADD_SHARD')
     archive_blocks = os.getenv('ARCHIVE_BLOCKS')
-    collate_shard = os.getenv('COLLATE_SHARD', '')
 
     backup = None
     if args.backup is not None:
@@ -116,7 +115,7 @@ def get_context(args) -> InstallerContext:
         paths_kwargs["ton_work_dir"] = _normalize_dir(args.ton_work_dir)
     paths = InstallerPaths(**paths_kwargs)
     return InstallerContext(user, vuser, paths, ports, telemetry, dump, args.mode, args.only_mtc, args.only_node, backup,
-                           archive_ttl, state_ttl, public_ip, add_shard, archive_blocks, collate_shard)
+                           archive_ttl, state_ttl, public_ip, add_shard, archive_blocks)
 
 
 def mytoninstaller():

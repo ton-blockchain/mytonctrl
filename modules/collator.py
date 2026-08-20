@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from modules.module import MtcModule
 from mypylib import color_print, print_table
-from mytoncore.utils import b642hex, signed_int_to_hex64, shard_prefix_len, hex_shard_to_int, shard_prefix, shard_is_ancestor
-from mytonctrl.console_cmd import check_usage_args_min_len, add_command, check_usage_no_args, check_usage_args_lens
+from mytoncore.utils import b642hex
+from mytonctrl.console_cmd import (add_command, check_usage_args_lens, check_usage_args_min_len,
+                                   check_usage_no_args, get_usage)
 from mytonctrl.utils import pop_arg_from_args
 
 from typing import TYPE_CHECKING
@@ -17,79 +18,34 @@ class CollatorModule(MtcModule):
     default_value = False
 
 
-    def add_collator_to_vc(self, adnl_addr: str, shard: str):
+    def add_collator_to_vc(self, adnl_addr: str):
         self.local.add_log("start add_collator_to_vc function", "debug")
-        result = self.ton.validatorConsole.run(f"add-collator {adnl_addr} {shard}")
+        result = self.ton.validatorConsole.run(f"add-collator {adnl_addr}")
         return result
 
-    @staticmethod
-    def _check_input_shards(node_shards: list, shards_need_to_add: list, monitor_min_split: int):
-        true_monitoring_shards = []
-        for sh in node_shards:
-            shard_id = hex_shard_to_int(sh)
-            if shard_id['workchain'] == -1:
-                continue
-            shard = shard_id['shard']
-            if shard_prefix_len(shard) > monitor_min_split:
-                shard_id['shard'] = shard_prefix(shard, monitor_min_split)
-            true_monitoring_shards.append(shard_id)
-        for sh in shards_need_to_add:
-            shard_id = hex_shard_to_int(sh)
-            found = False
-            for true_shard in true_monitoring_shards:
-                if shard_id['workchain'] == true_shard['workchain'] and \
-                        shard_is_ancestor(true_shard['shard'], shard_id['shard']):
-                    found = True
-                    break
-            if not found:
-                raise Exception(
-                    f'This node already has shards to monitor, '
-                    f'but shard {shard_id} is not monitored by the node: {true_monitoring_shards} It\'s highly not recommended to add new shards for node to monitor. '
-                    f'If you are sure you want to add new collator use option `--force`.'
-                )
-
     def setup_collator(self, args: list[str]):
-        from mytoninstaller.node_args import set_node_argument
-        from mytoninstaller.node_args import get_node_args
-        if not check_usage_args_min_len("setup_collator", args, 1):
+        if not check_usage_args_lens("setup_collator", args, [0, 2]):
             return
-        force = '--force' in args
-        args.remove('--force') if '--force' in args else None
         adnl_addr = pop_arg_from_args(args, '--adnl')
-        shards = args
-        node_args = get_node_args()
-        if '--add-shard' not in node_args:
-            node_args['--add-shard'] = []
-
-        node_shards = node_args['--add-shard']
-        shards_need_to_add = [shard for shard in shards if shard not in node_shards]
-        if not force and shards_need_to_add and '-M' in node_args:
-            monitor_min_split = self.ton.get_basechain_config().monitor_min_split
-            self._check_input_shards(node_shards, shards_need_to_add, monitor_min_split)
+        if args:
+            color_print("{red}Bad args. Usage:{endc} setup_collator " + get_usage("setup_collator"))
+            return
         if adnl_addr is None:
             adnl_addr = self.ton.CreateNewKey()
         self.ton.add_adnl_addr(adnl_addr)
-        for shard in shards:
-            res = self.add_collator_to_vc(adnl_addr, shard)
-            if 'successfully' not in res:
-                raise Exception(f'Failed to enable collator: add-collator query failed: {res}')
-        self.local.add_log(f'Collator added for shards {shards} with ADNL address {adnl_addr}\n'
-                           f'Editing monitoring shards.')
-        if '-M' not in node_args:
-            set_node_argument(['-M'])
-        if shards_need_to_add:
-            set_node_argument(['--add-shard', ' '.join(node_args['--add-shard'] + shards_need_to_add)])
-        commands_text = [f'`add_collator {adnl_addr} {s}`' for s in shards]
-        self.local.add_log(f'Collator enabled for shards {shards}\n'
+        res = self.add_collator_to_vc(adnl_addr)
+        if 'successfully' not in res:
+            raise Exception(f'Failed to enable collator: add-collator query failed: {res}')
+        self.local.add_log(f'Collator enabled with ADNL address {adnl_addr}\n'
                            f'To add this collator to validator use command:\n'
-                           + '\n'.join(commands_text))
+                           f'`add_collator {adnl_addr}`')
         color_print("setup_collator - {green}OK{endc}")
 
     def stop_collator(self, args: list):
-        if not check_usage_args_lens("stop_collator", args, [0, 2]):
+        if not check_usage_args_lens("stop_collator", args, [0, 1]):
             return
         if not args:
-            text = "{red}WARNING: This action will stop and delete all local collation broadcasts from this node for all shards.{endc}\n"
+            text = "{red}WARNING: This action will stop and delete all local collation broadcasts from this node.{endc}\n"
             color_print(text)
             if input("Continue anyway? [Y/n]\n").strip().lower() not in ('y', ''):
                 print('aborted.')
@@ -99,11 +55,8 @@ class CollatorModule(MtcModule):
                 print("No collators found")
                 return
             errors = []
-            for c in collators:
-                adnl_hex = b642hex(c['adnl_id']).upper()
-                workchain = int(c['shard']['workchain'])
-                shard_int = int(c['shard']['shard'])
-                res = self.ton.validatorConsole.run(f"del-collator {adnl_hex} {workchain} {shard_int}")
+            for adnl_b64 in collators:
+                res = self.ton.validatorConsole.run(f"del-collator {b642hex(adnl_b64).upper()}")
                 if 'success' not in res.lower():
                     errors.append(res.strip())
             if errors:
@@ -111,19 +64,12 @@ class CollatorModule(MtcModule):
             color_print("stop_collator - {green}OK{endc}")
             return
 
-        adnl_addr, shard_str = args
-        if ':' not in shard_str:
-            raise Exception(f"Invalid shard: {shard_str}, use format <workchain>:<shard_hex>")
-        shard_id = hex_shard_to_int(shard_str)
-        workchain = int(shard_id['workchain'])
-        shard_int = int(shard_id['shard'])
-
-        res = self.ton.validatorConsole.run(f"del-collator {adnl_addr} {workchain} {shard_int}")
+        res = self.ton.validatorConsole.run(f"del-collator {args[0]}")
         if 'successfully removed collator' not in res.lower():
             raise Exception(f'Failed to disable collator: del-collator query failed: {res}')
         color_print("stop_collator - {green}OK{endc}")
 
-    def get_collators(self):
+    def get_collators(self) -> list[str]:
         return self.ton.GetValidatorConfig()['collators']
 
     def print_collators(self, args: list[str]):
@@ -132,9 +78,9 @@ class CollatorModule(MtcModule):
             print("No collators found")
             return
         print("Collators list:")
-        table = [['ADNL Address', 'Shard']]
-        for c in collators:
-            table.append([b642hex(c['adnl_id']).upper(), f"{c['shard']['workchain']}:{signed_int_to_hex64(int(c['shard']['shard']))}"])
+        table = [['ADNL Address']]
+        for adnl_b64 in collators:
+            table.append([b642hex(adnl_b64).upper()])
         print_table(table)
 
     def add_validator_to_collation_wl(self, args: list):
@@ -177,8 +123,10 @@ class CollatorModule(MtcModule):
                             'Use `disable_mode validator` first.')
 
     def check_disable(self):
-        have_collators_text = 'has active collator working and ' if self.get_collators() else ''
-        text = f"{{red}}WARNING: This node {have_collators_text}probably synchronizes not the whole blockchain, thus it may not work as expected in other node modes. Make sure you know what you're doing.{{endc}}\n"
+        have_collators_text = 'This node has active collator working. ' if self.get_collators() else ''
+        text = (f"{{red}}WARNING: {have_collators_text}Collators registered on this node stay in the node config "
+                f"and keep collating for validators that delegate to them until you remove them "
+                f"with `stop_collator`. Make sure you know what you're doing.{{endc}}\n")
         color_print(text)
         if input("Continue anyway? [Y/n]\n").strip().lower() not in ('y', ''):
             raise Exception('aborted.')
