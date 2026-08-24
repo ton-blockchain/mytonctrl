@@ -26,6 +26,7 @@ USAGES = {
     "delete_register_collator": "<adnl>",
     "set_self_collate": "<true/false>",
     "print_collators": "[--json]",
+    "update_collators_list": "[--force]",
     "nw": "[<workchain_id> <wallet_name> [<version>] [<subwallet_id>]]",
     "aw": "<wallet_name>|--all",
     "iw": "<wallet_addr> <wallet_secret_key>",

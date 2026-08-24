@@ -374,6 +374,11 @@
 		"ru": "Сбросить список коллаторов",
 		"zh_TW": "重置協作者列表"
 	},
+	"update_collators_list_cmd": {
+		"en": "Overwrite this validator collators list with the default collators list",
+		"ru": "Перезаписать список коллаторов этого валидатора списком коллаторов по умолчанию",
+		"zh_TW": "使用預設協作者列表覆蓋此驗證者的協作者列表"
+	},
 	"ton_status_head": {
 		"en": "{cyan}===[ TON network status ]==={endc}",
 		"ru": "{cyan}===[ Статус сети TON ]==={endc}",

@@ -492,6 +492,139 @@ def test_reset_collators(cli, ton, monkeypatch, mocker: MockerFixture):
     get_collators_mock.assert_called_once()
 
 
+def test_update_collators_list(cli, ton, monkeypatch, mocker: MockerFixture):
+    adnl1 = base64.b64encode(b"\xaa" * 32).decode()
+    adnl2 = base64.b64encode(b"\xbb" * 32).decode()
+    adnl3 = base64.b64encode(b"\xcc" * 32).decode()
+
+    get_default_mock = mocker.Mock(return_value=[adnl1, adnl2])
+    get_collators_mock = mocker.Mock(return_value={})
+    set_collators_mock = mocker.Mock()
+    monkeypatch.setattr(ValidatorModule, 'get_default_collators_list', get_default_mock)
+    monkeypatch.setattr(ValidatorModule, 'get_collators_list', get_collators_mock)
+    monkeypatch.setattr(ValidatorModule, 'set_collators_list', set_collators_mock)
+    monkeypatch.setattr('builtins.input', lambda _: "n")
+
+    # bad args
+    output = cli.execute("update_collators_list --forse", no_color=True)
+    assert "Bad args" in output
+    output = cli.execute("update_collators_list --force extra_arg", no_color=True)
+    assert "Bad args" in output
+    get_default_mock.assert_not_called()
+    set_collators_mock.assert_not_called()
+
+    # unknown network
+    get_default_mock.return_value = None
+    output = cli.execute("update_collators_list --force", no_color=True)
+    assert "Could not get default collators list" in output
+    get_collators_mock.assert_not_called()
+    set_collators_mock.assert_not_called()
+    get_default_mock.return_value = [adnl1, adnl2]
+
+    # confirmation declined - the list is shown, nothing is written
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': adnl1}, {'adnl_id': adnl3}],
+        'register_collators': [{'adnl_id': adnl3}],
+        'disable_self_collate': True,
+    }
+    output = cli.execute("update_collators_list", no_color=True)
+    assert "WARNING" in output
+    assert "Collators to be removed (1)" in output
+    assert "CC" * 32 in output
+    assert "Collators to be added (1)" in output
+    assert "BB" * 32 in output
+    assert "aborted." in output
+    set_collators_mock.assert_not_called()
+
+    # confirmation accepted - collators are overwritten, other fields are kept
+    monkeypatch.setattr('builtins.input', lambda _: "y")
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': adnl1}, {'adnl_id': adnl3}],
+        'register_collators': [{'adnl_id': adnl3}],
+        'disable_self_collate': True,
+    }
+    output = cli.execute("update_collators_list", no_color=True)
+    assert "update_collators_list - OK" in output
+    set_collators_mock.assert_called_once()
+    assert set_collators_mock.call_args[0][0] == {
+        'collators': [{'adnl_id': adnl1}, {'adnl_id': adnl2}],
+        'register_collators': [{'adnl_id': adnl3}],
+        'disable_self_collate': True,
+    }
+
+    # --force skips the confirmation
+    set_collators_mock.reset_mock()
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': adnl1}, {'adnl_id': adnl3}],
+        'register_collators': [{'adnl_id': adnl3}],
+        'disable_self_collate': True,
+    }
+    def fail_input(_):
+        raise AssertionError('should not ask for confirmation with --force')
+    monkeypatch.setattr('builtins.input', fail_input)
+    output = cli.execute("update_collators_list --force", no_color=True)
+    assert "WARNING" not in output
+    assert "update_collators_list - OK" in output
+    assert set_collators_mock.call_args[0][0]['collators'] == [{'adnl_id': adnl1}, {'adnl_id': adnl2}]
+
+    # empty node list - defaults are set, other fields get their default values
+    set_collators_mock.reset_mock()
+    get_collators_mock.return_value = {}
+    cli.execute("update_collators_list --force", no_color=True)
+    assert set_collators_mock.call_args[0][0] == {
+        'collators': [{'adnl_id': adnl1}, {'adnl_id': adnl2}],
+        'register_collators': [],
+        'disable_self_collate': False,
+    }
+
+    # already equal to the default list - the list is re-applied as is
+    set_collators_mock.reset_mock()
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': adnl1}, {'adnl_id': adnl2}],
+        'register_collators': [],
+        'disable_self_collate': False,
+    }
+    output = cli.execute("update_collators_list --force", no_color=True)
+    assert "update_collators_list - OK" in output
+    assert set_collators_mock.call_args[0][0] == {
+        'collators': [{'adnl_id': adnl1}, {'adnl_id': adnl2}],
+        'register_collators': [],
+        'disable_self_collate': False,
+    }
+
+    # ... and without --force it is still confirmed, with nothing to add or remove
+    set_collators_mock.reset_mock()
+    monkeypatch.setattr('builtins.input', lambda _: "y")
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': adnl1}, {'adnl_id': adnl2}],
+        'register_collators': [],
+        'disable_self_collate': False,
+    }
+    output = cli.execute("update_collators_list", no_color=True)
+    assert "WARNING" in output
+    assert "to be removed" not in output
+    assert "to be added" not in output
+    assert "update_collators_list - OK" in output
+    set_collators_mock.assert_called_once()
+
+    # empty default list wipes the collators, still behind the confirmation
+    monkeypatch.setattr('builtins.input', lambda _: "y")
+    get_default_mock.return_value = []
+    get_collators_mock.return_value = {
+        'collators': [{'adnl_id': adnl1}],
+        'register_collators': [{'adnl_id': adnl3}],
+        'disable_self_collate': False,
+    }
+    output = cli.execute("update_collators_list", no_color=True)
+    assert "Collators to be removed (1)" in output
+    assert "update_collators_list - OK" in output
+    assert set_collators_mock.call_args[0][0] == {
+        'collators': [],
+        'register_collators': [{'adnl_id': adnl3}],
+        'disable_self_collate': False,
+    }
+
+
 def test_parse_collators_list():
     output = """some header
 conn ready
