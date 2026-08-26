@@ -679,11 +679,17 @@ class GeneralModule(MtcModule):
         from modules import get_setting
 
         setting = get_setting(name)
-        if setting is None and not force:
-            color_print(
-                f"{{red}} Error: setting {name} not found.{{endc}} Use flag --force to set it anyway"
-            )
-            return
+        if not force:
+            if setting is None:
+                color_print(
+                    f"{{red}} Error: setting {name} not found.{{endc}} Use flag --force to set it anyway"
+                )
+                return
+            if name == "validatorWalletName":
+                wallet = self.ton.GetLocalWallet(value, version="v1")  # avoid using network to determine wallet version
+                if wallet.workchain != -1:
+                    raise Exception("Validator wallet must be in masterchain")
+
         if setting is not None and setting.mode is not None:
             if not self.ton.get_mode_value(setting.mode) and not force:
                 color_print(

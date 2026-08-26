@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import pathlib
+import struct
 import subprocess
 
 from mytoncore.models import Config15, Config17, Paths, Config
@@ -507,6 +508,45 @@ def test_settings(cli, ton, monkeypatch):  # status_settings, get, set
     output = cli.execute('set abc abc --force', no_color=True)
     assert 'SetSettings - OK' in output
     assert ton.GetSettings('abc') == 'abc'
+
+def _create_wallet_files(ton: MyTonCore, name: str, workchain: int, addr_hex: str) -> None:
+    """Put `.pk`/`.addr` files of a wallet in the given workchain into the wallets dir."""
+    path = os.path.join(ton.walletsDir, name)
+    open(path + '.pk', 'wb').close()
+    with open(path + '.addr', 'wb') as file:
+        file.write(bytes.fromhex(addr_hex))
+        file.write(struct.pack('i', workchain))
+
+
+def test_set_validator_wallet_name(cli, ton, monkeypatch):
+    _create_wallet_files(ton, 'validator_wallet_001', -1, 'aa' * 32)
+    _create_wallet_files(ton, 'basechain_wallet_001', 0, 'bb' * 32)
+    monkeypatch.setattr(
+        ton,
+        'GetAccount',
+        lambda *_: (_ for _ in ()).throw(AssertionError('network lookup attempted')),
+    )
+
+    # masterchain wallet is ok
+    output = cli.execute('set validatorWalletName validator_wallet_001', no_color=True)
+    assert 'SetSettings - OK' in output
+    assert ton.GetSettings('validatorWalletName') == 'validator_wallet_001'
+
+    # non-masterchain wallet is rejected, setting is not changed
+    output = cli.execute('set validatorWalletName basechain_wallet_001', no_color=True)
+    assert 'Validator wallet must be in masterchain' in output
+    assert ton.GetSettings('validatorWalletName') == 'validator_wallet_001'
+
+    # unknown wallet: workchain can't be checked, setting is not changed
+    output = cli.execute('set validatorWalletName unknown_wallet', no_color=True)
+    assert 'Private key not found' in output
+    assert ton.GetSettings('validatorWalletName') == 'validator_wallet_001'
+
+    # --force skips the check
+    output = cli.execute('set validatorWalletName basechain_wallet_001 --force', no_color=True)
+    assert 'SetSettings - OK' in output
+    assert ton.GetSettings('validatorWalletName') == 'basechain_wallet_001'
+
 
 def test_about(cli, monkeypatch):
     from modules import MODES
