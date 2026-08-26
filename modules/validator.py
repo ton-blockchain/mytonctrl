@@ -9,8 +9,8 @@ from mypylib.mypylib import color_print, get_timestamp, print_table
 from modules.module import MtcModule
 from mytoncore.utils import b642hex, hex2b64
 from mytoncore.models import ValidatorConfig
-from mytonctrl.console_cmd import (add_command, check_usage_args_len, check_usage_args_min_max_len,
-                                   check_usage_one_arg, check_usage_two_args)
+from mytonctrl.console_cmd import (add_command, check_usage, check_usage_args_len,
+                                   check_usage_args_min_max_len, check_usage_one_arg, check_usage_two_args)
 
 from mytonctrl.utils import timestamp2utcdatetime, GetColorInt, pop_arg_from_args, is_hex
 
@@ -337,6 +337,41 @@ class ValidatorModule(MtcModule):
         self.set_collators_list(collators_list)
         self.local.add_log(f'apply_default_collators: added {len(to_add)} default collators: {to_add}', 'info')
 
+    def update_collators_list(self, args: list):
+        if not check_usage("update_collators_list", args, lambda x: x in ([], ['--force'])):
+            return
+        force = bool(args)
+
+        default_collators = self.get_default_collators_list()
+        if default_collators is None:
+            raise Exception('Could not get default collators list')
+
+        collators_list = self.get_collators_list()
+        existing = [c['adnl_id'] for c in collators_list.get('collators', [])]
+
+        if not force:
+            to_add = [adnl for adnl in default_collators if adnl not in existing]
+            to_remove = [adnl for adnl in existing if adnl not in default_collators]
+            color_print("{red}WARNING: This action will overwrite the collators list of this validator "
+                        "with the default collators list.{endc}\n")
+            if to_remove:
+                print(f"Collators to be removed ({len(to_remove)}):")
+                self._print_collators_table([{'adnl_id': adnl} for adnl in to_remove])
+            if to_add:
+                print(f"Collators to be added ({len(to_add)}):")
+                self._print_collators_table([{'adnl_id': adnl} for adnl in to_add])
+            if input("Continue anyway? [Y/n]\n").strip().lower() not in ('y', ''):
+                print('aborted.')
+                return
+
+        collators_list['collators'] = [{'adnl_id': adnl} for adnl in default_collators]
+        collators_list.setdefault('register_collators', [])
+        collators_list.setdefault('disable_self_collate', False)
+        self.set_collators_list(collators_list)
+        self.local.add_log(f'update_collators_list: set {len(default_collators)} default collators: '
+                           f'{default_collators}', 'info')
+        color_print("update_collators_list - {green}OK{endc}")
+
     def add_console_commands(self, console):
         add_command(self.local, console, "vo", self.vote_offer)
         add_command(self.local, console, "ve", self.vote_election_entry)
@@ -349,3 +384,4 @@ class ValidatorModule(MtcModule):
         add_command(self.local, console, "set_self_collate", self.set_self_collate)
         add_command(self.local, console, "print_collators", self.print_collators)
         add_command(self.local, console, "reset_collators", self.reset_collators)
+        add_command(self.local, console, "update_collators_list", self.update_collators_list)
