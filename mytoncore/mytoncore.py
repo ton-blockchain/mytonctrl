@@ -1608,6 +1608,8 @@ class MyTonCore:
 		self.local.add_log("start VoteOffer function", "debug")
 		full_config_addr = self.GetFullConfigAddr()
 		wallet = self.GetValidatorWallet()
+		if wallet.workchain != -1:
+			raise Exception(f"Validator wallet {wallet.addrB64} must be in masterchain")
 		validator_key = self.GetValidatorKey()
 		validator_pubkey_b64 = self.GetPubKeyBase64(validator_key)
 		validator_index = self.GetValidatorIndex()
