@@ -75,7 +75,8 @@ class MyTonCore:
 		self.poolsDir = self.local.my_work_dir + "pools/"
 		self.tempDir = self.local.my_temp_dir
 
-		os.makedirs(self.walletsDir, exist_ok=True)
+		os.makedirs(self.walletsDir, mode=0o700, exist_ok=True)
+		os.chmod(self.walletsDir, 0o700)
 		os.makedirs(self.contractsDir, exist_ok=True)
 		os.makedirs(self.poolsDir, exist_ok=True)
 

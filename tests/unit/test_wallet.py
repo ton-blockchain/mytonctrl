@@ -1,11 +1,14 @@
+import base64
 import os
+import stat
 import struct
 import types
+
 import pytest
 
+from modules.wallet import WalletModule
 from mytoncore.models import Account
 from mytoncore.mytoncore import MyTonCore
-from modules.wallet import WalletModule
 
 
 @pytest.fixture
@@ -89,6 +92,82 @@ def test_generate_wallet_name_and_list(ton: MyTonCore, module: WalletModule, tmp
 
     assert ton.GetWalletsNameList() == ['wallet_001']
     assert module.generate_wallet_name() == 'wallet_002'
+
+
+@pytest.mark.parametrize('umask', [0o000, 0o022])
+def test_do_import_wallet_restricts_private_key_permissions(ton: MyTonCore, module: WalletModule, monkeypatch, umask):
+    monkeypatch.setattr(ton, 'addr_b64_to_bytes', lambda _: b'\x00' * 36)
+    private_key = b'\x01' * 32
+    old_umask = os.umask(umask)
+    try:
+        name = module.do_import_wallet('address', base64.b64encode(private_key).decode())
+    finally:
+        os.umask(old_umask)
+
+    private_key_path = os.path.join(ton.walletsDir, name + '.pk')
+    assert stat.S_IMODE(os.stat(private_key_path).st_mode) == 0o600
+    with open(private_key_path, 'rb') as file:
+        assert file.read() == private_key
+
+
+def test_do_import_wallet_creates_private_key_with_restricted_permissions(ton: MyTonCore, module: WalletModule, monkeypatch):
+    monkeypatch.setattr(ton, 'addr_b64_to_bytes', lambda _: b'\x00' * 36)
+    original_fdopen = os.fdopen
+
+    def check_private_key_permissions(fd, mode):
+        assert stat.S_IMODE(os.fstat(fd).st_mode) == 0o600
+        return original_fdopen(fd, mode)
+
+    monkeypatch.setattr(os, 'fdopen', check_private_key_permissions)
+    module.do_import_wallet('address', base64.b64encode(b'\x01' * 32).decode())
+
+
+def test_do_import_wallet_does_not_overwrite_partial_wallet(ton: MyTonCore, module: WalletModule, monkeypatch):
+    monkeypatch.setattr(ton, 'addr_b64_to_bytes', lambda _: b'\x00' * 36)
+    existing_private_key_path = os.path.join(ton.walletsDir, 'wallet_001.pk')
+    with open(existing_private_key_path, 'wb') as file:
+        file.write(b'old key')
+
+    name = module.do_import_wallet('address', base64.b64encode(b'\x01' * 32).decode())
+
+    assert name == 'wallet_002'
+    with open(existing_private_key_path, 'rb') as file:
+        assert file.read() == b'old key'
+
+
+def test_do_import_wallet_removes_files_on_key_error(ton: MyTonCore, module: WalletModule, monkeypatch):
+    monkeypatch.setattr(ton, 'addr_b64_to_bytes', lambda _: b'\x00' * 36)
+
+    def fail_chmod(fd, mode):
+        raise OSError('chmod failed')
+
+    monkeypatch.setattr(os, 'fchmod', fail_chmod)
+
+    with pytest.raises(OSError, match='chmod failed'):
+        module.do_import_wallet('address', base64.b64encode(b'\x01' * 32).decode())
+
+    assert os.listdir(ton.walletsDir) == []
+
+
+@pytest.mark.parametrize('umask', [0o000, 0o022])
+def test_wallets_directory_is_private(local, umask):
+    old_umask = os.umask(umask)
+    try:
+        ton = MyTonCore(local)
+    finally:
+        os.umask(old_umask)
+
+    assert stat.S_IMODE(os.stat(ton.walletsDir).st_mode) == 0o700
+
+
+def test_existing_wallets_directory_is_private(local):
+    wallets_dir = os.path.join(local.my_work_dir, 'wallets')
+    os.makedirs(wallets_dir, mode=0o755)
+    os.chmod(wallets_dir, 0o755)
+
+    ton = MyTonCore(local)
+
+    assert stat.S_IMODE(os.stat(ton.walletsDir).st_mode) == 0o700
 
 
 def test_do_move_coins(ton: MyTonCore, module: WalletModule, monkeypatch, tmp_path):

@@ -36,6 +36,13 @@ class WalletModule(MtcModule):
             index = max(index_list) + 1
             index_str = str(index).rjust(3, '0')
             wallet_name = wallet_prefix + index_str
+        while (
+            os.path.lexists(self.ton.walletsDir + wallet_name + ".addr")
+            or os.path.lexists(self.ton.walletsDir + wallet_name + ".pk")
+        ):
+            index += 1
+            index_str = str(index).rjust(3, '0')
+            wallet_name = wallet_prefix + index_str
         return wallet_name
 
     def create_new_wallet(self, args):
@@ -122,10 +129,27 @@ class WalletModule(MtcModule):
         pk_bytes = base64.b64decode(key)
         wallet_name = self.generate_wallet_name()
         wallet_path = self.ton.walletsDir + wallet_name
-        with open(wallet_path + ".addr", 'wb') as file:
+        addr_path = wallet_path + ".addr"
+        pk_path = wallet_path + ".pk"
+        with open(addr_path, 'xb') as file:
             file.write(addr_bytes)
-        with open(wallet_path + ".pk", 'wb') as file:
-            file.write(pk_bytes)
+        try:
+            pk_fd = os.open(pk_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except Exception:
+            os.remove(addr_path)
+            raise
+        try:
+            os.fchmod(pk_fd, 0o600)
+            pk_file = os.fdopen(pk_fd, 'wb')
+            pk_fd = None
+            with pk_file:
+                pk_file.write(pk_bytes)
+        except Exception:
+            if pk_fd is not None:
+                os.close(pk_fd)
+            os.remove(pk_path)
+            os.remove(addr_path)
+            raise
         return wallet_name
 
     def import_wallet(self, args):
