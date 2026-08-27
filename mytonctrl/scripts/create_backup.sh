@@ -28,6 +28,9 @@ mkdir $tmp_dir/db
 
 cp $ton_dir/db/config.json ${tmp_dir}/db
 cp -r $ton_dir/db/keyring ${tmp_dir}/db
+if [ -f "$ton_dir/db/collators-list.json" ]; then
+	cp "$ton_dir/db/collators-list.json" ${tmp_dir}/db
+fi
 cp -r $keys_dir ${tmp_dir}
 cp -r $mtc_dir $tmp_dir
 rm -rf "$tmp_dir/mytoncore/venv"

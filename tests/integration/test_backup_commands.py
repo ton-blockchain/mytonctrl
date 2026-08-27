@@ -145,3 +145,53 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     return_code = 1
     output = cli.execute("restore_backup backup.tar.gz --skip-create-backup -y", no_color=True)
     assert "restore_backup - Error" in output
+
+
+def test_create_tmp_ton_dir_collators_list(ton, monkeypatch, tmp_path):
+    from modules.validator import ValidatorModule
+
+    def fake_run(cmd):
+        assert cmd == "getconfig"
+        return "---------\n{}\n--------"
+
+    monkeypatch.setattr(ton.validatorConsole, "run", fake_run)
+    monkeypatch.setattr(ton, "tempDir", str(tmp_path))
+    monkeypatch.setattr(BackupModule, "create_keyring", lambda self, dir_name: None)
+
+    collators_list = {
+        "collators": [{"adnl_id": "abc"}],
+        "register_collators": [],
+        "disable_self_collate": True,
+    }
+    monkeypatch.setattr(ValidatorModule, "get_collators_list", lambda self: collators_list)
+
+    module = BackupModule(ton, ton.local)
+    dumped = Path(module.create_tmp_ton_dir()) / "db" / "collators-list.json"
+    assert json.loads(dumped.read_text()) == collators_list
+
+
+def test_create_collators_list_empty(ton, monkeypatch, tmp_path):
+    from modules.validator import ValidatorModule
+
+    module = BackupModule(ton, ton.local)
+
+    # list was never set on this node -> empty json, which the node reads back as an empty
+    # list, so restoring the backup clears the recipient's one
+    monkeypatch.setattr(ValidatorModule, "get_collators_list", lambda self: {})
+    module.create_collators_list(str(tmp_path))
+    assert json.loads((tmp_path / "collators-list.json").read_text()) == {}
+
+
+def test_create_collators_list_unreadable(ton, monkeypatch, tmp_path):
+    from modules.validator import ValidatorModule
+
+    module = BackupModule(ton, ton.local)
+
+    # node too old / console error -> backup still succeeds, just without the file,
+    # and restoring it leaves the recipient's collators list alone
+    def raise_(self):
+        raise Exception("node does not support collators list commands (old node version)")
+
+    monkeypatch.setattr(ValidatorModule, "get_collators_list", raise_)
+    module.create_collators_list(str(tmp_path))
+    assert not (tmp_path / "collators-list.json").exists()

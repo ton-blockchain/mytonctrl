@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import subprocess
@@ -19,6 +20,16 @@ class BackupModule(MtcModule):
         keyring_dir = dir_name + '/keyring'
         self.ton.validatorConsole.run(f'exportallprivatekeys {keyring_dir}')
 
+    def create_collators_list(self, dir_name: str):
+        from modules.validator import ValidatorModule
+        try:
+            collators_list = ValidatorModule(self.ton, self.local).get_collators_list()
+        except Exception as e:
+            self.local.add_log(f'Failed to get collators list, skipping it in backup: {e}', 'warning')
+            return
+        with open(dir_name + '/collators-list.json', 'w') as f:
+            json.dump(collators_list, f, indent=4)
+
     def create_tmp_ton_dir(self):
         result = self.ton.validatorConsole.run("getconfig")
         text = parse(result, "---------", "--------")
@@ -30,6 +41,7 @@ class BackupModule(MtcModule):
         with open(dir_name_db + '/config.json', 'w') as f:
             f.write(text)
         self.create_keyring(dir_name_db)
+        self.create_collators_list(dir_name_db)
         return dir_name
 
     @staticmethod
