@@ -10,7 +10,8 @@ from modules.module import MtcModule
 from mytoncore.utils import b642hex, hex2b64
 from mytoncore.models import ValidatorConfig
 from mytonctrl.console_cmd import (add_command, check_usage, check_usage_args_len,
-                                   check_usage_args_min_max_len, check_usage_one_arg, check_usage_two_args)
+                                   check_usage_args_min_max_len, check_usage_no_args, check_usage_one_arg,
+                                   check_usage_two_args)
 
 from mytonctrl.utils import timestamp2utcdatetime, GetColorInt, pop_arg_from_args, is_hex
 
@@ -42,7 +43,8 @@ class ValidatorModule(MtcModule):
             self.ton.VoteOffer(offer)
         color_print("VoteOffer - {green}OK{endc}")
 
-    def run_elections(self):
+    # the recovery part of the election cycle, shared by `ve` and `recover_stake`
+    def recover_stakes(self):
         use_pool = self.ton.using_pool()
         use_liquid_staking = self.ton.using_liquid_staking()
         if use_pool:
@@ -50,12 +52,21 @@ class ValidatorModule(MtcModule):
         if use_liquid_staking:
             self.ton.ControllersUpdateValidatorSet()
         self.ton.RecoverStake()
+
+    def run_elections(self):
+        self.recover_stakes()
         if self.ton.using_validator():
             self.ton.ElectionEntry()
 
     def vote_election_entry(self, args):
         self.run_elections()
         color_print("VoteElectionEntry - {green}OK{endc}")
+
+    def recover_stake(self, args):
+        if not check_usage_no_args("recover_stake", args):
+            return
+        self.recover_stakes()
+        color_print("RecoverStake - {green}OK{endc}")
 
     def vote_complaint(self, args):
         if not check_usage_two_args("vc", args):
@@ -375,6 +386,7 @@ class ValidatorModule(MtcModule):
     def add_console_commands(self, console):
         add_command(self.local, console, "vo", self.vote_offer)
         add_command(self.local, console, "ve", self.vote_election_entry)
+        add_command(self.local, console, "recover_stake", self.recover_stake)
         add_command(self.local, console, "vc", self.vote_complaint)
         add_command(self.local, console, "check_ef", self.check_efficiency)
         add_command(self.local, console, "add_collator", self.add_collator)
