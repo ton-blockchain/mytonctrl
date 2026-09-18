@@ -20,6 +20,7 @@ USAGES = {
     "delete_custom_overlay": "<name>",
     "vo": "<offer_hash>[ <offer_hash> ...]",
     "vc": "<election_id> <complaint_hash>",
+    "recover_stake": "",
     "add_collator": "<adnl> [--self-collate <true/false>]",
     "delete_collator": "<adnl>",
     "add_register_collator": "<adnl>",

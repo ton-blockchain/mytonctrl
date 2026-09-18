@@ -294,6 +294,11 @@
 		"ru": "Голосовать в выборах",
 		"zh_TW": "投票選舉入口"
 	},
+	"recover_stake_cmd": {
+		"en": "Recover stake from elector without entering the next election",
+		"ru": "Восстановить стейк из электора, не участвуя в следующих выборах",
+		"zh_TW": "從選舉人合約恢復賭注，不參與下一輪選舉"
+	},
 	"vl_cmd": {
 		"en": "Show current validators",
 		"ru": "Показать действующие валидаторы",

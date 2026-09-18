@@ -43,6 +43,23 @@ def test_ve(cli, monkeypatch, mocker: MockerFixture):
     elections_mocker.assert_called_once()
 
 
+def test_recover_stake(cli, monkeypatch, mocker: MockerFixture):
+    # Bad args
+    output = cli.execute("recover_stake arg", no_color=True)
+    assert "Bad args" in output
+
+    recover_stakes_mock = mocker.Mock()
+    election_entry_mock = mocker.Mock()
+    monkeypatch.setattr(ValidatorModule, 'recover_stakes', recover_stakes_mock)
+    monkeypatch.setattr(MyTonCore, 'ElectionEntry', election_entry_mock)
+
+    output = cli.execute("recover_stake", no_color=True)
+    assert "RecoverStake - OK" in output
+    recover_stakes_mock.assert_called_once()
+    # the whole point of the command: recover without entering the next election
+    election_entry_mock.assert_not_called()
+
+
 def test_vc(cli, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("vc", no_color=True)
