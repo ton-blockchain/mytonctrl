@@ -1,9 +1,9 @@
 """Console commands of modules/utilities.py (account views, bookmarks, offers,
 elections, validators, complaints, pool data).
 
-These pin the behaviour of the legacy ``args: list[str]`` handlers, including the
-bare keyword arguments (``past``, ``fast``, ``offline``, ``adnl``, ``pubkey``,
-``wallet``, ``hash``, ``--json``) that are matched anywhere in the argument list.
+These pin the behaviour of the handlers, including the bare keyword arguments
+(``past``, ``fast``, ``offline``, ``adnl``, ``pubkey``, ``wallet``, ``hash``): each
+command accepts only the keywords it reacts to, in any order, plus the ``--json`` flag.
 """
 import json
 import subprocess
@@ -92,9 +92,10 @@ def test_vas(cli, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("vas", no_color=True)
-    assert "Bad args" in output
+    assert "usage: vas [-h] account_addr" in output
+    assert "vas: error: the following arguments are required: account_addr" in output
     output = cli.execute(f"vas {ACCOUNT_ADDR} extra", no_color=True)
-    assert "Bad args" in output
+    assert "vas: error: unrecognized arguments: extra" in output
     get_account_mock.assert_not_called()
 
     output = cli.execute(f"vas {ACCOUNT_ADDR}", no_color=True)
@@ -120,11 +121,12 @@ def test_vah(cli, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("vah", no_color=True)
-    assert "Bad args" in output
+    assert "usage: vah [-h] account_addr limit" in output
+    assert "vah: error: the following arguments are required: account_addr, limit" in output
     output = cli.execute(f"vah {ACCOUNT_ADDR}", no_color=True)
-    assert "Bad args" in output
+    assert "vah: error: the following arguments are required: limit" in output
     output = cli.execute(f"vah {ACCOUNT_ADDR} 5 extra", no_color=True)
-    assert "Bad args" in output
+    assert "vah: error: unrecognized arguments: extra" in output
     get_history_mock.assert_not_called()
 
     output = cli.execute(f"vah {ACCOUNT_ADDR} 5", no_color=True)
@@ -135,7 +137,7 @@ def test_vah(cli, monkeypatch, mocker: MockerFixture):
     # wrong limit
     get_history_mock.reset_mock()
     output = cli.execute(f"vah {ACCOUNT_ADDR} abc", no_color=True)
-    assert "invalid literal for int() with base 10: 'abc'" in output
+    assert "vah: error: argument limit: invalid int value: 'abc'" in output
     get_history_mock.assert_not_called()
 
 
@@ -150,15 +152,17 @@ def test_bookmarks(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("nb", no_color=True)
-    assert "Bad args" in output
+    assert "usage: nb [-h] bookmark_name account_addr" in output
+    assert "nb: error: the following arguments are required: bookmark_name, account_addr" in output
     output = cli.execute("nb my_bookmark", no_color=True)
-    assert "Bad args" in output
+    assert "nb: error: the following arguments are required: account_addr" in output
     output = cli.execute(f"nb my_bookmark {ACCOUNT_ADDR} extra", no_color=True)
-    assert "Bad args" in output
+    assert "nb: error: unrecognized arguments: extra" in output
     output = cli.execute("db", no_color=True)
-    assert "Bad args" in output
+    assert "usage: db [-h] bookmark_name" in output
+    assert "db: error: the following arguments are required: bookmark_name" in output
     output = cli.execute("db my_bookmark extra", no_color=True)
-    assert "Bad args" in output
+    assert "db: error: unrecognized arguments: extra" in output
     assert "bookmarks" not in ton.local.db
 
     output = cli.execute("bl", no_color=True)
@@ -170,7 +174,7 @@ def test_bookmarks(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # nb only accepts addresses
     output = cli.execute("nb my_bookmark not_an_address", no_color=True)
-    assert "Incorrect address" in output
+    assert "nb: error: argument account_addr: expected a TON address (in user-friendly or raw form), got 'not_an_address'" in output
     assert "bookmarks" not in ton.local.db
 
     output = cli.execute(f"nb my_bookmark {ACCOUNT_ADDR}", no_color=True)
@@ -202,9 +206,9 @@ def test_bookmarks(cli, ton, monkeypatch, mocker: MockerFixture):
     assert "DeleteBookmark error: Bookmark not found" in output
     assert [b["name"] for b in ton.local.db["bookmarks"]] == ["peer"]
 
-    # No usage check today: extra args are silently ignored
     output = cli.execute("bl extra", no_color=True)
-    assert ["peer", raw_peer, "empty"] in _rows(output)
+    assert "usage: bl [-h]" in output
+    assert "bl: error: unrecognized arguments: extra" in output
 
 
 def test_ol(cli, monkeypatch, mocker: MockerFixture):
@@ -238,9 +242,8 @@ def test_ol(cli, monkeypatch, mocker: MockerFixture):
         [hash2, "44", "0", "3/1", "80.0%", "true"],
     ]
 
-    # an actual offer hash is not a filter: it is ignored
     output = cli.execute(f"ol {hash1}", no_color=True)
-    assert [row[0] for row in _rows(output)[1:]] == [_reduct(hash1), _reduct(hash2)]
+    assert f"ol: error: argument words: invalid choice: '{hash1}'" in output
 
     get_offers_mock.return_value = []
     output = cli.execute("ol", no_color=True)
@@ -273,9 +276,10 @@ def test_od(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("od", no_color=True)
-    assert "Bad args" in output
+    assert "usage: od [-h] offer_hash" in output
+    assert "od: error: the following arguments are required: offer_hash" in output
     output = cli.execute(f"od {offer_hash} extra", no_color=True)
-    assert "Bad args" in output
+    assert "od: error: unrecognized arguments: extra" in output
     get_offer_mock.assert_not_called()
 
     output = cli.execute(f"od {offer_hash}", no_color=True)
@@ -329,6 +333,11 @@ def test_el(cli, monkeypatch, mocker: MockerFixture):
     assert _rows(output) == [header, [ADNL, PUBKEY, WALLET, "100000.5", "3.0"]]
     output = cli.execute("el wallet", no_color=True)
     assert _rows(output)[1] == [_reduct(ADNL), _reduct(PUBKEY), WALLET, "100000.5", "3.0"]
+
+    get_entries_mock.reset_mock()
+    output = cli.execute("el fast", no_color=True)
+    assert "el: error: argument words: invalid choice: 'fast'" in output
+    get_entries_mock.assert_not_called()
 
     get_entries_mock.return_value = {}
     output = cli.execute("el", no_color=True)
@@ -392,6 +401,15 @@ def test_vl(cli, monkeypatch, mocker: MockerFixture):
     output = cli.execute("vl offline", no_color=True)
     assert _rows(output) == [header, short_rows[1]]
 
+    get_validators_mock.reset_mock()
+    output = cli.execute("vl past fast --json", no_color=True)
+    get_validators_mock.assert_called_once_with(past=True, fast=True)
+    assert json.dumps([asdict(v) for v in validators], indent=2) in output
+    get_validators_mock.reset_mock()
+    output = cli.execute("vl hash", no_color=True)
+    assert "vl: error: argument words: invalid choice: 'hash'" in output
+    get_validators_mock.assert_not_called()
+
     get_validators_mock.return_value = []
     output = cli.execute("vl", no_color=True)
     assert "No data" in output
@@ -428,6 +446,11 @@ def test_cl(cli, monkeypatch, mocker: MockerFixture):
     output = cli.execute("cl past adnl", no_color=True)
     assert [row[1] for row in _rows(output)[1:]] == [ADNL, "EF" * 32]
 
+    get_complaints_mock.reset_mock()
+    output = cli.execute("cl pubkey", no_color=True)
+    assert "cl: error: argument words: invalid choice: 'pubkey'" in output
+    get_complaints_mock.assert_not_called()
+
     get_complaints_mock.return_value = {}
     output = cli.execute("cl", no_color=True)
     assert "No data" in output
@@ -452,9 +475,10 @@ def test_get_pool_data(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("get_pool_data", no_color=True)
-    assert "Bad args" in output
+    assert "usage: get_pool_data [-h] pool_name" in output
+    assert "get_pool_data: error: the following arguments are required: pool_name" in output
     output = cli.execute(f"get_pool_data {POOL_ADDR} extra", no_color=True)
-    assert "Bad args" in output
+    assert "get_pool_data: error: unrecognized arguments: extra" in output
     get_account_mock.assert_not_called()
 
     # by address, v1 pool

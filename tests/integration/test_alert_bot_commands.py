@@ -1,7 +1,7 @@
 """Console commands of modules/alert_bot.py (Telegram alert bot).
 
-These pin the behaviour of the legacy ``args: list[str]`` handlers: the alert state
-kept in ``local.db["alerts"]``, the bot credentials stored in the db, and the exact
+These pin the behaviour of the commands: the alert state kept in
+``local.db["alerts"]``, the bot credentials stored in the db, and the exact
 Telegram Bot API requests that are sent.
 """
 import pytest
@@ -55,13 +55,15 @@ def test_enable_disable_list_alerts(cli, ton):
 
     # Bad args
     output = cli.execute("enable_alert", no_color=True)
-    assert "Bad args" in output
+    assert "usage: enable_alert [-h] alert_name" in output
+    assert "enable_alert: error: the following arguments are required: alert_name" in output
     output = cli.execute("enable_alert low_efficiency out_of_sync", no_color=True)
-    assert "Bad args" in output
+    assert "enable_alert: error: unrecognized arguments: out_of_sync" in output
     output = cli.execute("disable_alert", no_color=True)
-    assert "Bad args" in output
+    assert "usage: disable_alert [-h] alert_name" in output
+    assert "disable_alert: error: the following arguments are required: alert_name" in output
     output = cli.execute("disable_alert low_efficiency out_of_sync", no_color=True)
-    assert "Bad args" in output
+    assert "disable_alert: error: unrecognized arguments: out_of_sync" in output
     assert "alerts" not in ton.local.db
 
     output = cli.execute("disable_alert low_efficiency", no_color=True)
@@ -93,9 +95,9 @@ def test_enable_disable_list_alerts(cli, ton):
     output = cli.execute("list_alerts", no_color=True)
     assert "no_such_alert" not in output
 
-    # No usage check today: extra args are silently ignored
     output = cli.execute("list_alerts extra", no_color=True)
-    assert [row[0] for row in _alert_rows(output)] == names
+    assert "usage: list_alerts [-h]" in output
+    assert "list_alerts: error: unrecognized arguments: extra" in output
 
 
 def test_setup_alert_bot(cli, ton, telegram_post):
@@ -103,11 +105,12 @@ def test_setup_alert_bot(cli, ton, telegram_post):
 
     # Bad args
     output = cli.execute("setup_alert_bot", no_color=True)
-    assert "Bad args" in output
+    assert "usage: setup_alert_bot [-h] bot_token chat_id" in output
+    assert "setup_alert_bot: error: the following arguments are required: bot_token, chat_id" in output
     output = cli.execute(f"setup_alert_bot {BOT_TOKEN}", no_color=True)
-    assert "Bad args" in output
+    assert "setup_alert_bot: error: the following arguments are required: chat_id" in output
     output = cli.execute(f"setup_alert_bot {BOT_TOKEN} {CHAT_ID} extra", no_color=True)
-    assert "Bad args" in output
+    assert "setup_alert_bot: error: unrecognized arguments: extra" in output
     telegram_post.assert_not_called()
 
     # Telegram rejects the welcome message: nothing is saved
@@ -202,8 +205,9 @@ def test_test_alert(cli, ton, telegram_post, monkeypatch, mocker: MockerFixture)
     output = cli.execute("test_alert", no_color=True)
     assert "send_message error: Forbidden: bot was blocked by the user" in output
 
-    # No usage check today: extra args are silently ignored
     telegram_post.reset_mock()
     telegram_post.return_value.status_code = 200
-    cli.execute("test_alert extra", no_color=True)
-    telegram_post.assert_called_once()
+    output = cli.execute("test_alert extra", no_color=True)
+    assert "usage: test_alert [-h]" in output
+    assert "test_alert: error: unrecognized arguments: extra" in output
+    telegram_post.assert_not_called()

@@ -7,6 +7,7 @@ import pytest
 from mytoncore.mytoncore import MyTonCore
 from mytonctrl import __main__ as main_module
 from tests.conftest import TestLocal, TestMyPyConsole
+from tests.helpers import remove_colors
 
 
 @pytest.fixture()
@@ -249,7 +250,11 @@ def test_mytonctrl_run_executes_single_cmd_and_exits(local, monkeypatch):
     monkeypatch.setattr(console, "run", lambda: run_loop_calls.append(1))
 
     invoked = []
-    console.add_item("foo", lambda args: invoked.append(args), "test cmd")
+
+    def foo(*args: str) -> None:
+        invoked.append(list(args))
+
+    console.add_command("foo", foo, "test cmd")
 
     mtc.run(skip_startup_checks=True, cmd="foo bar baz")
 
@@ -281,6 +286,33 @@ def test_mytonctrl_run_exits_nonzero_when_cmd_unknown(local, monkeypatch):
     assert run_loop_calls == []
 
 
+def test_mytonctrl_run_exits_with_status_2_on_usage_error(local, monkeypatch, capsys):
+    from mytonctrl.mytonctrl import MyTonCtrl
+
+    monkeypatch.setattr(MyTonCore, "create_self_db_backup", lambda self: None)
+    monkeypatch.setattr(MyTonCore, "GetNetworkName", lambda self: "mainnet")
+    monkeypatch.setattr(TestLocal, "save", lambda *a, **kw: None)
+    monkeypatch.setattr(MyTonCore, "using_validator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_collator", lambda self: False)
+    monkeypatch.setattr(MyTonCore, "using_alert_bot", lambda self: False)
+    monkeypatch.setattr(TestLocal, "run", lambda *a, **kw: None, raising=False)
+
+    ton = MyTonCore(local)
+    console = TestMyPyConsole(local)
+    mtc = MyTonCtrl(local, ton, console)
+
+    run_loop_calls = []
+    monkeypatch.setattr(console, "run", lambda: run_loop_calls.append(1))
+
+    with pytest.raises(SystemExit) as ei:
+        mtc.run(skip_startup_checks=True, cmd="set")
+    assert ei.value.code == 2
+    assert run_loop_calls == []
+    err = remove_colors(capsys.readouterr().err)
+    assert "usage: set [-h] [--force] name value" in err
+    assert "set: error: the following arguments are required: name, value" in err
+
+
 def test_mytonctrl_run_exits_nonzero_when_cmd_raises(local, monkeypatch):
     from mytonctrl.mytonctrl import MyTonCtrl
 
@@ -299,10 +331,10 @@ def test_mytonctrl_run_exits_nonzero_when_cmd_raises(local, monkeypatch):
     run_loop_calls = []
     monkeypatch.setattr(console, "run", lambda: run_loop_calls.append(1))
 
-    def boom(_args):
+    def boom() -> None:
         raise RuntimeError("kaboom")
 
-    console.add_item("boom", boom, "raises")
+    console.add_command("boom", boom, "raises")
 
     with pytest.raises(SystemExit) as ei:
         mtc.run(skip_startup_checks=True, cmd="boom")

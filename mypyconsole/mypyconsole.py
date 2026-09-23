@@ -5,20 +5,18 @@ import subprocess
 import traceback
 import sys
 import readline
-from typing import Callable
+from typing import Any, Callable, NoReturn
 from collections import deque
 from dataclasses import dataclass
 
 from mypylib import MyPyClass
-
-
-CallableFunc = Callable[["list[str]"], None]
+from mypyconsole.command_parser import CommandParser, UsageError
 
 
 @dataclass
 class MyPyConsoleItem:
     cmd: str
-    func: CallableFunc
+    parser: CommandParser
     desc: str
     usage: str = ""
 
@@ -36,10 +34,10 @@ class MyPyConsole:
         self.menu_items: list[MyPyConsoleItem] = []
         self.history: deque[str] = deque(maxlen=100)
         self.local: MyPyClass = local
-        self.add_item("help", self.help, "Print help text")
-        self.add_item("clear", self.clear, "Clear console")
-        self.add_item("history", self.print_history, "Print last commands")
-        self.add_item("exit", self.exit, "Exit from application")
+        self.add_command("help", self.help, "Print help text")
+        self.add_command("clear", self.clear, "Clear console")
+        self.add_command("history", self.print_history, "Print last commands")
+        self.add_command("exit", self.exit, "Exit from application")
         readline.parse_and_bind("tab: complete")
         readline.set_completer(self.readline_completer)
 
@@ -49,9 +47,22 @@ class MyPyConsole:
             return commands[state]
         return None
 
-    def add_item(self, cmd: str, func: CallableFunc, desc: str, usage: str = ""):
-        item = MyPyConsoleItem(cmd, func, desc, usage)
-        self.menu_items.append(item)
+    def add_command(
+        self,
+        name: str,
+        handler: Callable[..., Any],
+        description: str | None = None,
+        *,
+        forward_unknown: bool = False,
+    ) -> None:
+        if description is None:
+            description = self.local.translate(f"{name}_cmd")
+        parser = CommandParser(
+            name, handler, description, forward_unknown=forward_unknown
+        )
+        self.menu_items.append(
+            MyPyConsoleItem(name, parser, description, parser.short_usage())
+        )
 
     def add_history_item(self, item: str):
         try:
@@ -68,11 +79,16 @@ class MyPyConsole:
 
     def user_worker(self):
         try:
-            result = input(self._rl_escape(self.color) + self.name + "> " + self._rl_escape(self.ENDC))
+            result = input(
+                self._rl_escape(self.color)
+                + self.name
+                + "> "
+                + self._rl_escape(self.ENDC)
+            )
         except KeyboardInterrupt:
-            self.exit([])
+            self.exit()
         except EOFError:
-            self.exit([])
+            self.exit()
         return result
 
     def get_cmd_from_user(self):
@@ -80,7 +96,7 @@ class MyPyConsole:
         self.add_history_item(result)
         self.run_cmd(result)
 
-    def run_cmd(self, result: str) -> bool:
+    def run_cmd(self, result: str) -> int:
         result_list = result.split(" ")
         result_list = list(filter(None, result_list))
         cmd = None
@@ -88,29 +104,30 @@ class MyPyConsole:
             cmd = result_list[0]
         args = result_list[1:]
         for item in self.menu_items:
-            suc = True
             if cmd == item.cmd:
-                if self.debug:
-                    item.func(args)
-                else:
-                    suc = self._try(item.func, args)
+                status = self._run_item(item.parser, args)
                 print()
-                return suc
+                return status
         print(self.unknown_cmd)
-        return False
+        return 1
 
-    def _try(self, func: CallableFunc, args: list[str]) -> bool:
+    def _run_item(self, parser: CommandParser, args: list[str]) -> int:
         try:
-            func(args)
-            return True
+            parser.run(args)
+            return 0
+        except UsageError as err:
+            print(f"{self.RED}{err}{self.ENDC}", file=sys.stderr)
+            return 2
         except Exception as err:
+            if self.debug:
+                raise
             traceback.print_exc()
             print(
                 "{RED}Error: {err}{ENDC}".format(RED=self.RED, ENDC=self.ENDC, err=err)
             )
-            return False
+            return 1
 
-    def help(self, _: list[str]):
+    def help(self) -> None:
         index_list: list[int] = []
         for item in self.menu_items:
             index = len(item.cmd) + len(item.usage) + 1
@@ -120,14 +137,14 @@ class MyPyConsole:
             cmd_text = (item.cmd + " " + item.usage).ljust(index)
             print(cmd_text, item.desc)
 
-    def print_history(self, _: list[str]):
+    def print_history(self) -> None:
         for i, cmd in enumerate(self.history):
             print(f"{i + 1}  {cmd}")
 
-    def clear(self, _: list[str]):
+    def clear(self) -> None:
         subprocess.run(["clear"])
 
-    def exit(self, _: list[str]):
+    def exit(self) -> NoReturn:
         print("Bye.")
         sys.exit()
 

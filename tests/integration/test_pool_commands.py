@@ -12,6 +12,11 @@ def test_pools_list(cli, ton, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "GetPools", get_pools_mock)
     monkeypatch.setattr(MyTonCore, "GetAccount", get_account_mock)
 
+    output = cli.execute("pools_list extra", no_color=True)
+    assert "usage: pools_list [-h]" in output
+    assert "pools_list: error: unrecognized arguments: extra" in output
+    get_pools_mock.assert_not_called()
+
     # no pools
     get_pools_mock.return_value = []
     output = cli.execute("pools_list", no_color=True)
@@ -53,7 +58,10 @@ def test_pools_list(cli, ton, monkeypatch, mocker: MockerFixture):
 def test_delete_pool(cli, ton):
     # Bad args
     output = cli.execute("delete_pool")
-    assert "Bad args" in output
+    assert "usage: delete_pool [-h] pool_name" in output
+    assert "delete_pool: error: the following arguments are required: pool_name" in output
+    output = cli.execute("delete_pool a b", no_color=True)
+    assert "delete_pool: error: unrecognized arguments: b" in output
 
     pool_name = 'test_pool'
     pool_path = ton.poolsDir + pool_name
@@ -68,9 +76,13 @@ def test_delete_pool(cli, ton):
 def test_import_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("import_pool", no_color=True)
-    assert "Bad args" in output
+    assert "usage: import_pool [-h] pool_name pool_addr" in output
+    assert "import_pool: error: the following arguments are required: pool_name, pool_addr" in output
     output = cli.execute(f"import_pool abcd", no_color=True)
-    assert "Bad args" in output
+    assert "import_pool: error: the following arguments are required: pool_addr" in output
+    output = cli.execute("import_pool abcd not_an_address", no_color=True)
+    assert "import_pool: error: argument pool_addr: expected a TON address (in user-friendly or raw form), got 'not_an_address'" in output
+    assert not os.path.exists(ton.poolsDir + "abcd.addr")
 
     # happy path
     download_contract_mock = mocker.Mock()

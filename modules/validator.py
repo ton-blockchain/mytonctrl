@@ -1,5 +1,6 @@
 from __future__ import annotations
 import base64
+from typing import List, Optional
 import json
 import time
 
@@ -9,10 +10,10 @@ from mypylib.mypylib import color_print, get_timestamp, print_table
 from modules.module import MtcModule
 from mytoncore.utils import b642hex, hex2b64
 from mytoncore.models import ValidatorConfig
-from mytonctrl.console_cmd import (add_command, check_usage, check_usage_args_len,
-                                   check_usage_args_min_max_len, check_usage_one_arg, check_usage_two_args)
+from mytonctrl.argtypes import adnl_address
+from mypyconsole.command_parser import Annotated, Arg
 
-from mytonctrl.utils import timestamp2utcdatetime, GetColorInt, pop_arg_from_args, is_hex
+from mytonctrl.utils import timestamp2utcdatetime, GetColorInt, is_hex
 
 from typing import TYPE_CHECKING, Sequence, TypeVar
 
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
 
 X = TypeVar("X", bound=ValidatorConfig)
 
+_CollatorAdnl = Annotated[str, Arg(type=adnl_address, help="ADNL address of the collator, hex or base64")]
+
 
 class ValidatorModule(MtcModule):
 
@@ -30,14 +33,12 @@ class ValidatorModule(MtcModule):
 
     default_value = True
 
-    def vote_offer(self, args):
-        if not check_usage_args_min_max_len("vo", args, min_len=1, max_len=1000):
-            return
+    def vote_offer(self, offer_hashes: List[str]) -> None:
         offers = self.ton.GetOffers()
-        for offer_hash in args:
+        for offer_hash in offer_hashes:
             offer = self.ton.GetOffer(offer_hash, offers)
             self.ton.add_save_offer(offer)
-        for offer_hash in args:
+        for offer_hash in offer_hashes:
             offer = self.ton.GetOffer(offer_hash, offers)
             self.ton.VoteOffer(offer)
         color_print("VoteOffer - {green}OK{endc}")
@@ -53,15 +54,11 @@ class ValidatorModule(MtcModule):
         if self.ton.using_validator():
             self.ton.ElectionEntry()
 
-    def vote_election_entry(self, args):
+    def vote_election_entry(self) -> None:
         self.run_elections()
         color_print("VoteElectionEntry - {green}OK{endc}")
 
-    def vote_complaint(self, args):
-        if not check_usage_two_args("vc", args):
-            return
-        election_id = args[0]
-        complaint_hash = args[1]
+    def vote_complaint(self, election_id: str, complaint_hash: str) -> None:
         self.ton.VoteComplaint(election_id, complaint_hash)
         color_print("VoteComplaint - {green}OK{endc}")
 
@@ -72,7 +69,7 @@ class ValidatorModule(MtcModule):
                 return validator
         return None
 
-    def check_efficiency(self, args):
+    def check_efficiency(self) -> None:
         self.local.add_log("start GetValidatorEfficiency function", "debug")
         previous_validators = []
         try:
@@ -172,16 +169,15 @@ class ValidatorModule(MtcModule):
         if 'success' not in result:
             raise Exception(f'Failed to set collators list: {result}')
 
-    def add_collator(self, args: list):
-        if not check_usage_args_min_max_len("add_collator", args, min_len=1, max_len=3):
-            return
-        self_collate = pop_arg_from_args(args, '--self-collate')
-        if self_collate not in (None, 'true', 'false'):
-            color_print("{red}Bad args. Self collate must be one of: true, false{endc}")
-            return
-        if not check_usage_args_len("add_collator", args, 1):
-            return
-        adnl = args[0]
+    def add_collator(
+        self,
+        adnl: _CollatorAdnl,
+        *,
+        self_collate: Annotated[
+            Optional[bool],
+            Arg(help="whether this validator also collates blocks itself; unchanged if omitted"),
+        ] = None,
+    ) -> None:
         if is_hex(adnl):
             adnl = hex2b64(adnl)
 
@@ -193,16 +189,13 @@ class ValidatorModule(MtcModule):
             raise Exception(f"Сollator {adnl} already exists in the collators list.")
         collators.append({'adnl_id': adnl})
         if self_collate is not None:
-            collators_list['disable_self_collate'] = self_collate == 'false'
+            collators_list['disable_self_collate'] = not self_collate
         self.local.add_log(f'Adding collator {adnl} to collators list. '
                            f'self_collate: {not collators_list["disable_self_collate"]}', 'info')
         self.set_collators_list(collators_list)
         color_print("add_collator - {green}OK{endc}")
 
-    def add_register_collator(self, args: list):
-        if not check_usage_one_arg("add_register_collator", args):
-            return
-        adnl = args[0]
+    def add_register_collator(self, adnl: _CollatorAdnl) -> None:
         if is_hex(adnl):
             adnl = hex2b64(adnl)
 
@@ -217,11 +210,7 @@ class ValidatorModule(MtcModule):
         self.set_collators_list(collators_list)
         color_print("add_register_collator - {green}OK{endc}")
 
-    def _delete_collator(self, args: list, name: str, key: str):
-        if not check_usage_one_arg(name, args):
-            return
-
-        adnl = args[0]
+    def _delete_collator(self, adnl: str, name: str, key: str) -> None:
         if is_hex(adnl):
             adnl = hex2b64(adnl)
 
@@ -240,22 +229,17 @@ class ValidatorModule(MtcModule):
             self.set_collators_list(collators_list)
         color_print(f"{name} - {{green}}OK{{endc}}")
 
-    def delete_collator(self, args: list):
-        self._delete_collator(args, "delete_collator", "collators")
+    def delete_collator(self, adnl: _CollatorAdnl) -> None:
+        self._delete_collator(adnl, "delete_collator", "collators")
 
-    def delete_register_collator(self, args: list):
-        self._delete_collator(args, "delete_register_collator", "register_collators")
+    def delete_register_collator(self, adnl: _CollatorAdnl) -> None:
+        self._delete_collator(adnl, "delete_register_collator", "register_collators")
 
-    def set_self_collate(self, args: list):
-        if not check_usage_one_arg("set_self_collate", args):
-            return
-        if args[0] not in ('true', 'false'):
-            color_print("{red}Bad args. Self collate must be one of: true, false{endc}")
-            return
+    def set_self_collate(self, value: Annotated[bool, Arg(help="true or false")]) -> None:
         collators_list = self.get_collators_list()
         collators_list.setdefault('collators', [])
         collators_list.setdefault('register_collators', [])
-        collators_list['disable_self_collate'] = args[0] == 'false'
+        collators_list['disable_self_collate'] = not value
         self.set_collators_list(collators_list)
         color_print("set_self_collate - {green}OK{endc}")
 
@@ -266,9 +250,9 @@ class ValidatorModule(MtcModule):
             table.append([b642hex(c['adnl_id']).upper()])
         print_table(table)
 
-    def print_collators(self, args: list):
+    def print_collators(self, *, json_: bool = False) -> None:
         collators_list = self.get_collators_list()
-        if '--json' in args:
+        if json_:
             print(json.dumps(collators_list, indent=2))
             return
         collators = collators_list.get('collators')
@@ -283,7 +267,7 @@ class ValidatorModule(MtcModule):
             self._print_collators_table(register_collators)
         print(f"Self collate: {not collators_list.get('disable_self_collate', False)}")
 
-    def reset_collators(self, args: list):
+    def reset_collators(self) -> None:
         if not self.get_collators_list():
             color_print("{red}No collators to reset.{endc}")
             return
@@ -337,11 +321,7 @@ class ValidatorModule(MtcModule):
         self.set_collators_list(collators_list)
         self.local.add_log(f'apply_default_collators: added {len(to_add)} default collators: {to_add}', 'info')
 
-    def update_collators_list(self, args: list):
-        if not check_usage("update_collators_list", args, lambda x: x in ([], ['--force'])):
-            return
-        force = bool(args)
-
+    def update_collators_list(self, *, force: Annotated[bool, Arg(help="do not ask for confirmation")] = False) -> None:
         default_collators = self.get_default_collators_list()
         if default_collators is None:
             raise Exception('Could not get default collators list')
@@ -373,15 +353,15 @@ class ValidatorModule(MtcModule):
         color_print("update_collators_list - {green}OK{endc}")
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "vo", self.vote_offer)
-        add_command(self.local, console, "ve", self.vote_election_entry)
-        add_command(self.local, console, "vc", self.vote_complaint)
-        add_command(self.local, console, "check_ef", self.check_efficiency)
-        add_command(self.local, console, "add_collator", self.add_collator)
-        add_command(self.local, console, "delete_collator", self.delete_collator)
-        add_command(self.local, console, "add_register_collator", self.add_register_collator)
-        add_command(self.local, console, "delete_register_collator", self.delete_register_collator)
-        add_command(self.local, console, "set_self_collate", self.set_self_collate)
-        add_command(self.local, console, "print_collators", self.print_collators)
-        add_command(self.local, console, "reset_collators", self.reset_collators)
-        add_command(self.local, console, "update_collators_list", self.update_collators_list)
+        console.add_command("vo", self.vote_offer)
+        console.add_command("ve", self.vote_election_entry)
+        console.add_command("vc", self.vote_complaint)
+        console.add_command("check_ef", self.check_efficiency)
+        console.add_command("add_collator", self.add_collator)
+        console.add_command("delete_collator", self.delete_collator)
+        console.add_command("add_register_collator", self.add_register_collator)
+        console.add_command("delete_register_collator", self.delete_register_collator)
+        console.add_command("set_self_collate", self.set_self_collate)
+        console.add_command("print_collators", self.print_collators)
+        console.add_command("reset_collators", self.reset_collators)
+        console.add_command("update_collators_list", self.update_collators_list)

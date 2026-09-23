@@ -8,7 +8,7 @@ from modules.module import MtcModule
 from mypylib.mypylib import get_timestamp, print_table, color_print
 from mytoncore.models import Config
 from mytoncore.utils import get_hostname
-from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
+from mypyconsole.command_parser import Annotated, Arg
 from mytonctrl.utils import timestamp2utcdatetime
 from modules.validator import ValidatorModule
 
@@ -325,21 +325,15 @@ Severity: <code>{alert.severity}</code>
     def _is_alert_active(self, alert_name: str) -> bool:
         return self.get_alert_from_db(alert_name).get('active', False)
 
-    def enable_alert(self, args):
-        if not check_usage_one_arg("enable_alert", args):
-            return
-        alert_name = args[0]
+    def enable_alert(self, alert_name: str) -> None:
         self.set_alert_enabled(alert_name, True)
         color_print("enable_alert - {green}OK{endc}")
 
-    def disable_alert(self, args):
-        if not check_usage_one_arg("disable_alert", args):
-            return
-        alert_name = args[0]
+    def disable_alert(self, alert_name: str) -> None:
         self.set_alert_enabled(alert_name, False)
         color_print("disable_alert - {green}OK{endc}")
 
-    def print_alerts(self, args):
+    def print_alerts(self) -> None:
         init_alerts()
         table = [['Name', 'Enabled', 'Last sent']]
         for alert_name in ALERTS:
@@ -347,21 +341,23 @@ Severity: <code>{alert.severity}</code>
             table.append([alert_name, alert['enabled'], alert['sent']])
         print_table(table)
 
-    def test_alert(self, args):
+    def test_alert(self) -> None:
         if not self.inited:
             self.init()
         self.send_message('Test alert')
 
-    def setup_alert_bot(self, args):
-        if not check_usage_two_args("setup_alert_bot", args):
-            return
-        self.token = args[0]
-        self.chat_id = args[1]
+    def setup_alert_bot(
+        self,
+        bot_token: Annotated[str, Arg(help="token of the bot, from @BotFather")],
+        chat_id: Annotated[str, Arg(help="chat to send alerts to, negative for a group")],
+    ) -> None:
+        self.token = bot_token
+        self.chat_id = chat_id
         init_alerts()
         try:
             self.send_welcome_message()
-            self.ton.local.db['BotToken'] = args[0]
-            self.ton.local.db['ChatId'] = args[1]
+            self.ton.local.db['BotToken'] = bot_token
+            self.ton.local.db['ChatId'] = chat_id
             self.ton.local.save()
             color_print("setup_alert_bot - {green}OK{endc}")
         except Exception as e:
@@ -585,8 +581,8 @@ Full bot documentation <a href="https://docs.ton.org/v3/guidelines/nodes/mainten
         self.local.try_function(self.check_initial_sync)
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "enable_alert", self.enable_alert)
-        add_command(self.local, console, "disable_alert", self.disable_alert)
-        add_command(self.local, console, "list_alerts", self.print_alerts)
-        add_command(self.local, console, "test_alert", self.test_alert)
-        add_command(self.local, console, "setup_alert_bot", self.setup_alert_bot)
+        console.add_command("enable_alert", self.enable_alert)
+        console.add_command("disable_alert", self.disable_alert)
+        console.add_command("list_alerts", self.print_alerts)
+        console.add_command("test_alert", self.test_alert)
+        console.add_command("setup_alert_bot", self.setup_alert_bot)

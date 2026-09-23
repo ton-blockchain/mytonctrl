@@ -1,7 +1,7 @@
 """Console commands of modules/controller.py (liquid-staking controllers).
 
-These pin the behaviour of the legacy ``args: list[str]`` handlers: which MyTonCore
-calls each command makes, with which arguments, and what it prints.
+These pin the behaviour of the console handlers: which MyTonCore calls each
+command makes, with which arguments, and what it prints.
 """
 import json
 import os
@@ -20,6 +20,7 @@ CONTROLLER_1 = raw_addr_to_b64("-1:" + "a1" * 32)
 CONTROLLER_2 = raw_addr_to_b64("-1:" + "a2" * 32)
 CONTROLLER_3 = raw_addr_to_b64("-1:" + "a3" * 32)
 LIQUID_POOL = raw_addr_to_b64("0:" + "cc" * 32)
+BAD_ADDR_ERROR = "argument controller_addr: expected a TON address (in user-friendly or raw form), got 'not_an_address'"
 
 CONTROLLER_COMMANDS = [
     "create_controllers",
@@ -134,11 +135,15 @@ def test_create_controllers(cli, ton, monkeypatch, mocker: MockerFixture,
     sign_boc_mock.assert_not_called()
     send_file_mock.assert_not_called()
 
-    # No usage check today: extra args are silently ignored
+    get_controllers_mock.reset_mock()
     output = cli.execute("create_controllers extra args", no_color=True)
-    assert "CreateControllers - OK" in output
+    assert "usage: create_controllers [-h]" in output
+    assert "create_controllers: error: unrecognized arguments: extra args" in output
+    assert "CreateControllers - OK" not in output
     output = cli.execute("update_controllers extra", no_color=True)
-    assert "CreateControllers - OK" in output
+    assert "update_controllers: error: unrecognized arguments: extra" in output
+    assert "CreateControllers - OK" not in output
+    get_controllers_mock.assert_not_called()
     sign_boc_mock.assert_not_called()
 
 
@@ -218,9 +223,12 @@ def test_controllers_list(cli, ton, monkeypatch, mocker: MockerFixture):
     assert list(_sections(output)) == ["using controllers"]
     assert CONTROLLER_3 not in output
 
-    # No usage check today: extra args are silently ignored
+    get_controllers_mock.reset_mock()
     output = cli.execute("controllers_list extra", no_color=True)
-    assert "using controllers:" in output
+    assert "usage: controllers_list [-h]" in output
+    assert "controllers_list: error: unrecognized arguments: extra" in output
+    assert "using controllers:" not in output
+    get_controllers_mock.assert_not_called()
 
 
 def test_get_controller_data(cli, ton, monkeypatch, mocker: MockerFixture):
@@ -231,9 +239,12 @@ def test_get_controller_data(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("get_controller_data", no_color=True)
-    assert "Bad args" in output
+    assert "usage: get_controller_data [-h] controller_addr" in output
+    assert "get_controller_data: error: the following arguments are required: controller_addr" in output
     output = cli.execute(f"get_controller_data {CONTROLLER_0} {CONTROLLER_1}", no_color=True)
-    assert "Bad args" in output
+    assert f"get_controller_data: error: unrecognized arguments: {CONTROLLER_1}" in output
+    output = cli.execute("get_controller_data not_an_address", no_color=True)
+    assert f"get_controller_data: error: {BAD_ADDR_ERROR}" in output
     lite_client_run_mock.assert_not_called()
 
     output = cli.execute(f"get_controller_data {CONTROLLER_0}", no_color=True)
@@ -259,11 +270,14 @@ def test_deposit_to_controller(cli, ton, validator_wallet, sign_boc_mock, send_f
 
     # Bad args
     output = cli.execute("deposit_to_controller", no_color=True)
-    assert "Bad args" in output
+    assert "usage: deposit_to_controller [-h] controller_addr amount" in output
+    assert "deposit_to_controller: error: the following arguments are required: controller_addr, amount" in output
     output = cli.execute(f"deposit_to_controller {CONTROLLER_0}", no_color=True)
-    assert "Bad args" in output
+    assert "deposit_to_controller: error: the following arguments are required: amount" in output
     output = cli.execute(f"deposit_to_controller {CONTROLLER_0} 100 extra", no_color=True)
-    assert "Bad args" in output
+    assert "deposit_to_controller: error: unrecognized arguments: extra" in output
+    output = cli.execute("deposit_to_controller not_an_address 100", no_color=True)
+    assert f"deposit_to_controller: error: {BAD_ADDR_ERROR}" in output
     sign_boc_mock.assert_not_called()
 
     # integer amount is sent as float coins attached to the top-up message
@@ -280,11 +294,10 @@ def test_deposit_to_controller(cli, ton, validator_wallet, sign_boc_mock, send_f
     sign_boc_mock.assert_called_once_with(validator_wallet, top_up_boc, CONTROLLER_1, 12.5)
     send_file_mock.assert_called_once_with(top_up_boc + ".signed", validator_wallet)
 
-    # wrong amount: float() raises inside the handler, nothing is sent
     sign_boc_mock.reset_mock()
     send_file_mock.reset_mock()
     output = cli.execute(f"deposit_to_controller {CONTROLLER_0} abc", no_color=True)
-    assert "could not convert string to float: 'abc'" in output
+    assert "deposit_to_controller: error: argument amount: invalid float value: 'abc'" in output
     sign_boc_mock.assert_not_called()
     send_file_mock.assert_not_called()
 
@@ -295,9 +308,12 @@ def test_withdraw_from_controller(cli, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("withdraw_from_controller", no_color=True)
-    assert "Bad args" in output
+    assert "usage: withdraw_from_controller [-h] controller_addr [amount]" in output
+    assert "withdraw_from_controller: error: the following arguments are required: controller_addr" in output
     output = cli.execute(f"withdraw_from_controller {CONTROLLER_0} 50 extra", no_color=True)
-    assert "Bad args" in output
+    assert "withdraw_from_controller: error: unrecognized arguments: extra" in output
+    output = cli.execute("withdraw_from_controller not_an_address 50", no_color=True)
+    assert f"withdraw_from_controller: error: {BAD_ADDR_ERROR}" in output
     withdraw_mock.assert_not_called()
 
     # with amount: passed on as the raw string
@@ -390,7 +406,8 @@ def test_calculate_annual_controller_percentage(cli, ton, monkeypatch, mocker: M
 
     # Bad args
     output = cli.execute("calculate_annual_controller_percentage 1 2", no_color=True)
-    assert "Bad args" in output
+    assert "usage: calculate_annual_controller_percentage [-h] [percent_per_round]" in output
+    assert "calculate_annual_controller_percentage: error: unrecognized arguments: 2" in output
     get_config_15_mock.assert_not_called()
 
     # explicit percent per round
@@ -420,7 +437,7 @@ def test_calculate_annual_controller_percentage(cli, ton, monkeypatch, mocker: M
 
     # wrong percent
     output = cli.execute("calculate_annual_controller_percentage abc", no_color=True)
-    assert "could not convert string to float: 'abc'" in output
+    assert "calculate_annual_controller_percentage: error: argument percent_per_round: invalid float value: 'abc'" in output
 
 
 def test_controller_update_validator_set(cli, monkeypatch, mocker: MockerFixture):
@@ -429,9 +446,12 @@ def test_controller_update_validator_set(cli, monkeypatch, mocker: MockerFixture
 
     # Bad args
     output = cli.execute("controller_update_validator_set", no_color=True)
-    assert "Bad args" in output
+    assert "usage: controller_update_validator_set [-h] controller_addr" in output
+    assert "controller_update_validator_set: error: the following arguments are required: controller_addr" in output
     output = cli.execute(f"controller_update_validator_set {CONTROLLER_0} {CONTROLLER_1}", no_color=True)
-    assert "Bad args" in output
+    assert f"controller_update_validator_set: error: unrecognized arguments: {CONTROLLER_1}" in output
+    output = cli.execute("controller_update_validator_set not_an_address", no_color=True)
+    assert f"controller_update_validator_set: error: {BAD_ADDR_ERROR}" in output
     update_mock.assert_not_called()
 
     output = cli.execute(f"controller_update_validator_set {CONTROLLER_0}", no_color=True)
@@ -442,9 +462,12 @@ def test_controller_update_validator_set(cli, monkeypatch, mocker: MockerFixture
 def test_stop_controller(cli, ton):
     # Bad args
     output = cli.execute("stop_controller", no_color=True)
-    assert "Bad args" in output
+    assert "usage: stop_controller [-h] controller_addr" in output
+    assert "stop_controller: error: the following arguments are required: controller_addr" in output
     output = cli.execute(f"stop_controller {CONTROLLER_0} {CONTROLLER_1}", no_color=True)
-    assert "Bad args" in output
+    assert f"stop_controller: error: unrecognized arguments: {CONTROLLER_1}" in output
+    output = cli.execute("stop_controller not_an_address", no_color=True)
+    assert f"stop_controller: error: {BAD_ADDR_ERROR}" in output
     assert "stop_controllers_list" not in ton.local.db
 
     ton.local.db["user_controllers"] = [CONTROLLER_0, CONTROLLER_1]
@@ -472,9 +495,12 @@ def test_stop_and_withdraw_controller(cli, ton, monkeypatch, mocker: MockerFixtu
 
     # Bad args
     output = cli.execute("stop_and_withdraw_controller", no_color=True)
-    assert "Bad args" in output
+    assert "usage: stop_and_withdraw_controller [-h] controller_addr [amount]" in output
+    assert "stop_and_withdraw_controller: error: the following arguments are required: controller_addr" in output
     output = cli.execute(f"stop_and_withdraw_controller {CONTROLLER_0} 50 extra", no_color=True)
-    assert "Bad args" in output
+    assert "stop_and_withdraw_controller: error: unrecognized arguments: extra" in output
+    output = cli.execute("stop_and_withdraw_controller not_an_address 50", no_color=True)
+    assert f"stop_and_withdraw_controller: error: {BAD_ADDR_ERROR}" in output
     withdraw_mock.assert_not_called()
     assert "stop_controllers_list" not in ton.local.db
 
@@ -506,9 +532,12 @@ def test_stop_and_withdraw_controller(cli, ton, monkeypatch, mocker: MockerFixtu
 def test_add_controller(cli, ton):
     # Bad args
     output = cli.execute("add_controller", no_color=True)
-    assert "Bad args" in output
+    assert "usage: add_controller [-h] controller_addr" in output
+    assert "add_controller: error: the following arguments are required: controller_addr" in output
     output = cli.execute(f"add_controller {CONTROLLER_0} {CONTROLLER_1}", no_color=True)
-    assert "Bad args" in output
+    assert f"add_controller: error: unrecognized arguments: {CONTROLLER_1}" in output
+    output = cli.execute("add_controller not_an_address", no_color=True)
+    assert f"add_controller: error: {BAD_ADDR_ERROR}" in output
     assert "user_controllers" not in ton.local.db
 
     ton.local.db["stop_controllers_list"] = [CONTROLLER_0, CONTROLLER_1]
@@ -545,7 +574,8 @@ def test_test_calculate_loan_amount(cli, ton, monkeypatch, mocker: MockerFixture
     assert "-1" in output.splitlines()
     calculate_mock.assert_called_once_with(1000, 2000, 1677721)
 
-    # No usage check today: extra args are silently ignored
     calculate_mock.reset_mock()
-    cli.execute("test_calculate_loan_amount extra", no_color=True)
-    calculate_mock.assert_called_once_with(1000, 2000, 1677721)
+    output = cli.execute("test_calculate_loan_amount extra", no_color=True)
+    assert "usage: test_calculate_loan_amount [-h]" in output
+    assert "test_calculate_loan_amount: error: unrecognized arguments: extra" in output
+    calculate_mock.assert_not_called()

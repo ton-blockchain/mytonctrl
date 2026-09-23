@@ -6,7 +6,6 @@ import requests
 from mypylib.mypylib import color_print
 from modules.module import MtcModule
 from mytoncore.utils import hex2base64
-from mytonctrl.console_cmd import add_command, check_usage_two_args, check_usage_one_arg
 
 
 class CustomOverlayModule(MtcModule):
@@ -53,24 +52,21 @@ class CustomOverlayModule(MtcModule):
                 result["nodes"].append(node)
         return result
 
-    def add_custom_overlay(self, args):
-        if not check_usage_two_args("add_custom_overlay", args):
-            return
-        path = args[1]
-        with open(path, 'r') as f:
+    def add_custom_overlay(self, name: str, path_to_config: str) -> None:
+        with open(path_to_config, 'r') as f:
             config = json.load(f)
-        self.ton.set_custom_overlay(args[0], config)
+        self.ton.set_custom_overlay(name, config)
         if '@validators' in config:
             print('Dynamic overlay will be added within 1 minute')
         else:
-            result = self.add_custom_overlay_to_vc(self.parse_config(args[0], config))
+            result = self.add_custom_overlay_to_vc(self.parse_config(name, config))
             if not result:
                 print('Failed to add overlay to validator console')
                 color_print("add_custom_overlay - {red}ERROR{endc}")
                 return
         color_print("add_custom_overlay - {green}OK{endc}")
 
-    def list_custom_overlays(self, args):
+    def list_custom_overlays(self) -> None:
         if not self.ton.get_custom_overlays():
             color_print("{red}No custom overlays{endc}")
             return
@@ -78,15 +74,13 @@ class CustomOverlayModule(MtcModule):
             color_print(f"Custom overlay {{bold}}{k}{{endc}}:")
             print(json.dumps(v, indent=4))
 
-    def delete_custom_overlay(self, args):
-        if not check_usage_one_arg("delete_custom_overlay", args):
-            return
-        if '@validators' in self.ton.get_custom_overlays().get(args[0], {}):
-            self.ton.delete_custom_overlay(args[0])
+    def delete_custom_overlay(self, name: str) -> None:
+        if '@validators' in self.ton.get_custom_overlays().get(name, {}):
+            self.ton.delete_custom_overlay(name)
             print('Dynamic overlay will be deleted within 1 minute')
         else:
-            self.ton.delete_custom_overlay(args[0])
-            result = self.delete_custom_overlay_from_vc(args[0])
+            self.ton.delete_custom_overlay(name)
+            result = self.delete_custom_overlay_from_vc(name)
             if not result:
                 print('Failed to delete overlay from validator console')
                 color_print("delete_custom_overlay - {red}ERROR{endc}")
@@ -191,6 +185,6 @@ class CustomOverlayModule(MtcModule):
         return config.get(network)
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "add_custom_overlay", self.add_custom_overlay)
-        add_command(self.local, console, "list_custom_overlays", self.list_custom_overlays)
-        add_command(self.local, console, "delete_custom_overlay", self.delete_custom_overlay)
+        console.add_command("add_custom_overlay", self.add_custom_overlay)
+        console.add_command("list_custom_overlays", self.list_custom_overlays)
+        console.add_command("delete_custom_overlay", self.delete_custom_overlay)

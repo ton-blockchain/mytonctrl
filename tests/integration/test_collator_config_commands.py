@@ -1,8 +1,8 @@
 """Console commands of modules/collator_config.py (collator options JSON).
 
-These pin the behaviour of the legacy ``args: list[str]`` handlers: where the config
-is read from (local file or HTTP), what is stored in the db, and the
-validator-engine-console commands that are sent.
+These pin the behaviour of the console handlers: where the config is read from
+(local file or HTTP), what is stored in the db, and the validator-engine-console
+commands that are sent.
 """
 import json
 
@@ -60,9 +60,10 @@ def test_set_collation_config(cli, ton, vc, http_get, tmp_path):
 
     # Bad args
     output = cli.execute("set_collation_config", no_color=True)
-    assert "Bad args" in output
+    assert "usage: set_collation_config [-h] location" in output
+    assert "set_collation_config: error: the following arguments are required: location" in output
     output = cli.execute(f"set_collation_config {path} extra", no_color=True)
-    assert "Bad args" in output
+    assert "set_collation_config: error: unrecognized arguments: extra" in output
     vc.run.assert_not_called()
     assert "collator_config" not in ton.local.db
 
@@ -132,10 +133,11 @@ def test_update_collation_config(cli, ton, vc, http_get, tmp_path):
     assert "Failed to add collator config to validator console: error: bad options" in output
     assert "update_collator_config - ERROR" in output
 
-    # No usage check today: extra args are silently ignored
-    vc.run.return_value = "success"
+    vc.run.reset_mock()
     output = cli.execute("update_collation_config extra", no_color=True)
-    assert "update_collator_config - OK" in output
+    assert "usage: update_collation_config [-h]" in output
+    assert "update_collation_config: error: unrecognized arguments: extra" in output
+    vc.run.assert_not_called()
 
 
 def test_print_collation_config(cli, ton, vc, tmp_path):
@@ -162,7 +164,8 @@ def test_print_collation_config(cli, ton, vc, tmp_path):
     assert "Failed to get collator config: error: not a collator" in output
     assert "get_collator_config - ERROR" in output
 
-    # No usage check today: extra args are silently ignored
     vc.run.reset_mock()
-    cli.execute("print_collation_config extra", no_color=True)
-    vc.run.assert_called_once_with(f"getcollatoroptionsjson {current_path}")
+    output = cli.execute("print_collation_config extra", no_color=True)
+    assert "usage: print_collation_config [-h]" in output
+    assert "print_collation_config: error: unrecognized arguments: extra" in output
+    vc.run.assert_not_called()

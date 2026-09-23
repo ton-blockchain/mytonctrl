@@ -162,9 +162,12 @@ def test_add_custom_overlay_emits_queries_fields(cli, ton, tmp_path, monkeypatch
 
 def test_add_custom_overlay_bad_args(cli):
     output = cli.execute("add_custom_overlay", no_color=True)
-    assert "Bad args" in output
+    assert "usage: add_custom_overlay [-h] name path_to_config" in output
+    assert "add_custom_overlay: error: the following arguments are required: name, path_to_config" in output
     output = cli.execute("add_custom_overlay only_name", no_color=True)
-    assert "Bad args" in output
+    assert "add_custom_overlay: error: the following arguments are required: path_to_config" in output
+    output = cli.execute("add_custom_overlay name config.json extra", no_color=True)
+    assert "add_custom_overlay: error: unrecognized arguments: extra" in output
 
 
 def test_add_custom_overlay_static(cli, ton, tmp_path, monkeypatch, mocker: MockerFixture):
@@ -233,6 +236,10 @@ def test_add_custom_overlay_dynamic_validators(cli, ton, tmp_path, mocker: Mocke
 
 
 def test_list_custom_overlays(cli, ton):
+    output = cli.execute("list_custom_overlays extra", no_color=True)
+    assert "usage: list_custom_overlays [-h]" in output
+    assert "list_custom_overlays: error: unrecognized arguments: extra" in output
+
     output = cli.execute("list_custom_overlays", no_color=True)
     assert "No custom overlays" in output
 
@@ -248,7 +255,11 @@ def test_delete_custom_overlay(cli, ton, monkeypatch, mocker: MockerFixture):
     vc = _mock_validator_console(mocker, ton)
 
     output = cli.execute("delete_custom_overlay", no_color=True)
-    assert "Bad args" in output
+    assert "usage: delete_custom_overlay [-h] name" in output
+    assert "delete_custom_overlay: error: the following arguments are required: name" in output
+    output = cli.execute("delete_custom_overlay static_one dyn_one", no_color=True)
+    assert "delete_custom_overlay: error: unrecognized arguments: dyn_one" in output
+    vc.run.assert_not_called()
 
     output = cli.execute("delete_custom_overlay static_one", no_color=True)
     assert "delete_custom_overlay - OK" in output

@@ -1,11 +1,12 @@
 import json
 import os
 import time
+from typing import Optional, Union
 
 from mypylib.mypylib import color_print, print_table
-from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args, check_usage_args_min_max_len
+from mytonctrl.argtypes import TonAddress
+from mypyconsole.command_parser import Annotated, Arg
 
-from mytonctrl.utils import GetItemFromList
 from modules.module import MtcModule
 
 
@@ -39,11 +40,11 @@ class ControllerModule(MtcModule):
         self.ton.local.db["using_controllers"] = new_controllers
         self.ton.local.save()
 
-    def create_controllers(self, args):
+    def create_controllers(self) -> None:
         self.do_create_controllers()
         color_print("CreateControllers - {green}OK{endc}")
 
-    def print_controllers_list(self, args):
+    def print_controllers_list(self) -> None:
         new_controllers = self.ton.GetControllers()
         using_controllers = self.ton.GetSettings("using_controllers")
         old_controllers = self.ton.GetSettings("old_controllers")
@@ -78,10 +79,7 @@ class ControllerModule(MtcModule):
             table += [[controllerAddr, account.status, account.balance, approved, state]]
         print_table(table)
 
-    def get_controller_data(self, args):
-        if not check_usage_one_arg("get_controller_data", args):
-            return
-        controller_addr = args[0]
+    def get_controller_data(self, controller_addr: TonAddress) -> None:
         controller_data = self.ton.GetControllerData(controller_addr)
         print(json.dumps(controller_data, indent=4))
 
@@ -92,31 +90,30 @@ class ControllerModule(MtcModule):
         result_file_path = self.ton.SignBocWithWallet(wallet, file_name, controller_addr, amount)
         self.ton.SendFile(result_file_path, wallet)
 
-    def deposit_to_controller(self, args):
-        if not check_usage_two_args("deposit_to_controller", args):
-            return
-        controller_addr = args[0]
-        amount = float(args[1])
+    def deposit_to_controller(
+        self,
+        controller_addr: TonAddress,
+        amount: Annotated[float, Arg(help="amount in TON")],
+    ) -> None:
         self.do_deposit_to_controller(controller_addr, amount)
 
-    def withdraw_from_controller(self, args):
-        if not check_usage_args_min_max_len("withdraw_from_controller", args, min_len=1, max_len=2):
-            return
-        controller_addr = args[0]
-        amount = GetItemFromList(args, 1)
+    def withdraw_from_controller(
+        self,
+        controller_addr: TonAddress,
+        amount: Annotated[Optional[str], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
+    ) -> None:
         self.ton.WithdrawFromController(controller_addr, amount)
 
-    def calculate_annual_controller_percentage(self, args):
-        if not check_usage_args_min_max_len("calculate_annual_controller_percentage", args, min_len=0, max_len=1):
-            return
-        if args:
-            percent_per_round = float(args[0])
-        else:
+    def calculate_annual_controller_percentage(
+        self,
+        percent_per_round: Annotated[Optional[float], Arg(help="default: the max_interest_percent setting")] = None,
+    ) -> None:
+        if percent_per_round is None:
             percent_per_round = self.ton.GetSettings("max_interest_percent")
         config15 = self.ton.get_config_15()
         roundPeriod = config15.validators_elected_for
         rounds = 365 * 24 * 3600 / roundPeriod
-        yearInterest = (1 + percent_per_round / 100) * rounds
+        yearInterest = (1 + percent_per_round / 100) * rounds  # pyright: ignore[reportOptionalOperand]
         yearInterestPercent = round(yearInterest / 100, 2)
         print("roundPeriod", roundPeriod)
         print("rounds", rounds)
@@ -124,10 +121,7 @@ class ControllerModule(MtcModule):
         print("yearInterest", yearInterest)
         print(f"yearInterestPercent: {yearInterestPercent}%")
 
-    def controller_update_validator_set(self, args):
-        if not check_usage_one_arg("controller_update_validator_set", args):
-            return
-        controller_addr = args[0]
+    def controller_update_validator_set(self, controller_addr: TonAddress) -> None:
         self.ton.ControllerUpdateValidatorSet(controller_addr)
         color_print("ControllerUpdateValidatorSet - {green}OK{endc}")
 
@@ -144,23 +138,21 @@ class ControllerModule(MtcModule):
             user_controllers.remove(controller_addr)
         self.ton.local.save()
 
-    def stop_controller(self, args):
-        if not check_usage_one_arg("stop_controller", args):
-            return
-        controller_addr = args[0]
+    def stop_controller(self, controller_addr: TonAddress) -> None:
         self.do_stop_controller(controller_addr)
         color_print("StopController - {green}OK{endc}")
 
-    def stop_and_withdraw_controller(self, args):
-        if not check_usage_args_min_max_len("stop_and_withdraw_controller", args, min_len=1, max_len=2):
-            return
-        controller_addr = args[0]
-        amount = GetItemFromList(args, 1)
-        if amount is None:
+    def stop_and_withdraw_controller(
+        self,
+        controller_addr: TonAddress,
+        amount: Annotated[Optional[str], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
+    ) -> None:
+        withdraw_amount: Union[str, float, None] = amount
+        if withdraw_amount is None:
             account = self.ton.GetAccount(controller_addr)
-            amount = account.balance - 10.1
+            withdraw_amount = account.balance - 10.1
         self.do_stop_controller(controller_addr)
-        self.ton.WithdrawFromController(controller_addr, amount)
+        self.ton.WithdrawFromController(controller_addr, withdraw_amount)
         color_print("StopAndWithdrawController - {green}OK{endc}")
 
     def do_add_controller(self, controller_addr):
@@ -176,10 +168,7 @@ class ControllerModule(MtcModule):
             stop_controllers_list.remove(controller_addr)
         self.ton.local.save()
 
-    def add_controller(self, args):
-        if not check_usage_one_arg("add_controller", args):
-            return
-        controller_addr = args[0]
+    def add_controller(self, controller_addr: TonAddress) -> None:
         self.do_add_controller(controller_addr)
         color_print("AddController - {green}OK{endc}")
 
@@ -190,20 +179,20 @@ class ControllerModule(MtcModule):
         max_interest = int(max_interest_percent / 100 * 16777216)
         return self.ton.calculate_loan_amount(min_loan, max_loan, max_interest)
 
-    def calculate_loan_amount_test(self, args):
+    def calculate_loan_amount_test(self) -> None:
         t = self.do_calculate_loan_amount_test()
         print(t)
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "create_controllers", self.create_controllers)
-        add_command(self.local, console, "update_controllers", self.create_controllers)
-        add_command(self.local, console, "controllers_list", self.print_controllers_list)
-        add_command(self.local, console, "get_controller_data", self.get_controller_data)
-        add_command(self.local, console, "deposit_to_controller", self.deposit_to_controller)
-        add_command(self.local, console, "withdraw_from_controller", self.withdraw_from_controller)
-        add_command(self.local, console, "calculate_annual_controller_percentage", self.calculate_annual_controller_percentage)
-        add_command(self.local, console, "controller_update_validator_set", self.controller_update_validator_set)
-        add_command(self.local, console, "stop_controller", self.stop_controller)
-        add_command(self.local, console, "stop_and_withdraw_controller", self.stop_and_withdraw_controller)
-        add_command(self.local, console, "add_controller", self.add_controller)
-        add_command(self.local, console, "test_calculate_loan_amount", self.calculate_loan_amount_test)
+        console.add_command("create_controllers", self.create_controllers)
+        console.add_command("update_controllers", self.create_controllers)
+        console.add_command("controllers_list", self.print_controllers_list)
+        console.add_command("get_controller_data", self.get_controller_data)
+        console.add_command("deposit_to_controller", self.deposit_to_controller)
+        console.add_command("withdraw_from_controller", self.withdraw_from_controller)
+        console.add_command("calculate_annual_controller_percentage", self.calculate_annual_controller_percentage)
+        console.add_command("controller_update_validator_set", self.controller_update_validator_set)
+        console.add_command("stop_controller", self.stop_controller)
+        console.add_command("stop_and_withdraw_controller", self.stop_and_withdraw_controller)
+        console.add_command("add_controller", self.add_controller)
+        console.add_command("test_calculate_loan_amount", self.calculate_loan_amount_test)

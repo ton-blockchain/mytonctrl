@@ -130,8 +130,9 @@ class MyTonCtrl:
             self._pre_up()
 
         if cmd is not None:
-            if not self._console_engine.run_cmd(cmd):
-                raise SystemExit(1)
+            status = self._console_engine.run_cmd(cmd)
+            if status != 0:
+                raise SystemExit(status)
             return
 
         self._console_engine.run()

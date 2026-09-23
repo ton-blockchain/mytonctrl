@@ -1,7 +1,7 @@
 """Console commands of modules/collator.py (collator-only node).
 
-These pin the behaviour of the legacy ``args: list[str]`` handlers: the exact
-validator-engine-console commands each console command sends, and what it prints.
+These pin the behaviour of the console handlers: the exact validator-engine-console
+commands each console command sends, and what it prints.
 """
 import pytest
 from pytest_mock import MockerFixture
@@ -14,6 +14,7 @@ from mytoncore.utils import hex2base64
 NEW_KEY = "0123456789ABCDEF" * 4
 ADNL_1 = "A1" * 32
 ADNL_2 = "B2" * 32
+BAD_ADNL = "expected an ADNL address (64 hex characters or base64), got 'not_an_adnl'"
 
 COLLATOR_COMMANDS = [
     "setup_collator",
@@ -65,13 +66,16 @@ def test_setup_collator(cli, vc, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("setup_collator --adnl", no_color=True)
-    assert "Bad args" in output
+    assert "usage: setup_collator [-h] [--adnl ADNL]" in output
+    assert "setup_collator: error: argument --adnl: expected one argument" in output
     output = cli.execute(f"setup_collator {ADNL_1}", no_color=True)
-    assert "Bad args" in output
+    assert f"setup_collator: error: unrecognized arguments: {ADNL_1}" in output
     output = cli.execute(f"setup_collator --adnl {ADNL_1} extra", no_color=True)
-    assert "Bad args" in output
+    assert "setup_collator: error: unrecognized arguments: extra" in output
     output = cli.execute(f"setup_collator --foo {ADNL_1}", no_color=True)
-    assert "Bad args" in output
+    assert f"setup_collator: error: unrecognized arguments: --foo {ADNL_1}" in output
+    output = cli.execute("setup_collator --adnl not_an_adnl", no_color=True)
+    assert f"setup_collator: error: argument --adnl: {BAD_ADNL}" in output
     vc.run.assert_not_called()
 
     # without --adnl a new key is created and used as the collator ADNL
@@ -122,15 +126,20 @@ def test_print_local_collators(cli, local_collators):
     output = cli.execute("print_local_collators", no_color=True)
     assert "No collators found" in output
 
-    # No usage check today: extra args are silently ignored
+    local_collators.reset_mock()
     output = cli.execute("print_local_collators extra", no_color=True)
-    assert "No collators found" in output
+    assert "usage: print_local_collators [-h]" in output
+    assert "print_local_collators: error: unrecognized arguments: extra" in output
+    local_collators.assert_not_called()
 
 
 def test_add_validator_to_collation_wl(cli, vc, mocker: MockerFixture):
     # Bad args
     output = cli.execute("add_validator_to_collation_wl", no_color=True)
-    assert "Bad args" in output
+    assert "usage: add_validator_to_collation_wl [-h] adnls [adnls ...]" in output
+    assert "add_validator_to_collation_wl: error: the following arguments are required: adnls" in output
+    output = cli.execute(f"add_validator_to_collation_wl {ADNL_1} not_an_adnl", no_color=True)
+    assert f"add_validator_to_collation_wl: error: argument adnls: {BAD_ADNL}" in output
     vc.run.assert_not_called()
 
     output = cli.execute(f"add_validator_to_collation_wl {ADNL_1}", no_color=True)
@@ -165,7 +174,10 @@ def test_add_validator_to_collation_wl(cli, vc, mocker: MockerFixture):
 def test_delete_validator_from_collation_wl(cli, vc, mocker: MockerFixture):
     # Bad args
     output = cli.execute("delete_validator_from_collation_wl", no_color=True)
-    assert "Bad args" in output
+    assert "usage: delete_validator_from_collation_wl [-h] adnls [adnls ...]" in output
+    assert "delete_validator_from_collation_wl: error: the following arguments are required: adnls" in output
+    output = cli.execute(f"delete_validator_from_collation_wl {ADNL_1} not_an_adnl", no_color=True)
+    assert f"delete_validator_from_collation_wl: error: argument adnls: {BAD_ADNL}" in output
     vc.run.assert_not_called()
 
     output = cli.execute(f"delete_validator_from_collation_wl {ADNL_1} {ADNL_2}", no_color=True)
@@ -186,7 +198,8 @@ def test_delete_validator_from_collation_wl(cli, vc, mocker: MockerFixture):
 def test_disable_collation_wl(cli, vc):
     # Bad args
     output = cli.execute("disable_collation_wl extra", no_color=True)
-    assert "Bad args" in output
+    assert "usage: disable_collation_wl [-h]" in output
+    assert "disable_collation_wl: error: unrecognized arguments: extra" in output
     vc.run.assert_not_called()
 
     output = cli.execute("disable_collation_wl", no_color=True)
@@ -210,10 +223,11 @@ def test_print_collation_whitelist(cli, vc):
     output = cli.execute("print_collation_whitelist", no_color=True)
     assert "list index out of range" in output
 
-    # No usage check today: extra args are silently ignored
-    vc.run.return_value = "conn ready\nwhitelist"
+    vc.run.reset_mock()
     output = cli.execute("print_collation_whitelist extra", no_color=True)
-    assert "whitelist" in output
+    assert "usage: print_collation_whitelist [-h]" in output
+    assert "print_collation_whitelist: error: unrecognized arguments: extra" in output
+    vc.run.assert_not_called()
 
 
 def test_stop_collator(cli, vc, local_collators, monkeypatch, mocker: MockerFixture):
@@ -223,7 +237,10 @@ def test_stop_collator(cli, vc, local_collators, monkeypatch, mocker: MockerFixt
 
     # Bad args
     output = cli.execute(f"stop_collator {ADNL_1} {ADNL_2}", no_color=True)
-    assert "Bad args" in output
+    assert "usage: stop_collator [-h] [adnl_id]" in output
+    assert f"stop_collator: error: unrecognized arguments: {ADNL_2}" in output
+    output = cli.execute("stop_collator not_an_adnl", no_color=True)
+    assert f"stop_collator: error: argument adnl_id: {BAD_ADNL}" in output
     vc.run.assert_not_called()
     input_mock.assert_not_called()
 
