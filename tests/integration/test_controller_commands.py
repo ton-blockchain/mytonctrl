@@ -428,12 +428,11 @@ def test_calculate_annual_controller_percentage(cli, ton, monkeypatch, mocker: M
     assert "yearInterest 490.8251953125" in output
     assert "yearInterestPercent: 4.91%" in output
 
-    # without argument and without the db setting the SETTINGS default (10) is not
-    # applied: GetSettings returns None and the handler crashes
+    # without argument and without the db setting: the default 1.5, the same the loan request uses
     del ton.local.db["max_interest_percent"]
     output = cli.execute("calculate_annual_controller_percentage", no_color=True)
-    assert "unsupported operand type(s) for /: 'NoneType' and 'int'" in output
-    assert "yearInterestPercent" not in output
+    assert "percentPerRound 1.5\n" in output
+    assert "yearInterestPercent: 4.88%" in output
 
     # wrong percent
     output = cli.execute("calculate_annual_controller_percentage abc", no_color=True)

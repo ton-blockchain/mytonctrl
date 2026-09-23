@@ -108,16 +108,19 @@ class ControllerModule(MtcModule):
         self,
         percent_per_round: Annotated[Optional[float], Arg(help="default: the max_interest_percent setting")] = None,
     ) -> None:
-        if percent_per_round is None:
-            percent_per_round = self.ton.GetSettings("max_interest_percent")
+        percent: float = (
+            percent_per_round
+            if percent_per_round is not None
+            else self.ton.local.db.get("max_interest_percent", 1.5)
+        )
         config15 = self.ton.get_config_15()
         roundPeriod = config15.validators_elected_for
         rounds = 365 * 24 * 3600 / roundPeriod
-        yearInterest = (1 + percent_per_round / 100) * rounds  # pyright: ignore[reportOptionalOperand]
+        yearInterest = (1 + percent / 100) * rounds
         yearInterestPercent = round(yearInterest / 100, 2)
         print("roundPeriod", roundPeriod)
         print("rounds", rounds)
-        print("percentPerRound", percent_per_round)
+        print("percentPerRound", percent)
         print("yearInterest", yearInterest)
         print(f"yearInterestPercent: {yearInterestPercent}%")
 
