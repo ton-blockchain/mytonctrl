@@ -93,7 +93,7 @@ class BackupModule(MtcModule):
         filename: str,
         *,
         yes: Annotated[bool, Arg("-y", help="do not ask for confirmation")] = False,
-        skip_create_backup: bool = False,
+        skip_create_backup: Annotated[bool, Arg("-s", help="skip creation of backup")] = False,
         user: Annotated[Optional[str], Arg("-u", help="owner of the restored files (default: current user)")] = None,
     ) -> None:
         if not yes:

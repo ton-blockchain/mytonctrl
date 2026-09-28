@@ -83,6 +83,7 @@ FORMS = [
     ("restore_backup f.tar.gz -y", {"filename": "f.tar.gz", "yes": True, "skip_create_backup": False}),
     ("restore_backup f.tar.gz -y --skip-create-backup -u user",
      {"filename": "f.tar.gz", "yes": True, "skip_create_backup": True, "user": "user"}),
+    ("restore_backup f.tar.gz -s", {"filename": "f.tar.gz", "skip_create_backup": True}),
     ("add_custom_overlay my_overlay /tmp/overlay.json", {"name": "my_overlay", "path_to_config": "/tmp/overlay.json"}),
     ("list_custom_overlays", {}),
     ("delete_custom_overlay my_overlay", {"name": "my_overlay"}),

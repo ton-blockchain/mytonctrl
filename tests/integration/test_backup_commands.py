@@ -197,7 +197,7 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
 
     # bad args
     output = cli.execute("restore_backup", no_color=True)
-    assert "usage: restore_backup [-h] [-y] [--skip-create-backup] [-u USER] filename" in output
+    assert "usage: restore_backup [-h] [-y] [-s] [-u USER] filename" in output
     assert "restore_backup: error: the following arguments are required: filename" in output
     output = cli.execute("restore_backup backup.tar.gz other.tar.gz", no_color=True)
     assert "restore_backup: error: unrecognized arguments: other.tar.gz" in output
