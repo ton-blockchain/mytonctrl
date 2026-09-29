@@ -44,7 +44,7 @@ class CustomOverlayModule(MtcModule):
                 node = {"adnl_id": hex2base64(k)}
                 if "block_sender" in v:
                     node["block_sender"] = v["block_sender"]
-                elif "msg_sender" in v:
+                if "msg_sender" in v:
                     node["msg_sender"] = v["msg_sender"]
                     if v["msg_sender"]:
                         node["msg_sender_priority"] = v["msg_sender_priority"]

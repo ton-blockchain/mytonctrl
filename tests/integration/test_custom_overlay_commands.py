@@ -118,6 +118,17 @@ def test_parse_config_accept_queries_with_msg_sender(overlay_module):
     }]
 
 
+def test_parse_config_block_sender_with_msg_sender(overlay_module):
+    config = {STATIC_NODE_HEX: {"block_sender": False, "msg_sender": True, "msg_sender_priority": 2}}
+    result = overlay_module.parse_config("o", config)
+    assert result["nodes"] == [{
+        "adnl_id": hex2base64(STATIC_NODE_HEX),
+        "block_sender": False,
+        "msg_sender": True,
+        "msg_sender_priority": 2,
+    }]
+
+
 def test_parse_config_send_queries_omitted_when_absent(overlay_module):
     config = {STATIC_NODE_HEX: {"msg_sender": True, "msg_sender_priority": 1}}
     result = overlay_module.parse_config("o", config)
