@@ -675,3 +675,48 @@ def test_getconfig36(ton: MyTonCore, monkeypatch):
     monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
     cfg = ton.get_config_36()
     assert cfg is None
+
+
+# --- get_destination_addr: how `mg` / `mgtp` resolve <destination> ------------
+
+_RAW_ADDR = '0:' + '55' * 32
+_B64_BOUNCEABLE = 'EQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUMv'
+_B64_NON_BOUNCEABLE = 'UQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVR7q'
+
+
+@pytest.mark.parametrize('addr', [_B64_BOUNCEABLE, _B64_NON_BOUNCEABLE])
+def test_get_destination_addr_returns_b64_address_unchanged(ton: MyTonCore, monkeypatch, addr):
+    monkeypatch.setattr(ton, 'GetWalletsNameList', lambda: pytest.fail('a b64 address is not a wallet name'))
+
+    assert ton.get_destination_addr(addr) == addr
+
+
+def test_get_destination_addr_converts_raw_address_to_bounceable_b64(ton: MyTonCore, monkeypatch):
+    monkeypatch.setattr(ton, 'GetWalletsNameList', lambda: pytest.fail('a raw address is not a wallet name'))
+
+    result = ton.get_destination_addr(_RAW_ADDR)
+
+    assert result == _B64_BOUNCEABLE
+    assert result == raw_addr_to_b64(_RAW_ADDR)
+    assert ton.IsBounceableAddrB64(result) is True
+
+
+def test_get_destination_addr_resolves_local_wallet_name(ton: MyTonCore, monkeypatch):
+    requested = []
+
+    def fake_get_local_wallet(name, version=None, subwallet=None):
+        requested.append((name, version, subwallet))
+        return types.SimpleNamespace(addrB64='ALICE_ADDR_B64')
+
+    monkeypatch.setattr(ton, 'GetWalletsNameList', lambda: ['alice', 'bob'])
+    monkeypatch.setattr(ton, 'GetLocalWallet', fake_get_local_wallet)
+
+    assert ton.get_destination_addr('alice') == 'ALICE_ADDR_B64'
+    assert requested == [('alice', None, None)]
+
+
+def test_get_destination_addr_returns_unknown_name_unchanged(ton: MyTonCore, monkeypatch):
+    monkeypatch.setattr(ton, 'GetWalletsNameList', lambda: ['alice', 'bob'])
+    monkeypatch.setattr(ton, 'GetLocalWallet', lambda *a, **kw: pytest.fail('carol is not a local wallet'))
+
+    assert ton.get_destination_addr('carol') == 'carol'

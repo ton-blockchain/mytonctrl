@@ -382,6 +382,8 @@ def test_mg(cli, ton, monkeypatch, mocker: MockerFixture):
     assert "mg: error: unrecognized arguments: -Some flags" in output
     output = cli.execute("mg wallet1 dest_addr 10 -x 1", no_color=True)
     assert "mg: error: unrecognized arguments: -x 1" in output
+    output = cli.execute("mg wallet1 dest_addr 10 extra", no_color=True)
+    assert "mg: error: unrecognized arguments: extra" in output
     get_local_wallet_mock.assert_not_called()
     get_destination_addr_mock.assert_not_called()
     move_coins_mock.assert_not_called()
