@@ -317,13 +317,8 @@ class MyTonCore:
 		result.reverse()
 		return result
 
-	def GetLocalWallet(self, wallet_name: str, version=None, subwallet=None) -> Wallet:
-		walletPath = self.walletsDir + wallet_name
-		if version and "h" in version:
-			wallet = self.GetHighWalletFromFile(walletPath, subwallet, version)
-		else:
-			wallet = self.GetWalletFromFile(walletPath, version)
-		return wallet
+	def GetLocalWallet(self, wallet_name: str, version=None) -> Wallet:
+		return self.GetWalletFromFile(self.walletsDir + wallet_name, version)
 
 	def GetWalletFromFile(self, filePath, version):
 		# Check input args
@@ -337,21 +332,6 @@ class MyTonCore:
 		# Create wallet object
 		walletName = filePath[filePath.rfind('/')+1:]
 		wallet = Wallet.from_file(walletName, filePath, version)
-		self.WalletVersion2Wallet(wallet)
-		return wallet
-
-	def GetHighWalletFromFile(self, filePath, subwallet, version):
-		# Check input args
-		if (".addr" in filePath):
-			filePath = filePath.replace(".addr", '')
-		if (".pk" in filePath):
-			filePath = filePath.replace(".pk", '')
-		if not os.path.isfile(filePath + ".pk"):
-			raise Exception("GetHighWalletFromFile error: Private key not found: " + filePath)
-
-		# Create wallet object
-		walletName = filePath[filePath.rfind('/')+1:]
-		wallet = Wallet.from_file(walletName, filePath, version, subwallet)
 		self.WalletVersion2Wallet(wallet)
 		return wallet
 

@@ -217,21 +217,21 @@ def test_getwalletfromfile_requires_pk(ton: MyTonCore):
         ton.GetLocalWallet(name, version='v2')
 
 
-def test_gethighwalletfromfile(ton: MyTonCore):
-    name = 'hw1'
-    sub = 777
+def test_getlocalwallet_reads_the_same_files_for_every_version(ton: MyTonCore):
+    # there is no separate highload path any more: <name>.addr / <name>.pk, whatever the version label
+    name = 'w_any'
     addr_hex = 'EF' * 32
-    workchain = -1
     pk_path = os.path.join(ton.walletsDir, f'{name}.pk')
-    addr_path = os.path.join(ton.walletsDir, f'{name}{sub}.addr')
+    addr_path = os.path.join(ton.walletsDir, f'{name}.addr')
     open(pk_path, 'wb').close()
-    _write_addr_file(addr_path, addr_hex, workchain)
+    _write_addr_file(addr_path, addr_hex, -1)
 
-    w = ton.GetLocalWallet(name, version='hv1', subwallet=sub)
-    assert w.subwallet == sub and w.version == 'hv1'
-    assert w.addr.lower() == addr_hex.lower() and w.workchain == workchain
-    assert w.addrFilePath.endswith(f'{name}{sub}.addr')
-    assert w.bocFilePath.endswith(f'{name}{sub}-query.boc')
+    for version in ('v1', 'v3r2', 'hv1'):
+        w = ton.GetLocalWallet(name, version=version)
+        assert w.version == version and w.subwallet is None
+        assert w.addr.lower() == addr_hex.lower() and w.workchain == -1
+        assert w.addrFilePath.endswith(f'{name}.addr')
+        assert w.bocFilePath.endswith(f'{name}-query.boc')
 
 
 def test_getlocalwallet_version(ton: MyTonCore, monkeypatch):
