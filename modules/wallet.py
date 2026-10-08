@@ -163,13 +163,13 @@ class WalletModule(MtcModule):
 
     @staticmethod
     def get_new_wallet_fift_args(version: str, workchain: int, wallet_path: str, subwallet: int) -> list[str]:
-        if "v1" in version:
+        if version.startswith("v1"):
             fift_script = "new-wallet.fif"
             args = [fift_script, workchain, wallet_path]
-        elif "v2" in version:
+        elif version.startswith("v2"):
             fift_script = "new-wallet-v2.fif"
             args = [fift_script, workchain, wallet_path]
-        elif "v3" in version:
+        elif version.startswith("v3"):
             fift_script = "new-wallet-v3.fif"
             args = [fift_script, workchain, subwallet, wallet_path]
         else:
@@ -204,7 +204,8 @@ class WalletModule(MtcModule):
     def do_move_coins(self, wallet: Wallet, dest: str, coins: float | str, flags: list | None = None, timeout: int = 30, subwallet: int | None = None):
         if flags is None:
             flags = []
-        if "v3" in wallet.version and subwallet is None:
+        version = wallet.version or ""
+        if version.startswith("v3") and subwallet is None:
             subwallet = self._get_wallet_id(wallet)
         if coins == "all":
             mode = 130
@@ -232,17 +233,17 @@ class WalletModule(MtcModule):
 
         seqno = str(self.ton.get_seqno(wallet))
         result_file_path = self.local.my_temp_dir + wallet.name + "_wallet-query"
-        if "v1" in wallet.version:
+        if version.startswith("v1"):
             fift_script = "wallet.fif"
             args = [fift_script, wallet.path, dest, seqno, str(coins), "-m", str(mode), result_file_path]
-        elif "v2" in wallet.version:
+        elif version.startswith("v2"):
             fift_script = "wallet-v2.fif"
             args = [fift_script, wallet.path, dest, seqno, str(coins), "-m", str(mode), result_file_path]
-        elif "v3" in wallet.version:
+        elif version.startswith("v3"):
             fift_script = "wallet-v3.fif"
             args = [fift_script, wallet.path, dest, str(subwallet), seqno, str(coins), "-m", str(mode), result_file_path]
         else:
-            raise Exception(f"MoveCoins error: Wallet version '{wallet.version}' is not supported")
+            raise Exception(f"MoveCoins error: Wallet version {wallet.version!r} is not supported")
         if flags:
             args += flags
         result = self.ton.fift.run(args)

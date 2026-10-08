@@ -270,6 +270,39 @@ def test_do_move_coins_unsupported_wallet_version_raises(ton: MyTonCore, module:
     assert calls['send'] == []
 
 
+def test_do_move_coins_highload_wallet_is_not_supported(ton: MyTonCore, module: WalletModule, monkeypatch):
+    # "hv1" contains "v1": a substring match used to pick wallet.fif for a highload wallet
+    wallet = _transfer_wallet('hv1')
+    calls = _patch_transfer(ton, monkeypatch, _account())
+
+    with pytest.raises(Exception, match="Wallet version 'hv1' is not supported"):
+        module.do_move_coins(wallet, _DEST, 1.0)
+
+    assert calls['fift'] == []
+    assert calls['send'] == []
+
+
+def test_do_move_coins_unknown_wallet_version_is_not_supported(ton: MyTonCore, module: WalletModule, monkeypatch):
+    wallet = _transfer_wallet(None)
+    calls = _patch_transfer(ton, monkeypatch, _account())
+
+    with pytest.raises(Exception, match="Wallet version None is not supported"):
+        module.do_move_coins(wallet, _DEST, 1.0)
+
+    assert calls['fift'] == []
+
+
+@pytest.mark.parametrize("version, script", [("v1", "new-wallet.fif"), ("v1r3", "new-wallet.fif"), ("v2r2", "new-wallet-v2.fif"), ("v3", "new-wallet-v3.fif"), ("v3r2", "new-wallet-v3.fif")])
+def test_get_new_wallet_fift_args_picks_the_script_by_version_prefix(version, script):
+    assert WalletModule.get_new_wallet_fift_args(version, 0, "/w/x", 7)[0] == script
+
+
+@pytest.mark.parametrize("version", ["hv1", "v4", "unknown"])
+def test_get_new_wallet_fift_args_rejects_other_versions(version):
+    with pytest.raises(Exception, match=f"fift script for `{version}` not found"):
+        WalletModule.get_new_wallet_fift_args(version, 0, "/w/x", 7)
+
+
 def test_do_move_coins_insufficient_balance_raises_before_fift(ton: MyTonCore, module: WalletModule, monkeypatch):
     wallet = _transfer_wallet()
     sender_acc = _account(balance=1.0)

@@ -806,13 +806,14 @@ class MyTonCore:
 
 		seqno = str(self.get_seqno(wallet))
 		result_file_path = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
-		if "v1" in wallet.version:
+		version = wallet.version or ""
+		if version.startswith("v1"):
 			fift_script = "wallet.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
-		elif "v2" in wallet.version:
+		elif version.startswith("v2"):
 			fift_script = "wallet-v2.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
-		elif "v3" in wallet.version:
+		elif version.startswith("v3"):
 			if wallet.subwallet is None:
 				subwallet = str(698983191 + wallet.workchain)  # 0x29A9A317 + workchain
 			else:

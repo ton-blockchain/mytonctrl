@@ -425,9 +425,10 @@ def test_sign_boc_with_wallet_bounceable_inactive_raises(ton: MyTonCore, monkeyp
     assert "non-bounceable" in str(e.value)
 
 
-def test_sign_boc_with_wallet_unsupported_version_raises(ton: MyTonCore, monkeypatch, tmp_path):
+@pytest.mark.parametrize("version", ["unknown", "hv1", None])
+def test_sign_boc_with_wallet_unsupported_version_raises(ton: MyTonCore, monkeypatch, tmp_path, version):
     wallet, dest_account = _setup_sign_boc_wallet(
-        ton, monkeypatch, tmp_path, version="unknown", bounceable=True, dest_status="active"
+        ton, monkeypatch, tmp_path, version=version, bounceable=True, dest_status="active"
     )
     monkeypatch.setattr(ton.fift, 'run', lambda args: "should not run")
     with pytest.raises(Exception) as e:
