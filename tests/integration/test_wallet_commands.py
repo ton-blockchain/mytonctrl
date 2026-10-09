@@ -17,13 +17,12 @@ BAD_ADDR_ERROR = "argument wallet_addr: expected a TON address (in user-friendly
 def test_nw(cli, ton, monkeypatch):
     created_wallet = Dict()
 
-    def fake_create_wallet(self, wallet_name, workchain, version, subwallet):
+    def fake_create_wallet(self, wallet_name, workchain, version):
         nonlocal created_wallet
         wallet = Dict()
         wallet.name = wallet_name
         wallet.workchain = workchain
         wallet.version = version
-        wallet.subwallet = subwallet
         wallet.addrB64 = "test"
         wallet.addrB64_init = "test_init"
         created_wallet = wallet
@@ -38,7 +37,6 @@ def test_nw(cli, ton, monkeypatch):
     assert created_wallet.name == "wallet_001"
     assert created_wallet.workchain == 0
     assert created_wallet.addrB64 == "test"
-    assert created_wallet.subwallet == 698983191
     assert output.splitlines()[1].split() == ["wallet_001", "0", "test_init"]
 
     # provide workchain and wallet name
@@ -48,7 +46,6 @@ def test_nw(cli, ton, monkeypatch):
     assert created_wallet.name == "my_wallet"
     assert created_wallet.workchain == -1
     assert created_wallet.version == "v1"
-    assert created_wallet.subwallet == 698983190  # 698983191 + (-1)
     assert output.splitlines()[1].split() == ["my_wallet", "-1", "test_init"]
 
     # provide workchain, wallet name, version
@@ -58,17 +55,15 @@ def test_nw(cli, ton, monkeypatch):
     assert created_wallet.name == "test_wallet"
     assert created_wallet.workchain == 0
     assert created_wallet.version == "v3"
-    assert created_wallet.subwallet == 698983191
     assert output.splitlines()[1].split() == ["test_wallet", "0", "test_init"]
 
-    # provide workchain, wallet name, version, subwallet
+    # a version with a revision
     created_wallet = Dict()
-    output = cli.execute("nw 0 full_wallet v3r2 12345", no_color=True)
+    output = cli.execute("nw 0 full_wallet v3r2", no_color=True)
 
     assert created_wallet.name == "full_wallet"
     assert created_wallet.workchain == 0
     assert created_wallet.version == "v3r2"
-    assert created_wallet.subwallet == 12345
     assert output.splitlines()[1].split() == ["full_wallet", "0", "test_init"]
 
     # Bad args
@@ -76,10 +71,10 @@ def test_nw(cli, ton, monkeypatch):
     output = cli.execute("nw 0", no_color=True)
     assert "nw: error: workchain_id and wallet_name must be given together" in output
     output = cli.execute("nw abc my_wallet", no_color=True)
-    assert "usage: nw [-h] [workchain_id] [wallet_name] [version] [subwallet_id]" in output
+    assert "usage: nw [-h] [workchain_id] [wallet_name] [version]" in output
     assert "nw: error: argument workchain_id: invalid int value: 'abc'" in output
-    output = cli.execute("nw 0 my_wallet v3 1 extra", no_color=True)
-    assert "nw: error: unrecognized arguments: extra" in output
+    output = cli.execute("nw 0 my_wallet v3 1001", no_color=True)
+    assert "nw: error: unrecognized arguments: 1001" in output
     output = cli.execute("nw 0 my_wallet hv1", no_color=True)
     assert "nw: error: argument version: expected a wallet version v1, v2 or v3, optionally with a revision like v3r2, got 'hv1'" in output
     assert not created_wallet

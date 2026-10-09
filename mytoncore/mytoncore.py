@@ -19,6 +19,7 @@ import requests
 from modules import MODES
 from mytoncore.stats_collector import StatsCollector
 from mytoncore.utils import (
+    wallet_v3_subwallet_id,
     b642hex,
     xhex2hex,
     ng2g,
@@ -794,10 +795,7 @@ class MyTonCore:
 			fift_script = "wallet-v2.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
 		elif version.startswith("v3"):
-			if wallet.subwallet is None:
-				subwallet = str(698983191 + wallet.workchain)  # 0x29A9A317 + workchain
-			else:
-				subwallet = str(wallet.subwallet)
+			subwallet = str(wallet_v3_subwallet_id(wallet.workchain))
 			fift_script = "wallet-v3.fif"
 			args = [fift_script, wallet.path, dest, subwallet, seqno, coins, boc_mode, boc_path, result_file_path]
 		else:

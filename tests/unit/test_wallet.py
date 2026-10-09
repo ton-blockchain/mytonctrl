@@ -70,7 +70,7 @@ def test_create_wallet(ton: MyTonCore, module: WalletModule, monkeypatch, tmp_pa
     if os.path.isfile(wallet_path + '.addr'):
         os.remove(wallet_path + '.addr')
     wallet_obj = types.SimpleNamespace(addrB64='ADDR', name=name)
-    monkeypatch.setattr(module, 'get_new_wallet_fift_args', lambda version, workchain, wallet_path, subwallet: ['script.fif'])
+    monkeypatch.setattr(module, 'get_new_wallet_fift_args', lambda version, workchain, wallet_path: ['script.fif'])
     monkeypatch.setattr(ton.fift, 'run', lambda args: '... Creating new wallet ...')
     monkeypatch.setattr(ton, 'GetLocalWallet', lambda n, version='v1': wallet_obj)
     called = {}
@@ -165,7 +165,6 @@ def test_do_move_coins(ton: MyTonCore, module: WalletModule, monkeypatch, tmp_pa
     monkeypatch.setattr(ton, 'GetAccount', lambda arg: wallet_acc if arg == wallet.addrB64 else dest_acc)
     monkeypatch.setattr(ton, 'IsBounceableAddrB64', lambda *_: True)  # avoid -b assert dependency
     monkeypatch.setattr(ton, 'get_seqno', lambda *_: 8)
-    monkeypatch.setattr(module, '_get_wallet_id', lambda w: 777)
 
     captured = {}
     monkeypatch.setattr(ton.fift, 'run', lambda args: captured.setdefault('args', args) and '... Saved to file /tmp/file_v3.boc)')
@@ -177,25 +176,10 @@ def test_do_move_coins(ton: MyTonCore, module: WalletModule, monkeypatch, tmp_pa
     # args layout: [script, wallet.path, dest, subwallet, seqno, coins, '-m', mode, resultFile]
     args = captured['args']
     assert args[0] == 'wallet-v3.fif'
-    assert args[3] == '777' and args[4] == '8'  # subwallet and seqno
+    assert args[3] == '698983191' and args[4] == '8'  # default subwallet for workchain 0, seqno
     assert args[5] == '0'  # coins for 'all'
     assert '-m' in args and '130' in args # mode 130 for 'all'
     assert sent['x'][0] == '/tmp/file_v3.boc' and sent['x'][2] == 11
-
-
-def test_get_wallet_id(ton: MyTonCore, module: WalletModule, monkeypatch):
-    w = types.SimpleNamespace(workchain=0, addrB64='EQD...')
-
-    # success parse
-    output = '\nresult:  [ 777 ]\n'
-    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: output)
-    assert module._get_wallet_id(w) == 777
-
-    # error or missing -> default
-    w2 = types.SimpleNamespace(workchain=-1, addrB64='EQC...')
-    output2 = '\nerror: cannot run method\n'
-    monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: output2)
-    assert module._get_wallet_id(w2) == 698983190  # 698983191 + (-1)
 
 
 # --- do_move_coins: the fift argv behind `mg` ---------------------------------
@@ -249,7 +233,6 @@ def test_do_move_coins_alld_sends_zero_coins_with_mode_160(ton: MyTonCore, modul
 def test_do_move_coins_v2_wallet_uses_wallet_v2_fif_without_subwallet(ton: MyTonCore, module: WalletModule, monkeypatch):
     wallet = _transfer_wallet('v2r2')
     calls = _patch_transfer(ton, monkeypatch, _account())
-    monkeypatch.setattr(module, '_get_wallet_id', lambda w: pytest.fail('subwallet is only for v3 wallets'))
 
     module.do_move_coins(wallet, _DEST, 1.5)
 
@@ -294,13 +277,18 @@ def test_do_move_coins_unknown_wallet_version_is_not_supported(ton: MyTonCore, m
 
 @pytest.mark.parametrize("version, script", [("v1", "new-wallet.fif"), ("v1r3", "new-wallet.fif"), ("v2r2", "new-wallet-v2.fif"), ("v3", "new-wallet-v3.fif"), ("v3r2", "new-wallet-v3.fif")])
 def test_get_new_wallet_fift_args_picks_the_script_by_version_prefix(version, script):
-    assert WalletModule.get_new_wallet_fift_args(version, 0, "/w/x", 7)[0] == script
+    assert WalletModule.get_new_wallet_fift_args(version, 0, "/w/x")[0] == script
+
+
+@pytest.mark.parametrize("workchain, subwallet", [(0, "698983191"), (-1, "698983190")])
+def test_get_new_wallet_fift_args_v3_uses_the_default_subwallet_for_the_workchain(workchain, subwallet):
+    assert WalletModule.get_new_wallet_fift_args("v3", workchain, "/w/x") == ["new-wallet-v3.fif", str(workchain), subwallet, "/w/x"]
 
 
 @pytest.mark.parametrize("version", ["hv1", "v4", "unknown"])
 def test_get_new_wallet_fift_args_rejects_other_versions(version):
     with pytest.raises(Exception, match=f"fift script for `{version}` not found"):
-        WalletModule.get_new_wallet_fift_args(version, 0, "/w/x", 7)
+        WalletModule.get_new_wallet_fift_args(version, 0, "/w/x")
 
 
 def test_do_move_coins_insufficient_balance_raises_before_fift(ton: MyTonCore, module: WalletModule, monkeypatch):

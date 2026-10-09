@@ -228,7 +228,7 @@ def test_getlocalwallet_reads_the_same_files_for_every_version(ton: MyTonCore):
 
     for version in ('v1', 'v3r2', 'hv1'):
         w = ton.GetLocalWallet(name, version=version)
-        assert w.version == version and w.subwallet is None
+        assert w.version == version
         assert w.addr.lower() == addr_hex.lower() and w.workchain == -1
         assert w.addrFilePath.endswith(f'{name}.addr')
         assert w.bocFilePath.endswith(f'{name}-query.boc')
@@ -705,15 +705,15 @@ def test_get_destination_addr_converts_raw_address_to_bounceable_b64(ton: MyTonC
 def test_get_destination_addr_resolves_local_wallet_name(ton: MyTonCore, monkeypatch):
     requested = []
 
-    def fake_get_local_wallet(name, version=None, subwallet=None):
-        requested.append((name, version, subwallet))
+    def fake_get_local_wallet(name, version=None):
+        requested.append((name, version))
         return types.SimpleNamespace(addrB64='ALICE_ADDR_B64')
 
     monkeypatch.setattr(ton, 'GetWalletsNameList', lambda: ['alice', 'bob'])
     monkeypatch.setattr(ton, 'GetLocalWallet', fake_get_local_wallet)
 
     assert ton.get_destination_addr('alice') == 'ALICE_ADDR_B64'
-    assert requested == [('alice', None, None)]
+    assert requested == [('alice', None)]
 
 
 def test_get_destination_addr_returns_unknown_name_unchanged(ton: MyTonCore, monkeypatch):
