@@ -1,7 +1,7 @@
 import json
 import os
 import time
-from typing import Optional, Union
+from typing import Optional
 
 from mypylib.mypylib import color_print, print_table
 from mytonctrl.argtypes import TonAddress
@@ -100,7 +100,7 @@ class ControllerModule(MtcModule):
     def withdraw_from_controller(
         self,
         controller_addr: TonAddress,
-        amount: Annotated[Optional[str], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
+        amount: Annotated[Optional[float], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
     ) -> None:
         self.ton.WithdrawFromController(controller_addr, amount)
 
@@ -148,14 +148,13 @@ class ControllerModule(MtcModule):
     def stop_and_withdraw_controller(
         self,
         controller_addr: TonAddress,
-        amount: Annotated[Optional[str], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
+        amount: Annotated[Optional[float], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
     ) -> None:
-        withdraw_amount: Union[str, float, None] = amount
-        if withdraw_amount is None:
+        if amount is None:
             account = self.ton.GetAccount(controller_addr)
-            withdraw_amount = account.balance - 10.1
+            amount = account.balance - 10.1
         self.do_stop_controller(controller_addr)
-        self.ton.WithdrawFromController(controller_addr, withdraw_amount)
+        self.ton.WithdrawFromController(controller_addr, amount)
         color_print("StopAndWithdrawController - {green}OK{endc}")
 
     def do_add_controller(self, controller_addr):

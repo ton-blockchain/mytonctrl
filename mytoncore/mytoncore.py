@@ -2743,14 +2743,14 @@ class MyTonCore:
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.05)
 		self.SendFile(resultFilePath, wallet)
 
-	def WithdrawFromController(self, controllerAddr, amount=None):
+	def WithdrawFromController(self, controllerAddr: str, amount: float | None = None):
 		controllerData = self.GetControllerData(controllerAddr)
 		if controllerData["state"] == 0:
 			self.WithdrawFromControllerProcess(controllerAddr, amount)
 		else:
 			self.PendWithdrawFromController(controllerAddr, amount)
 
-	def WithdrawFromControllerProcess(self, controllerAddr, amount):
+	def WithdrawFromControllerProcess(self, controllerAddr: str, amount: float | None):
 		if amount is None:
 			account = self.GetAccount(controllerAddr)
 			amount = account.balance-10.1
@@ -2766,7 +2766,7 @@ class MyTonCore:
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, controllerAddr, 1.06)
 		self.SendFile(resultFilePath, wallet)
 
-	def PendWithdrawFromController(self, controllerAddr, amount):
+	def PendWithdrawFromController(self, controllerAddr: str, amount: float | None):
 		self.local.add_log("start PendWithdrawFromController function", "debug")
 		controllerPendingWithdraws = self.GetControllerPendingWithdraws()
 		controllerPendingWithdraws[controllerAddr] = amount

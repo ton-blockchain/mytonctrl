@@ -316,9 +316,9 @@ def test_withdraw_from_controller(cli, monkeypatch, mocker: MockerFixture):
     assert f"withdraw_from_controller: error: {BAD_ADDR_ERROR}" in output
     withdraw_mock.assert_not_called()
 
-    # with amount: passed on as the raw string
+    # with amount: converted to float
     output = cli.execute(f"withdraw_from_controller {CONTROLLER_0} 50", no_color=True)
-    withdraw_mock.assert_called_once_with(CONTROLLER_0, "50")
+    withdraw_mock.assert_called_once_with(CONTROLLER_0, 50.0)
     assert output.strip() == ""  # no confirmation line is printed
 
     # without amount: None (MyTonCore then withdraws the whole balance)
@@ -326,10 +326,11 @@ def test_withdraw_from_controller(cli, monkeypatch, mocker: MockerFixture):
     cli.execute(f"withdraw_from_controller {CONTROLLER_0}", no_color=True)
     withdraw_mock.assert_called_once_with(CONTROLLER_0, None)
 
-    # wrong amount: not validated by the handler
+    # wrong amount: a usage error, nothing is withdrawn
     withdraw_mock.reset_mock()
-    cli.execute(f"withdraw_from_controller {CONTROLLER_0} abc", no_color=True)
-    withdraw_mock.assert_called_once_with(CONTROLLER_0, "abc")
+    output = cli.execute(f"withdraw_from_controller {CONTROLLER_0} abc", no_color=True)
+    assert "withdraw_from_controller: error: argument amount: invalid float value: 'abc'" in output
+    withdraw_mock.assert_not_called()
 
 
 def test_withdraw_from_controller_idle(cli, ton, monkeypatch, mocker: MockerFixture,
@@ -344,11 +345,11 @@ def test_withdraw_from_controller_idle(cli, ton, monkeypatch, mocker: MockerFixt
     script = ton.contractsDir + "jetton_pool/fift-scripts/withdraw-controller.fif"
     request_boc = ton.tempDir + "wallet_001_withdraw_request.boc"
 
-    # with amount: the raw string goes to fift
+    # with amount: the float goes to fift
     cli.execute(f"withdraw_from_controller {CONTROLLER_0} 50", no_color=True)
     get_controller_data_mock.assert_called_once_with(CONTROLLER_0)
     get_account_mock.assert_not_called()
-    fift_run_mock.assert_called_once_with([script, "50", request_boc])
+    fift_run_mock.assert_called_once_with([script, 50.0, request_boc])
     sign_boc_mock.assert_called_once_with(validator_wallet, request_boc, CONTROLLER_0, 1.06)
     send_file_mock.assert_called_once_with(request_boc + ".signed", validator_wallet)
 
@@ -371,11 +372,17 @@ def test_withdraw_from_controller_idle(cli, ton, monkeypatch, mocker: MockerFixt
     fift_run_mock.assert_not_called()
     send_file_mock.assert_not_called()
 
-    # wrong amount: int() of the raw string fails, so fractional amounts fail too
+    # fractional amounts work: the amount is a float, not the raw string int() choked on
     output = cli.execute(f"withdraw_from_controller {CONTROLLER_0} 5.5", no_color=True)
-    assert "invalid literal for int() with base 10: '5.5'" in output
+    assert output.strip() == ""
+    fift_run_mock.assert_called_once_with([script, 5.5, request_boc])
+    send_file_mock.assert_called_once()
+
+    # wrong amount: a usage error
+    fift_run_mock.reset_mock()
+    send_file_mock.reset_mock()
     output = cli.execute(f"withdraw_from_controller {CONTROLLER_0} abc", no_color=True)
-    assert "invalid literal for int() with base 10: 'abc'" in output
+    assert "withdraw_from_controller: error: argument amount: invalid float value: 'abc'" in output
     fift_run_mock.assert_not_called()
     send_file_mock.assert_not_called()
 
@@ -388,11 +395,9 @@ def test_withdraw_from_controller_staking(cli, ton, monkeypatch, mocker: MockerF
 
     cli.execute(f"withdraw_from_controller {CONTROLLER_0} 50", no_color=True)
     cli.execute(f"withdraw_from_controller {CONTROLLER_1}", no_color=True)
-    cli.execute(f"withdraw_from_controller {CONTROLLER_2} abc", no_color=True)
     assert ton.local.db["controllerPendingWithdraws"] == {
-        CONTROLLER_0: "50",
+        CONTROLLER_0: 50.0,
         CONTROLLER_1: None,
-        CONTROLLER_2: "abc",
     }
     fift_run_mock.assert_not_called()
     send_file_mock.assert_not_called()
@@ -503,11 +508,11 @@ def test_stop_and_withdraw_controller(cli, ton, monkeypatch, mocker: MockerFixtu
     withdraw_mock.assert_not_called()
     assert "stop_controllers_list" not in ton.local.db
 
-    # with amount: controller is stopped, the raw amount string is withdrawn
+    # with amount: controller is stopped, the amount is withdrawn
     ton.local.db["user_controllers"] = [CONTROLLER_0]
     output = cli.execute(f"stop_and_withdraw_controller {CONTROLLER_0} 50", no_color=True)
     assert "StopAndWithdrawController - OK" in output
-    withdraw_mock.assert_called_once_with(CONTROLLER_0, "50")
+    withdraw_mock.assert_called_once_with(CONTROLLER_0, 50.0)
     get_account_mock.assert_not_called()
     assert ton.local.db["stop_controllers_list"] == [CONTROLLER_0]
     assert ton.local.db["user_controllers"] == []
@@ -520,12 +525,12 @@ def test_stop_and_withdraw_controller(cli, ton, monkeypatch, mocker: MockerFixtu
     withdraw_mock.assert_called_once_with(CONTROLLER_1, 1000 - 10.1)
     assert ton.local.db["stop_controllers_list"] == [CONTROLLER_0, CONTROLLER_1]
 
-    # wrong amount: not validated, the controller is stopped and the string passed on
+    # wrong amount: a usage error before the handler runs, the controller is not stopped
     withdraw_mock.reset_mock()
     output = cli.execute(f"stop_and_withdraw_controller {CONTROLLER_2} abc", no_color=True)
-    assert "StopAndWithdrawController - OK" in output
-    withdraw_mock.assert_called_once_with(CONTROLLER_2, "abc")
-    assert ton.local.db["stop_controllers_list"] == [CONTROLLER_0, CONTROLLER_1, CONTROLLER_2]
+    assert "stop_and_withdraw_controller: error: argument amount: invalid float value: 'abc'" in output
+    withdraw_mock.assert_not_called()
+    assert ton.local.db["stop_controllers_list"] == [CONTROLLER_0, CONTROLLER_1]
 
 
 def test_add_controller(cli, ton):
