@@ -19,6 +19,7 @@ import requests
 from modules import MODES
 from mytoncore.stats_collector import StatsCollector
 from mytoncore.utils import (
+    wallet_v3_subwallet_id,
     b642hex,
     xhex2hex,
     ng2g,
@@ -317,13 +318,8 @@ class MyTonCore:
 		result.reverse()
 		return result
 
-	def GetLocalWallet(self, wallet_name: str, version=None, subwallet=None) -> Wallet:
-		walletPath = self.walletsDir + wallet_name
-		if version and "h" in version:
-			wallet = self.GetHighWalletFromFile(walletPath, subwallet, version)
-		else:
-			wallet = self.GetWalletFromFile(walletPath, version)
-		return wallet
+	def GetLocalWallet(self, wallet_name: str, version=None) -> Wallet:
+		return self.GetWalletFromFile(self.walletsDir + wallet_name, version)
 
 	def GetWalletFromFile(self, filePath, version):
 		# Check input args
@@ -337,21 +333,6 @@ class MyTonCore:
 		# Create wallet object
 		walletName = filePath[filePath.rfind('/')+1:]
 		wallet = Wallet.from_file(walletName, filePath, version)
-		self.WalletVersion2Wallet(wallet)
-		return wallet
-
-	def GetHighWalletFromFile(self, filePath, subwallet, version):
-		# Check input args
-		if (".addr" in filePath):
-			filePath = filePath.replace(".addr", '')
-		if (".pk" in filePath):
-			filePath = filePath.replace(".pk", '')
-		if not os.path.isfile(filePath + ".pk"):
-			raise Exception("GetHighWalletFromFile error: Private key not found: " + filePath)
-
-		# Create wallet object
-		walletName = filePath[filePath.rfind('/')+1:]
-		wallet = Wallet.from_file(walletName, filePath, version, subwallet)
 		self.WalletVersion2Wallet(wallet)
 		return wallet
 
@@ -806,17 +787,15 @@ class MyTonCore:
 
 		seqno = str(self.get_seqno(wallet))
 		result_file_path = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
-		if "v1" in wallet.version:
+		version = wallet.version or ""
+		if version.startswith("v1"):
 			fift_script = "wallet.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
-		elif "v2" in wallet.version:
+		elif version.startswith("v2"):
 			fift_script = "wallet-v2.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
-		elif "v3" in wallet.version:
-			if wallet.subwallet is None:
-				subwallet = str(698983191 + wallet.workchain)  # 0x29A9A317 + workchain
-			else:
-				subwallet = str(wallet.subwallet)
+		elif version.startswith("v3"):
+			subwallet = str(wallet_v3_subwallet_id(wallet.workchain))
 			fift_script = "wallet-v3.fif"
 			args = [fift_script, wallet.path, dest, subwallet, seqno, coins, boc_mode, boc_path, result_file_path]
 		else:
@@ -2764,14 +2743,14 @@ class MyTonCore:
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.05)
 		self.SendFile(resultFilePath, wallet)
 
-	def WithdrawFromController(self, controllerAddr, amount=None):
+	def WithdrawFromController(self, controllerAddr: str, amount: float | None = None):
 		controllerData = self.GetControllerData(controllerAddr)
 		if controllerData["state"] == 0:
 			self.WithdrawFromControllerProcess(controllerAddr, amount)
 		else:
 			self.PendWithdrawFromController(controllerAddr, amount)
 
-	def WithdrawFromControllerProcess(self, controllerAddr, amount):
+	def WithdrawFromControllerProcess(self, controllerAddr: str, amount: float | None):
 		if amount is None:
 			account = self.GetAccount(controllerAddr)
 			amount = account.balance-10.1
@@ -2787,7 +2766,7 @@ class MyTonCore:
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, controllerAddr, 1.06)
 		self.SendFile(resultFilePath, wallet)
 
-	def PendWithdrawFromController(self, controllerAddr, amount):
+	def PendWithdrawFromController(self, controllerAddr: str, amount: float | None):
 		self.local.add_log("start PendWithdrawFromController function", "debug")
 		controllerPendingWithdraws = self.GetControllerPendingWithdraws()
 		controllerPendingWithdraws[controllerAddr] = amount

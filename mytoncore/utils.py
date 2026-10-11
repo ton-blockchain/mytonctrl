@@ -47,6 +47,10 @@ def b642dict(b64: str):
     return d
 
 
+def wallet_v3_subwallet_id(workchain: int) -> int:
+    return 698983191 + workchain  # 0x29A9A317 + workchain, the wallet-v3 default
+
+
 def hex2b64(inp: str):  # TODO: remove duplicates
     hex_bytes = bytes.fromhex(inp)
     b64_bytes = base64.b64encode(hex_bytes)

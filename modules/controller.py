@@ -1,7 +1,7 @@
 import json
 import os
 import time
-from typing import Optional, Union
+from typing import Optional
 
 from mypylib.mypylib import color_print, print_table
 from mytonctrl.argtypes import TonAddress
@@ -100,7 +100,7 @@ class ControllerModule(MtcModule):
     def withdraw_from_controller(
         self,
         controller_addr: TonAddress,
-        amount: Annotated[Optional[str], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
+        amount: Annotated[Optional[float], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
     ) -> None:
         self.ton.WithdrawFromController(controller_addr, amount)
 
@@ -108,16 +108,19 @@ class ControllerModule(MtcModule):
         self,
         percent_per_round: Annotated[Optional[float], Arg(help="default: the max_interest_percent setting")] = None,
     ) -> None:
-        if percent_per_round is None:
-            percent_per_round = self.ton.GetSettings("max_interest_percent")
+        percent: float = (
+            percent_per_round
+            if percent_per_round is not None
+            else self.ton.local.db.get("max_interest_percent", 1.5)
+        )
         config15 = self.ton.get_config_15()
         roundPeriod = config15.validators_elected_for
         rounds = 365 * 24 * 3600 / roundPeriod
-        yearInterest = (1 + percent_per_round / 100) * rounds  # pyright: ignore[reportOptionalOperand]
+        yearInterest = (1 + percent / 100) * rounds
         yearInterestPercent = round(yearInterest / 100, 2)
         print("roundPeriod", roundPeriod)
         print("rounds", rounds)
-        print("percentPerRound", percent_per_round)
+        print("percentPerRound", percent)
         print("yearInterest", yearInterest)
         print(f"yearInterestPercent: {yearInterestPercent}%")
 
@@ -145,14 +148,13 @@ class ControllerModule(MtcModule):
     def stop_and_withdraw_controller(
         self,
         controller_addr: TonAddress,
-        amount: Annotated[Optional[str], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
+        amount: Annotated[Optional[float], Arg(help="amount in TON, default: the balance minus 10.1 TON")] = None,
     ) -> None:
-        withdraw_amount: Union[str, float, None] = amount
-        if withdraw_amount is None:
+        if amount is None:
             account = self.ton.GetAccount(controller_addr)
-            withdraw_amount = account.balance - 10.1
+            amount = account.balance - 10.1
         self.do_stop_controller(controller_addr)
-        self.ton.WithdrawFromController(controller_addr, withdraw_amount)
+        self.ton.WithdrawFromController(controller_addr, amount)
         color_print("StopAndWithdrawController - {green}OK{endc}")
 
     def do_add_controller(self, controller_addr):

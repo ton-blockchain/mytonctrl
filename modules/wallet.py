@@ -8,6 +8,7 @@ from modules.module import MtcModule
 from mypyconsole.mypyconsole import UsageError
 from mypylib.mypylib import color_print, print_table, parse
 from mytoncore.models import Wallet
+from mytoncore.utils import wallet_v3_subwallet_id
 from mytonctrl.argtypes import TonAddress, WalletVersion, coins_amount
 from mypyconsole.command_parser import Annotated, Arg
 
@@ -50,16 +51,13 @@ class WalletModule(MtcModule):
         workchain_id: Optional[int] = None,
         wallet_name: Optional[str] = None,
         version: WalletVersion = "v1",
-        subwallet_id: Optional[int] = None,
     ) -> None:
         if workchain_id is None and wallet_name is None:
             wallet_name = self.generate_wallet_name()
             workchain_id = 0
         elif workchain_id is None or wallet_name is None:
             raise UsageError("workchain_id and wallet_name must be given together")
-        if subwallet_id is None:
-            subwallet_id = 698983191 + workchain_id  # 0x29A9A317 + workchain
-        wallet = self.create_wallet(wallet_name, workchain_id, version, subwallet=subwallet_id)
+        wallet = self.create_wallet(wallet_name, workchain_id, version)
         table = list()
         table += [["Name", "Workchain", "Address"]]
         table += [[wallet.name, wallet.workchain, wallet.addrB64_init]]
@@ -162,38 +160,26 @@ class WalletModule(MtcModule):
         color_print("DeleteWallet - {green}OK{endc}")
 
     @staticmethod
-    def get_new_wallet_fift_args(version: str, workchain: int, wallet_path: str, subwallet: int) -> list[str]:
-        if "v1" in version:
+    def get_new_wallet_fift_args(version: str, workchain: int, wallet_path: str) -> list[str]:
+        if version.startswith("v1"):
             fift_script = "new-wallet.fif"
             args = [fift_script, workchain, wallet_path]
-        elif "v2" in version:
+        elif version.startswith("v2"):
             fift_script = "new-wallet-v2.fif"
             args = [fift_script, workchain, wallet_path]
-        elif "v3" in version:
+        elif version.startswith("v3"):
             fift_script = "new-wallet-v3.fif"
-            args = [fift_script, workchain, subwallet, wallet_path]
+            args = [fift_script, workchain, wallet_v3_subwallet_id(workchain), wallet_path]
         else:
             raise Exception(f"get_wallet_fift error: fift script for `{version}` not found")
         return list(map(str, args))
 
-    def _get_wallet_id(self, wallet: Wallet):
-        subwallet = 698983191 + wallet.workchain  # 0x29A9A317 + workchain
-        try:
-            subwallet = self.ton.run_get_method(wallet.addrB64, "wallet_id")[0]
-        except Exception as e:
-            self.local.add_log(f"Error getting wallet id: {e}", "error")
-        return int(subwallet)
-
-    def create_wallet(self, name: str, workchain: int = 0, version: str = "v1", subwallet: int | None = None) -> Wallet:
-        subwallet_default = 698983191 + workchain  # 0x29A9A317 + workchain
-        if subwallet is None:
-            subwallet = subwallet_default
+    def create_wallet(self, name: str, workchain: int = 0, version: str = "v1") -> Wallet:
         wallet_path = self.ton.walletsDir + name
-        if os.path.isfile(wallet_path + ".pk") and "v3" not in version:
+        if os.path.isfile(wallet_path + ".pk") and not version.startswith("v3"):
             self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
         else:
-            fift_args = self.get_new_wallet_fift_args(version, workchain=workchain,
-                                                      wallet_path=wallet_path, subwallet=subwallet)
+            fift_args = self.get_new_wallet_fift_args(version, workchain=workchain, wallet_path=wallet_path)
             result = self.ton.fift.run(fift_args)
             if "Creating new" not in result:
                 raise Exception(f"CreateWallet error: {result}")
@@ -201,11 +187,10 @@ class WalletModule(MtcModule):
         self.ton.SetWalletVersion(wallet.addrB64, version)
         return wallet
 
-    def do_move_coins(self, wallet: Wallet, dest: str, coins: float | str, flags: list | None = None, timeout: int = 30, subwallet: int | None = None):
+    def do_move_coins(self, wallet: Wallet, dest: str, coins: float | str, flags: list | None = None, timeout: int = 30):
         if flags is None:
             flags = []
-        if "v3" in wallet.version and subwallet is None:
-            subwallet = self._get_wallet_id(wallet)
+        version = wallet.version or ""
         if coins == "all":
             mode = 130
             coins = 0
@@ -232,17 +217,18 @@ class WalletModule(MtcModule):
 
         seqno = str(self.ton.get_seqno(wallet))
         result_file_path = self.local.my_temp_dir + wallet.name + "_wallet-query"
-        if "v1" in wallet.version:
+        if version.startswith("v1"):
             fift_script = "wallet.fif"
             args = [fift_script, wallet.path, dest, seqno, str(coins), "-m", str(mode), result_file_path]
-        elif "v2" in wallet.version:
+        elif version.startswith("v2"):
             fift_script = "wallet-v2.fif"
             args = [fift_script, wallet.path, dest, seqno, str(coins), "-m", str(mode), result_file_path]
-        elif "v3" in wallet.version:
+        elif version.startswith("v3"):
             fift_script = "wallet-v3.fif"
-            args = [fift_script, wallet.path, dest, str(subwallet), seqno, str(coins), "-m", str(mode), result_file_path]
+            subwallet = str(wallet_v3_subwallet_id(wallet.workchain))
+            args = [fift_script, wallet.path, dest, subwallet, seqno, str(coins), "-m", str(mode), result_file_path]
         else:
-            raise Exception(f"MoveCoins error: Wallet version '{wallet.version}' is not supported")
+            raise Exception(f"MoveCoins error: Wallet version {wallet.version!r} is not supported")
         if flags:
             args += flags
         result = self.ton.fift.run(args)
