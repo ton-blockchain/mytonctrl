@@ -38,7 +38,7 @@ jobs:
 
       - name: Run Ruff format check
         run: |
-          ruff format mytonctrl/ --check
+          ruff format mytonctrl/ mypyconsole/ --check
 
       - name: Build project
         run: |

@@ -2,7 +2,6 @@ import os
 
 from modules.module import MtcModule
 
-from mytonctrl.console_cmd import add_command
 from mypylib.mypylib import run_as_root
 from mytoncore.utils import get_package_resource_path
 
@@ -21,11 +20,11 @@ class BtcTeleportModule(MtcModule):
         with get_package_resource_path('mytonctrl', 'scripts/remove_btc_teleport.sh') as script_path:
             return run_as_root(["bash", str(script_path)] + args)
 
-    def remove_btc_teleport(self, _):
+    def remove_btc_teleport(self) -> None:
         exit_code = self.run_remove_btc_teleport(["-s", self.src_dir, "-k", self.keystore_path])
         if exit_code != 0:
             raise Exception('Failed to remove btc_teleport')
         self.local.add_log('Removed btc_teleport', 'info')
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "remove_btc_teleport", self.remove_btc_teleport)
+        console.add_command("remove_btc_teleport", self.remove_btc_teleport)

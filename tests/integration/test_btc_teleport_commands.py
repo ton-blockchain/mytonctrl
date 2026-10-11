@@ -18,6 +18,11 @@ def test_remove_btc_teleport(cli, monkeypatch, ton):
 
     monkeypatch.setattr(btc_teleport_module, "run_as_root", fake_run_as_root)
 
+    output = cli.execute("remove_btc_teleport extra", no_color=True)
+    assert "usage: remove_btc_teleport [-h]" in output
+    assert "remove_btc_teleport: error: unrecognized arguments: extra" in output
+    assert run_args == []
+
     monkeypatch.setattr(MyTonCore, "GetValidatorIndex", lambda self: -1)
     monkeypatch.setattr(MyTonCore, "get_config_34", lambda self: Config(total_validators=0, main_validators=100, start_work_time=0, end_work_time=0, total_weight=None, validators=[]))
 

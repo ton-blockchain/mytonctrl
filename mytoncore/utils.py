@@ -226,6 +226,43 @@ def raw_addr_to_b64(addr_full: str, bounceable: bool = True, is_testnet: bool = 
     return result
 
 
+def parse_addr_b64(addr_b64: str) -> tuple[int, str, bool]:
+    buff = addr_b64.replace('-', '+')
+    buff = buff.replace('_', '/')
+    b = base64.b64decode(buff.encode())
+    if len(b) != 36:
+        raise Exception("ParseAddrB64 error: address is not 36 bytes")
+    bounceable_int = (b[0] & 0x40)
+    if bounceable_int != 0:
+        bounceable = False
+    else:
+        bounceable = True
+
+    # get wc and addr
+    workchain_bytes = b[1:2]
+    addr_bytes = b[2:34]
+    crc_bytes = b[34:36]
+    crc_data = bytes(b[:34])
+    crc = int.from_bytes(crc_bytes, "big")
+    check_crc = crc16.xmodem(crc_data)
+    if crc != check_crc:
+        raise Exception("ParseAddrB64 error: crc do not match")
+
+    workchain = int.from_bytes(workchain_bytes, "big", signed=True)
+    addr = addr_bytes.hex()
+    return workchain, addr, bounceable
+
+
+def parse_addr_full(addr_full: str) -> tuple[int, str]:
+    buff = addr_full.split(':')
+    workchain = int(buff[0])
+    addr = buff[1]
+    addr_bytes = bytes.fromhex(addr)
+    if len(addr_bytes) != 32:
+        raise Exception("ParseAddrFull error: addrBytes is not 32 bytes")
+    return workchain, addr
+
+
 def parse_mc_addr_from_vm_int(item: str | None) -> str | None:
     if item is None:
         return None

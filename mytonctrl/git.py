@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import json
+import re
+import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
+from mypyconsole.command_parser import UsageError
 from mypylib import color_print
-from mytonctrl.utils import pop_arg_from_args, GetItemFromList, is_hex
-
-import subprocess
+from mytonctrl.utils import is_hex
 
 
 def fix_git_config(git_path: str | Path):
@@ -39,8 +41,58 @@ def fix_git_config(git_path: str | Path):
             raise Exception(f"Failed to check git status: {err}")
 
 
+_GITHUB_URL = re.compile(
+    r"https?://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?/?(?:/tree/(?P<branch>.+?)/?)?"
+)
+
+
+@dataclass(frozen=True)
+class GitTarget:
+    author: str | None = None
+    repo: str | None = None
+    branch: str | None = None
+    url: str | None = None
+
+
+def parse_git_target(
+    target: str | None,
+    target_branch: str | None = None,
+    *,
+    branch: str | None = None,
+    url: str | None = None,
+) -> GitTarget:
+    author = repo = git_url = given_branch = None
+    if url is not None:
+        if target is not None:
+            raise UsageError("--url cannot be combined with a positional target")
+        git_url, sharp, given_branch = url.partition("#")
+        if sharp and not given_branch:
+            raise UsageError("--url fragment after # is empty")
+    elif target is not None and not target.startswith(("https://", "http://")):
+        if target_branch is not None:
+            raise UsageError(
+                f"{target!r} is not a github url, a branch cannot follow it"
+            )
+        given_branch = target
+    elif target is not None:
+        match = _GITHUB_URL.fullmatch(target)
+        if match is None:
+            raise UsageError(
+                f"expected https://github.com/<owner>/<repo>[/tree/<branch>], got {target!r}"
+            )
+        author, repo = match["owner"], match["repo"]
+        if target_branch is not None and match["branch"] is not None:
+            raise UsageError(
+                f"branch given more than once: {target_branch}, {match['branch']}"
+            )
+        given_branch = target_branch or match["branch"]
+    if given_branch and branch is not None:
+        raise UsageError(f"branch given more than once: {given_branch}, {branch}")
+    return GitTarget(author, repo, given_branch or branch, git_url)
+
+
 def check_git(
-    input_args: list[str],
+    target: GitTarget,
     src_dir: Path,
     default_repo: str,
     text: str,
@@ -53,23 +105,8 @@ def check_git(
             raise Exception(f"{text} error: {git_path} is not a git repository")
         fix_git_config(git_path)
 
-    branch = pop_arg_from_args(input_args, "--branch")
-
-    if "--url" in input_args:
-        git_url = pop_arg_from_args(input_args, "--url")
-        if not git_url:
-            raise Exception("git url is empty after --url flag")
-        if branch is None:
-            if "#" in git_url:
-                ref_fragment = git_url.rsplit("#", 1)[1]
-                if not ref_fragment:
-                    raise Exception("--url fragment after # is empty")
-                branch = ref_fragment
-            else:
-                branch = default_branch
-        if "#" in git_url:
-            git_url = git_url.split("#", 1)[0]
-        return None, None, branch, git_url
+    if target.url is not None:
+        return None, None, target.branch or default_branch, target.url
 
     if src_dir.exists():
         local_author, local_repo = get_git_author_and_repo(git_path)
@@ -81,12 +118,7 @@ def check_git(
         )
         local_author = local_repo = local_branch = None
 
-    # Set author, repo, branch
-    data = GetAuthorRepoBranchFromArgs(input_args)
-    need_author = data.get("author")
-    need_repo = data.get("repo")
-    need_branch = data.get("branch") or branch
-
+    need_author, need_repo, need_branch = target.author, target.repo, target.branch
     if src_dir.exists():
         if (need_author is None and local_author != default_author) or (
             need_repo is None and local_repo != default_repo
@@ -126,26 +158,6 @@ def check_branch_exists(author, repo, branch):
     output = process.stdout.decode("utf-8")
     if branch not in output:
         raise Exception(f"Branch {branch} not found in {url}")
-
-
-def GetAuthorRepoBranchFromArgs(args: list[str]):
-    data = dict()
-    arg1 = GetItemFromList(args, 0)
-    arg2 = GetItemFromList(args, 1)
-    if arg1:
-        if "https://" in arg1:
-            buff = arg1[8:].split("/")
-            print(f"buff: {buff}")
-            data["author"] = buff[1]
-            data["repo"] = buff[2]
-            tree = GetItemFromList(buff, 3)
-            if tree:
-                data["branch"] = GetItemFromList(buff, 4)
-        else:
-            data["branch"] = arg1
-    if arg2:
-        data["branch"] = arg2
-    return data
 
 
 def get_git_url(git_path: str | Path) -> str | None:

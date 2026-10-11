@@ -15,7 +15,6 @@ from typing import Union, Any
 import psutil
 import subprocess
 import requests
-from fastcrc import crc16
 
 from modules import MODES
 from mytoncore.stats_collector import StatsCollector
@@ -28,6 +27,8 @@ from mytoncore.utils import (
 	nano_ton_to_ton,
 	dec2hex,
 	parse_mc_addr_from_vm_int,
+	parse_addr_b64,
+	parse_addr_full,
 )
 from mytoncore.output import (
 	get_cell_body,
@@ -1154,19 +1155,18 @@ class MyTonCore:
 			return
 		from modules.backups import BackupModule
 		module = BackupModule(self, self.local)
-		args = []
 		name = f"/mytonctrl_backup_elid{election_id}.zip"
 		backups_dir = self.tempDir + "/auto_backups"
 		if self.local.db.get("auto_backup_path"):
 			backups_dir = self.local.db.get("auto_backup_path")
 		os.makedirs(backups_dir, exist_ok=True)
-		args.append(backups_dir + name)
+		dest = backups_dir + name
 		self.clear_dir(backups_dir)
-		exit_code = module.create_backup(args)
+		exit_code = module.create_backup(dest, user=None, from_host=False)
 		if exit_code != 0:
 			self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
 			# try one more time
-			exit_code = module.create_backup(args)
+			exit_code = module.create_backup(dest, user=None, from_host=False)
 			if exit_code != 0:
 				self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
 		if exit_code == 0:
@@ -2148,42 +2148,14 @@ class MyTonCore:
 		if buff:
 			return buff
 
-		buff = addr_b64.replace('-', '+')
-		buff = buff.replace('_', '/')
-		buff = buff.encode()
-		b = base64.b64decode(buff)
-		bounceable_int = (b[0] & 0x40)
-		if bounceable_int != 0:
-			bounceable = False
-		else:
-			bounceable = True
-
-		# get wc and addr
-		workchain_bytes = b[1:2]
-		addr_bytes = b[2:34]
-		crc_bytes = b[34:36]
-		crc_data = bytes(b[:34])
-		crc = int.from_bytes(crc_bytes, "big")
-		check_crc = crc16.xmodem(crc_data)
-		if crc != check_crc:
-			raise Exception("ParseAddrB64 error: crc do not match")
-
-		workchain = int.from_bytes(workchain_bytes, "big", signed=True)
-		addr = addr_bytes.hex()
+		data = parse_addr_b64(addr_b64)
 
 		# Set buffer
-		data = (workchain, addr, bounceable)
 		self.SetFunctionBuffer(fname, data)
 		return data
 
 	def ParseAddrFull(self, addrFull):
-		buff = addrFull.split(':')
-		workchain = int(buff[0])
-		addr = buff[1]
-		addrBytes = bytes.fromhex(addr)
-		if len(addrBytes) != 32:
-			raise Exception("ParseAddrFull error: addrBytes is not 32 bytes")
-		return workchain, addr
+		return parse_addr_full(addrFull)
 
 	def ParseInputAddr(self, inputAddr):
 		if self.IsAddrB64(inputAddr):

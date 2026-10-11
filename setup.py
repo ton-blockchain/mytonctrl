@@ -32,6 +32,7 @@ setup(
         "fastcrc==0.3.2",
         "pynacl==1.5.0",
         "importlib_resources==6.4.5; python_version < '3.9'",
+        "typing_extensions==4.13.2; python_version < '3.9'",
     ],
     package_data={
         "mytoninstaller.scripts": ["*.sh"],
