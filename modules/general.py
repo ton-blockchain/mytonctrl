@@ -1022,6 +1022,10 @@ class GeneralModule(MtcModule):
                 for f in (src_dir / "tl" / "generate" / "scheme").glob("*.tl"):
                     shutil.copy(f, tl_dest)
 
+                block_tlb_dest = run_dir / "crypto" / "block"
+                block_tlb_dest.mkdir(parents=True, exist_ok=True)
+                shutil.copy(src_dir / "crypto" / "block" / "block.tlb", block_tlb_dest)
+
                 subprocess.run(
                     ["uv", "add", "--editable", tontester_dir], cwd=run_dir, check=True
                 )
