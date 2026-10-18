@@ -34,6 +34,9 @@ directory. It creates `.env` and `compose.yml` for published images. Leave
 `TON_WORK_HOST_DIR` blank for the standard `TON_WORK_VOLUME` Docker volume, or
 set it to an absolute directory on your mounted data disk;
 see [storage setup and migration](../README.docker.md#store-ton-data-on-a-separate-disk).
+For a new archive liteserver, use `install.sh --archive` to prepare the required
+tool and Compose override automatically;
+see [archive node setup](../README.docker.md#set-up-an-archive-node).
 After editing `.env`, start the setup:
 
 ```sh
@@ -303,13 +306,16 @@ controller database. The default container command runs services;
 `image console --cmd ...` initializes them and runs a foreground console command.
 
 `--archive` in `MYTONCTRL_ARGS` and `ARCHIVE_BLOCKS` use MyTonCtrl's existing
-archive downloader,
-which requires **tonutils-storage**, a different program/API from the official
-TON `storage-daemon`. Supply its prebuilt executable as `tonutils-storage` in the
-mounted flat binaries directory. Startup fails early with an actionable message
-when it is absent. The image never compiles this optional tool. `enable TS` uses
-the same executable. Optional `enable THA` and `enable LSP` install other projects
-on a host; in container deployments run those tools in separate images instead.
+archive downloader, which requires **tonutils-storage**, a different program/API
+from the official TON `storage-daemon`. For a new archive node,
+[`install.sh --archive`](../README.docker.md#set-up-an-archive-node) downloads a
+pinned prebuilt executable and installs [the Compose override](compose.archive.yml)
+to include it in the exported artifacts. For custom native mounts, supply it as
+`tonutils-storage` in the mounted flat binaries directory. Startup fails early
+with an actionable message when it is absent. The image never compiles this
+optional tool. `enable TS` uses the same executable. Optional `enable THA` and
+`enable LSP` install other projects on a host; in container deployments run those
+tools in separate images instead.
 
 ## Troubleshooting
 

@@ -1,0 +1,13 @@
+# install.sh --archive installs this as compose.override.yml next to compose.yml.
+# For a source checkout, use -f compose.yaml -f docker/compose.archive.yml.
+# First set MYTONCTRL_ARGS=-m liteserver -n mainnet --archive and DUMP=false in .env.
+services:
+  ton-binaries:
+    volumes:
+      # Export the prebuilt downloader alongside the TON image's binaries.
+      - type: bind
+        source: ./tonutils-storage
+        target: /usr/local/bin/tonutils-storage
+        read_only: true
+        bind:
+          create_host_path: false

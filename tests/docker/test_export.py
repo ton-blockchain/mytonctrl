@@ -79,6 +79,15 @@ class ExportTonTests(unittest.TestCase):
         self.assertEqual((release / "image-ref").read_text(), "different-tag-for-same-content\n")
         self.assert_no_staging_files()
 
+    def test_separately_supplied_archive_downloader_is_published_with_ton_binaries(self):
+        downloader = self.source / "bin" / "tonutils-storage"
+        downloader.write_text("#!/bin/sh\nprintf 'archive downloader\\n'\n")
+        downloader.chmod(0o755)
+        self.export()
+        published = self.current_release() / "bin" / "tonutils-storage"
+        self.assertEqual(published.read_bytes(), downloader.read_bytes())
+        self.assertEqual(published.stat().st_mode & 0o777, 0o755)
+
     def test_export_without_identity_does_not_retain_a_previous_image_reference(self):
         self.export()
         release = self.current_release()
