@@ -41,7 +41,7 @@ def test_updates_refer_to_images_before_git_or_compiler_checks(container, monkey
     monkeypatch.setattr("modules.general.get_clang_major_version", forbidden)
     monkeypatch.setattr("modules.general.run_as_root", forbidden)
     module = GeneralModule(SimpleNamespace(get_paths=forbidden), None)
-    getattr(module, method)(["some-repository", "some-branch"])
+    getattr(module, method)("some-repository", "some-branch")
     assert image in capsys.readouterr().out
 
 
@@ -193,7 +193,7 @@ def test_optional_addons_fail_before_config_or_install_mutation(container, monke
     ctrl = InstallerCtrl.__new__(InstallerCtrl)
     ctrl.create_local_config_file = forbidden
     with pytest.raises(RuntimeError, match="installed separately"):
-        ctrl.enable([addon])
+        ctrl.enable(addon)
 
 
 def test_direct_optional_installer_cannot_clone_proxy(container, monkeypatch):

@@ -48,7 +48,7 @@ SETTINGS = {
     'liquid_pool_addr': Setting('liquid-staking', None, 'Liquid staking pool address'),
     'min_loan': Setting('liquid-staking', 41000, 'Min loan amount'),
     'max_loan': Setting('liquid-staking', 43000, 'Max loan amount'),
-    'max_interest_percent': Setting('liquid-staking', 10, 'Max interest percent'),
+    'max_interest_percent': Setting('liquid-staking', 1.5, 'Max interest percent'),
     'duplicateSendfile': Setting(None, True, 'Duplicate external to public Liteservers'),
     'sendTelemetry': Setting(None, True, 'Send node telemetry'),
     'telemetryLiteUrl': Setting(None, 'https://telemetry.toncenter.com/report_status', 'Telemetry url'),

@@ -15,6 +15,7 @@ from pytest_mock import MockerFixture
 
 from mytoncore.utils import get_package_resource_path
 from modules import general as general_module
+from mytonctrl.git import GitTarget
 from mypylib.mypylib import MyPyClass
 from mypylib.mypylib import Dict
 from mytoncore.mytoncore import MyTonCore
@@ -53,7 +54,13 @@ def test_update(cli, monkeypatch, mocker):
     exit_mock = mocker.Mock()
     monkeypatch.setattr(MyPyClass, "exit", exit_mock)
 
-    monkeypatch.setattr(general_module, "check_git", lambda args, src_dir, default_repo, text: ("author", "repo", "branch", None))
+    seen = {}
+
+    def fake_check_git(target, src_dir, default_repo, text):
+        seen.update(target=target, src_dir=src_dir, text=text)
+        return ("author", "repo", "branch", None)
+
+    monkeypatch.setattr(general_module, "check_git", fake_check_git)
 
     calls = {}
     def fake_run_as_root(run_args):
@@ -66,11 +73,39 @@ def test_update(cli, monkeypatch, mocker):
         assert upd_path.is_file()
     assert "Error" not in output
     assert calls["run_args"] == ['bash', str(upd_path), '-a', 'author', '-r', 'repo', '-b', 'branch', '-S', '/usr/src/mytonctrl', '-p', sys.executable]
+    assert seen["target"] == GitTarget() and seen["text"] == "update"
     exit_mock.assert_called_once()
+
+    cli.execute("update dev")
+    assert seen["target"] == GitTarget(branch="dev")
+    cli.execute("update https://github.com/yungwine/mytonctrl dev")
+    assert seen["target"] == GitTarget("yungwine", "mytonctrl", "dev")
+    cli.execute("update https://github.com/yungwine/mytonctrl/tree/dev")
+    assert seen["target"] == GitTarget("yungwine", "mytonctrl", "dev")
+    cli.execute("update --branch dev")
+    assert seen["target"] == GitTarget(branch="dev")
+    cli.execute("update https://github.com/yungwine/mytonctrl --branch dev")
+    assert seen["target"] == GitTarget("yungwine", "mytonctrl", "dev")
+
+    seen.clear()
+    output = cli.execute("update --url https://github.com/yungwine/mytonctrl", no_color=True)
+    assert "update: error: unrecognized arguments: --url" in output
+    assert not seen
+
+    output = cli.execute("update yungwine dev", no_color=True)
+    assert "usage: update [-h] [--branch BRANCH] [target] [target_branch]" in output
+    assert "update: error: 'yungwine' is not a github url, a branch cannot follow it" in output
+    assert not seen
 
 
 def test_upgrade(cli, monkeypatch):
-    monkeypatch.setattr(general_module, "check_git", lambda args, src_dir, default_repo, text: ("author", "repo", "branch", None))
+    seen = {}
+
+    def fake_check_git(target, src_dir, default_repo, text):
+        seen.update(target=target)
+        return ("author", "repo", "branch", None)
+
+    monkeypatch.setattr(general_module, "check_git", fake_check_git)
 
     calls = {}
     def fake_run_as_root(run_args):
@@ -125,6 +160,20 @@ def test_upgrade(cli, monkeypatch):
     assert "Upgrade - OK" in output
     assert "Error" not in output
     assert calls["run_args"] == ["bash", str(upg_path), "-a", "author", "-r", "repo", "-b", "branch", "-B", "/usr/bin/ton", "-S", "/usr/src/ton"]
+
+    cli.execute("upgrade testnet", no_color=True)
+    assert seen["target"] == GitTarget(branch="testnet")
+    cli.execute("upgrade --url https://github.com/someone/ton --branch dev", no_color=True)
+    assert seen["target"] == GitTarget(branch="dev", url="https://github.com/someone/ton")
+    cli.execute("upgrade --url https://github.com/someone/ton#feature", no_color=True)
+    assert seen["target"] == GitTarget(branch="feature", url="https://github.com/someone/ton")
+
+    seen.clear()
+    output = cli.execute("upgrade testnet --url https://github.com/someone/ton", no_color=True)
+    assert "upgrade: error: --url cannot be combined with a positional target" in output
+    output = cli.execute("upgrade hotfix --branch dev", no_color=True)
+    assert "upgrade: error: branch given more than once: hotfix, dev" in output
+    assert not seen
 
     monkeypatch.setattr(general_module, "run_as_root", lambda _: 1)
     output = cli.execute("upgrade", no_color=True)
@@ -181,7 +230,8 @@ def test_reload_global_config(cli, monkeypatch):
     # too many args -> usage error, nothing downloaded
     requested.clear()
     output = cli.execute("reload_global_config a b", no_color=True)
-    assert "Bad args" in output
+    assert "usage: reload_global_config [-h] [url]" in output
+    assert "reload_global_config: error: unrecognized arguments: b" in output
     assert requested == {}
 
     # non-json response -> error, config is not touched
@@ -218,6 +268,16 @@ def test_installer(cli, monkeypatch):
     output = cli.execute("installer cmd arg1 arg2")
     assert calls["cmd"] == "cmd arg1 arg2"
     assert "Error" not in output
+
+    cli.execute("installer set_node_argument --archive-ttl 86400 -d")
+    assert calls["cmd"] == "set_node_argument --archive-ttl 86400 -d"
+
+    calls.clear()
+    cli.execute("installer")
+    assert calls["cmd"] == ""
+
+    output = cli.execute("help", no_color=True)
+    assert "installer [command ...]" in output
 
 
 def test_create_local_config_root_fallback_sets_readable_mode(local, tmp_path, monkeypatch):
@@ -392,6 +452,8 @@ def test_status(cli, monkeypatch, mocker: MockerFixture):
     assert 'Number of validators: ' not in output
     assert "Validation period" not in output
     assert "elections" not in output
+    output = cli.execute("status slow", no_color=True)
+    assert "status: error: argument mode: invalid choice: 'slow'" in output
 
     # test other mode
     monkeypatch.setattr(MyTonCore, "using_validator", lambda *_: False)
@@ -435,9 +497,22 @@ def test_modes(cli, monkeypatch):  # status_modes, enable_mode, disable_mode
     assert modes["liteserver"] == "enabled"
 
     output = cli.execute("enable_mode", no_color=True)
-    assert 'Bad args' in output
+    assert "usage: enable_mode [-h]" in output
+    assert "enable_mode: error: the following arguments are required: mode_name" in output
     output = cli.execute("disable_mode", no_color=True)
-    assert 'Bad args' in output
+    assert "usage: disable_mode [-h]" in output
+    assert "disable_mode: error: the following arguments are required: mode_name" in output
+    output = cli.execute("enable_mode abc", no_color=True)
+    assert "enable_mode: error: argument mode_name: invalid choice: 'abc'" in output
+    output = cli.execute("enable_mode -h", no_color=True)
+    assert "usage: enable_mode [-h] mode_name" in output
+    assert "one of: validator, nominator-pool," in output
+    output = cli.execute("help", no_color=True)
+    assert [line.split()[:2] for line in output.splitlines() if line.startswith("disable_mode ")] == [
+        ["disable_mode", "mode_name"]
+    ]
+    output = cli.execute("status_modes extra", no_color=True)
+    assert "status_modes: error: unrecognized arguments: extra" in output
 
 def test_enable_deprecated_nominator_pool(cli, monkeypatch):
     monkeypatch.setattr(sys, "exit", lambda *_: None)
@@ -496,11 +571,23 @@ def test_settings(cli, ton, monkeypatch):  # status_settings, get, set
 
     # bad args
     output = cli.execute("get", no_color=True)
-    assert 'Bad args' in output
+    assert "usage: get [-h] name" in output
+    assert "get: error: the following arguments are required: name" in output
     output = cli.execute("set", no_color=True)
-    assert 'Bad args' in output
+    assert "usage: set [-h] [--force] name value" in output
+    assert "set: error: the following arguments are required: name, value" in output
     output = cli.execute("set a", no_color=True)
-    assert 'Bad args' in output
+    assert "set: error: the following arguments are required: value" in output
+    output = cli.execute("set a b c", no_color=True)
+    assert "set: error: unrecognized arguments: c" in output
+
+    output = cli.execute("set -h", no_color=True)
+    assert "usage: set [-h] [--force] name value" in output
+    assert "Set setting" in output
+    assert "error" not in output
+
+    output = cli.execute("help", no_color=True)
+    assert "set [--force] name value" in output
 
     # set for disabled mode
     ton.disable_mode('validator')
@@ -511,6 +598,9 @@ def test_settings(cli, ton, monkeypatch):  # status_settings, get, set
     output = cli.execute('set stake 1000 --force', no_color=True)
     assert 'SetSettings - OK' in output
     assert ton.GetSettings('stake') == 1000
+    output = cli.execute('set --force stake 2000', no_color=True)
+    assert 'SetSettings - OK' in output
+    assert ton.GetSettings('stake') == 2000
 
     # set unexisting setting
     output = cli.execute('set abc abc', no_color=True)
@@ -564,7 +654,8 @@ def test_about(cli, monkeypatch):
     from modules import MODES
 
     output = cli.execute('about', no_color=True)
-    assert 'Bad args' in output
+    assert "usage: about [-h]" in output
+    assert "about: error: the following arguments are required: mode_name" in output
 
     output = cli.execute('about validator', no_color=True)
     assert MODES['validator'].description in output
@@ -575,11 +666,16 @@ def test_about(cli, monkeypatch):
     assert 'Enabled: no' in output
 
     output = cli.execute('about abc', no_color=True)
-    assert 'Mode abc not found' in output
+    assert "about: error: argument mode_name: invalid choice: 'abc'" in output
 
 def test_download_archive_blocks(cli, monkeypatch):
-    output = cli.execute('download_archive_blocks')
-    assert 'Bad args' in output
+    output = cli.execute('download_archive_blocks', no_color=True)
+    assert 'usage: download_archive_blocks [-h] [--port PORT] [--only-master]' in output
+    assert 'the following arguments are required: download_path, from_block_seqno' in output
+    output = cli.execute('download_archive_blocks test/ one', no_color=True)
+    assert "argument from_block_seqno: invalid int value: 'one'" in output
+    output = cli.execute('download_archive_blocks 123 test/ 1', no_color=True)
+    assert "argument from_block_seqno: invalid int value: 'test/'" in output
 
     calls = []
     def download_blocks(*args):
@@ -590,7 +686,7 @@ def test_download_archive_blocks(cli, monkeypatch):
     monkeypatch.setattr('modules.general.download_blocks', download_blocks)
 
     output = cli.execute('download_archive_blocks test/ 1')
-    assert 'Failed to get Ton Storage API port and port was not provided' in output
+    assert 'Failed to get Ton Storage API port and --port was not given' in output
     monkeypatch.setattr('modules.general.get_ton_storage_port', lambda *_: 3334)
 
     # unable to connect
@@ -614,12 +710,12 @@ def test_download_archive_blocks(cli, monkeypatch):
     assert 'Error' not in output
     assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 3334, False, 1, 2, True)
 
-    output = cli.execute('download_archive_blocks 123 test/ 1 2 --only-master')
+    output = cli.execute('download_archive_blocks test/ 1 2 --only-master --port 123')
 
     assert 'Error' not in output
     assert calls[1:] == (str(pathlib.Path(os.getcwd()) / 'test/'), 123, False, 1, 2, True)
 
-    output = cli.execute('download_archive_blocks 123 /test/ 1')
+    output = cli.execute('download_archive_blocks --port 123 /test/ 1')
 
     assert 'Error' not in output
     assert calls[1:] == ('/test', 123, False, 1, None, False)
@@ -628,25 +724,26 @@ def test_download_archive_blocks(cli, monkeypatch):
 def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args - no args
     output = cli.execute("set_quic_port", no_color=True)
-    assert "Bad args" in output
+    assert "usage: set_quic_port [-h] port [category]" in output
+    assert "set_quic_port: error: the following arguments are required: port" in output
 
     # Bad args - too many args
     output = cli.execute("set_quic_port 1234 2 extra", no_color=True)
-    assert "Bad args" in output
+    assert "set_quic_port: error: unrecognized arguments: extra" in output
 
     # Bad args - port not integer
     output = cli.execute("set_quic_port abc", no_color=True)
-    assert "Port must be an integer" in output
+    assert "set_quic_port: error: argument port: expected a port number, got 'abc'" in output
 
     # Bad args - port out of range
     output = cli.execute("set_quic_port -1", no_color=True)
-    assert "Port must be between 0 and 65535" in output
+    assert "set_quic_port: error: argument port: port must be between 0 and 65535, got -1" in output
     output = cli.execute("set_quic_port 65536", no_color=True)
-    assert "Port must be between 0 and 65535" in output
+    assert "set_quic_port: error: argument port: port must be between 0 and 65535, got 65536" in output
 
     # Bad args - category not integer
     output = cli.execute("set_quic_port 1234 abc", no_color=True)
-    assert "Category must be an integer" in output
+    assert "set_quic_port: error: argument category: invalid int value: 'abc'" in output
 
     # Happy path - set quic port with default category, no existing quic addrs, no collators
     validator_console_mock = mocker.Mock()

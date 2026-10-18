@@ -3,7 +3,8 @@ import os
 from mypylib.mypylib import color_print
 from modules.pool import PoolModule
 from mytoncore.models import Pool
-from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args, check_usage_args_len
+from mytonctrl.argtypes import TonAddress
+from mypyconsole.command_parser import Annotated, Arg
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -46,18 +47,14 @@ class NominatorPoolModule(PoolModule):
                 new_pool.delete()
                 raise Exception("CreatePool error: Pool with the same parameters already exists.")
 
-    def new_pool(self, args):
-        if not check_usage_args_len("new_pool", args, 5):
-            return
-        pool_name = args[0]
-        try:
-            validator_reward_share_percent = float(args[1])
-            max_nominators_count = int(args[2])
-            min_validator_stake = int(args[3])
-            min_nominator_stake = int(args[4])
-        except ValueError:
-            color_print("{red}Bad args types. validator_reward_share_percent=float, counts/stakes=int{endc}")
-            return
+    def new_pool(
+        self,
+        pool_name: str,
+        validator_reward_share_percent: Annotated[float, Arg(help="validator's share of the reward, in percent")],
+        max_nominators_count: int,
+        min_validator_stake: Annotated[int, Arg(help="in TON")],
+        min_nominator_stake: Annotated[int, Arg(help="in TON")],
+    ) -> None:
         self.do_create_pool(pool_name, validator_reward_share_percent, max_nominators_count, min_validator_stake, min_nominator_stake)
         color_print("NewPool - {green}OK{endc}")
 
@@ -73,18 +70,12 @@ class NominatorPoolModule(PoolModule):
             self.ton.check_account_active(validator_wallet.addrB64)
             self.ton.SendFile(pool.bocFilePath, timeout=False, remove=False)
 
-    def activate_pool(self, args):
-        if not check_usage_one_arg("activate_pool", args):
-            return
-        pool_name = args[0]
+    def activate_pool(self, pool_name: str) -> None:
         pool = self.ton.GetLocalPool(pool_name)
         self.do_activate_pool(pool)
         color_print("ActivatePool - {green}OK{endc}")
 
-    def update_validator_set(self, args):
-        if not check_usage_one_arg("update_validator_set", args):
-            return
-        pool_addr = args[0]
+    def update_validator_set(self, pool_addr: TonAddress) -> None:
         wallet = self.ton.GetValidatorWallet()
         self.ton.PoolUpdateValidatorSet(pool_addr, wallet)
         color_print("UpdateValidatorSet - {green}OK{endc}")
@@ -98,15 +89,7 @@ class NominatorPoolModule(PoolModule):
         resultFilePath = self.ton.SignBocWithWallet(wallet, bocPath, pool_addr, amount)
         self.ton.SendFile(resultFilePath, wallet)
 
-    def deposit_to_pool(self, args):
-        if not check_usage_two_args("deposit_to_pool", args):
-            return
-        pool_addr = args[0]
-        try:
-            amount = float(args[1])
-        except ValueError:
-            color_print("{red}Amount must be a number{endc}")
-            return
+    def deposit_to_pool(self, pool_addr: TonAddress, amount: float) -> None:
         self.do_deposit_to_pool(pool_addr, amount)
         color_print("DepositToPool - {green}OK{endc}")
 
@@ -117,21 +100,13 @@ class NominatorPoolModule(PoolModule):
         else:
             self.ton.PendWithdrawFromPool(pool_addr, amount)
 
-    def withdraw_from_pool(self, args):
-        if not check_usage_two_args("withdraw_from_pool", args):
-            return
-        pool_addr = args[0]
-        try:
-            amount = float(args[1])
-        except ValueError:
-            color_print("{red}Amount must be a number{endc}")
-            return
+    def withdraw_from_pool(self, pool_addr: TonAddress, amount: float) -> None:
         self.do_withdraw_from_pool(pool_addr, amount)
         color_print("WithdrawFromPool - {green}OK{endc}")
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "new_pool", self.new_pool)
-        add_command(self.local, console, "activate_pool", self.activate_pool)
-        add_command(self.local, console, "update_validator_set", self.update_validator_set)
-        add_command(self.local, console, "withdraw_from_pool", self.withdraw_from_pool)
-        add_command(self.local, console, "deposit_to_pool", self.deposit_to_pool)
+        console.add_command("new_pool", self.new_pool)
+        console.add_command("activate_pool", self.activate_pool)
+        console.add_command("update_validator_set", self.update_validator_set)
+        console.add_command("withdraw_from_pool", self.withdraw_from_pool)
+        console.add_command("deposit_to_pool", self.deposit_to_pool)

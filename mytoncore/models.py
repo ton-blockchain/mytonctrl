@@ -43,19 +43,17 @@ class Wallet(_HasAddress):
     name: str
     path: str
     version: str
-    subwallet: int | None = None
     seqno: int | None = None
 
     def __post_init__(self):
-        self.addrFilePath: str = f"{self.path}.addr" if self.subwallet is None else f"{self.path}{self.subwallet}.addr"
+        self.addrFilePath: str = f"{self.path}.addr"
         self.privFilePath: str = f"{self.path}.pk"
-        self.bocFilePath: str = f"{self.path}-query.boc" if self.subwallet is None else f"{self.path}{self.subwallet}-query.boc"
+        self.bocFilePath: str = f"{self.path}-query.boc"
 
     @classmethod
-    def from_file(cls, name: str, path: str, version: str, subwallet: int | None = None):
-        addr_file = f"{path}.addr" if subwallet is None else f"{path}{subwallet}.addr"
-        workchain, addr = cls._get_data_from_file(addr_file)
-        return cls(workchain, addr, name, path, version, subwallet)
+    def from_file(cls, name: str, path: str, version: str):
+        workchain, addr = cls._get_data_from_file(f"{path}.addr")
+        return cls(workchain, addr, name, path, version)
 
     def delete(self):
         os.remove(self.addrFilePath)

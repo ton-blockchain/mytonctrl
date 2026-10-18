@@ -3,7 +3,7 @@ import os
 from mypylib.mypylib import color_print
 from modules.pool import PoolModule
 from mytoncore.utils import get_package_resource_path
-from mytonctrl.console_cmd import add_command, check_usage_two_args, check_usage_one_arg
+from mytonctrl.argtypes import TonAddress
 
 
 class SingleNominatorModule(PoolModule):
@@ -36,11 +36,7 @@ class SingleNominatorModule(PoolModule):
                 new_pool.delete()
                 raise Exception("create_single_pool error: Pool with the same parameters already exists.")
 
-    def new_single_pool(self, args):
-        if not check_usage_two_args("new_single_pool", args):
-            return
-        pool_name = args[0]
-        owner_address = args[1]
+    def new_single_pool(self, pool_name: str, owner_address: TonAddress) -> None:
         self.do_create_single_pool(pool_name, owner_address)
         color_print("new_single_pool - {green}OK{endc}")
 
@@ -52,10 +48,7 @@ class SingleNominatorModule(PoolModule):
         result_file_path = self.ton.SignBocWithWallet(validator_wallet, pool.bocFilePath, pool.addrB64_init, 1, boc_mode=boc_mode)
         self.ton.SendFile(result_file_path, validator_wallet)
 
-    def activate_single_pool(self, args):
-        if not check_usage_one_arg("activate_single_pool", args):
-            return
-        pool_name = args[0]
+    def activate_single_pool(self, pool_name: str) -> None:
         pool = self.ton.GetLocalPool(pool_name)
         if not os.path.isfile(pool.bocFilePath):
             self.local.add_log(f"Pool {pool_name} already activated", "warning")
@@ -63,15 +56,11 @@ class SingleNominatorModule(PoolModule):
         self.do_activate_single_pool(pool)
         color_print("activate_single_pool - {green}OK{endc}")
 
-    def withdraw_from_single_pool(self, args):
-        if not check_usage_two_args("withdraw_from_single_pool", args):
-            return
-        pool_addr = args[0]
-        amount = float(args[1])
+    def withdraw_from_single_pool(self, pool_addr: TonAddress, amount: float) -> None:
         self.ton.WithdrawFromPoolProcess(pool_addr, amount)
         color_print("withdraw_from_single_pool - {green}OK{endc}")
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "new_single_pool", self.new_single_pool)
-        add_command(self.local, console, "activate_single_pool", self.activate_single_pool)
-        add_command(self.local, console, "withdraw_from_single_pool", self.withdraw_from_single_pool)
+        console.add_command("new_single_pool", self.new_single_pool)
+        console.add_command("activate_single_pool", self.activate_single_pool)
+        console.add_command("withdraw_from_single_pool", self.withdraw_from_single_pool)

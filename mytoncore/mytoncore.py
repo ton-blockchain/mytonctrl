@@ -15,11 +15,11 @@ from typing import Union, Any
 import psutil
 import subprocess
 import requests
-from fastcrc import crc16
 
 from modules import MODES
 from mytoncore.stats_collector import StatsCollector
 from mytoncore.utils import (
+    wallet_v3_subwallet_id,
     b642hex,
     xhex2hex,
     ng2g,
@@ -28,6 +28,8 @@ from mytoncore.utils import (
 	nano_ton_to_ton,
 	dec2hex,
 	parse_mc_addr_from_vm_int,
+	parse_addr_b64,
+	parse_addr_full,
 )
 from mytoncore.output import (
 	get_cell_body,
@@ -316,13 +318,8 @@ class MyTonCore:
 		result.reverse()
 		return result
 
-	def GetLocalWallet(self, wallet_name: str, version=None, subwallet=None) -> Wallet:
-		walletPath = self.walletsDir + wallet_name
-		if version and "h" in version:
-			wallet = self.GetHighWalletFromFile(walletPath, subwallet, version)
-		else:
-			wallet = self.GetWalletFromFile(walletPath, version)
-		return wallet
+	def GetLocalWallet(self, wallet_name: str, version=None) -> Wallet:
+		return self.GetWalletFromFile(self.walletsDir + wallet_name, version)
 
 	def GetWalletFromFile(self, filePath, version):
 		# Check input args
@@ -336,21 +333,6 @@ class MyTonCore:
 		# Create wallet object
 		walletName = filePath[filePath.rfind('/')+1:]
 		wallet = Wallet.from_file(walletName, filePath, version)
-		self.WalletVersion2Wallet(wallet)
-		return wallet
-
-	def GetHighWalletFromFile(self, filePath, subwallet, version):
-		# Check input args
-		if (".addr" in filePath):
-			filePath = filePath.replace(".addr", '')
-		if (".pk" in filePath):
-			filePath = filePath.replace(".pk", '')
-		if not os.path.isfile(filePath + ".pk"):
-			raise Exception("GetHighWalletFromFile error: Private key not found: " + filePath)
-
-		# Create wallet object
-		walletName = filePath[filePath.rfind('/')+1:]
-		wallet = Wallet.from_file(walletName, filePath, version, subwallet)
 		self.WalletVersion2Wallet(wallet)
 		return wallet
 
@@ -805,17 +787,15 @@ class MyTonCore:
 
 		seqno = str(self.get_seqno(wallet))
 		result_file_path = self.tempDir + self.nodeName + wallet.name + "_wallet-query"
-		if "v1" in wallet.version:
+		version = wallet.version or ""
+		if version.startswith("v1"):
 			fift_script = "wallet.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
-		elif "v2" in wallet.version:
+		elif version.startswith("v2"):
 			fift_script = "wallet-v2.fif"
 			args = [fift_script, wallet.path, dest, seqno, coins, boc_mode, boc_path, result_file_path]
-		elif "v3" in wallet.version:
-			if wallet.subwallet is None:
-				subwallet = str(698983191 + wallet.workchain)  # 0x29A9A317 + workchain
-			else:
-				subwallet = str(wallet.subwallet)
+		elif version.startswith("v3"):
+			subwallet = str(wallet_v3_subwallet_id(wallet.workchain))
 			fift_script = "wallet-v3.fif"
 			args = [fift_script, wallet.path, dest, subwallet, seqno, coins, boc_mode, boc_path, result_file_path]
 		else:
@@ -1154,19 +1134,18 @@ class MyTonCore:
 			return
 		from modules.backups import BackupModule
 		module = BackupModule(self, self.local)
-		args = []
 		name = f"/mytonctrl_backup_elid{election_id}.zip"
 		backups_dir = self.tempDir + "/auto_backups"
 		if self.local.db.get("auto_backup_path"):
 			backups_dir = self.local.db.get("auto_backup_path")
 		os.makedirs(backups_dir, exist_ok=True)
-		args.append(backups_dir + name)
+		dest = backups_dir + name
 		self.clear_dir(backups_dir)
-		exit_code = module.create_backup(args)
+		exit_code = module.create_backup(dest, user=None, from_host=False)
 		if exit_code != 0:
 			self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
 			# try one more time
-			exit_code = module.create_backup(args)
+			exit_code = module.create_backup(dest, user=None, from_host=False)
 			if exit_code != 0:
 				self.local.add_log(f"Backup failed with exit code {exit_code}", "error")
 		if exit_code == 0:
@@ -2148,42 +2127,14 @@ class MyTonCore:
 		if buff:
 			return buff
 
-		buff = addr_b64.replace('-', '+')
-		buff = buff.replace('_', '/')
-		buff = buff.encode()
-		b = base64.b64decode(buff)
-		bounceable_int = (b[0] & 0x40)
-		if bounceable_int != 0:
-			bounceable = False
-		else:
-			bounceable = True
-
-		# get wc and addr
-		workchain_bytes = b[1:2]
-		addr_bytes = b[2:34]
-		crc_bytes = b[34:36]
-		crc_data = bytes(b[:34])
-		crc = int.from_bytes(crc_bytes, "big")
-		check_crc = crc16.xmodem(crc_data)
-		if crc != check_crc:
-			raise Exception("ParseAddrB64 error: crc do not match")
-
-		workchain = int.from_bytes(workchain_bytes, "big", signed=True)
-		addr = addr_bytes.hex()
+		data = parse_addr_b64(addr_b64)
 
 		# Set buffer
-		data = (workchain, addr, bounceable)
 		self.SetFunctionBuffer(fname, data)
 		return data
 
 	def ParseAddrFull(self, addrFull):
-		buff = addrFull.split(':')
-		workchain = int(buff[0])
-		addr = buff[1]
-		addrBytes = bytes.fromhex(addr)
-		if len(addrBytes) != 32:
-			raise Exception("ParseAddrFull error: addrBytes is not 32 bytes")
-		return workchain, addr
+		return parse_addr_full(addrFull)
 
 	def ParseInputAddr(self, inputAddr):
 		if self.IsAddrB64(inputAddr):
@@ -2792,14 +2743,14 @@ class MyTonCore:
 		resultFilePath = self.SignBocWithWallet(wallet, fileName, controllerAddr, 1.05)
 		self.SendFile(resultFilePath, wallet)
 
-	def WithdrawFromController(self, controllerAddr, amount=None):
+	def WithdrawFromController(self, controllerAddr: str, amount: float | None = None):
 		controllerData = self.GetControllerData(controllerAddr)
 		if controllerData["state"] == 0:
 			self.WithdrawFromControllerProcess(controllerAddr, amount)
 		else:
 			self.PendWithdrawFromController(controllerAddr, amount)
 
-	def WithdrawFromControllerProcess(self, controllerAddr, amount):
+	def WithdrawFromControllerProcess(self, controllerAddr: str, amount: float | None):
 		if amount is None:
 			account = self.GetAccount(controllerAddr)
 			amount = account.balance-10.1
@@ -2815,7 +2766,7 @@ class MyTonCore:
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, controllerAddr, 1.06)
 		self.SendFile(resultFilePath, wallet)
 
-	def PendWithdrawFromController(self, controllerAddr, amount):
+	def PendWithdrawFromController(self, controllerAddr: str, amount: float | None):
 		self.local.add_log("start PendWithdrawFromController function", "debug")
 		controllerPendingWithdraws = self.GetControllerPendingWithdraws()
 		controllerPendingWithdraws[controllerAddr] = amount

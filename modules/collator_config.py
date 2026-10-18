@@ -3,7 +3,7 @@ import requests
 
 from mypylib.mypylib import color_print
 from modules.module import MtcModule
-from mytonctrl.console_cmd import add_command, check_usage_one_arg
+from mypyconsole.command_parser import Annotated, Arg
 
 
 class CollatorConfigModule(MtcModule):
@@ -47,10 +47,9 @@ class CollatorConfigModule(MtcModule):
         result = self.ton.validatorConsole.run(f"setcollatoroptionsjson {path}")
         return 'success' in result, result
 
-    def set_collator_config(self, args):
-        if not check_usage_one_arg("set_collation_config", args):
-            return
-        location = args[0]
+    def set_collator_config(
+        self, location: Annotated[str, Arg(help="path or URL of the collator options JSON")]
+    ) -> None:
         config = self.get_config(location)
         self.ton.set_collator_config(location)
         added, msg = self.add_collator_config_to_vc(config)
@@ -60,7 +59,7 @@ class CollatorConfigModule(MtcModule):
             return
         color_print("set_collator_config - {green}OK{endc}")
 
-    def get_collator_config(self, args):
+    def get_collator_config(self) -> None:
         location = self.ton.get_collator_config_location()
         print(f'Collator config location: {location}')
         path = self.ton.tempDir + '/current_collator_config.json'
@@ -75,7 +74,7 @@ class CollatorConfigModule(MtcModule):
         print(json.dumps(config, indent=4))
         color_print("get_collator_config - {green}OK{endc}")
 
-    def update_collator_config(self, args):
+    def update_collator_config(self) -> None:
         location = self.ton.get_collator_config_location()
         config = self.get_config(location)
         added, msg = self.add_collator_config_to_vc(config)
@@ -86,6 +85,6 @@ class CollatorConfigModule(MtcModule):
         color_print("update_collator_config - {green}OK{endc}")
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "set_collation_config", self.set_collator_config)
-        add_command(self.local, console, "update_collation_config", self.update_collator_config)
-        add_command(self.local, console, "print_collation_config", self.get_collator_config)
+        console.add_command("set_collation_config", self.set_collator_config)
+        console.add_command("update_collation_config", self.update_collator_config)
+        console.add_command("print_collation_config", self.get_collator_config)

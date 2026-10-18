@@ -5,15 +5,16 @@ import os
 import json
 import sys
 import tempfile
-from typing import final, TypedDict, Callable
+from typing import final, TypedDict, Callable, Literal, Optional
 
 import requests
 
 from mypylib.mypylib import MyPyClass, run_as_root, color_print, ip2int
-from mypyconsole.mypyconsole import MyPyConsole
+from mypyconsole.mypyconsole import MyPyConsole, UsageError
 from mytoncore.models import BlockHead, Paths
 from mytoncore.mytoncore import MyTonCore
 from mytoncore.utils import get_package_resource_path
+from mypyconsole.command_parser import Annotated, Arg
 from mytonctrl.utils import get_current_user, is_container
 
 from mytoninstaller.config import get_ls_proxy_config, get_own_ip
@@ -61,16 +62,17 @@ class InstallerCtrl:
 		self._console_engine.run()
 
 	def _add_console_commands(self, console: MyPyConsole):
-		console.add_item("status", self._print_status, "Print TON component status")
-		console.add_item("set_node_argument", self._set_node_argument, "Set node argument", "<arg_name> [arg_value1] [arg_value2] [-d (to delete)]")
-		console.add_item("enable", self.enable, "Enable some function", "<mode_name>")
-		console.add_item("plsc", self._print_ls_config, "Print lite-server config")
-		console.add_item("clcf", self.create_local_config_file, "Create lite-server config file", "[path]")
-		console.add_item("print_ls_proxy_config", self._print_ls_proxy_config, "Print ls-proxy config")
-		console.add_item("drvcf", self._drvcf, "Dangerous recovery validator config file")
-		console.add_item("ton_storage_list", self.ton_storage_list, "Print result of /list method at Ton Storage API")
+		console.add_command("status", self._print_status, "Print TON component status")
+		console.add_command("set_node_argument", self._set_node_argument, "Set node argument", forward_unknown=True)
+		console.add_command("enable", self.enable, "Enable some function")
+		console.add_command("plsc", self._print_ls_config, "Print lite-server config")
+		console.add_command("clcf", self.create_local_config_file, "Create lite-server config file")
+		console.add_command("print_ls_proxy_config", self._print_ls_proxy_config, "Print ls-proxy config")
+		console.add_command("drvcf", self._drvcf, "Dangerous recovery validator config file")
+		console.add_command("ton_storage_list", self.ton_storage_list, "Print result of /list method at Ton Storage API")
 
-	def _print_status(self, _: list[str]):
+
+	def _print_status(self) -> None:
 		keys_dir = self._paths.ton_keys
 		server_key = keys_dir / "server"
 		client_key = keys_dir / "client"
@@ -96,49 +98,38 @@ class InstallerCtrl:
 			for v in value:
 				print(f"{key}: {v}")
 
-	def _set_node_argument(self, args: list[str]):
-		if len(args) < 1:
-			color_print("{red}Bad args. Usage:{endc} set_node_argument <arg-name> [arg-value] [-d (to delete)].\n"
-						"Examples: 'set_node_argument --archive-ttl 86400' or 'set_node_argument --archive-ttl -d' or 'set_node_argument -M' or 'set_node_argument --add-shard 0:2000000000000000 0:a000000000000000'")
-			return
+	def _set_node_argument(self, *arg_name_and_values: str, delete: Annotated[bool, Arg("-d", help="delete the argument from the node command line")] = False) -> None:
+		if not arg_name_and_values:
+			raise UsageError("expected the node argument name, e.g. set_node_argument --archive-ttl 86400")
+		args = list(arg_name_and_values)
+		if delete:
+			args.append("-d")
 		set_node_argument(args)
 
-	def enable(self, args: list[str]):
-		if len(args) < 1:
-			color_print("{red}Bad args. Usage:{endc} enable <mode-name>")
-			return
-		name = args[0]
-		if is_container() and name in ("THA", "LSP"):
-			raise RuntimeError(f"{name} is installed separately in container deployments. The controller image does not install packages or compile add-ons.")
-		if name == "DS":
+	def enable(self, mode_name: Literal["DS", "THA", "LSP", "TS"]) -> None:
+		if is_container() and mode_name in ("THA", "LSP"):
+			raise RuntimeError(f"{mode_name} is installed separately in container deployments. The controller image does not install packages or compile add-ons.")
+		if mode_name == "DS":
 			with get_package_resource_path('mytoninstaller.scripts', 'dht_server.py') as script_path:
 				run_as_root([sys.executable, str(script_path), self._validator_user, str(self._paths.ton_bin), str(self._paths.global_config_path)])
-		elif name == "THA":
-			self.create_local_config_file([])
+		elif mode_name == "THA":
+			self.create_local_config_file()
 			self.enable_ton_http_api(update=True)
-		elif name == "LSP":
+		elif mode_name == "LSP":
 			user = get_current_user()
 			with get_package_resource_path('mytoninstaller.scripts', 'ls_proxy.py') as script_path:
 				run_as_root([sys.executable, str(script_path), user, self.mconfig_path, str(self._paths.src_dir)])
-		elif name == "TS":
+		elif mode_name == "TS":
 			user = get_current_user()
 			with get_package_resource_path('mytoninstaller.scripts', 'ton_storage.py') as script_path:
 				run_as_root([sys.executable, str(script_path), user, self.mconfig_path, str(self._paths.global_config_path), str(self._paths.src_dir)])
-		else:
-			color_print("{red}Bad args{endc}")
-			print("'DS' - DHT-Server")
-			print("'THA' - ton-http-api")
-			print("'LSP' - ls-proxy")
-			print("'TS' - ton-storage")
 
-	def _drvcf(self, _: list[str]):
+	def _drvcf(self) -> None:
 		with get_package_resource_path('mytoninstaller.scripts', 'drvcf.py') as script_path:
 			run_as_root([sys.executable, str(script_path), str(self._paths.keyring_dir), self.mconfig_path, str(self._paths.ton_db)])
 
-	def ton_storage_list(self, args: list[str]):
-		if len(args) > 0:
-			api_port = int(args[0])
-		else:
+	def ton_storage_list(self, api_port: Optional[int] = None) -> None:
+		if api_port is None:
 			api_port = get_ton_storage_port(self.local)
 			if api_port is None:
 				raise Exception('Failed to get Ton Storage API port and port was not provided. Use ton_storage_list [api_port]')
@@ -162,7 +153,7 @@ class InstallerCtrl:
 			raise RuntimeError("Run ton-http-api in a separate container; this controller image does not install or update it.")
 		self.local.add_log("start do_enable_ton_http_api function", "debug")
 		if not os.path.exists(self._paths.local_config_path):
-			self.create_local_config_file([])
+			self.create_local_config_file()
 		user = get_current_user()
 		with get_package_resource_path('mytoninstaller.scripts',
 		                               'ton_http_api_installer.sh') as ton_http_api_installer_path:
@@ -193,8 +184,9 @@ class InstallerCtrl:
 		}
 		return result
 
-	def create_local_config_file(self, args: list[str]):
-		path = args[0] if len(args) > 0 else str(self._paths.local_config_path)
+	def create_local_config_file(self, path: Optional[str] = None) -> None:
+		if path is None:
+			path = str(self._paths.local_config_path)
 		init_block: BlockHead | None = None
 		if self._get_init_block is not None:
 			try:
@@ -239,10 +231,10 @@ class InstallerCtrl:
 
 		print("Local config file created:", localConfigPath)
 
-	def _print_ls_config(self, _: list[str]):
+	def _print_ls_config(self) -> None:
 		print(json.dumps(self._get_ls_config(), indent=4))
 
-	def _print_ls_proxy_config(self, _: list[str]):
+	def _print_ls_proxy_config(self) -> None:
 		print(json.dumps(get_ls_proxy_config(), indent=4))
 
 	@classmethod

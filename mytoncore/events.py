@@ -4,6 +4,7 @@ from modules.general import GeneralModule
 from mypylib.mypylib import MyPyClass
 
 from mytoncore.mytoncore import MyTonCore
+from mytonctrl.argtypes import tcp_port
 
 
 def run_event(local: MyPyClass, event_name: str):
@@ -32,8 +33,7 @@ def enable_vc_event(local: MyPyClass, event_name: str):
 
     args = event_name.split("_")[1:]
     if args:
-        module = GeneralModule(ton, local)
-        module.set_quic_port(args)
+        GeneralModule(ton, local).set_quic_port(tcp_port(args[0]))
 
 
 def enable_mode(local: MyPyClass, event_name: str):
@@ -49,4 +49,4 @@ def setup_collator(local: MyPyClass, event_name: str):
     ton = MyTonCore(local)
     from modules.collator import CollatorModule
 
-    CollatorModule(ton, local).setup_collator([])
+    CollatorModule(ton, local).setup_collator(adnl=None)

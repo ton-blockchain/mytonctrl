@@ -42,13 +42,6 @@ def ts_diff_to_human(diff: int | float) -> str:
     return str(dt.days) + " days"
 
 
-def GetItemFromList(data, index):
-    try:
-        return data[index]
-    except IndexError:
-        pass
-
-
 def is_hex(s):
     try:
         int(s, 16)
@@ -76,21 +69,6 @@ def GetColorInt(data, border, logic, ending=None):
 
 def get_current_user():
     return pwd.getpwuid(os.getuid()).pw_name
-
-
-def pop_arg_from_args(args: typing.List[str], arg_name: str) -> typing.Optional[str]:
-    if arg_name in args:
-        arg_index = args.index(arg_name) + 1
-        if arg_index >= len(args):
-            raise Exception(f'Value not found after "{arg_name}" in args: {args}')
-        value = args.pop(arg_index)
-        args.pop(args.index(arg_name))
-        return value
-    return None
-
-
-def pop_user_from_args(args: list) -> typing.Optional[str]:
-    return pop_arg_from_args(args, "-u")
 
 
 def get_clang_major_version():

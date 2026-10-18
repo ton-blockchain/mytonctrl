@@ -142,7 +142,8 @@ def test_benchmark_resolves_symlinked_tmp_dir(cli, monkeypatch, tmp_path):
 def test_benchmark_runs(cli, monkeypatch, tmp_path):
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/uv" if name == "uv" else None)
     monkeypatch.setattr(shutil, "copytree", lambda src, dst: None)
-    monkeypatch.setattr(shutil, "copy", lambda src, dst: None)
+    copies = []
+    monkeypatch.setattr(shutil, "copy", lambda src, dst: copies.append((str(src), str(dst))))
 
     def fake_lstat(path):
         raise FileNotFoundError
@@ -194,6 +195,9 @@ def test_benchmark_runs(cli, monkeypatch, tmp_path):
     assert root_calls == [["mkdir", "-m", "777", "/var/ton-work/tmp"]]
     assert temp_parent_dirs == ["/var/ton-work/tmp"]
     assert len(calls) == 4
+
+    # generate_tl.py reads crypto/block/block.tlb relative to the run dir
+    assert ("/usr/src/ton/crypto/block/block.tlb", f"{benchmark_tmp_dir.resolve()}/crypto/block") in copies
 
     # uv init
     assert calls[0]["args"] == ["uv", "init", "--python", "3.14", "--no-workspace", "--name", "benchmark"]

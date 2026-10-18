@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal, Optional
+
 import stat
 import tempfile
 from pathlib import Path
@@ -25,6 +27,7 @@ from mypylib.mypylib import (
 )
 from mytoncore.telemetry import get_memory_info, get_swap_info, get_bin_git_hash, get_load_avg
 from mytonctrl.git import (
+    parse_git_target,
     fix_git_config,
     check_git,
     get_git_hash,
@@ -32,31 +35,32 @@ from mytonctrl.git import (
 )
 from mytoninstaller.archive_blocks import download_blocks
 from mytoninstaller.utils import get_ton_storage_port
+from mytonctrl.argtypes import tcp_port
+from mypyconsole.command_parser import Annotated, Arg
 
 from mytoncore.utils import get_package_resource_path, b642hex
-from mytonctrl.console_cmd import (
-    check_usage_one_arg,
-    check_usage_args_min_max_len,
-    add_command,
-)
 from mytonctrl.utils import (
     timestamp2utcdatetime,
     GetColorInt,
     get_clang_major_version,
-    pop_arg_from_args,
     ts_diff_to_human,
     get_service_status,
     get_service_uptime,
     is_container,
 )
 from mytoncore.models import Config15, Config17
+from modules import MODES, get_mode_settings
 from modules.module import MtcModule
+
+_ModeName = Annotated[
+    str, Arg(choices=list(MODES), metavar="mode_name", help="one of: %(choices)s")
+]
 
 
 class GeneralModule(MtcModule):
     CLANG_VERSION_REQUIRED = 21
 
-    def mode_status(self, _):
+    def mode_status(self) -> None:
         from modules import get_mode
 
         modes = self.ton.get_modes()
@@ -72,7 +76,7 @@ class GeneralModule(MtcModule):
             table.append([mode_name, status, mode.description])
         print_table(table)
 
-    def settings_status(self, _):
+    def settings_status(self) -> None:
         from modules import SETTINGS
 
         table = [["Name", "Description", "Mode", "Default value", "Current value"]]
@@ -89,11 +93,8 @@ class GeneralModule(MtcModule):
             )
         print_table(table)
 
-    def print_status(self, args: list[str]):
-        opt = None
-        if len(args) == 1:
-            opt = args[0]
-        fast = opt == "fast"
+    def print_status(self, mode: Optional[Literal["fast"]] = None) -> None:
+        fast = mode == "fast"
 
         # Local status
         validator_status = self.ton.GetValidatorStatus()
@@ -663,18 +664,11 @@ class GeneralModule(MtcModule):
         ).format(_get_color_time(start_next_election_time, start_next_election))
         print(start_next_election_time_text)
 
-    def GetSettings(self, args: list[str]):
-        if not check_usage_one_arg("get", args):
-            return
-        name = args[0]
+    def GetSettings(self, name: str) -> None:
         result = self.ton.GetSettings(name)
         print(json.dumps(result, indent=2))
 
-    def SetSettings(self, args: list[str]):
-        if not check_usage_args_min_max_len("set", args, min_len=2, max_len=3):
-            return
-        name = args[0]
-        value = args[1]
+    def SetSettings(self, name: str, value: str, *, force: bool = False) -> None:
         if name == "usePool" or name == "useController":
             mode_name = "nominator-pool" if name == "usePool" else "liquid-staking"
             color_print(
@@ -682,10 +676,6 @@ class GeneralModule(MtcModule):
                 f"\nInstead, use {{bold}}enable_mode {mode_name}{{endc}}"
             )
             return
-        force = False
-        if len(args) > 2:
-            if args[2] == "--force":
-                force = True
         from modules import get_setting
 
         setting = get_setting(name)
@@ -709,47 +699,37 @@ class GeneralModule(MtcModule):
         self.ton.SetSettings(name, value)
         color_print("SetSettings - {green}OK{endc}")
 
-    def enable_mode(self, args: list[str]):
-        if not check_usage_one_arg("enable_mode", args):
-            return
-        name = args[0]
-        self.ton.enable_mode(name)
+    def enable_mode(
+        self,
+        mode_name: _ModeName,
+    ) -> None:
+        self.ton.enable_mode(mode_name)
         color_print("enable_mode - {green}OK{endc}")
         self.local.exit()
 
-    def disable_mode(self, args: list[str]):
-        if not check_usage_one_arg("disable_mode", args):
-            return
-        name = args[0]
-        self.ton.disable_mode(name)
+    def disable_mode(
+        self,
+        mode_name: _ModeName,
+    ) -> None:
+        self.ton.disable_mode(mode_name)
         color_print("disable_mode - {green}OK{endc}")
         self.local.exit()
 
-    def download_archive_blocks(self, args: list[str]):
-        if not check_usage_args_min_max_len("download_archive_blocks", args, 2, 5):
-            return
-
-        only_master = "--only-master" in args
-        args.remove("--only-master") if only_master else None
-        api_port = None
-        if args[0].isdigit():
-            api_port = int(args.pop(0))
-        path = pathlib.Path(args[0])
-        from_block = args[1]
-        to_block = args[2] if len(args) >= 3 else None
-        try:
-            from_block, to_block = int(from_block), int(to_block) if to_block else None
-        except ValueError:
-            color_print(
-                "{red}Bad args. from_block and to_block must be integers.{endc}"
-            )
-            return
-
+    def download_archive_blocks(
+        self,
+        download_path: pathlib.Path,
+        from_block_seqno: int,
+        to_block_seqno: Optional[int] = None,
+        *,
+        port: Annotated[Optional[int], Arg(help="TON Storage API port, default: the one of ton_storage.service")] = None,
+        only_master: Annotated[bool, Arg(help="download only masterchain blocks")] = False,
+    ) -> None:
+        api_port = port
         if api_port is None:
             api_port = get_ton_storage_port(self.local)
             if api_port is None:
                 raise Exception(
-                    "Failed to get Ton Storage API port and port was not provided"
+                    "Failed to get Ton Storage API port and --port was not given"
                 )
 
         # check ton storage is alive
@@ -765,28 +745,18 @@ class GeneralModule(MtcModule):
             return
 
         download_blocks(
-            self.local, str(path.absolute()), api_port, self.ton.IsTestnet(), from_block, to_block, only_master
+            self.local,
+            str(download_path.absolute()),
+            api_port,
+            self.ton.IsTestnet(),
+            from_block_seqno,
+            to_block_seqno,
+            only_master,
         )
 
-    def set_quic_port(self, args: list[str]):
-        if not check_usage_args_min_max_len("set_quic_port", args, 1, 2):
-            return
-        try:
-            port = int(args[0])
-        except ValueError:
-            color_print("{red}Port must be an integer{endc}")
-            return
-        if port < 0 or port > 65535:
-            color_print("{red}Port must be between 0 and 65535{endc}")
-            return
-        category = 2
-        if len(args) > 1:
-            try:
-                category = int(args[1])
-            except ValueError:
-                color_print("{red}Category must be an integer{endc}")
-                return
-
+    def set_quic_port(
+        self, port: Annotated[int, Arg(type=tcp_port)], category: int = 2
+    ) -> None:
         vconfig = self.ton.GetValidatorConfig()
         ip = int2ip(vconfig["addrs"][0]["ip"])
         adnl_addr = self.ton.GetAdnlAddr()
@@ -836,15 +806,23 @@ class GeneralModule(MtcModule):
                 "info",
             )
 
-    def Update(self, args: list[str]):
+    def Update(
+        self,
+        target: Annotated[Optional[str], Arg(help="branch, tag or commit, or a github url (optionally .../tree/<branch>)")] = None,
+        target_branch: Annotated[Optional[str], Arg(help="branch, tag or commit when target is a github url")] = None,
+        *,
+        branch: Annotated[Optional[str], Arg(help="branch, tag or commit to update to")] = None,
+    ) -> None:
         if is_container():
             color_print("Replace the MyTonCtrl image with a newer tagged image to update the controller.")
             return
-        repo = "mytonctrl"
         paths = self.ton.get_paths()
         author, repo, branch, _ = check_git(
-            args, paths.mtc_src, repo, "update"
-        )  # todo: implement --url for update
+            parse_git_target(target, target_branch, branch=branch),
+            paths.mtc_src,
+            "mytonctrl",
+            "update",
+        )
         # Run script
         with get_package_resource_path(
             "mytonctrl", "scripts/update.sh"
@@ -871,14 +849,23 @@ class GeneralModule(MtcModule):
         color_print(text)
         self.local.exit()
 
-    def Upgrade(self, args: list[str]):
+    def Upgrade(
+        self,
+        target: Annotated[Optional[str], Arg(help="branch, tag or commit, or a github url (optionally .../tree/<branch>)")] = None,
+        target_branch: Annotated[Optional[str], Arg(help="branch, tag or commit when target is a github url")] = None,
+        *,
+        branch: Annotated[Optional[str], Arg(help="branch, tag or commit to build")] = None,
+        url: Annotated[Optional[str], Arg(help="git url of a TON fork, optionally with #ref")] = None,
+    ) -> None:
         if is_container():
             color_print("Update the separate TON image and publish its binaries to the mounted volume. TON is not built inside the MyTonCtrl container.")
             return
         paths = self.ton.get_paths()
-
         author, repo, branch, git_url = check_git(
-            args, paths.ton_src, default_repo="ton", text="upgrade"
+            parse_git_target(target, target_branch, branch=branch, url=url),
+            paths.ton_src,
+            "ton",
+            "upgrade",
         )
 
         clang_version = get_clang_major_version()
@@ -923,12 +910,8 @@ class GeneralModule(MtcModule):
             text = "Upgrade - {red}Error{endc}"
         color_print(text)
 
-    def reload_global_config(self, args: list[str]):
-        if not check_usage_args_min_max_len("reload_global_config", args, 0, 1):
-            return
-        if len(args) == 1:
-            url = args[0]
-        else:
+    def reload_global_config(self, url: Optional[str] = None) -> None:
+        if url is None:
             network_name = self.ton.GetNetworkName()
             if network_name == "mainnet":
                 url = "https://ton-blockchain.github.io/global.config.json"
@@ -964,7 +947,13 @@ class GeneralModule(MtcModule):
         else:
             color_print("reload_global_config - {red}Error{endc}")
 
-    def run_benchmark(self, args: list[str]):
+    def run_benchmark(
+        self, *benchmark_args: str, tmp_dir: Optional[str] = None
+    ) -> None:
+        """Every option except --tmp-dir goes to benchmark.py: benchmark --nodes 4 --tps 1000
+
+        To pass -h or --tmp-dir to benchmark.py itself, put it after --: benchmark -- -h
+        """
         if shutil.which("uv") is None:
             answer = input("uv is not installed. Install it? [y/n] ").strip().lower()
             if answer == "y":
@@ -997,9 +986,8 @@ class GeneralModule(MtcModule):
             )
             return
 
-        tmp_parent_dir = pop_arg_from_args(args, "--tmp-dir")
-        if tmp_parent_dir is not None:
-            tmp_parent_dir = os.path.expanduser(tmp_parent_dir)
+        if tmp_dir is not None:
+            tmp_parent_dir = os.path.expanduser(tmp_dir)
             os.makedirs(tmp_parent_dir, exist_ok=True)
         else:
             tmp_parent_dir = str(self.ton.get_paths().ton_work / "tmp")
@@ -1016,13 +1004,13 @@ class GeneralModule(MtcModule):
                     color_print("{red}Error: benchmark temp path is not a directory{endc}")
                     return
 
-        with tempfile.TemporaryDirectory(dir=tmp_parent_dir) as tmp_dir:
-            tmp_dir = Path(tmp_dir).resolve()
+        with tempfile.TemporaryDirectory(dir=tmp_parent_dir) as run_dir:
+            run_dir = Path(run_dir).resolve()
             with get_package_resource_path(
                 "mytonctrl", "scripts/benchmark.py"
             ) as benchmark_path:
                 paths = self.ton.get_paths()
-                shutil.copy(benchmark_path, tmp_dir / "benchmark.py")
+                shutil.copy(benchmark_path, run_dir / "benchmark.py")
 
                 subprocess.run(
                     [
@@ -1034,29 +1022,33 @@ class GeneralModule(MtcModule):
                         "--name",
                         "benchmark",
                     ],
-                    cwd=tmp_dir,
+                    cwd=run_dir,
                     check=True,
                 )
 
                 src_dir = paths.ton_src
-                test_dir = tmp_dir / "test"
+                test_dir = run_dir / "test"
                 tontester_dir = test_dir / "tontester"
 
                 shutil.copytree(src_dir / "test", test_dir)
 
-                tl_dest = tmp_dir / "tl" / "generate" / "scheme"
+                tl_dest = run_dir / "tl" / "generate" / "scheme"
                 Path(tl_dest).mkdir(parents=True, exist_ok=True)
 
                 for f in (src_dir / "tl" / "generate" / "scheme").glob("*.tl"):
                     shutil.copy(f, tl_dest)
 
+                block_tlb_dest = run_dir / "crypto" / "block"
+                block_tlb_dest.mkdir(parents=True, exist_ok=True)
+                shutil.copy(src_dir / "crypto" / "block" / "block.tlb", block_tlb_dest)
+
                 subprocess.run(
-                    ["uv", "add", "--editable", tontester_dir], cwd=tmp_dir, check=True
+                    ["uv", "add", "--editable", tontester_dir], cwd=run_dir, check=True
                 )
 
                 subprocess.run(
                     ["uv", "run", tontester_dir / "generate_tl.py"],
-                    cwd=tmp_dir,
+                    cwd=run_dir,
                     check=True,
                 )
 
@@ -1069,20 +1061,15 @@ class GeneralModule(MtcModule):
                     "--source-dir",
                     paths.ton_src,
                     "--work-dir",
-                    str(tmp_dir / "test" / "integration" / ".network"),
-                ] + args
-                subprocess.run(cmd, cwd=tmp_dir)
+                    str(run_dir / "test" / "integration" / ".network"),
+                ] + list(benchmark_args)
+                subprocess.run(cmd, cwd=run_dir)
 
-    def about(self, args: list[str]):
-        from modules import get_mode, get_mode_settings
-
-        if not check_usage_one_arg("about", args):
-            return
-        mode_name = args[0]
-        mode = get_mode(mode_name)
-        if mode is None:
-            color_print(f"{{red}}Mode {mode_name} not found{{endc}}")
-            return
+    def about(
+        self,
+        mode_name: _ModeName,
+    ) -> None:
+        mode = MODES[mode_name]
         mode_settings = get_mode_settings(mode_name)
         color_print(f"""{{cyan}}===[ {mode_name} MODE ]==={{endc}}""")
         color_print(f"""Description: {mode.description}""")
@@ -1100,32 +1087,32 @@ class GeneralModule(MtcModule):
                 f"  {{bold}}{setting_name}{{endc}}: {setting.description}.\n    Default value: {setting.default_value}"
             )
 
-    def run_installer(self, args: list[str]):
+    def run_installer(self, *command: str) -> None:
         from mytoninstaller.mytoninstaller import InstallerCtrl
         installer = InstallerCtrl.from_ton(self.ton)
         try:
-            installer.run(' '.join(args))
+            installer.run(' '.join(command))
         except SystemExit:
             self.local.add_log("Exited MyTonInstaller")
             pass
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "update", self.Update)
-        add_command(self.local, console, "upgrade", self.Upgrade)
-        add_command(
-            self.local, console, "reload_global_config", self.reload_global_config
+        console.add_command("update", self.Update)
+        console.add_command("upgrade", self.Upgrade)
+        console.add_command("reload_global_config", self.reload_global_config
         )
-        add_command(self.local, console, "installer", self.run_installer)
-        add_command(self.local, console, "status", self.print_status)
-        add_command(self.local, console, "status_modes", self.mode_status)
-        add_command(self.local, console, "status_settings", self.settings_status)
-        add_command(self.local, console, "enable_mode", self.enable_mode)
-        add_command(self.local, console, "disable_mode", self.disable_mode)
-        add_command(self.local, console, "about", self.about)
-        add_command(self.local, console, "get", self.GetSettings)
-        add_command(self.local, console, "set", self.SetSettings)
-        add_command(
-            self.local, console, "download_archive_blocks", self.download_archive_blocks
+        console.add_command("installer", self.run_installer, forward_unknown=True
         )
-        add_command(self.local, console, "benchmark", self.run_benchmark)
-        add_command(self.local, console, "set_quic_port", self.set_quic_port)
+        console.add_command("status", self.print_status)
+        console.add_command("status_modes", self.mode_status)
+        console.add_command("status_settings", self.settings_status)
+        console.add_command("enable_mode", self.enable_mode)
+        console.add_command("disable_mode", self.disable_mode)
+        console.add_command("about", self.about)
+        console.add_command("get", self.GetSettings)
+        console.add_command("set", self.SetSettings)
+        console.add_command("download_archive_blocks", self.download_archive_blocks
+        )
+        console.add_command("benchmark", self.run_benchmark, forward_unknown=True
+        )
+        console.add_command("set_quic_port", self.set_quic_port)
