@@ -11,7 +11,7 @@ import tempfile
 import unittest
 
 
-INSTALL_SCRIPT = Path(__file__).resolve().parents[2] / "install.sh"
+INSTALL_SCRIPT = Path(__file__).resolve().parents[2] / "docker/install.sh"
 EXISTING_NAMES = (".env", "compose.yml", "compose.yaml", "docker-compose.yml", "docker-compose.yaml",
                   "compose.override.yml", "compose.override.yaml", "docker-compose.override.yml",
                   "docker-compose.override.yaml")

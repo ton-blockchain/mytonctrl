@@ -29,11 +29,13 @@ TON runtime, with runtime libraries and diagnostic tools only.
 
 ## Start with Compose
 
-Use the [quick setup installer](../README.docker.md#quick-setup) in an empty deployment
+Use [docker/install.sh](install.sh) as described in
+[quick setup](../README.docker.md#quick-setup), running it in an empty deployment
 directory. It creates `.env` and `compose.yml` for published images. Leave
 `TON_WORK_HOST_DIR` blank for the standard `TON_WORK_VOLUME` Docker volume, or
 set it to an absolute directory on your mounted data disk;
 see [storage setup and migration](../README.docker.md#store-ton-data-on-a-separate-disk).
+The standalone migration wizard is [docker/migrate.sh](migrate.sh).
 For a new archive liteserver, use `install.sh --archive` to prepare the required
 tool and Compose override automatically;
 see [archive node setup](../README.docker.md#set-up-an-archive-node).

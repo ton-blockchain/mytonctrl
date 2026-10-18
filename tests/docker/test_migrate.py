@@ -22,7 +22,8 @@ import unittest
 from unittest import mock
 
 
-MIGRATE_SCRIPT = Path(__file__).resolve().parents[2] / "migrate.sh"
+ROOT = Path(__file__).resolve().parents[2]
+MIGRATE_SCRIPT = ROOT / "docker/migrate.sh"
 
 
 def load_wizard():
@@ -579,7 +580,7 @@ class MigrationFixture(unittest.TestCase):
     def test_actual_native_mode_functions_skip_new_events_for_migration_backup_arguments(self):
         # Exercise the actual installer functions without requiring the native
         # TON/Python dependency stack merely to test this event-dispatch guard.
-        path = MIGRATE_SCRIPT.parent / "mytoninstaller/settings.py"
+        path = ROOT / "mytoninstaller/settings.py"
         source = ast.parse(path.read_text(), filename=str(path))
         definitions = [node for node in source.body if isinstance(node, ast.FunctionDef)
                        and node.name in ("EnableMode", "SetupCollator")]
@@ -632,7 +633,7 @@ class MigrationFixture(unittest.TestCase):
         self.assertEqual(node, self.node)
         archive_path = self.wizard.create_backup(migration)
         self.assertEqual(stat.S_IMODE(archive_path.stat().st_mode), 0o600)
-        docker_dir = MIGRATE_SCRIPT.parent / "docker"
+        docker_dir = ROOT / "docker"
         with mock.patch.object(sys, "path", [str(docker_dir), *sys.path]):
             spec = importlib.util.spec_from_file_location("migration_actual_entrypoint", docker_dir / "entrypoint.py")
             entrypoint = importlib.util.module_from_spec(spec)
@@ -889,9 +890,9 @@ class MigrationFixture(unittest.TestCase):
             if url.endswith("global.config.json"):
                 return json.dumps(global_config).encode()
             if url.endswith("/.env.example"):
-                return (MIGRATE_SCRIPT.parent / ".env.example").read_bytes()
+                return (ROOT / ".env.example").read_bytes()
             if url.endswith("/docker/compose.yml"):
-                return (MIGRATE_SCRIPT.parent / "docker/compose.yml").read_bytes()
+                return (ROOT / "docker/compose.yml").read_bytes()
             raise AssertionError("Unexpected download: " + url)
 
         def run(args, capture=True, **kwargs):

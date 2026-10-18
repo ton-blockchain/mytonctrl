@@ -21,14 +21,14 @@ Prepare an empty deployment directory:
 ```sh
 mkdir mytonctrl-docker
 cd mytonctrl-docker
-wget -O install.sh https://raw.githubusercontent.com/neodiX42/mytonctrl/master/install.sh
+wget -O install.sh https://raw.githubusercontent.com/neodiX42/mytonctrl/master/docker/install.sh
 bash install.sh
 ```
 
 Alternatively, run the installer directly from an empty deployment directory:
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/neodiX42/mytonctrl/master/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/neodiX42/mytonctrl/master/docker/install.sh | bash
 ```
 
 By default, the installer downloads only `.env` and `compose.yml` into the
@@ -75,7 +75,7 @@ The default `--branch master` selects master assets and
 starting. For dev assets and the `dev` image, use:
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/neodiX42/mytonctrl/dev/install.sh | bash -s -- --branch dev
+wget -qO- https://raw.githubusercontent.com/neodiX42/mytonctrl/dev/docker/install.sh | bash -s -- --branch dev
 ```
 
 Use `--image IMAGE` and `--ton-image IMAGE` to select published controller and
@@ -174,7 +174,7 @@ installation on the **same Linux host**. Install Python 3.8 or newer and Docker
 Compose, then run this from a terminal on that host:
 
 ```sh
-wget -O migrate.sh https://raw.githubusercontent.com/neodiX42/mytonctrl/master/migrate.sh
+wget -O migrate.sh https://raw.githubusercontent.com/neodiX42/mytonctrl/master/docker/migrate.sh
 sudo bash migrate.sh
 ```
 
@@ -403,14 +403,14 @@ automatically; follow [archive node setup](#set-up-an-archive-node).
 ## Set up an archive node
 
 With Docker, Compose and `jq` installed on a Linux `amd64` or `arm64` host, run the
-[installer](install.sh) with `--archive` in a new deployment directory. Choose
+[installer](docker/install.sh) with `--archive` in a new deployment directory. Choose
 pinned image references using the [lookup commands](#quick-setup); the following
 TON image example is for `amd64`:
 
 ```sh
 mkdir mytonctrl-archive
 cd mytonctrl-archive
-wget -O install.sh https://raw.githubusercontent.com/neodiX42/mytonctrl/master/install.sh
+wget -O install.sh https://raw.githubusercontent.com/neodiX42/mytonctrl/master/docker/install.sh
 bash install.sh --archive \
   --ton-image ghcr.io/ton-blockchain/ton:v2026.08-amd64 \
   --image ghcr.io/neodix42/mytonctrl:v1.0.2

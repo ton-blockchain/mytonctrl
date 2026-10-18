@@ -46,37 +46,37 @@ Learn more about node types: https://docs.ton.org/v3/documentation/nodes/overvie
 
 ### Install
 
-Host installation uses `scripts/install.sh`, downloaded below as `install-host.sh`.
+Host installation uses `scripts/install.sh`, downloaded below as `install.sh`.
 Installation and upgrades use `sudo` or `su` to install system components. You
 may be prompted for the root or sudo user's password.
 
-1. Download installation script:
+1. Download the installation script:
 	```shell
-	wget -O install-host.sh https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
+	wget https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/scripts/install.sh
 	```
 
-2. Run script with desired options:
+2. Run a script with desired options:
 	```shell
-	sudo bash install-host.sh -m <mode>
+	sudo bash install.sh -m <mode>
 	```
 	Or for Debian:
 	```shell
-	su root -c 'bash install-host.sh -m <mode>'
+	su root -c 'bash install.sh -m <mode>'
 	```
 
 To install a full archive liteserver, use:
 ```shell
-sudo bash install-host.sh -m liteserver --archive
+sudo bash install.sh -m liteserver --archive
 ```
 
-To view all available installation options use `bash install-host.sh --help`
+To view all available installation options use `bash install.sh --help`
 
 ### Installation options
 
-Pass these options directly to `sudo bash install-host.sh`. For example:
+Pass these options directly to `sudo bash install.sh`. For example:
 
 ```sh
-sudo bash install-host.sh -m validator -n mainnet -d
+sudo bash install.sh -m validator -n mainnet -d
 ```
 
 | Installation option | Description |
@@ -112,9 +112,9 @@ You can also configure some installation parameters using environment variables.
 * `LITESERVER_PORT` - port for liteserver (default: random port in range 2000-65000)
 * `VALIDATOR_PORT` - port for validator (default: random port in range 2000-64000)
 
-You can provide `env` file with allowed variables to installation script:
+You can provide `env` file with allowed variables to an installation script:
 ```shell
-sudo bash install-host.sh -m <mode> --env-file /path/to/installer.env
+sudo bash install.sh -m <mode> --env-file /path/to/installer.env
 ```
 
 ### Interactive CLI installer
@@ -123,7 +123,7 @@ To use the interactive CLI installer, run the installation script without a
 mode (`-m`) or backup (`-p`):
 
 ```shell
-sudo bash install-host.sh [args]
+sudo bash install.sh [args]
 ```
 You will be prompted to choose the installation mode and other options.
 
@@ -131,7 +131,7 @@ To run the interactive installer in `dry-run` mode, which will show you all the 
 that will be executed during installation without actually installing MyTonCtrl, use flag `--print-env`:
 
 ```shell
-sudo bash install-host.sh --print-env
+sudo bash install.sh --print-env
 ```
 
 After installation, you can run MyTonCtrl console using the command:
@@ -165,7 +165,7 @@ By default, MyTonCtrl sends validator statistics to the https://toncenter.com se
 It is necessary to identify network abnormalities, as well as to quickly give feedback to developers.
 To disable telemetry during installation, use the `-t` flag:
 ```sh
-sudo bash install-host.sh -m <mode> -t
+sudo bash install.sh -m <mode> -t
 ```
 
 To disable telemetry after installation, do the following:
