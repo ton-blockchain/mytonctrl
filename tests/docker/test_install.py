@@ -152,14 +152,14 @@ class InstallTests(unittest.TestCase):
         self.assertEqual({path.name for path in self.deployment.iterdir()}, {".env", "compose.yml"})
         self.assertFalse((self.deployment / "unexpected").exists())
         self.assertFalse((self.deployment / "unexpected-backtick").exists())
-        base = f"https://raw.githubusercontent.com/neodiX42/mytonctrl/{branch}"
+        base = f"https://raw.githubusercontent.com/ton-blockchain/mytonctrl/{branch}"
         self.assertEqual([(request["tool"], request["url"]) for request in self.requests()],
                          [(tool, base + "/.env.example"), (tool, base + "/docker/compose.yml")])
 
     def assert_archive_deployment(self, arch="amd64", branch="master", tool="curl", image=None,
                                   ton_image=None, contents=None, directory=None):
         directory = directory or self.deployment
-        image = image or f"ghcr.io/neodix42/mytonctrl:{'latest' if branch == 'master' else 'dev'}"
+        image = image or f"ghcr.io/ton-blockchain/mytonctrl:{'latest' if branch == 'master' else 'dev'}"
         expected = (contents or self.env_contents).replace("MYTONCTRL_IMAGE=template:image",
                                                           "MYTONCTRL_IMAGE=" + image)
         expected = expected.replace("MYTONCTRL_ARGS=-m validator -n mainnet -d",
@@ -179,7 +179,7 @@ class InstallTests(unittest.TestCase):
         for name, mode in ((".env", 0o600), ("compose.yml", 0o644), ("compose.override.yml", 0o644),
                            ("tonutils-storage", 0o755)):
             self.assertEqual(stat.S_IMODE((directory / name).stat().st_mode), mode)
-        base = f"https://raw.githubusercontent.com/neodiX42/mytonctrl/{branch}"
+        base = f"https://raw.githubusercontent.com/ton-blockchain/mytonctrl/{branch}"
         self.assertEqual([(request["tool"], request["url"]) for request in self.requests()], [
             (tool, base + "/.env.example"),
             (tool, base + "/docker/compose.yml"),
@@ -193,17 +193,17 @@ class InstallTests(unittest.TestCase):
         self.downloader("curl")
         self.downloader("wget")
         self.run_install()
-        self.assert_deployment("ghcr.io/neodix42/mytonctrl:latest")
+        self.assert_deployment("ghcr.io/ton-blockchain/mytonctrl:latest")
 
     def test_wget_stdin_bootstrap_selects_dev_assets_and_image(self):
         self.downloader("wget")
         self.run_install(["--branch", "dev"], stdin=True)
-        self.assert_deployment("ghcr.io/neodix42/mytonctrl:dev", branch="dev", tool="wget")
+        self.assert_deployment("ghcr.io/ton-blockchain/mytonctrl:dev", branch="dev", tool="wget")
 
     def test_explicit_master_branch_selects_latest_image(self):
         self.downloader("curl")
         self.run_install(["--branch", "master"])
-        self.assert_deployment("ghcr.io/neodix42/mytonctrl:latest")
+        self.assert_deployment("ghcr.io/ton-blockchain/mytonctrl:latest")
 
     def test_custom_image_changes_only_image_setting_and_keeps_asset_branch(self):
         self.downloader("wget")
@@ -216,11 +216,11 @@ class InstallTests(unittest.TestCase):
         ton_image = "ghcr.io/ton-blockchain/ton:v2026.10"
         self.run_install(["--ton-image", ton_image])
         self.env_contents = self.env_contents.replace("TON_IMAGE=ton-template:image", "TON_IMAGE=" + ton_image)
-        self.assert_deployment("ghcr.io/neodix42/mytonctrl:latest")
+        self.assert_deployment("ghcr.io/ton-blockchain/mytonctrl:latest")
 
     def test_archive_curl_downloads_amd64_binary_and_pins_both_images(self):
         self.downloader("curl")
-        image = "ghcr.io/neodix42/mytonctrl:v1.0.2"
+        image = "ghcr.io/ton-blockchain/mytonctrl:v1.0.2"
         ton_image = "ghcr.io/ton-blockchain/ton:v2026.10"
         result = self.run_install(["--archive", "--image", image, "--ton-image", ton_image])
         self.assert_archive_deployment(image=image, ton_image=ton_image)
@@ -281,7 +281,7 @@ class InstallTests(unittest.TestCase):
         self.downloader("wget")
         (self.tools / "jq").unlink()
         self.run_install()
-        self.assert_deployment("ghcr.io/neodix42/mytonctrl:latest", tool="wget")
+        self.assert_deployment("ghcr.io/ton-blockchain/mytonctrl:latest", tool="wget")
 
     def test_archive_rejects_unsupported_architecture_or_os_before_download(self):
         self.downloader("curl")

@@ -87,7 +87,7 @@ Use the same `TON_WORK_VOLUME` and optional `TON_WORK_HOST_DIR` values in `.env`
 and your shell. The exporter comes from the controller image:
 
 ```sh
-docker pull ghcr.io/neodix42/mytonctrl:latest
+docker pull ghcr.io/ton-blockchain/mytonctrl:latest
 docker pull ghcr.io/ton-blockchain/ton:latest
 docker volume create mytonctrl-ton-scripts
 docker volume create mytonctrl-ton-artifacts
@@ -95,7 +95,7 @@ TON_WORK_VOLUME=mytonctrl-ton-work
 TON_WORK_HOST_DIR=
 docker run --rm --entrypoint /bin/sh \
   --mount type=volume,src=mytonctrl-ton-scripts,dst=/scripts \
-  ghcr.io/neodix42/mytonctrl:latest \
+  ghcr.io/ton-blockchain/mytonctrl:latest \
   -c 'cp /usr/local/lib/mytonctrl/export-ton.sh /scripts/export-ton.sh'
 docker run --rm --entrypoint /bin/sh \
   -e TON_IMAGE_REF=ghcr.io/ton-blockchain/ton:latest \
@@ -106,7 +106,7 @@ docker run -d --name mytonctrl --network host --stop-timeout 75 \
   --env-file .env \
   --mount type=volume,src=mytonctrl-ton-artifacts,dst=/ton-artifacts,readonly \
   -v "${TON_WORK_HOST_DIR:-$TON_WORK_VOLUME}:/var/ton-work" \
-  ghcr.io/neodix42/mytonctrl:latest
+  ghcr.io/ton-blockchain/mytonctrl:latest
 docker exec -it mytonctrl mytonctrl
 ```
 
@@ -115,7 +115,7 @@ Check mounts and binary dependencies without initializing the node state:
 ```sh
 docker run --rm \
   --mount type=volume,src=mytonctrl-ton-artifacts,dst=/ton-artifacts,readonly \
-  ghcr.io/neodix42/mytonctrl:latest check
+  ghcr.io/ton-blockchain/mytonctrl:latest check
 ```
 
 ## Use an existing TON container's volumes
@@ -135,7 +135,7 @@ docker run -d --name mytonctrl --network host --stop-timeout 75 --env-file .env 
   -v ton-native-fift:/ton-source/fift:ro \
   -v ton-native-smartcont:/ton-source/smartcont:ro \
   -v "${TON_WORK_HOST_DIR:-${TON_WORK_VOLUME:-mytonctrl-ton-work}}:/var/ton-work" \
-  ghcr.io/neodix42/mytonctrl:latest
+  ghcr.io/ton-blockchain/mytonctrl:latest
 ```
 
 Docker populates new empty named volumes from the official image directories.
@@ -192,7 +192,7 @@ TON or MyTonCtrl in this image.
 
 ## Published controller images
 
-GitHub Actions builds and publishes `ghcr.io/<lowercase-repository-owner>/mytonctrl` for
+GitHub Actions builds and publishes `ghcr.io/ton-blockchain/mytonctrl` for
 both `linux/amd64` and `linux/arm64`:
 
 | Trigger | Image tag |
@@ -210,7 +210,7 @@ repository's `GITHUB_TOKEN`.
 
 Image tags become available after the publishing workflow completes successfully.
 
-Set `MYTONCTRL_IMAGE=ghcr.io/<lowercase-repository-owner>/mytonctrl:<tag>` in
+Set `MYTONCTRL_IMAGE=ghcr.io/ton-blockchain/mytonctrl:<tag>` in
 `.env` to use a published image. Pull and recreate only the controller:
 
 ```sh

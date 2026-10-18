@@ -1361,7 +1361,7 @@ class GeneralModule(MtcModule):
 
         clang_version = get_clang_major_version()
         if clang_version is None or clang_version < self.CLANG_VERSION_REQUIRED:
-            text = f"{{red}}WARNING: THIS UPGRADE WILL MOST PROBABLY FAIL DUE TO A WRONG CLANG VERSION: {clang_version}, REQUIRED VERSION IS {self.CLANG_VERSION_REQUIRED}. RECOMMENDED TO EXIT NOW AND UPGRADE CLANG AS PER INSTRUCTIONS: https://gist.github.com/neodix42/24d6a401e928f7e895fcc8e7b7c5c24a{{endc}}\n"
+            text = f"{{red}}WARNING: THIS UPGRADE WILL MOST PROBABLY FAIL DUE TO A WRONG CLANG VERSION: {clang_version}, REQUIRED VERSION IS {self.CLANG_VERSION_REQUIRED}. RECOMMENDED TO EXIT NOW AND UPGRADE CLANG AS PER INSTRUCTIONS: https://apt.llvm.org/{{endc}}\n"
             color_print(text)
             if input("Continue with upgrade anyway? [Y/n]\n").strip().lower() not in (
                 "y",

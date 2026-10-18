@@ -1,6 +1,6 @@
 services:
   ton-exporter:
-    image: ${MYTONCTRL_IMAGE:-ghcr.io/neodix42/mytonctrl:latest}
+    image: ${MYTONCTRL_IMAGE:-ghcr.io/ton-blockchain/mytonctrl:latest}
     # Supply the export script from the controller image without starting it.
     entrypoint: ["/bin/sh", "-eu", "-c"]
     command:
@@ -30,7 +30,7 @@ services:
     restart: "no"
 
   mytonctrl:
-    image: ${MYTONCTRL_IMAGE:-ghcr.io/neodix42/mytonctrl:latest}
+    image: ${MYTONCTRL_IMAGE:-ghcr.io/ton-blockchain/mytonctrl:latest}
     env_file: ${MYTONCTRL_ENV_FILE:-.env}
     volumes:
       - ton-artifacts:/ton-artifacts:ro

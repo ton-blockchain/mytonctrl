@@ -59,7 +59,7 @@ case "$branch" in
     dev) default_tag=dev ;;
     *) fail "--branch must be master or dev" ;;
 esac
-image=${image:-ghcr.io/neodix42/mytonctrl:$default_tag}
+image=${image:-ghcr.io/ton-blockchain/mytonctrl:$default_tag}
 [[ "$image" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:/@-]*$ ]] || fail "Invalid --image value"
 if [[ -n "$ton_image" ]]; then
     [[ "$ton_image" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:/@-]*$ ]] || fail "Invalid --ton-image value"
@@ -131,7 +131,7 @@ download() {
     [[ -s "$destination" ]] || fail "Downloaded file is empty: $url"
 }
 
-base_url=https://raw.githubusercontent.com/neodiX42/mytonctrl/$branch
+base_url=https://raw.githubusercontent.com/ton-blockchain/mytonctrl/$branch
 download "$base_url/.env.example" "$stage_dir/env.example"
 download "$base_url/docker/compose.yml" "$stage_dir/compose.yml"
 if ((archive)); then

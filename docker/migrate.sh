@@ -808,7 +808,7 @@ class Wizard:
         if storage_type == 'directory' and filesystem.split()[0] == '/':
             self.confirm('The TON work destination is on the root filesystem. Use this disk anyway?')
         tag = 'dev' if self.branch == 'dev' else 'latest'
-        controller_image = self.image('New MyTonCtrl image', 'ghcr.io/neodix42/mytonctrl:' + tag)
+        controller_image = self.image('New MyTonCtrl image', 'ghcr.io/ton-blockchain/mytonctrl:' + tag)
         ton_default = {'x86_64': 'ghcr.io/ton-blockchain/ton:v2026.08-amd64',
                        'amd64': 'ghcr.io/ton-blockchain/ton:v2026.08-amd64',
                        'aarch64': 'ghcr.io/ton-blockchain/ton:v2026.08-arm64',
@@ -823,7 +823,7 @@ class Wizard:
         if probe['core'].get('sendTelemetry') is False:
             args.append('-t')
         self.settings['MYTONCTRL_ARGS'] = shlex.join(args)
-        base = f'https://raw.githubusercontent.com/neodiX42/mytonctrl/{self.branch}'
+        base = f'https://raw.githubusercontent.com/ton-blockchain/mytonctrl/{self.branch}'
         template = download(base + '/.env.example').decode()
         compose = download(base + '/docker/compose.yml').decode()
         print('\nMigration plan:')

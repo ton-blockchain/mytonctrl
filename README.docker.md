@@ -21,14 +21,14 @@ Prepare an empty deployment directory:
 ```sh
 mkdir mytonctrl-docker
 cd mytonctrl-docker
-wget -O install.sh https://raw.githubusercontent.com/neodiX42/mytonctrl/master/docker/install.sh
+wget -O install.sh https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/docker/install.sh
 bash install.sh
 ```
 
 Alternatively, run the installer directly from an empty deployment directory:
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/neodiX42/mytonctrl/master/docker/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/docker/install.sh | bash
 ```
 
 By default, the installer downloads only `.env` and `compose.yml` into the
@@ -48,22 +48,22 @@ skopeo list-tags docker://ghcr.io/ton-blockchain/ton |
     | last // error("No stable TON image tag found")
     | "ghcr.io/ton-blockchain/ton:\(.)"'
 
-skopeo list-tags docker://ghcr.io/neodix42/mytonctrl |
+skopeo list-tags docker://ghcr.io/ton-blockchain/mytonctrl |
   jq -er '
     .Tags | map(select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))
     | sort_by(ltrimstr("v") | split(".") | map(tonumber))
     | last // error("No stable MyTonCtrl image tag found")
-    | "ghcr.io/neodix42/mytonctrl:\(.)"'
+    | "ghcr.io/ton-blockchain/mytonctrl:\(.)"'
 ```
 
 The TON lookup includes tags for the host architecture (`amd64` or `arm64`)
 and tags without an architecture suffix. For example, the output may be
 `ghcr.io/ton-blockchain/ton:v2026.08-amd64` and
-`ghcr.io/neodix42/mytonctrl:v1.0.2`; the actual versions change as images are
+`ghcr.io/ton-blockchain/mytonctrl:v1.0.2`; the actual versions change as images are
 published. These commands query published image tags, independently of GitHub
 releases, and select the highest version rather than the most recently built tag.
 See the [TON package](https://github.com/ton-blockchain/ton/pkgs/container/ton)
-and [MyTonCtrl package](https://github.com/neodiX42/mytonctrl/pkgs/container/mytonctrl).
+and [MyTonCtrl package](https://github.com/ton-blockchain/mytonctrl/pkgs/container/mytonctrl).
 
 **Avoid using the `latest` tag for either image.** It can move to another build
 without an explicit version change in your configuration. Pin a version tag or
@@ -71,11 +71,11 @@ digest in `.env`, choose the [data storage](#store-ton-data-on-a-separate-disk),
 then [start the containers and open the console](#start-and-open-the-console).
 
 The default `--branch master` selects master assets and
-`ghcr.io/neodix42/mytonctrl:latest`; replace that default in `.env` before
+`ghcr.io/ton-blockchain/mytonctrl:latest`; replace that default in `.env` before
 starting. For dev assets and the `dev` image, use:
 
 ```sh
-wget -qO- https://raw.githubusercontent.com/neodiX42/mytonctrl/dev/docker/install.sh | bash -s -- --branch dev
+wget -qO- https://raw.githubusercontent.com/ton-blockchain/mytonctrl/dev/docker/install.sh | bash -s -- --branch dev
 ```
 
 Use `--image IMAGE` and `--ton-image IMAGE` to select published controller and
@@ -144,7 +144,7 @@ available controller image:
 ```sh
 OLD_TON_WORK_VOLUME=mytonctrl-ton-work
 TON_WORK_HOST_DIR=/mnt/ton/ton-work
-MYTONCTRL_IMAGE=ghcr.io/neodix42/mytonctrl:v1.0.2
+MYTONCTRL_IMAGE=ghcr.io/ton-blockchain/mytonctrl:v1.0.2
 
 docker volume inspect "$OLD_TON_WORK_VOLUME" >/dev/null &&
   docker run --rm --pull never --network none --user 0 --entrypoint /bin/sh \
@@ -174,7 +174,7 @@ installation on the **same Linux host**. Install Python 3.8 or newer and Docker
 Compose, then run this from a terminal on that host:
 
 ```sh
-wget -O migrate.sh https://raw.githubusercontent.com/neodiX42/mytonctrl/master/docker/migrate.sh
+wget -O migrate.sh https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/docker/migrate.sh
 sudo bash migrate.sh
 ```
 
@@ -340,7 +340,7 @@ dump. Replace the template's `latest` image tags with pinned versions, for examp
 
 ```dotenv
 TON_IMAGE=ghcr.io/ton-blockchain/ton:v2026.08-amd64
-MYTONCTRL_IMAGE=ghcr.io/neodix42/mytonctrl:v1.0.2
+MYTONCTRL_IMAGE=ghcr.io/ton-blockchain/mytonctrl:v1.0.2
 TON_WORK_HOST_DIR=
 MYTONCTRL_ARGS=-m validator -n mainnet -d
 PUBLIC_IP=
@@ -360,12 +360,12 @@ skopeo list-tags docker://ghcr.io/ton-blockchain/ton |
     | last // error("No stable TON image tag found")
     | "ghcr.io/ton-blockchain/ton:\(.)"'
 
-skopeo list-tags docker://ghcr.io/neodix42/mytonctrl |
+skopeo list-tags docker://ghcr.io/ton-blockchain/mytonctrl |
   jq -er '
     .Tags | map(select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))
     | sort_by(ltrimstr("v") | split(".") | map(tonumber))
     | last // error("No stable MyTonCtrl image tag found")
-    | "ghcr.io/neodix42/mytonctrl:\(.)"'
+    | "ghcr.io/ton-blockchain/mytonctrl:\(.)"'
 ```
 
 These examples use `v2026.08-amd64` for x86-64 hosts; the TON lookup selects
@@ -410,10 +410,10 @@ TON image example is for `amd64`:
 ```sh
 mkdir mytonctrl-archive
 cd mytonctrl-archive
-wget -O install.sh https://raw.githubusercontent.com/neodiX42/mytonctrl/master/docker/install.sh
+wget -O install.sh https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/docker/install.sh
 bash install.sh --archive \
   --ton-image ghcr.io/ton-blockchain/ton:v2026.08-amd64 \
-  --image ghcr.io/neodix42/mytonctrl:v1.0.2
+  --image ghcr.io/ton-blockchain/mytonctrl:v1.0.2
 ```
 
 The installer prepares `.env` and `compose.yml`, installs
@@ -492,7 +492,7 @@ docker compose exec mytonctrl mytonctrl --cmd "get modes"
 In Docker mode, status displays image references instead of Git commits:
 
 ```text
-Version mytonctrl: ghcr.io/neodix42/mytonctrl:v1.0.2
+Version mytonctrl: ghcr.io/ton-blockchain/mytonctrl:v1.0.2
 Version validator: ghcr.io/ton-blockchain/ton:v2026.08-amd64
 ```
 
@@ -668,12 +668,12 @@ For a published image, retrieve the newest stable MyTonCtrl image reference usin
 `skopeo` and `jq` on the host:
 
 ```sh
-skopeo list-tags docker://ghcr.io/neodix42/mytonctrl |
+skopeo list-tags docker://ghcr.io/ton-blockchain/mytonctrl |
   jq -er '
     .Tags | map(select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))
     | sort_by(ltrimstr("v") | split(".") | map(tonumber))
     | last // error("No stable MyTonCtrl image tag found")
-    | "ghcr.io/neodix42/mytonctrl:\(.)"'
+    | "ghcr.io/ton-blockchain/mytonctrl:\(.)"'
 ```
 
 Copy the full output into `MYTONCTRL_IMAGE` in `.env`, or pin another version
@@ -719,7 +719,7 @@ Prepare an empty directory and download the environment template:
 ```sh
 mkdir mytonctrl-docker &&
   cd mytonctrl-docker &&
-  wget -O .env https://raw.githubusercontent.com/neodiX42/mytonctrl/master/.env.example
+  wget -O .env https://raw.githubusercontent.com/ton-blockchain/mytonctrl/master/.env.example
 ```
 
 Edit `.env` with the same [installation arguments](#installation-arguments-in-env)
@@ -730,7 +730,7 @@ references and volume names in `.env`:
 
 ```sh
 TON_IMAGE=ghcr.io/ton-blockchain/ton:v2026.08-amd64
-MYTONCTRL_IMAGE=ghcr.io/neodix42/mytonctrl:v1.0.2
+MYTONCTRL_IMAGE=ghcr.io/ton-blockchain/mytonctrl:v1.0.2
 TON_SCRIPTS_VOLUME=mytonctrl-ton-scripts
 TON_ARTIFACTS_VOLUME=mytonctrl-ton-artifacts
 TON_WORK_VOLUME=mytonctrl-ton-work
@@ -849,7 +849,7 @@ Set `MYTONCTRL_IMAGE` to the desired tag or digest in `.env` and in your shell.
 Pull it and refresh the packaged exporter for future TON exports:
 
 ```sh
-MYTONCTRL_IMAGE=ghcr.io/neodix42/mytonctrl:v1.0.2
+MYTONCTRL_IMAGE=ghcr.io/ton-blockchain/mytonctrl:v1.0.2
 docker pull "$MYTONCTRL_IMAGE"
 docker run --rm --pull never --network none --entrypoint /bin/sh \
   --mount "type=volume,src=$TON_SCRIPTS_VOLUME,dst=/scripts" \

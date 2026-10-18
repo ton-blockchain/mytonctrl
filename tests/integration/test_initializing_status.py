@@ -74,7 +74,7 @@ def test_status_works_during_dump_before_validator_console_exists(cli, ton, init
 def test_container_status_displays_image_references_without_commit_or_branch(
     cli, initializing_node, monkeypatch,
 ):
-    monkeypatch.setattr(general, "get_controller_image_ref", lambda: "ghcr.io/neodix42/mytonctrl:v1.2.3")
+    monkeypatch.setattr(general, "get_controller_image_ref", lambda: "ghcr.io/ton-blockchain/mytonctrl:v1.2.3")
     monkeypatch.setattr(general, "get_ton_image_ref", lambda: "ghcr.io/ton-blockchain/ton:v2026.10")
     monkeypatch.setattr(general, "get_git_hash", lambda *args, **kwargs: pytest.fail("container read Git hash"))
     monkeypatch.setattr(general, "get_git_branch", lambda *args, **kwargs: pytest.fail("container read Git branch"))
@@ -82,7 +82,7 @@ def test_container_status_displays_image_references_without_commit_or_branch(
 
     output = cli.execute("status fast", no_color=True)
 
-    assert "Version mytonctrl: ghcr.io/neodix42/mytonctrl:v1.2.3\n" in output
+    assert "Version mytonctrl: ghcr.io/ton-blockchain/mytonctrl:v1.2.3\n" in output
     assert "Version validator: ghcr.io/ton-blockchain/ton:v2026.10\n" in output
     assert "external image" not in output
 

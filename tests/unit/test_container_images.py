@@ -8,7 +8,7 @@ from mytonctrl import images
 
 @pytest.mark.parametrize("tag", ["latest", "dev", "v1.2.3", "custom-tag"])
 def test_controller_image_prefers_baked_reference_over_stale_environment(monkeypatch, tag):
-    reference = f"ghcr.io/neodix42/mytonctrl:{tag}"
+    reference = f"ghcr.io/ton-blockchain/mytonctrl:{tag}"
     monkeypatch.setattr(mytonctrl, "__image_ref__", reference)
     monkeypatch.setattr(mytonctrl, "__version__", tag)
     monkeypatch.setenv("MYTONCTRL_IMAGE", "other/image:stale")
