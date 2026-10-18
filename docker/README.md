@@ -309,7 +309,8 @@ controller database. The default container command runs services;
 archive downloader, which requires **tonutils-storage**, a different program/API
 from the official TON `storage-daemon`. For a new archive node,
 [`install.sh --archive`](../README.docker.md#set-up-an-archive-node) downloads a
-pinned prebuilt executable and installs [the Compose override](compose.archive.yml)
+prebuilt executable from the latest GitHub release and installs
+[the Compose override](compose.archive.yml)
 to include it in the exported artifacts. For custom native mounts, supply it as
 `tonutils-storage` in the mounted flat binaries directory. Startup fails early
 with an actionable message when it is absent. The image never compiles this

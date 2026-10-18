@@ -402,7 +402,7 @@ automatically; follow [archive node setup](#set-up-an-archive-node).
 
 ## Set up an archive node
 
-With Docker and Compose installed on a Linux `amd64` or `arm64` host, run the
+With Docker, Compose and `jq` installed on a Linux `amd64` or `arm64` host, run the
 [installer](install.sh) with `--archive` in a new deployment directory. Choose
 pinned image references using the [lookup commands](#quick-setup); the following
 TON image example is for `amd64`:
@@ -418,8 +418,8 @@ bash install.sh --archive \
 
 The installer prepares `.env` and `compose.yml`, installs
 [the archive Compose configuration](docker/compose.archive.yml) as
-`compose.override.yml`, and downloads the pinned `tonutils-storage` executable
-for the host architecture. It sets
+`compose.override.yml`, and queries GitHub for the latest `tonutils-storage`
+release tag before downloading its executable for the host architecture. It sets
 `MYTONCTRL_ARGS=-m liteserver -n mainnet --archive` and `DUMP=false` automatically.
 Compose loads the override and exports the tool with the TON binaries.
 Keep all four generated files in the deployment directory for future starts

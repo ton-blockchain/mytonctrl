@@ -8,7 +8,7 @@ Usage: bash install.sh [--branch master|dev] [--image IMAGE] [--ton-image IMAGE]
 
 Download .env and compose.yml into the current directory.
 Use --archive to also prepare a new mainnet archive liteserver, downloading
-compose.override.yml and the pinned tonutils-storage executable.
+compose.override.yml and the latest released tonutils-storage executable.
 Existing environment, Compose files and archive executables are never overwritten.
 
   --branch master|dev  Asset branch and default image tag (default: master/latest)
@@ -17,7 +17,8 @@ Existing environment, Compose files and archive executables are never overwritte
   --archive            Prepare a fresh mainnet archive liteserver (Linux amd64/arm64)
   -h, --help           Show this help
 
-Docker and Compose must be installed separately. This script does not start containers.
+Docker and Compose must be installed separately; --archive also requires jq.
+This script does not start containers.
 EOF
 }
 
@@ -77,6 +78,7 @@ if ((archive)); then
         aarch64|arm64) storage_arch=arm64 ;;
         *) fail "--archive supports Linux amd64 and arm64 only" ;;
     esac
+    command -v jq >/dev/null 2>&1 || fail "Install jq to resolve the latest tonutils-storage release for --archive"
     outputs+=(compose.override.yml tonutils-storage)
     existing_names+=(tonutils-storage)
 fi
@@ -134,7 +136,12 @@ download "$base_url/.env.example" "$stage_dir/env.example"
 download "$base_url/docker/compose.yml" "$stage_dir/compose.yml"
 if ((archive)); then
     download "$base_url/docker/compose.archive.yml" "$stage_dir/compose.override.yml"
-    storage_version=v1.5.5
+    download "https://api.github.com/repos/xssnick/tonutils-storage/releases/latest" \
+        "$stage_dir/tonutils-storage-release.json"
+    storage_version=$(jq -er '.tag_name | select(type == "string")' "$stage_dir/tonutils-storage-release.json") \
+        || fail "Could not read the latest tonutils-storage release tag"
+    [[ "$storage_version" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]] \
+        || fail "Invalid latest tonutils-storage release tag"
     download "https://github.com/xssnick/tonutils-storage/releases/download/$storage_version/tonutils-storage-linux-$storage_arch" \
         "$stage_dir/tonutils-storage"
     chmod 644 "$stage_dir/compose.override.yml"

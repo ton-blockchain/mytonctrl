@@ -27,7 +27,7 @@ class InstallTests(unittest.TestCase):
         self.tools = self.root / "bin"
         self.tools.mkdir()
         # PATH contains no real downloader or Docker executable.
-        for name in ("bash", "cat", "mktemp", "rm", "chmod", "ln"):
+        for name in ("bash", "cat", "mktemp", "rm", "chmod", "ln", "jq"):
             self.assertIsNotNone(shutil.which(name), f"Missing test utility: {name}")
             (self.tools / name).symlink_to(shutil.which(name))
         self.download_log = self.root / "downloads.jsonl"
@@ -56,6 +56,9 @@ class InstallTests(unittest.TestCase):
         self.storage_binary = self.root / "tonutils-storage-binary"
         self.storage_contents = b"\x7fELFmock archive storage executable\n"
         self.storage_binary.write_bytes(self.storage_contents)
+        self.storage_version = "v9.8.7"
+        self.storage_release = self.root / "storage-release.json"
+        self.storage_release.write_text(json.dumps({"tag_name": self.storage_version}))
         self.environment = dict(os.environ)
         self.environment.update(
             PATH=str(self.tools),
@@ -65,6 +68,7 @@ class InstallTests(unittest.TestCase):
             INSTALL_TEST_COMPOSE_TEMPLATE=str(self.compose_template),
             INSTALL_TEST_ARCHIVE_TEMPLATE=str(self.archive_template),
             INSTALL_TEST_STORAGE_BINARY=str(self.storage_binary),
+            INSTALL_TEST_STORAGE_RELEASE=str(self.storage_release),
         )
         uname = self.tools / "uname"
         uname.write_text(
@@ -106,7 +110,9 @@ class InstallTests(unittest.TestCase):
             "    source = os.environ['INSTALL_TEST_COMPOSE_TEMPLATE']\n"
             "elif url.endswith('/docker/compose.archive.yml'):\n"
             "    source = os.environ['INSTALL_TEST_ARCHIVE_TEMPLATE']\n"
-            "elif '/releases/download/v1.5.5/tonutils-storage-linux-' in url:\n"
+            "elif url == 'https://api.github.com/repos/xssnick/tonutils-storage/releases/latest':\n"
+            "    source = os.environ['INSTALL_TEST_STORAGE_RELEASE']\n"
+            "elif '/releases/download/' in url and '/tonutils-storage-linux-' in url:\n"
             "    source = os.environ['INSTALL_TEST_STORAGE_BINARY']\n"
             "else:\n"
             "    raise SystemExit('Unexpected asset URL: ' + url)\n"
@@ -178,8 +184,9 @@ class InstallTests(unittest.TestCase):
             (tool, base + "/.env.example"),
             (tool, base + "/docker/compose.yml"),
             (tool, base + "/docker/compose.archive.yml"),
+            (tool, "https://api.github.com/repos/xssnick/tonutils-storage/releases/latest"),
             (tool, "https://github.com/xssnick/tonutils-storage/releases/download/"
-                   f"v1.5.5/tonutils-storage-linux-{arch}"),
+                   f"{self.storage_version}/tonutils-storage-linux-{arch}"),
         ])
 
     def test_executable_bootstrap_fetches_only_two_assets_and_defaults_to_latest(self):
@@ -218,7 +225,7 @@ class InstallTests(unittest.TestCase):
         result = self.run_install(["--archive", "--image", image, "--ton-image", ton_image])
         self.assert_archive_deployment(image=image, ton_image=ton_image)
         self.assertIn("mainnet", (self.deployment / ".env").read_text())
-        self.assertIn("compose.override.yml and tonutils-storage v1.5.5", result.stdout)
+        self.assertIn(f"compose.override.yml and tonutils-storage {self.storage_version}", result.stdout)
         self.assertFalse((self.deployment / "unexpected").exists())
         self.assertFalse((self.deployment / "unexpected-backtick").exists())
 
@@ -240,6 +247,42 @@ class InstallTests(unittest.TestCase):
         self.run_install(["--archive"])
         self.assert_archive_deployment()
 
+    def test_archive_uses_the_new_release_tag_from_github(self):
+        self.downloader("curl")
+        self.storage_version = "v10.2.4"
+        self.storage_release.write_text(json.dumps({"tag_name": self.storage_version}))
+        result = self.run_install(["--archive"])
+        self.assert_archive_deployment()
+        self.assertIn(f"tonutils-storage {self.storage_version}", result.stdout)
+
+    def test_archive_invalid_release_metadata_installs_nothing(self):
+        self.downloader("wget")
+        responses = ["not JSON", "{}", '{"tag_name": null}', '{"tag_name": 12}',
+                     '{"tag_name": ""}', '{"tag_name": "../unsafe"}',
+                     '{"tag_name": "$(touch unexpected)"}']
+        for response in responses:
+            with self.subTest(response=response):
+                self.storage_release.write_text(response)
+                self.download_log.unlink(missing_ok=True)
+                result = self.run_install(["--archive"], success=False)
+                self.assertIn("tonutils-storage release tag", result.stderr)
+                self.assertEqual(len(self.requests()), 4)
+                self.assertEqual(list(self.deployment.iterdir()), [])
+
+    def test_archive_requires_jq_before_downloading(self):
+        self.downloader("curl")
+        (self.tools / "jq").unlink()
+        result = self.run_install(["--archive"], success=False)
+        self.assertIn("Install jq", result.stderr)
+        self.assertEqual(self.requests(), [])
+        self.assertEqual(list(self.deployment.iterdir()), [])
+
+    def test_ordinary_installation_does_not_require_jq(self):
+        self.downloader("wget")
+        (self.tools / "jq").unlink()
+        self.run_install()
+        self.assert_deployment("ghcr.io/neodix42/mytonctrl:latest", tool="wget")
+
     def test_archive_rejects_unsupported_architecture_or_os_before_download(self):
         self.downloader("curl")
         for os_name, architecture in (("Linux", "riscv64"), ("Darwin", "arm64")):
@@ -251,7 +294,7 @@ class InstallTests(unittest.TestCase):
 
     def test_archive_failed_or_empty_download_leaves_no_output(self):
         self.downloader("wget")
-        for download in (3, 4):
+        for download in (3, 4, 5):
             with self.subTest(download=download):
                 self.download_log.unlink(missing_ok=True)
                 self.environment["INSTALL_TEST_FAIL_DOWNLOAD"] = str(download)
