@@ -20,6 +20,24 @@ def is_container() -> bool:
     )
 
 
+def container_initialization_complete(ton) -> bool:
+    """Console credentials can exist before the container finishes configuring its node."""
+    return (
+        not is_container()
+        or (ton.get_paths().ton_work / "controller/initialized.json").is_file()
+    )
+
+
+def get_service_state(name: str) -> str | None:
+    result = subprocess.run(
+        ["systemctl", "show", name, "--property=SubState", "--value"],
+        capture_output=True,
+        text=True,
+        timeout=3,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
 def timestamp2utcdatetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
     if timestamp is None:
         return "n/a"

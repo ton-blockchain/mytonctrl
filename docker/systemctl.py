@@ -116,6 +116,7 @@ def read_unit(path):
         "directory": last("WorkingDirectory"),
         "environment": environment,
         "restart": restart,
+        "nofile": last("LimitNOFILE"),
     }
 
 
@@ -125,11 +126,14 @@ def render_program(name, spec_path, spec, runner):
     # %% escapes Supervisor interpolation. Commands are parsed into argv by
     # Supervisor and by the runner; neither path invokes a shell.
     command = command.replace("%", "%%")
+    # Generated validator units sleep for two seconds before exec. The binary
+    # must have started before Supervisor reports a successful launch.
+    startsecs = 5 if name == "validator" else 1
     return f"""[program:{name}]
 command={command}
 autostart=false
 autorestart={restart}
-startsecs=1
+startsecs={startsecs}
 startretries=3
 stopsignal=TERM
 stopwaitsecs=60
@@ -309,7 +313,9 @@ def main(argv=None):
             if action == "show":
                 values = {"MainPID": info["pid"] if info else 0,
                           "ExecMainStartTimestampMonotonic": process_start_monotonic(info["pid"] if info else 0),
-                          "ActiveState": "active" if active else "inactive"}
+                          "ActiveState": "active" if active else "inactive",
+                          "SubState": info["statename"] if info else "STOPPED",
+                          "ExecMainStatus": info["exitstatus"] if info else 0}
                 for prop in properties or values:
                     if prop not in values:
                         raise ValueError(f"Unsupported systemctl property: {prop}")

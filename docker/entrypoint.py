@@ -5,6 +5,7 @@ import json
 import os
 import platform
 import pwd
+import random
 import re
 import shlex
 import shutil
@@ -28,8 +29,74 @@ BINARY_LAYOUT = {
     "generate-random-id": "utils/generate-random-id",
     "fift": "crypto/fift", "func": "crypto/func", "create-state": "crypto/create-state",
     "dht-server": "dht-server/dht-server",
+    "libtonlibjson.so": "tonlib/libtonlibjson.so",
+    "libemulator.so": "emulator/libemulator.so",
+    "blockchain-explorer": "blockchain-explorer/blockchain-explorer",
     "tonutils-storage": "tonutils-storage/tonutils-storage",
 }
+INITIALIZATION_SETTINGS = (
+    "MODE", "NETWORK", "MTC_USER", "TELEMETRY", "IGNORE_MINIMAL_REQS", "DUMP", "ARCHIVE",
+    "ONLY_MTC", "ONLY_NODE", "BACKUP", "BIN_DIR", "SRC_DIR", "TON_WORK_DIR", "PUBLIC_IP",
+    "GLOBAL_CONFIG_URL", "GLOBAL_CONFIG_FILE", "CONFIG_URL", "VALIDATOR_PORT",
+    "VALIDATOR_CONSOLE_PORT", "LITESERVER_PORT", "QUIC_PORT", "ARCHIVE_TTL", "STATE_TTL",
+    "ADD_SHARD", "ARCHIVE_BLOCKS", "DUMP_CACHE_DIR", "DUMP_EXTRACT_THREADS",
+    "DUMP_VALIDATE_BEFORE_EXTRACT", "CUSTOM_PARAMETERS", "VERBOSITY",
+)
+
+
+def write_json(path, value):
+    temporary = path.with_name(path.name + ".tmp")
+    with temporary.open("w") as stream:
+        json.dump(value, stream)
+        stream.flush()
+        os.fsync(stream.fileno())
+    temporary.replace(path)
+
+
+def resume_settings(env, pending, identity):
+    """Resume the same installation; older images created an empty marker."""
+    if not pending.exists():
+        return False
+    text = pending.read_text().strip()
+    if text:
+        try:
+            value = json.loads(text)
+            if value["version"] != 1 or value["identity"] != identity:
+                raise ValueError("Persisted initialization paths/user differ from .env")
+            settings = value["installer_environment"]
+            if not isinstance(settings, dict) or any(
+                    name not in INITIALIZATION_SETTINGS or not isinstance(setting, str)
+                    for name, setting in settings.items()):
+                raise ValueError("Invalid persisted initialization settings")
+            for name in INITIALIZATION_SETTINGS:
+                env.pop(name, None)
+            env.update(settings)
+        except (KeyError, TypeError, json.JSONDecodeError) as error:
+            raise ValueError(f"Invalid initialization marker {pending}; data and dump cache were preserved") from error
+    print("Resuming interrupted initialization; existing node data and dump cache will be reused.", flush=True)
+    return True
+
+
+def pin_installer_ports(env, work):
+    """Keep randomly selected ports stable across interrupted installations."""
+    node = work / "db/config.json"
+    config = json.loads(node.read_text()) if node.is_file() else {}
+    sections = {"VALIDATOR_PORT": "addrs", "VALIDATOR_CONSOLE_PORT": "control",
+                "LITESERVER_PORT": "liteservers"}
+    used = {int(env[name]) for name in sections if env.get(name)}
+    for name, section in sections.items():
+        if not env.get(name):
+            entries = config.get(section) or []
+            value = entries[0].get("port") if entries else None
+            if value is None:
+                value = random.SystemRandom().randint(2000, 64000)
+                while value in used:
+                    value = random.SystemRandom().randint(2000, 64000)
+            env[name] = str(value)
+        port = int(env[name])
+        if not 1 <= port <= 65535:
+            raise ValueError(f"{name} must be between 1 and 65535")
+        used.add(port)
 
 
 def boolean(env, name, default=False):
@@ -88,6 +155,11 @@ def snapshot_artifacts(sources, target=Path("/run/ton-active")):
         shutil.rmtree(target)
     for source, name in zip(sources, ("bin", "fift", "smartcont")):
         shutil.copytree(source, target / name)
+    # Keep the reported image tied to these binaries, even after another export.
+    if sources and all(source.parent == sources[0].parent for source in sources):
+        metadata = sources[0].parent / "image-ref"
+        if metadata.is_file():
+            shutil.copyfile(metadata, target / "image-ref")
     validate_artifacts(target / "bin", target / "fift", target / "smartcont")
     for path in target.rglob("*"):
         path.chmod(path.stat().st_mode & ~0o222)
@@ -353,7 +425,6 @@ def main():
     if os.getuid() != 0:
         raise ValueError("The container entrypoint must run as root; set MTC_USER for controller service ownership")
     custom_validator_args(env)
-    os.environ.update(env)
     work = directory(env, "TON_WORK_DIR", "/var/ton-work")
     default_work = Path("/var/ton-work")
     if work != default_work and mounted(default_work) and not mounted(work):
@@ -374,9 +445,14 @@ def main():
     if initialized.exists() and json.loads(initialized.read_text()) != identity:
         raise ValueError("Persisted controller paths/user differ from .env; retain the original installation settings")
     pending = state / ".initializing"
-    if pending.exists():
-        raise ValueError(f"Previous initialization was interrupted. Inspect {work} and restore its backup "
-                         "or use an empty data volume before retrying.")
+    if initialized.exists():
+        # A stop between committing completion and removing the pending marker
+        # must not rerun installation or block an otherwise complete node.
+        pending.unlink(missing_ok=True)
+    else:
+        resume_settings(env, pending, identity)
+        args = installer_args(env)
+        custom_validator_args(env)
     if not initialized.exists():
         check_requirements(env)
         backup = env.get("BACKUP") or "none"
@@ -386,7 +462,13 @@ def main():
             raise ValueError("ARCHIVE/ARCHIVE_BLOCKS requires a separately mounted prebuilt tonutils-storage "
                              "binary in TON binaries; official storage-daemon uses a different API.")
         resolve_public_ip(env)
-        os.environ.update(env)
+        pin_installer_ports(env, work)
+    # The native installer reads the process environment. Remove settings that
+    # were absent from the saved installation before applying restored values.
+    for name in INITIALIZATION_SETTINGS:
+        if name not in env:
+            os.environ.pop(name, None)
+    os.environ.update(env)
     prepare_layout(env, active, state)
     Path("/run/mytonctrl-options.json").write_text(json.dumps({
         "MTC_USER": env["MTC_USER"], "TON_WORK_DIR": env["TON_WORK_DIR"],
@@ -403,7 +485,10 @@ def main():
         stopping = True
         for child in reversed(children):
             if child.poll() is None:
-                os.killpg(child.pid, signal.SIGTERM)
+                try:
+                    os.killpg(child.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
@@ -421,19 +506,29 @@ def main():
         else:
             raise RuntimeError("Service supervisor did not become ready")
         if not initialized.exists():
-            pending.touch()
+            write_json(pending, {"version": 1, "identity": identity,
+                       "installer_environment": {name: env[name] for name in INITIALIZATION_SETTINGS if name in env}})
             installer = subprocess.Popen([sys.executable, "-m", "mytoninstaller", *args], start_new_session=True)
             children.append(installer)
-            if installer.wait() != 0:
-                raise RuntimeError("MyTonCtrl initialization failed; persistent state was retained for inspection")
+            result = installer.wait()
+            if stopping:
+                return
+            if result != 0:
+                raise RuntimeError("MyTonCtrl initialization failed; node data and dump cache were preserved. "
+                                   "The next start resumes installation; inspect controller/installer-progress.json for the cause.")
             core = json.loads((state / "mytoncore/mytoncore.db").read_text())
             if not boolean(env, "ONLY_MTC"):
                 if not (work / "db/config.json").is_file() or not core.get("validatorConsole") or not core.get("liteClient", {}).get("liteServer"):
                     raise RuntimeError("MyTonCtrl initialization did not create complete node/client configuration")
             if customize_validator(env, state):
                 subprocess.run(["systemctl", "restart", "validator"], check=True)
-            initialized.write_text(json.dumps(identity))
+            write_json(initialized, identity)
             pending.unlink()
+        from mytoninstaller.dump import cleanup_completed_dump, get_dump_cache_dir
+        try:
+            cleanup_completed_dump(get_dump_cache_dir(str(work)), str(work / "db"))
+        except (OSError, ValueError) as error:
+            print(f"Could not remove completed dump cache: {error}. Node data are ready.", file=sys.stderr, flush=True)
         subprocess.run(["systemctl", "initialize"], check=True)
         print("MyTonCtrl ready. Open the console with: docker exec -it <container> mytonctrl", flush=True)
         if command == "console":
@@ -448,11 +543,16 @@ def main():
                 raise RuntimeError("Service supervisor exited unexpectedly")
     finally:
         stop(signal.SIGTERM, None)
-        try:
-            supervisor.wait(timeout=75)
-        except subprocess.TimeoutExpired:
-            supervisor.kill()
-            supervisor.wait()
+        deadline = time.monotonic() + 65
+        for child in reversed(children):
+            try:
+                child.wait(timeout=max(0, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(child.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                child.wait()
         lock.close()
 
 

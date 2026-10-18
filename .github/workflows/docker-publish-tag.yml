@@ -62,6 +62,7 @@ jobs:
           build-args: |
             MYTONCTRL_COMMIT=${{ github.sha }}
             MYTONCTRL_VERSION=${{ steps.image.outputs.tag }}
+            MYTONCTRL_IMAGE_REF=${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}

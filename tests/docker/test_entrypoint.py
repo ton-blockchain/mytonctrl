@@ -6,7 +6,7 @@ import tarfile
 import tempfile
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -47,12 +47,17 @@ class EntrypointTests(unittest.TestCase):
 
     def test_snapshot_keeps_binaries_and_resources_when_provider_updates(self):
         sources = self.artifacts(self.root / "provider")
+        metadata = sources[0].parent / "image-ref"
+        metadata.write_text("ghcr.io/ton-blockchain/ton:running\n")
         active = entrypoint.snapshot_artifacts(sources, self.root / "active")
         (sources[0] / "validator-engine").write_text("new executable")
         (sources[1] / "TonUtil.fif").write_text("new library")
+        metadata.write_text("ghcr.io/ton-blockchain/ton:new\n")
         self.assertEqual((active / "bin/validator-engine").read_text(), "original executable")
         self.assertEqual((active / "fift/TonUtil.fif").read_text(), "original library")
         self.assertEqual((active / "bin/validator-engine").stat().st_mode & 0o222, 0)
+        self.assertEqual((active / "image-ref").read_text(), "ghcr.io/ton-blockchain/ton:running\n")
+        self.assertEqual((active / "image-ref").stat().st_mode & 0o222, 0)
 
     def test_existing_native_mounts_need_no_export_metadata(self):
         sources = self.artifacts(self.root / "native")
@@ -60,6 +65,8 @@ class EntrypointTests(unittest.TestCase):
         env["TON_ARTIFACTS_DIR"] = str(self.root / "absent")
         with patch.object(entrypoint, "mounted", return_value=True):
             self.assertEqual(entrypoint.artifact_sources(env), sources)
+        active = entrypoint.snapshot_artifacts(sources, self.root / "active")
+        self.assertFalse((active / "image-ref").exists())
 
     def test_missing_mount_fails_before_creating_runtime_or_state(self):
         with self.assertRaisesRegex(ValueError, "Missing TON artifact mount"):
@@ -112,6 +119,63 @@ class EntrypointTests(unittest.TestCase):
             detect.assert_not_called()
         self.assertEqual(env["PUBLIC_IP"], "")
 
+    def test_interrupted_initialization_restores_original_settings(self):
+        pending = self.root / ".initializing"
+        identity = {"MTC_USER": "root", "TON_WORK_DIR": str(self.root)}
+        settings = {"MTC_USER": "root", "TON_WORK_DIR": str(self.root), "DUMP": "true",
+                    "PUBLIC_IP": "192.0.2.10", "VALIDATOR_CONSOLE_PORT": "30304"}
+        entrypoint.write_json(pending, {"version": 1, "identity": identity,
+                                      "installer_environment": settings})
+        archive = self.root / "downloaded.tar.lz"
+        archive.write_bytes(b"downloaded dump")
+        env = {"DUMP": "false", "PUBLIC_IP": "", "TON_IMAGE": "new-image", "ARCHIVE_BLOCKS": "100"}
+        self.assertTrue(entrypoint.resume_settings(env, pending, identity))
+        self.assertEqual({key: env[key] for key in settings}, settings)
+        self.assertEqual(env["TON_IMAGE"], "new-image")
+        self.assertNotIn("ARCHIVE_BLOCKS", env)
+        self.assertEqual(archive.read_bytes(), b"downloaded dump")
+
+    def test_legacy_empty_pending_marker_can_resume_without_removing_data(self):
+        pending = self.root / ".initializing"
+        pending.touch()
+        env = {"DUMP": "true"}
+        self.assertTrue(entrypoint.resume_settings(env, pending, {}))
+        self.assertEqual(env, {"DUMP": "true"})
+        self.assertTrue(pending.exists())
+
+    def test_invalid_or_incompatible_resume_settings_are_rejected_without_overwriting(self):
+        pending = self.root / ".initializing"
+        values = ("broken JSON", json.dumps({"version": 1, "identity": {"MTC_USER": "other"},
+                                            "installer_environment": {}}),
+                  json.dumps({"version": 1, "identity": {}, "installer_environment": {"PATH": "/tmp"}}))
+        for value in values:
+            with self.subTest(value=value):
+                pending.write_text(value)
+                with self.assertRaises(ValueError):
+                    entrypoint.resume_settings({}, pending, {})
+                self.assertEqual(pending.read_text(), value)
+
+    def test_resume_reuses_existing_node_ports_when_environment_is_blank(self):
+        database = self.root / "db"
+        database.mkdir()
+        (database / "config.json").write_text(json.dumps({"addrs": [{"port": 30303}],
+                                                        "control": [{"port": 30304}],
+                                                        "liteservers": [{"port": 30305}]}))
+        env = {"VALIDATOR_PORT": "", "VALIDATOR_CONSOLE_PORT": "", "LITESERVER_PORT": ""}
+        entrypoint.pin_installer_ports(env, self.root)
+        self.assertEqual(env, {"VALIDATOR_PORT": "30303", "VALIDATOR_CONSOLE_PORT": "30304",
+                               "LITESERVER_PORT": "30305"})
+
+    def test_random_ports_are_persisted_before_installer_launch(self):
+        env = {}
+        entrypoint.pin_installer_ports(env, self.root)
+        pending = self.root / ".initializing"
+        entrypoint.write_json(pending, {"version": 1, "identity": {}, "installer_environment": env})
+        restored = {}
+        entrypoint.resume_settings(restored, pending, {})
+        self.assertEqual(restored, env)
+        self.assertEqual(len(set(restored.values())), 3)
+
     def test_discovery_failure_precedes_pending_marker_and_installer_process(self):
         work = self.root / "node-work"
         env = {"PUBLIC_IP": "", "TON_WORK_DIR": str(work), "MTC_USER": "root"}
@@ -133,6 +197,85 @@ class EntrypointTests(unittest.TestCase):
             process.assert_not_called()
         self.assertFalse((work / "controller/.initializing").exists())
         self.assertFalse((work / "db").exists())
+
+    def test_container_restart_resumes_initialization_and_handles_stale_marker(self):
+        for scenario in ("legacy", "saved", "ready"):
+            with self.subTest(scenario=scenario):
+                complete = scenario == "ready"
+                work = self.root / scenario
+                state = work / "controller"
+                (state / "mytoncore").mkdir(parents=True)
+                (work / "db").mkdir()
+                (work / "db/config.json").write_text('{}')
+                (state / "mytoncore/mytoncore.db").write_text(json.dumps({
+                    "validatorConsole": {"addr": "127.0.0.1:30304"},
+                    "liteClient": {"liteServer": {"port": 30305}},
+                }))
+                archive = work / "downloaded.tar.lz"
+                archive.write_bytes(b"keep downloaded archive")
+                pending = state / ".initializing"
+                pending.touch()
+                identity = {"MTC_USER": "root", "BIN_DIR": "/usr/bin", "SRC_DIR": "/usr/src",
+                            "TON_WORK_DIR": str(work)}
+                if complete:
+                    (state / "initialized.json").write_text(json.dumps(identity))
+                runtime = work / "run"
+                runtime.mkdir()
+                env = {**identity, "PUBLIC_IP": "192.0.2.10", "DUMP": "true"}
+                if scenario == "saved":
+                    pending.write_text(json.dumps({
+                        "version": 1, "identity": identity, "installer_environment": dict(env),
+                    }))
+                    env.update({"DUMP_CACHE_DIR": "/changed-cache", "ARCHIVE_BLOCKS": "100"})
+                env["UNRELATED_RUNTIME_SETTING"] = "keep"
+                supervisor = Mock(pid=12345)
+                supervisor.poll.return_value = None
+                supervisor.wait.return_value = 0
+                installer = Mock(pid=12346)
+                installer.poll.return_value = 0
+                installer.wait.return_value = 0
+                foreground = Mock(pid=12347)
+                foreground.poll.return_value = 0
+                foreground.wait.return_value = 0
+
+                def path(value):
+                    target = Path(value)
+                    return runtime / target.relative_to("/run") if str(target).startswith("/run/") else target
+
+                def spawn(argv, **kwargs):
+                    if "mytoninstaller" in argv and scenario == "saved":
+                        self.assertNotIn("DUMP_CACHE_DIR", entrypoint.os.environ)
+                        self.assertNotIn("ARCHIVE_BLOCKS", entrypoint.os.environ)
+                        self.assertEqual(entrypoint.os.environ["UNRELATED_RUNTIME_SETTING"], "keep")
+                    if argv[0] == "/usr/bin/supervisord":
+                        (runtime / "supervisor.sock").touch()
+                        return supervisor
+                    return installer if "mytoninstaller" in argv else foreground
+
+                with patch.object(entrypoint, "Path", path), \
+                     patch.object(entrypoint.sys, "argv", ["entrypoint.py", "console", "--cmd", "status"]), \
+                     patch.object(entrypoint, "installation_environment", return_value=env), \
+                     patch.object(entrypoint, "artifact_sources", return_value=()), \
+                     patch.object(entrypoint, "snapshot_artifacts", return_value=self.root / "active"), \
+                     patch.object(entrypoint, "check_binaries"), \
+                     patch.object(entrypoint.os, "getuid", return_value=0), \
+                     patch.object(entrypoint.os, "environ", dict(env)), \
+                     patch.object(entrypoint.os, "killpg"), \
+                     patch.object(entrypoint.signal, "signal"), \
+                     patch.object(entrypoint, "mounted", return_value=False), \
+                     patch.object(entrypoint, "check_requirements"), \
+                     patch.object(entrypoint, "prepare_layout"), \
+                     patch.object(entrypoint, "global_config"), \
+                     patch.object(entrypoint, "customize_validator", return_value=False), \
+                     patch.object(entrypoint.subprocess, "Popen", side_effect=spawn) as process, \
+                     patch.object(entrypoint.subprocess, "run"), \
+                     patch("mytoninstaller.dump.cleanup_completed_dump", create=True):
+                    entrypoint.main()
+                installs = [call for call in process.call_args_list if "mytoninstaller" in call.args[0]]
+                self.assertEqual(len(installs), 0 if complete else 1)
+                self.assertEqual(json.loads((state / "initialized.json").read_text()), identity)
+                self.assertFalse(pending.exists())
+                self.assertEqual(archive.read_bytes(), b"keep downloaded archive")
 
     def test_release_is_pinned_once_and_cannot_escape_volume(self):
         root = self.root / "artifacts"

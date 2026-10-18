@@ -180,6 +180,47 @@ def test_upgrade(cli, monkeypatch):
     assert "Upgrade - Error" in output
 
 
+@pytest.mark.parametrize("marker", ["environment", "file"])
+@pytest.mark.parametrize("args", ["", " custom-repository custom-branch"])
+@pytest.mark.parametrize("command,component,image_env", [
+    ("update", "MyTonCtrl", "MYTONCTRL_IMAGE"),
+    ("upgrade", "TON binaries", "TON_IMAGE"),
+])
+def test_container_update_commands_only_print_image_guidance(
+    cli, monkeypatch, mocker, marker, args, command, component, image_env,
+):
+    if marker == "environment":
+        monkeypatch.setenv("MYTONCTRL_CONTAINER", "1")
+    else:
+        monkeypatch.delenv("MYTONCTRL_CONTAINER", raising=False)
+    original_isfile = os.path.isfile
+
+    def isfile(path):
+        if os.fspath(path) == "/etc/mytonctrl-container":
+            return marker == "file"
+        return original_isfile(path)
+
+    monkeypatch.setattr("mytonctrl.utils.os.path.isfile", isfile)
+    forbidden = AssertionError("Container update must not modify the installation")
+    operations = [
+        mocker.patch.object(general_module, "check_git", side_effect=forbidden),
+        mocker.patch.object(general_module, "get_clang_major_version", side_effect=forbidden),
+        mocker.patch.object(general_module, "run_as_root", side_effect=forbidden),
+        mocker.patch("builtins.input", side_effect=forbidden),
+        mocker.patch.object(MyPyClass, "exit", side_effect=forbidden),
+    ]
+
+    output = cli.execute(command + args, no_color=True)
+
+    assert f"The {command} command is disabled inside this container." in output
+    assert component in output
+    assert "appropriate Docker image" in output
+    assert f"{image_env} in .env" in output
+    assert "Error" not in output
+    for operation in operations:
+        operation.assert_not_called()
+
+
 def test_reload_global_config(cli, monkeypatch):
     # the cli fixture pins GetNetworkName to "mainnet"
     valid_config = json.dumps({"validator": {}, "liteservers": []})

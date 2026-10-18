@@ -13,7 +13,6 @@ import struct
 import socket
 import platform
 import threading
-import traceback
 import subprocess
 from contextlib import contextmanager
 from types import FrameType
@@ -206,8 +205,8 @@ class MyPyClass:
 			result = False
 		return result
 
-	def add_log(self, input_text: str, mode: str = INFO) -> None:
-		self.logger.log(level_for_mode(mode), str(input_text))
+	def add_log(self, input_text: str, mode: str = INFO, *, exc_info: bool = False) -> None:
+		self.logger.log(level_for_mode(mode), str(input_text), exc_info=exc_info)
 
 	def exit(self, signum: int | None = None, frame: FrameType | None = None) -> None:
 		self.working = False
@@ -389,9 +388,7 @@ class MyPyClass:
 			else:
 				result = func(*args)
 		except Exception as err:
-			self.add_log(f"{func.__name__} error: {err}", ERROR)
-			if log_traceback:
-				self.add_log(traceback.format_exc(), ERROR)
+			self.add_log(f"{func.__name__} error: {err}", ERROR, exc_info=log_traceback)
 		return result
 
 	def start_thread(self, func: Callback, name: str | None = None, args: Sequence[Any] | None = None) -> None:

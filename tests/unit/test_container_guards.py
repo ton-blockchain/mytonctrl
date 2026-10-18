@@ -35,14 +35,22 @@ def test_container_marker_survives_environment_reset(monkeypatch):
     assert utils.is_container()
 
 
-@pytest.mark.parametrize("method,image", [("Update", "MyTonCtrl"), ("Upgrade", "TON")])
-def test_updates_refer_to_images_before_git_or_compiler_checks(container, monkeypatch, capsys, method, image):
+@pytest.mark.parametrize("method,image,setting", [
+    ("Update", "MyTonCtrl", "MYTONCTRL_IMAGE"),
+    ("Upgrade", "TON binaries", "TON_IMAGE"),
+])
+def test_updates_refer_to_images_before_git_or_compiler_checks(container, monkeypatch, capsys, method, image, setting):
     monkeypatch.setattr("modules.general.check_git", forbidden)
     monkeypatch.setattr("modules.general.get_clang_major_version", forbidden)
     monkeypatch.setattr("modules.general.run_as_root", forbidden)
-    module = GeneralModule(SimpleNamespace(get_paths=forbidden), None)
+    monkeypatch.setattr("modules.general.get_package_resource_path", forbidden)
+    monkeypatch.setattr("builtins.input", forbidden)
+    module = GeneralModule(SimpleNamespace(get_paths=forbidden), SimpleNamespace(exit=forbidden))
     getattr(module, method)("some-repository", "some-branch")
-    assert image in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert f"The {method.lower()} command is disabled inside this container." in output
+    assert f"Update {image} using the appropriate Docker image" in output
+    assert f"({setting} in .env)" in output
 
 
 def test_startup_update_check_does_not_access_repositories(container, monkeypatch):
@@ -98,19 +106,27 @@ def test_node_ownership_does_not_recurse_into_controller_state(container, monkey
     (work / "log.1").write_text("rotated validator log")
     (work / "logs").mkdir()
     ctx = SimpleNamespace(
-        only_mtc=False, validator_user="validator", paths=paths,
+        only_mtc=False, validator_user="validator", user="operator", paths=paths,
         archive_ttl=None, state_ttl=None, mode="validator", add_shard=None,
         public_ip="192.0.2.10", ports=SimpleNamespace(validator=30000), dump=False, archive_blocks=None,
     )
     monkeypatch.setattr(settings, "add2systemd", lambda **kwargs: None)
-    monkeypatch.setattr(settings, "StartValidator", lambda local: None)
+    monkeypatch.setattr(settings, "_start_validator", lambda local: None)
     monkeypatch.setattr(settings.psutil, "cpu_count", lambda: 4)
     commands = []
-    monkeypatch.setattr(settings.subprocess, "run", lambda args, **kwargs: commands.append(args))
+    def run(args, **kwargs):
+        commands.append(args)
+        if args[0] == paths.validator_app_path:
+            Path(paths.vconfig_path).write_text('{"addrs": [{}], "control": [], "liteservers": []}')
+
+    monkeypatch.setattr(settings.subprocess, "run", run)
     settings.FirstNodeSettings(SimpleNamespace(add_log=lambda *args: None), ctx)
     assert ["chown", "validator:validator", paths.ton_work_dir] in commands
     ownership = next(command for command in commands if command[:3] == ["chown", "-R", "validator:validator"])
-    assert set(ownership[3:]) == {paths.ton_db_dir, paths.keys_dir, str(work / "log"), str(work / "log.1")}
+    assert ownership[3:] == [paths.ton_db_dir]
+    log_ownership = next(command for command in commands
+                         if command[:3] == ["chown", "validator:validator", paths.keys_dir])
+    assert sorted(log_ownership[3:]) == [str(work / "log"), str(work / "log.1")]
     assert ["chown", "-R", "validator:validator", paths.ton_work_dir] not in commands
 
 
@@ -135,7 +151,7 @@ def test_initial_validator_failure_stops_before_dump_or_service_start(container,
         public_ip="192.0.2.10", ports=SimpleNamespace(validator=30000), dump=True, archive_blocks=None,
     )
     monkeypatch.setattr(settings, "add2systemd", lambda **kwargs: None)
-    monkeypatch.setattr(settings, "StartValidator", forbidden)
+    monkeypatch.setattr(settings, "_start_validator", forbidden)
     monkeypatch.setattr(settings, "download_dump", forbidden)
     commands = []
 
@@ -274,10 +290,12 @@ def restore_command(tmp_path):
     commands.mkdir()
     for name, exit_code in (("systemctl", 1), ("chown", 0)):
         executable = commands / name
-        executable.write_text(f"#!/bin/sh\nexit {exit_code}\n")
+        record = 'printf "%s\\n" "$*" >> "$SERVICE_COMMANDS"\n' if name == "systemctl" else ""
+        executable.write_text(f"#!/bin/sh\n{record}exit {exit_code}\n")
         executable.chmod(0o755)
     env = os.environ.copy()
     env["PATH"] = str(commands) + os.pathsep + env["PATH"]
+    env["SERVICE_COMMANDS"] = str(tmp_path / "service-commands.log")
     data = tmp_path / "controller data"
     data.mkdir()
     link = tmp_path / "controller-link"
@@ -302,6 +320,9 @@ def test_backup_script_restores_through_persisted_directory_symlink(container, r
     assert (data / "mytoncore.db").read_text() == '{"restored": true}'
     assert (work / "keys/client").read_bytes() == b"client-key"
     assert (tmp_path / "controller-link").is_symlink()
+    commands = Path(env["SERVICE_COMMANDS"]).read_text().splitlines()
+    assert "start validator" in commands
+    assert "start mytoncore" not in commands
 
 
 def test_backup_script_failed_extraction_never_copies_or_reports_success(container, restore_command, tmp_path):

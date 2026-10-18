@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -39,9 +40,10 @@ class ExportTonTests(unittest.TestCase):
             path = self.source / "bin" / binary
             path.write_text("#!/bin/sh\nprintf 'fake TON binary\\n'\n")
             path.chmod(0o755)
-        for resource in ("Fift.fif", "TonUtil.fif"):
+        for resource in ("Fift.fif", "TonUtil.fif", "Asm.fif"):
             (self.source / "fift" / resource).write_text("// Fift library\n")
-        (self.source / "smartcont" / "wallet-v3.fif").write_text("// wallet contract\n")
+        for resource in ("wallet-v3.fif", "validator-elect-signed.fif"):
+            (self.source / "smartcont" / resource).write_text("// wallet contract\n")
 
     def export(self, success=True, environment=None):
         result = subprocess.run(
@@ -74,8 +76,46 @@ class ExportTonTests(unittest.TestCase):
         self.export()
         self.assertEqual(self.current_release(), release)
         self.assertEqual(binary.stat().st_ino, original_inode)
-        self.assertEqual((release / "image-ref").read_text(), "ghcr.io/ton-blockchain/ton:test\n")
+        self.assertEqual((release / "image-ref").read_text(), "different-tag-for-same-content\n")
         self.assert_no_staging_files()
+
+    def test_separately_supplied_archive_downloader_is_published_with_ton_binaries(self):
+        downloader = self.source / "bin" / "tonutils-storage"
+        downloader.write_text("#!/bin/sh\nprintf 'archive downloader\\n'\n")
+        downloader.chmod(0o755)
+        self.export()
+        published = self.current_release() / "bin" / "tonutils-storage"
+        self.assertEqual(published.read_bytes(), downloader.read_bytes())
+        self.assertEqual(published.stat().st_mode & 0o777, 0o755)
+
+    def test_export_without_identity_does_not_retain_a_previous_image_reference(self):
+        self.export()
+        release = self.current_release()
+        self.environment.pop("TON_IMAGE_REF")
+        self.export()
+        self.assertEqual(self.current_release(), release)
+        self.assertFalse((release / "image-ref").exists())
+
+    def test_same_content_retag_preserves_identity_of_an_active_controller_snapshot(self):
+        self.export()
+        release = self.current_release()
+        active = self.root / "active"
+        subprocess.run(
+            [sys.executable, "-c",
+             "from pathlib import Path; import sys; from entrypoint import snapshot_artifacts; "
+             "root = Path(sys.argv[1]); snapshot_artifacts(tuple(root / name for name in "
+             "('bin', 'fift', 'smartcont')), Path(sys.argv[2]))",
+             str(release), str(active)],
+            cwd=EXPORT_SCRIPT.parent, check=True, timeout=15,
+        )
+        self.environment["TON_IMAGE_REF"] = "ghcr.io/ton-blockchain/ton:retagged"
+        self.export()
+
+        self.assertEqual(self.current_release(), release)
+        self.assertEqual((release / "image-ref").read_text(), "ghcr.io/ton-blockchain/ton:retagged\n")
+        self.assertEqual((active / "image-ref").read_text(), "ghcr.io/ton-blockchain/ton:test\n")
+        self.assertEqual((active / "bin/validator-engine").read_bytes(),
+                         (release / "bin/validator-engine").read_bytes())
 
     def test_new_content_publishes_release_and_preserves_old_binaries(self):
         self.export()

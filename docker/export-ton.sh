@@ -72,6 +72,13 @@ if [ -e "$release_dir" ] || [ -L "$release_dir" ]; then
     cmp -s "$stage_dir/content.sha256" "$release_dir/content.sha256" || fail "existing release manifest differs: $release_dir"
     cmp -s "$stage_dir/modes.manifest" "$release_dir/modes.manifest" || fail "existing release permissions manifest differs: $release_dir"
     (cd "$release_dir" && sha256sum --check --quiet content.sha256) || fail "existing release has been modified: $release_dir"
+    # Retagging identical artifacts must report the newly exported image. The
+    # controller pins this metadata in its private snapshot before execution.
+    if [ -f "$stage_dir/image-ref" ]; then
+        mv -Tf -- "$stage_dir/image-ref" "$release_dir/image-ref"
+    else
+        rm -f -- "$release_dir/image-ref"
+    fi
     rm -rf -- "$stage_dir"
 else
     mv -- "$stage_dir" "$release_dir"

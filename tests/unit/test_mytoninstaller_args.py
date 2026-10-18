@@ -47,6 +47,7 @@ def test_parse_general_args_rejects_removed_long_options(option):
 
 @pytest.mark.parametrize("value", [None, "", " ", "\t \n"])
 def test_empty_public_ip_uses_automatic_detection(monkeypatch, value):
+    monkeypatch.setenv("MYTONCTRL_CONTAINER", "1")
     if value is None:
         monkeypatch.delenv("PUBLIC_IP", raising=False)
     else:
@@ -56,6 +57,7 @@ def test_empty_public_ip_uses_automatic_detection(monkeypatch, value):
 
 
 def test_public_ip_removes_surrounding_whitespace(monkeypatch):
+    monkeypatch.setenv("MYTONCTRL_CONTAINER", "1")
     monkeypatch.setenv("PUBLIC_IP", " 192.0.2.10\t")
     ctx = get_context(_parse_general_args(["-m", "validator"]))
     assert ctx.public_ip == "192.0.2.10"

@@ -5,6 +5,7 @@ import grp
 import json
 import os
 import pwd
+import resource
 import subprocess
 import sys
 
@@ -20,6 +21,20 @@ def main():
         os.environ.update(HOME=account.pw_dir, USER=account.pw_name, LOGNAME=account.pw_name)
         os.environ["XDG_DATA_HOME"] = os.path.join(account.pw_dir, ".local", "share")
     os.environ.update(spec.get("environment", {}))
+    if spec.get("nofile"):
+        # systemd's infinity means the available kernel/container ceiling.
+        # Supervisor can lower its soft limit; restore the unit's requested
+        # limit before dropping privileges and launching a large node database.
+        current_hard = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+        values = str(spec["nofile"]).split(":")
+        if len(values) > 2:
+            raise ValueError("Invalid LimitNOFILE")
+        requested = [current_hard if value == "infinity" else int(value) for value in values]
+        soft, hard = requested if len(requested) == 2 else (requested[0], requested[0])
+        if current_hard != resource.RLIM_INFINITY:
+            hard = min(hard, current_hard)
+            soft = min(soft, hard)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
     if os.geteuid() == 0:
         if account:
             os.initgroups(account.pw_name, target_gid)

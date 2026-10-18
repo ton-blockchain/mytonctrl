@@ -33,6 +33,7 @@ from mytonctrl.git import (
     get_git_hash,
     get_git_branch,
 )
+from mytonctrl.images import get_controller_image_ref, get_ton_image_ref
 from mytoninstaller.archive_blocks import download_blocks
 from mytoninstaller.utils import get_ton_storage_port
 from mytonctrl.argtypes import tcp_port
@@ -46,6 +47,8 @@ from mytonctrl.utils import (
     ts_diff_to_human,
     get_service_status,
     get_service_uptime,
+    get_service_state,
+    container_initialization_complete,
     is_container,
 )
 from mytoncore.models import Config15, Config17
@@ -94,6 +97,9 @@ class GeneralModule(MtcModule):
         print_table(table)
 
     def print_status(self, mode: Optional[Literal["fast"]] = None) -> None:
+        if is_container():
+            return self._print_status_container(mode)
+
         fast = mode == "fast"
 
         # Local status
@@ -143,6 +149,133 @@ class GeneralModule(MtcModule):
                     old_start_work_time,
                     config15,
                 )
+
+
+    def _print_status_container(self, mode: Optional[Literal["fast"]] = None) -> None:
+        fast = mode == "fast"
+
+        if is_container() and Path(self.ton.local.db_path).is_file():
+            # The installer may add console/client settings after this console opens.
+            try:
+                self.ton.local.load_db()
+                self.ton.apply_db_settings()
+            except Exception as error:
+                self.local.add_log(f"Could not refresh controller settings: {error}", "warning")
+
+        # Local status
+        if (self.ton.local.db.get("validatorConsole") is None
+                or not container_initialization_complete(self.ton)):
+            validator_status = Dict()
+        else:
+            validator_status = self._status_value(self.ton.GetValidatorStatus) or Dict()
+        all_status = bool(
+            validator_status.is_working
+            and isinstance(validator_status.out_of_sync, (int, float))
+            and validator_status.out_of_sync < 20
+        ) and not fast
+        full_elector_addr = "n/a"
+        start_work_time = None
+        config34 = None
+        config36 = None
+
+        if all_status:
+            try:
+                config34 = self.ton.get_config_34()
+                total_validators = config34.total_validators
+                config36 = self.ton.get_config_36()
+                full_elector_addr = self.ton.GetFullElectorAddr()
+                start_work_time = self.ton.GetActiveElectionId(full_elector_addr)
+                self.print_ton_status(start_work_time, total_validators)
+            except Exception as e:
+                self.local.add_log(f"Failed to get TON status: {e}", "error")
+
+        self.print_local_status(validator_status, all_status)
+
+        if all_status and self.ton.using_validator():
+            try:
+                full_config_addr = self.ton.GetFullConfigAddr()
+                config15 = self.ton.get_config_15()
+                config17 = self.ton.get_config_17()
+                self.print_ton_config(
+                    full_config_addr, full_elector_addr, config15, config17
+                )
+                if config34 is not None and start_work_time is not None:
+                    old_start_work_time = config36.start_work_time if config36 is not None else config34.start_work_time
+                    root_workchain_enabled_time_int = self.local.try_function(
+                        self.ton.get_root_workchain_enabled_time
+                    )
+                    self.print_network_times(
+                        root_workchain_enabled_time_int, start_work_time,
+                        old_start_work_time, config15,
+                    )
+            except Exception as error:
+                self.local.add_log(f"Failed to get TON configuration: {error}", "warning")
+
+    @staticmethod
+    def _status_value(getter, default=None):
+        try:
+            value = getter()
+            return default if value is None else value
+        except Exception:
+            return default
+
+    @staticmethod
+    def _status_number(value, threshold, **kwargs):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return "n/a"
+        return GetColorInt(value, threshold, **kwargs)
+
+    @staticmethod
+    def _read_status_json(path):
+        try:
+            data = json.loads(path.read_text())
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def print_initialization_status(self, paths):
+        if not is_container():
+            return
+        controller = paths.ton_work / "controller"
+        progress = self._read_status_json(controller / "installer-progress.json")
+        if (controller / "initialized.json").is_file():
+            print("Initialization status: ready")
+            return
+        if progress.get("status") == "failed":
+            print("Initialization status: failed")
+        elif (controller / ".initializing").exists() or progress.get("status") == "running":
+            print("Initialization status: pending")
+        else:
+            print("Initialization status: not complete")
+        pending = self._read_status_json(controller / ".initializing")
+        environment = pending.get("installer_environment")
+        if isinstance(environment, dict) and isinstance(environment.get("MODE"), str):
+            print(f"Installation mode: {environment['MODE']}")
+        if isinstance(progress.get("stage"), str):
+            print(f"Installer stage: {progress['stage']} ({progress.get('status', 'unknown')})")
+        if isinstance(progress.get("error"), str):
+            print(f"Initialization error: {progress['error']}")
+        if (controller / "node-initialized.json").is_file():
+            print("Node setup: complete")
+        # Docker exec keeps the container environment even when initialization restores saved settings.
+        if isinstance(environment, dict):
+            cache_setting = environment.get("DUMP_CACHE_DIR")
+        else:
+            cache_setting = os.getenv("DUMP_CACHE_DIR")
+        cache = paths.ton_work / "dump-cache"
+        if isinstance(cache_setting, str) and cache_setting:
+            cache = Path(cache_setting)
+        dump_state = self._read_status_json(cache / "dump-state.json")
+        phase = dump_state.get("phase")
+        if phase in ("downloading", "verified", "extracting", "extracted"):
+            print(f"Dump phase: {phase}")
+            print(f"Dump cache: {cache}")
+            archive_name = dump_state.get("archive_name")
+            if isinstance(archive_name, str) and Path(archive_name).name == archive_name:
+                print(f"Dump archive: {cache / archive_name}")
+            archive_size = dump_state.get("archive_size")
+            if isinstance(archive_size, int) and archive_size >= 0:
+                print(f"Dump archive size: {archive_size} bytes")
 
     def print_ton_status(self, start_work_time: int, total_validators: int):
         color_print(self.local.translate("ton_status_head"))
@@ -220,6 +353,9 @@ class GeneralModule(MtcModule):
         return ports_parts
 
     def print_local_status(self, validator_status: Dict, all_status: bool):
+        if is_container():
+            return self._print_local_status_container(validator_status, all_status)
+
         color_print(self.local.translate("local_status_head"))
 
         node_mode = self.ton.get_node_mode()
@@ -514,15 +650,9 @@ class GeneralModule(MtcModule):
         paths = self.ton.get_paths()
         mtc_git_path = paths.mtc_src
         try:
-            if is_container():
-                from mytonctrl import __commit__, __version__
-
-                mtc_git_hash = __commit__
-                mtc_git_branch = __version__
-            else:
-                fix_git_config(mtc_git_path)
-                mtc_git_hash = get_git_hash(mtc_git_path, short=True)
-                mtc_git_branch = get_git_branch(mtc_git_path)
+            fix_git_config(mtc_git_path)
+            mtc_git_hash = get_git_hash(mtc_git_path, short=True)
+            mtc_git_branch = get_git_branch(mtc_git_path)
             mtc_git_hash_text = bcolors.yellow_text(mtc_git_hash)
             mtc_git_branch_text = bcolors.yellow_text(mtc_git_branch)
             mtc_version_text = self.local.translate("local_status_version_mtc").format(
@@ -534,12 +664,9 @@ class GeneralModule(MtcModule):
 
         validator_git_path = paths.ton_src
         try:
+            fix_git_config(validator_git_path)
             validator_bin_git_path = paths.ton_bin / "validator-engine" / "validator-engine"
-            if is_container():
-                validator_git_branch = "external image"
-            else:
-                fix_git_config(validator_git_path)
-                validator_git_branch = get_git_branch(validator_git_path)
+            validator_git_branch = get_git_branch(validator_git_path)
             validator_git_hash = get_bin_git_hash(validator_bin_git_path, short=True)
             validator_git_hash_text = bcolors.yellow_text(validator_git_hash)
             validator_git_branch_text = bcolors.yellow_text(validator_git_branch)
@@ -549,6 +676,346 @@ class GeneralModule(MtcModule):
             print(validator_version_text)
         except Exception:
             pass
+
+        print()
+
+
+    def _print_local_status_container(self, validator_status: Dict, all_status: bool):
+        color_print(self.local.translate("local_status_head"))
+        paths = self.ton.get_paths()
+        self.print_initialization_status(paths)
+
+        node_mode = self._status_value(self.ton.get_node_mode, "n/a")
+        if (is_container() and self.ton.local.db.get("validatorConsole") is None
+                and not (paths.ton_work / "controller/initialized.json").is_file()):
+            node_mode = "n/a (not configured yet)"
+        color_print(self.local.translate("node_mode").format(node_mode))
+
+        node_ip = self._status_value(self.ton.get_validator_engine_ip)
+        is_node_remote = node_ip is not None and node_ip != "127.0.0.1"
+        if is_node_remote:
+            node_ip_addr_text = self.local.translate("node_ip_address").format(node_ip)
+            color_print(node_ip_addr_text)
+
+        vconfig = None
+        if validator_status.is_working or not is_container():
+            vconfig = self._status_value(self.ton.GetValidatorConfig)
+        if vconfig is None:
+            # The node writes this file before console keys are initialized.
+            config = self._read_status_json(paths.ton_db / "config.json")
+            if config:
+                vconfig = Dict(config)
+        try:
+            fullnode_adnl = base64.b64decode(vconfig.fullnode).hex().upper() if vconfig else "n/a"
+        except Exception:
+            fullnode_adnl = "n/a"
+
+        if not validator_status.is_working:
+            configured = self.ton.local.db.get("validatorConsole") is not None
+            detail = "unavailable" if configured else "unavailable (not configured yet)"
+            print(f"Validator console: {detail}")
+
+        # Node ports
+        if vconfig is not None:
+            try:
+                ports_parts = self._get_node_ports(vconfig)
+                if ports_parts:
+                    color_print(
+                        self.local.translate("node_ports").format(
+                            ", ".join(ports_parts)
+                        )
+                    )
+            except Exception:
+                pass
+
+        if self.ton.using_validator():
+            if all_status:
+                validator_index = self._status_value(self.ton.GetValidatorIndex)
+                validator_index_text = self._status_number(validator_index, 0, logic="more")
+            else:
+                validator_index_text = "n/a"
+            validator_index_text = self.local.translate(
+                "local_status_validator_index"
+            ).format(validator_index_text)
+            print(validator_index_text)
+
+        adnl_addr = self._status_value(self.ton.GetAdnlAddr, "n/a")
+        adnl_addr_text = self.local.translate("local_status_adnl_addr").format(
+            bcolors.yellow_text(adnl_addr)
+        )
+        print(adnl_addr_text)
+
+        fullnode_adnl_text = self.local.translate("local_status_fullnode_adnl").format(
+            bcolors.yellow_text(fullnode_adnl)
+        )
+        print(fullnode_adnl_text)
+
+        wallet_addr = "n/a"
+        wallet_balance = "n/a"
+        if self.ton.using_validator():
+            try:
+                validator_wallet = self.ton.GetValidatorWallet()
+                wallet_addr = validator_wallet.addrB64
+                if all_status:
+                    validator_account = self.ton.GetAccount(validator_wallet.addrB64)
+                    wallet_balance = validator_account.balance
+            except Exception:
+                pass
+
+            wallet_addr_text = self.local.translate("local_status_wallet_addr").format(
+                bcolors.yellow_text(wallet_addr)
+            )
+            print(wallet_addr_text)
+
+            wallet_balance_text = self.local.translate(
+                "local_status_wallet_balance"
+            ).format(bcolors.green_text(wallet_balance) if isinstance(wallet_balance, (int, float)) else "n/a")
+            print(wallet_balance_text)
+
+        cpu_number = psutil.cpu_count()
+        cpu_load1, cpu_load5, cpu_load15 = get_load_avg()
+        cpu_number_text = bcolors.yellow_text(cpu_number)
+        cpu_load1_text = GetColorInt(cpu_load1, cpu_number, logic="less")
+        cpu_load5_text = GetColorInt(cpu_load5, cpu_number, logic="less")
+        cpu_load15_text = GetColorInt(cpu_load15, cpu_number, logic="less")
+        cpu_load_text = self.local.translate("local_status_cpu_load").format(
+            cpu_number_text, cpu_load1_text, cpu_load5_text, cpu_load15_text
+        )
+        print(cpu_load_text)
+
+        statistics = self._status_value(lambda: self.ton.GetSettings("statistics"), {})
+
+        net_load_avg = self._status_value(lambda: self.ton.GetStatistics("netLoadAvg", statistics))
+        if isinstance(net_load_avg, list) and len(net_load_avg) >= 3:
+            net_load1, net_load5, net_load15 = net_load_avg[:3]
+            def format_network_load(value):
+                measured = value if isinstance(value, (int, float)) and value >= 0 else None
+                return self._status_number(measured, 300, logic="less")
+
+            net_load1_text = format_network_load(net_load1)
+            net_load5_text = format_network_load(net_load5)
+            net_load15_text = format_network_load(net_load15)
+            net_load_text = self.local.translate("local_status_net_load").format(
+                net_load1_text, net_load5_text, net_load15_text
+            )
+            print(net_load_text)
+
+        memory_info = self._status_value(get_memory_info) or {}
+        swap_info = self._status_value(get_swap_info) or {}
+        ram_usage = memory_info.get("usage")
+        ram_usage_percent = memory_info.get("usagePercent")
+        swap_usage = swap_info.get("usage")
+        swap_usage_percent = swap_info.get("usagePercent")
+        ram_usage_text = self._status_number(ram_usage, 100, logic="less", ending=" Gb")
+        ram_usage_percent_text = self._status_number(
+            ram_usage_percent, 90, logic="less", ending="%"
+        )
+        swap_usage_text = self._status_number(swap_usage, 100, logic="less", ending=" Gb")
+        swap_usage_percent_text = self._status_number(
+            swap_usage_percent, 90, logic="less", ending="%"
+        )
+        ram_load_text = "{cyan}ram:[{default}{data}, {percent}{cyan}]{endc}"
+        ram_load_text = ram_load_text.format(
+            cyan=bcolors.cyan,
+            default=bcolors.default,
+            endc=bcolors.endc,
+            data=ram_usage_text,
+            percent=ram_usage_percent_text,
+        )
+        swap_load_text = "{cyan}swap:[{default}{data}, {percent}{cyan}]{endc}"
+        swap_load_text = swap_load_text.format(
+            cyan=bcolors.cyan,
+            default=bcolors.default,
+            endc=bcolors.endc,
+            data=swap_usage_text,
+            percent=swap_usage_percent_text,
+        )
+        memory_load_text = self.local.translate("local_status_memory").format(
+            ram_load_text, swap_load_text
+        )
+        print(memory_load_text)
+
+        disks_load_avg = self._status_value(lambda: self.ton.GetStatistics("disksLoadAvg", statistics))
+        disks_load_percent_avg = self._status_value(lambda: self.ton.GetStatistics("disksLoadPercentAvg", statistics))
+        if (
+            disks_load_avg
+            and isinstance(disks_load_avg, dict)
+            and isinstance(disks_load_percent_avg, dict)
+        ):
+            disks_load_data = list()
+            for key, item in disks_load_avg.items():
+                percent = disks_load_percent_avg.get(key)
+                if not isinstance(item, list) or len(item) < 3 or not isinstance(percent, list) or len(percent) < 3:
+                    continue
+                disk_load = item[2]
+                disk_load15_text = bcolors.green_text(disk_load) if isinstance(disk_load, (int, float)) and disk_load >= 0 else "n/a"
+                disk_load_percent15_text = self._status_number(
+                    percent[2], 80, logic="less", ending="%"
+                )
+                buff = "{}, {}"
+                buff = "{}{}:[{}{}{}]{}".format(
+                    bcolors.cyan, key, bcolors.default, buff, bcolors.cyan, bcolors.endc
+                )
+                disks_load_buff = buff.format(
+                    disk_load15_text, disk_load_percent15_text
+                )
+                disks_load_data.append(disks_load_buff)
+            disks_load_data = ", ".join(disks_load_data)
+            disks_load_text = self.local.translate("local_status_disks_load").format(
+                disks_load_data
+            )
+            print(disks_load_text)
+
+        def _get_color_status(status: bool | None):
+            if status is None:
+                result = bcolors.yellow_text("unavailable")
+            elif status:
+                result = bcolors.green_text("working")
+            else:
+                result = bcolors.red_text("not working")
+            return result
+
+        def _service_text(name, working):
+            if not is_container():
+                return _get_color_status(working)
+            state = self._status_value(lambda: get_service_state(name))
+            if state in ("STARTING", "BACKOFF", "STOPPING"):
+                detail = {"STARTING": "starting", "BACKOFF": "restarting", "STOPPING": "stopping"}[state]
+                return bcolors.yellow_text(detail)
+            if state in ("EXITED", "FATAL"):
+                return bcolors.red_text("failed")
+            if state == "RUNNING" and not container_initialization_complete(self.ton):
+                return bcolors.yellow_text("running (initializing)")
+            return _get_color_status(working)
+
+        mytoncore_status_bool = self._status_value(lambda: get_service_status("mytoncore"))
+        mytoncore_uptime = self._status_value(lambda: get_service_uptime("mytoncore")) if mytoncore_status_bool else None
+        mytoncore_uptime_text = bcolors.green_text(ts_diff_to_human(mytoncore_uptime)) if mytoncore_uptime is not None else "uptime n/a"
+        mytoncore_status_text = self.local.translate(
+            "local_status_mytoncore_status"
+        ).format(_service_text("mytoncore", mytoncore_status_bool), mytoncore_uptime_text)
+        print(mytoncore_status_text)
+
+        if not is_node_remote:
+            validator_status_bool = self._status_value(lambda: get_service_status("validator"))
+            validator_uptime = self._status_value(lambda: get_service_uptime("validator")) if validator_status_bool else None
+            validator_uptime_text = bcolors.green_text(ts_diff_to_human(validator_uptime)) if validator_uptime is not None else "uptime n/a"
+            validator_status_text = self.local.translate(
+                "local_status_validator_status"
+            ).format(_service_text("validator", validator_status_bool), validator_uptime_text)
+            print(validator_status_text)
+
+        if validator_status.initial_sync:
+            validator_initial_sync_text = self.local.translate(
+                "local_status_validator_initial_sync"
+            ).format(validator_status["process.initial_sync"])
+            print(validator_initial_sync_text)
+        elif (
+            self.ton.in_initial_sync()
+            and (
+                isinstance(validator_status.masterchain_out_of_sync, (int, float))
+                or isinstance(validator_status.shardchain_out_of_sync, (int, float))
+            )
+        ):  # states have been downloaded, now downloading blocks
+            sync_details = []
+            if isinstance(validator_status.masterchain_out_of_sync, (int, float)):
+                sync_details.append(f"masterchain is {validator_status.masterchain_out_of_sync} sec behind")
+            if isinstance(validator_status.shardchain_out_of_sync, (int, float)):
+                sync_details.append(f"shardchain is {validator_status.shardchain_out_of_sync} blocks behind")
+            validator_initial_sync_text = self.local.translate(
+                "local_status_validator_initial_sync"
+            ).format("Syncing blocks, " + ", ".join(sync_details))
+            print(validator_initial_sync_text)
+        else:
+            validator_out_of_sync_text = self.local.translate(
+                "local_status_validator_out_of_sync"
+            ).format(self._status_number(validator_status.out_of_sync, 20, logic="less"))
+            master_out_of_sync_text = self.local.translate(
+                "local_status_master_out_of_sync"
+            ).format(
+                self._status_number(
+                    validator_status.masterchain_out_of_sync,
+                    20,
+                    logic="less",
+                    ending=" sec",
+                )
+            )
+            shard_out_of_sync_text = self.local.translate(
+                "local_status_shard_out_of_sync"
+            ).format(
+                self._status_number(
+                    validator_status.shardchain_out_of_sync,
+                    5,
+                    logic="less",
+                    ending=" blocks",
+                )
+            )
+            print(validator_out_of_sync_text)
+            print(master_out_of_sync_text)
+            print(shard_out_of_sync_text)
+
+        if validator_status.stateserializerenabled:
+            validator_out_of_ser_text = self.local.translate(
+                "local_status_validator_out_of_ser"
+            ).format(f"{validator_status.out_of_ser} blocks ago")
+            print(validator_out_of_ser_text)
+
+        if (
+            self.ton.using_validator()
+            and validator_status.validator_groups_master is not None
+            and validator_status.validator_groups_shard is not None
+        ):
+            active_validator_groups = self.local.translate(
+                "active_validator_groups"
+            ).format(
+                validator_status.validator_groups_master,
+                validator_status.validator_groups_shard,
+            )
+            print(active_validator_groups)
+
+        node_stats = self._status_value(self.ton.get_node_statistics)
+        if node_stats is not None:
+            if self.ton.using_validator() and validator_status.is_working:
+                if "collated" in node_stats and "validated" in node_stats:
+                    collated = self.local.translate("collated_blocks").format(
+                        node_stats["collated"]["ok"], node_stats["collated"]["error"]
+                    )
+                    validated = self.local.translate("validated_blocks").format(
+                        node_stats["validated"]["ok"], node_stats["validated"]["error"]
+                    )
+                else:
+                    collated = self.local.translate("collated_blocks").format(
+                        "collecting data...", "wait for the next validation round"
+                    )
+                    validated = self.local.translate("validated_blocks").format(
+                        "collecting data...", "wait for the next validation round"
+                    )
+                print(collated)
+                print(validated)
+            if self.ton.using_liteserver():
+                if "ls_queries" in node_stats:
+                    ls_queries = self.local.translate("ls_queries").format(
+                        node_stats["ls_queries"]["time"],
+                        node_stats["ls_queries"]["ok"],
+                        node_stats["ls_queries"]["error"],
+                    )
+                    print(ls_queries)
+        else:
+            self.local.add_log("Failed to get node statistics", "warning")
+
+        db_size = self._status_value(self.ton.GetDbSize)
+        db_usage = self._status_value(self.ton.GetDbUsage)
+        db_size_text = self._status_number(db_size, 1000, logic="less", ending=" Gb")
+        db_usage_text = self._status_number(db_usage, 80, logic="less", ending="%")
+        db_status_text = self.local.translate("local_status_db").format(
+            db_size_text, db_usage_text
+        )
+        print(db_status_text)
+
+        mtc_image = bcolors.yellow_text(get_controller_image_ref())
+        validator_image = bcolors.yellow_text(get_ton_image_ref())
+        print(self.local.translate("local_status_image_mtc").format(mtc_image))
+        print(self.local.translate("local_status_image_validator").format(validator_image))
 
         print()
 
@@ -814,7 +1281,11 @@ class GeneralModule(MtcModule):
         branch: Annotated[Optional[str], Arg(help="branch, tag or commit to update to")] = None,
     ) -> None:
         if is_container():
-            color_print("Replace the MyTonCtrl image with a newer tagged image to update the controller.")
+            color_print(
+                "The update command is disabled inside this container. "
+                "Update MyTonCtrl using the appropriate Docker image "
+                "(MYTONCTRL_IMAGE in .env) and recreate the container."
+            )
             return
         paths = self.ton.get_paths()
         author, repo, branch, _ = check_git(
@@ -858,7 +1329,11 @@ class GeneralModule(MtcModule):
         url: Annotated[Optional[str], Arg(help="git url of a TON fork, optionally with #ref")] = None,
     ) -> None:
         if is_container():
-            color_print("Update the separate TON image and publish its binaries to the mounted volume. TON is not built inside the MyTonCtrl container.")
+            color_print(
+                "The upgrade command is disabled inside this container. "
+                "Update TON binaries using the appropriate Docker image "
+                "(TON_IMAGE in .env), export the binaries and restart the MyTonCtrl container."
+            )
             return
         paths = self.ton.get_paths()
         author, repo, branch, git_url = check_git(
@@ -870,7 +1345,7 @@ class GeneralModule(MtcModule):
 
         clang_version = get_clang_major_version()
         if clang_version is None or clang_version < self.CLANG_VERSION_REQUIRED:
-            text = f"{{red}}WARNING: THIS UPGRADE WILL MOST PROBABLY FAIL DUE TO A WRONG CLANG VERSION: {clang_version}, REQUIRED VERSION IS {self.CLANG_VERSION_REQUIRED}. RECOMMENDED TO EXIT NOW AND UPGRADE CLANG AS PER INSTRUCTIONS: https://gist.github.com/neodix42/24d6a401e928f7e895fcc8e7b7c5c24a{{endc}}\n"
+            text = f"{{red}}WARNING: THIS UPGRADE WILL MOST PROBABLY FAIL DUE TO A WRONG CLANG VERSION: {clang_version}, REQUIRED VERSION IS {self.CLANG_VERSION_REQUIRED}. RECOMMENDED TO EXIT NOW AND UPGRADE CLANG AS PER INSTRUCTIONS: https://apt.llvm.org/{{endc}}\n"
             color_print(text)
             if input("Continue with upgrade anyway? [Y/n]\n").strip().lower() not in (
                 "y",
@@ -954,6 +1429,12 @@ class GeneralModule(MtcModule):
 
         To pass -h or --tmp-dir to benchmark.py itself, put it after --: benchmark -- -h
         """
+        if is_container():
+            args = list(benchmark_args)
+            if tmp_dir is not None:
+                args = ["--tmp-dir", tmp_dir, *args]
+            return self._run_container_benchmark(args)
+
         if shutil.which("uv") is None:
             answer = input("uv is not installed. Install it? [y/n] ").strip().lower()
             if answer == "y":
@@ -1064,6 +1545,31 @@ class GeneralModule(MtcModule):
                     str(run_dir / "test" / "integration" / ".network"),
                 ] + list(benchmark_args)
                 subprocess.run(cmd, cwd=run_dir)
+
+    def _run_container_benchmark(self, args: list[str]):
+        if not any(arg in ("--help", "-h") for arg in args):
+            if not container_initialization_complete(self.ton):
+                color_print("{red}Error: wait for node initialization to finish before running benchmark.{endc}")
+                return
+            state = get_service_state("validator")
+            if state not in ("STOPPED", "FATAL"):
+                color_print(
+                    f"{{red}}Error: validator service state is {state or 'unknown'}. "
+                    "Stop it before running benchmark.{endc}\n"
+                    "Run these commands in the host shell:\n"
+                    "docker compose exec mytonctrl sudo systemctl stop mytoncore\n"
+                    "docker compose exec mytonctrl sudo systemctl stop validator"
+                )
+                return
+
+        paths = self.ton.get_paths()
+        subprocess.run([
+            sys.executable, "/usr/local/lib/mytonctrl/benchmark.py",
+            "--build-dir", str(paths.ton_bin),
+            "--source-dir", str(paths.ton_src),
+            "--work-root", str(paths.ton_work),
+            "--", *args,
+        ], check=True)
 
     def about(
         self,

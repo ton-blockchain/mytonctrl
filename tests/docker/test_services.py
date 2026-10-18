@@ -5,16 +5,20 @@ skipped when Supervisor is unavailable; parsing and runner tests always run.
 """
 
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
 import pwd
+import resource
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
 import unittest
+from contextlib import redirect_stdout
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -46,6 +50,7 @@ Group = ton
 WorkingDirectory = /var/ton-work
 Environment = 'VALUE=a b' OTHER=literal
 Restart = always
+LimitNOFILE = infinity
 """)
         parsed = systemctl.read_unit(unit)
         self.assertEqual(parsed["argv"], ["/opt/ton/validator-engine", "--db", "/var/ton db", "--logname", "/tmp/100%.log"])
@@ -53,6 +58,7 @@ Restart = always
         self.assertEqual(parsed["group"], "ton")
         self.assertEqual(parsed["directory"], "/var/ton-work")
         self.assertEqual(parsed["environment"], {"VALUE": "a b", "OTHER": "literal"})
+        self.assertEqual(parsed["nofile"], "infinity")
         self.assertEqual(parsed["pre"][1], {"argv": ["/bin/false"], "ignore_failure": True})
 
     def test_empty_directive_resets_pre_commands(self):
@@ -97,10 +103,28 @@ Restart = always
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stdout, "")
 
+    def test_runner_restores_unit_nofile_limit_before_start(self):
+        spec_path = self.directory / "service.json"
+        spec_path.write_text(json.dumps({
+            "argv": [sys.executable, "-c", "import resource; print(resource.getrlimit(resource.RLIMIT_NOFILE)[0])"],
+            "nofile": "infinity",
+        }))
+        hard = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+        code = (
+            "import os, resource, sys; "
+            "soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE); "
+            "resource.setrlimit(resource.RLIMIT_NOFILE, (min(1024, soft), hard)); "
+            "os.execv(sys.executable, [sys.executable, *sys.argv[1:]])"
+        )
+        result = subprocess.run([sys.executable, "-c", code, str(RUNNER), str(spec_path)],
+                                text=True, capture_output=True, check=True)
+        self.assertEqual(int(result.stdout), hard)
+
     def test_program_keeps_children_in_one_shutdown_group(self):
         rendered = systemctl.render_program("validator", "/tmp/100%/service.json", {"restart": "always"}, RUNNER)
         self.assertIn("/tmp/100%%/service.json", rendered)
         self.assertIn("autostart=false", rendered)
+        self.assertIn("startsecs=5", rendered)
         self.assertIn("stopasgroup=true", rendered)
         self.assertIn("killasgroup=true", rendered)
         self.assertIn("stdout_logfile_maxbytes=0", rendered)
@@ -110,6 +134,15 @@ Restart = always
         self.assertGreater(start, 0)
         self.assertLessEqual(start, int(time.clock_gettime(time.CLOCK_BOOTTIME) * 1_000_000))
         self.assertEqual(systemctl.process_start_monotonic(0), 0)
+
+    def test_show_preserves_supervisor_state_and_exit_status(self):
+        for state, exit_status in (("STARTING", 0), ("BACKOFF", 1), ("FATAL", 1), ("RUNNING", 0)):
+            with self.subTest(state=state), patch.object(systemctl, "ServiceManager") as manager:
+                manager.return_value.info.return_value = {"statename": state, "exitstatus": exit_status, "pid": 0}
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    self.assertEqual(systemctl.main(["show", "validator", "--property=SubState,ExecMainStatus", "--value"]), 0)
+                self.assertEqual(output.getvalue().splitlines(), [state, str(exit_status)])
 
 
 def supervisor_command():
@@ -205,6 +238,8 @@ files={self.configs}/*.conf
         self.assertGreater(first_pid, 0)
         self.assertGreater(int(self.ctl("show", "validator", "--property=ExecMainStartTimestampMonotonic", "--value")), 0)
         self.ctl("is-active", "--quiet", "validator.service")
+        self.assertEqual(self.ctl("show", "validator", "--property=SubState", "--value"), "RUNNING")
+        self.assertEqual(self.ctl("show", "validator", "--property=ExecMainStatus", "--value"), "0")
         self.assertIn("ExecStart=/bin/sleep 100", self.ctl("cat", "validator"))
         self.unit("validator", "120")
         self.ctl("daemon-reload")
@@ -236,6 +271,16 @@ files={self.configs}/*.conf
         self.assertEqual(self.pid("validator"), pid)
         self.ctl("stop", "validator")
         self.ctl("daemon-reload")
+        self.ctl("is-active", "--quiet", "validator", expected=3)
+
+    def test_pre_start_sleep_is_not_reported_as_successful_validator_launch(self):
+        path = self.units / "validator.service"
+        path.write_text("[Service]\nType=simple\nExecStartPre=/bin/sleep 2\nExecStart=/bin/false\nRestart=always\n")
+        result = subprocess.run([sys.executable, str(SHIM), "start", "validator"], env=self.environment,
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("SPAWN_ERROR", result.stderr)
+        self.assertIn(self.ctl("show", "validator", "--property=SubState", "--value"), ("BACKOFF", "FATAL"))
         self.ctl("is-active", "--quiet", "validator", expected=3)
 
 

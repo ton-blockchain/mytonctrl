@@ -36,10 +36,12 @@ services:
       args:
         MYTONCTRL_COMMIT: ${MYTONCTRL_BUILD_COMMIT:-unknown}
         MYTONCTRL_VERSION: ${MYTONCTRL_BUILD_VERSION:-unknown}
+        MYTONCTRL_IMAGE_REF: ${MYTONCTRL_IMAGE:-mytonctrl:local}
     env_file: ${MYTONCTRL_ENV_FILE:-.env}
     volumes:
       - ton-artifacts:/ton-artifacts:ro
-      - ton-work:/var/ton-work
+      # An empty host path retains the original named volume.
+      - "${TON_WORK_HOST_DIR:-ton-work}:/var/ton-work"
     depends_on:
       ton-binaries:
         condition: service_completed_successfully

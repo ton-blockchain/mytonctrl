@@ -106,6 +106,8 @@ fi
 echo -e "${COLOR}[3/4]${ENDC} Deleted DHT files"
 
 systemctl start validator
-systemctl start mytoncore
+if ! is_controller_container; then
+    systemctl start mytoncore
+fi
 
 echo -e "${COLOR}[4/4]${ENDC} Started validator and mytoncore"
