@@ -124,7 +124,9 @@ def test_node_ownership_does_not_recurse_into_controller_state(container, monkey
     assert ["chown", "validator:validator", paths.ton_work_dir] in commands
     ownership = next(command for command in commands if command[:3] == ["chown", "-R", "validator:validator"])
     assert ownership[3:] == [paths.ton_db_dir]
-    assert ["chown", "validator:validator", paths.keys_dir, str(work / "log"), str(work / "log.1")] in commands
+    log_ownership = next(command for command in commands
+                         if command[:3] == ["chown", "validator:validator", paths.keys_dir])
+    assert sorted(log_ownership[3:]) == [str(work / "log"), str(work / "log.1")]
     assert ["chown", "-R", "validator:validator", paths.ton_work_dir] not in commands
 
 

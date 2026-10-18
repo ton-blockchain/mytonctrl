@@ -108,7 +108,8 @@ class ComposeArchiveTests(unittest.TestCase):
                 self.assertEqual(storage["type"], "bind")
                 self.assertEqual(storage["source"], str(compose_file.parent / "tonutils-storage"))
                 self.assertTrue(storage["read_only"])
-                self.assertFalse(storage["bind"]["create_host_path"])
+                # Some Compose versions omit false-valued fields from JSON.
+                self.assertFalse(storage.get("bind", {}).get("create_host_path", False))
 
     def test_deployment_autoloads_archive_override_without_creating_missing_binary(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -138,7 +139,7 @@ class ComposeArchiveTests(unittest.TestCase):
                 if mount["target"] == "/usr/local/bin/tonutils-storage"
             )
             self.assertEqual(storage["source"], str(deployment / "tonutils-storage"))
-            self.assertFalse(storage["bind"]["create_host_path"])
+            self.assertFalse(storage.get("bind", {}).get("create_host_path", False))
             self.assertFalse((deployment / "tonutils-storage").exists())
             controller = config["services"]["mytonctrl"]
             self.assertEqual(controller["environment"]["MYTONCTRL_ARGS"],
