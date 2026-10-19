@@ -10,10 +10,19 @@ from mytoncore.mytoncore import MyTonCore
 from mytoncore.models import Config, ValidatorConfigExt
 
 
+TEST_ADNL = base64.b64encode(b"\x01" * 32).decode()
+TEST_ADNL_2 = base64.b64encode(b"\x02" * 32).decode()
+NEW_ADNL = base64.b64encode(b"\x03" * 32).decode()
+OTHER_ADNL = base64.b64encode(b"\x04" * 32).decode()
+HEX_ADNL = "ab" * 32
+BAD_ADNL_ERROR = "argument adnl: expected an ADNL address (64 hex characters or base64), got 'not_an_adnl'"
+
+
 def test_vote_offer(cli, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("vo", no_color=True)
-    assert "Bad args" in output
+    assert "usage: vo [-h] offer_hashes [offer_hashes ...]" in output
+    assert "vo: error: the following arguments are required: offer_hashes" in output
     offers = [{"hash": "hash1", "data": "offer-data"}, {"hash": "hash2", "data": "offer-data"}, {"hash": "hash3", "data": "offer-data"}]
     monkeypatch.setattr(MyTonCore, "GetOffers", lambda _: offers)
     vote_offer_mock = mocker.Mock()
@@ -46,9 +55,10 @@ def test_ve(cli, monkeypatch, mocker: MockerFixture):
 def test_vc(cli, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("vc", no_color=True)
-    assert "Bad args" in output
+    assert "usage: vc [-h] election_id complaint_hash" in output
+    assert "vc: error: the following arguments are required: election_id, complaint_hash" in output
     output = cli.execute("vc 123456", no_color=True)
-    assert "Bad args" in output
+    assert "vc: error: the following arguments are required: complaint_hash" in output
 
     vote_complaint_mock = mocker.Mock()
     monkeypatch.setattr(MyTonCore, "VoteComplaint", vote_complaint_mock)
@@ -120,73 +130,77 @@ def test_add_collator(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("add_collator", no_color=True)
-    assert "Bad args" in output
+    assert "usage: add_collator [-h] [--self-collate {true,false}] adnl" in output
+    assert "add_collator: error: the following arguments are required: adnl" in output
     get_collators_mock.assert_not_called()
     set_collators_mock.assert_not_called()
-    output = cli.execute("add_collator test_adnl extra_arg", no_color=True)
-    assert "Bad args" in output
+    output = cli.execute(f"add_collator {TEST_ADNL} extra_arg", no_color=True)
+    assert "add_collator: error: unrecognized arguments: extra_arg" in output
+    get_collators_mock.assert_not_called()
+    set_collators_mock.assert_not_called()
+    output = cli.execute("add_collator not_an_adnl", no_color=True)
+    assert f"add_collator: error: {BAD_ADNL_ERROR}" in output
     get_collators_mock.assert_not_called()
     set_collators_mock.assert_not_called()
 
     # Bad args - invalid self collate value
-    output = cli.execute("add_collator test_adnl --self-collate invalid", no_color=True)
+    output = cli.execute(f"add_collator {TEST_ADNL} --self-collate invalid", no_color=True)
     get_collators_mock.assert_not_called()
     set_collators_mock.assert_not_called()
-    assert "Bad args" in output
-    assert "Self collate must be one of" in output
+    assert "add_collator: error: argument --self-collate: expected true or false, got 'invalid'" in output
 
     # add collator to empty list with default values
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
-    output = cli.execute("add_collator test_adnl", no_color=True)
+    output = cli.execute(f"add_collator {TEST_ADNL}", no_color=True)
     assert "add_collator - OK" in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_called_once()
     call_args = set_collators_mock.call_args[0][0]
     assert call_args['disable_self_collate'] is False
-    assert call_args['collators'] == [{'adnl_id': 'test_adnl'}]
+    assert call_args['collators'] == [{'adnl_id': TEST_ADNL}]
     assert call_args['register_collators'] == []  # add_collator does not register the collator
 
     # add collator with custom parameters
     get_collators_mock.return_value = {}
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
-    output = cli.execute("add_collator test_adnl2 --self-collate false", no_color=True)
+    output = cli.execute(f"add_collator {TEST_ADNL_2} --self-collate false", no_color=True)
     assert "add_collator - OK" in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_called_once()
     call_args = set_collators_mock.call_args[0][0]
     assert call_args['disable_self_collate'] is True
-    assert call_args['collators'][0]['adnl_id'] == 'test_adnl2'
+    assert call_args['collators'][0]['adnl_id'] == TEST_ADNL_2
 
     # add collator to existing list
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
     get_collators_mock.return_value = {
-        'collators': [{'adnl_id': 'test_adnl'}],
-        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'collators': [{'adnl_id': TEST_ADNL}],
+        'register_collators': [{'adnl_id': TEST_ADNL}],
         'disable_self_collate': True,
     }
 
-    output = cli.execute("add_collator new_adnl", no_color=True)
+    output = cli.execute(f"add_collator {NEW_ADNL}", no_color=True)
     assert "add_collator - OK" in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_called_once()
     call_args = set_collators_mock.call_args[0][0]
     assert call_args['disable_self_collate'] is True  # not changed
-    assert call_args['collators'] == [{'adnl_id': 'test_adnl'}, {'adnl_id': 'new_adnl'}]
-    assert call_args['register_collators'] == [{'adnl_id': 'test_adnl'}]  # untouched
+    assert call_args['collators'] == [{'adnl_id': TEST_ADNL}, {'adnl_id': NEW_ADNL}]
+    assert call_args['register_collators'] == [{'adnl_id': TEST_ADNL}]  # untouched
 
     # add duplicate collator
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
     get_collators_mock.return_value = {
-        'collators': [{'adnl_id': 'test_adnl'}],
-        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'collators': [{'adnl_id': TEST_ADNL}],
+        'register_collators': [{'adnl_id': TEST_ADNL}],
         'disable_self_collate': False,
     }
 
-    output = cli.execute("add_collator test_adnl", no_color=True)
+    output = cli.execute(f"add_collator {TEST_ADNL}", no_color=True)
     assert "already exists" in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_not_called()
@@ -200,37 +214,42 @@ def test_add_register_collator(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("add_register_collator", no_color=True)
-    assert "Bad args" in output
+    assert "usage: add_register_collator [-h] adnl" in output
+    assert "add_register_collator: error: the following arguments are required: adnl" in output
     set_collators_mock.assert_not_called()
-    output = cli.execute("add_register_collator test_adnl extra_arg", no_color=True)
-    assert "Bad args" in output
+    output = cli.execute(f"add_register_collator {TEST_ADNL} extra_arg", no_color=True)
+    assert "add_register_collator: error: unrecognized arguments: extra_arg" in output
+    set_collators_mock.assert_not_called()
+    output = cli.execute("add_register_collator not_an_adnl", no_color=True)
+    assert f"add_register_collator: error: {BAD_ADNL_ERROR}" in output
+    get_collators_mock.assert_not_called()
     set_collators_mock.assert_not_called()
 
     # register collator with no list set yet - delegation list is left alone
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
-    output = cli.execute("add_register_collator test_adnl", no_color=True)
+    output = cli.execute(f"add_register_collator {TEST_ADNL}", no_color=True)
     assert "add_register_collator - OK" in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_called_once()
     call_args = set_collators_mock.call_args[0][0]
     assert call_args['collators'] == []
-    assert call_args['register_collators'] == [{'adnl_id': 'test_adnl'}]
+    assert call_args['register_collators'] == [{'adnl_id': TEST_ADNL}]
     assert call_args['disable_self_collate'] is False
 
     # register collator to existing list
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
     get_collators_mock.return_value = {
-        'collators': [{'adnl_id': 'test_adnl'}],
-        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'collators': [{'adnl_id': TEST_ADNL}],
+        'register_collators': [{'adnl_id': TEST_ADNL}],
         'disable_self_collate': True,
     }
-    output = cli.execute("add_register_collator new_adnl", no_color=True)
+    output = cli.execute(f"add_register_collator {NEW_ADNL}", no_color=True)
     assert "add_register_collator - OK" in output
     call_args = set_collators_mock.call_args[0][0]
-    assert call_args['collators'] == [{'adnl_id': 'test_adnl'}]  # untouched
-    assert call_args['register_collators'] == [{'adnl_id': 'test_adnl'}, {'adnl_id': 'new_adnl'}]
+    assert call_args['collators'] == [{'adnl_id': TEST_ADNL}]  # untouched
+    assert call_args['register_collators'] == [{'adnl_id': TEST_ADNL}, {'adnl_id': NEW_ADNL}]
     assert call_args['disable_self_collate'] is True
 
     # register duplicate collator
@@ -238,10 +257,10 @@ def test_add_register_collator(cli, ton, monkeypatch, mocker: MockerFixture):
     set_collators_mock.reset_mock()
     get_collators_mock.return_value = {
         'collators': [],
-        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'register_collators': [{'adnl_id': TEST_ADNL}],
         'disable_self_collate': False,
     }
-    output = cli.execute("add_register_collator test_adnl", no_color=True)
+    output = cli.execute(f"add_register_collator {TEST_ADNL}", no_color=True)
     assert "already exists" in output
     set_collators_mock.assert_not_called()
 
@@ -249,7 +268,9 @@ def test_add_register_collator(cli, ton, monkeypatch, mocker: MockerFixture):
 def test_delete_collator(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("delete_collator")
-    assert "Bad args" in output
+    assert "delete_collator: error: the following arguments are required: adnl" in output
+    output = cli.execute("delete_collator not_an_adnl", no_color=True)
+    assert f"delete_collator: error: {BAD_ADNL_ERROR}" in output
 
     get_collators_mock = mocker.Mock()
     set_collators_mock = mocker.Mock()
@@ -258,57 +279,57 @@ def test_delete_collator(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # no collators list
     get_collators_mock.return_value = {}
-    output = cli.execute("delete_collator test_adnl", no_color=True)
+    output = cli.execute(f"delete_collator {TEST_ADNL}", no_color=True)
     assert "No collators found" in output
     set_collators_mock.assert_not_called()
 
     # collators list is empty
     get_collators_mock.return_value = {'collators': [], 'register_collators': [], 'disable_self_collate': False}
     set_collators_mock.reset_mock()
-    output = cli.execute("delete_collator test_adnl", no_color=True)
+    output = cli.execute(f"delete_collator {TEST_ADNL}", no_color=True)
     assert "No collators found" in output
     set_collators_mock.assert_not_called()
 
     # delete collator - registry list is left alone
     get_collators_mock.return_value = {
-        'collators': [{'adnl_id': 'test_adnl'}, {'adnl_id': 'other_adnl'}],
-        'register_collators': [{'adnl_id': 'test_adnl'}, {'adnl_id': 'other_adnl'}],
+        'collators': [{'adnl_id': TEST_ADNL}, {'adnl_id': OTHER_ADNL}],
+        'register_collators': [{'adnl_id': TEST_ADNL}, {'adnl_id': OTHER_ADNL}],
         'disable_self_collate': True,
     }
     get_collators_mock.reset_mock()
     set_collators_mock.reset_mock()
 
-    output = cli.execute("delete_collator test_adnl", no_color=True)
+    output = cli.execute(f"delete_collator {TEST_ADNL}", no_color=True)
     assert "delete_collator - OK" in output
     get_collators_mock.assert_called_once()
     set_collators_mock.assert_called_once()
 
     call_args = set_collators_mock.call_args[0][0]
     assert call_args['disable_self_collate'] is True
-    assert call_args['collators'] == [{'adnl_id': 'other_adnl'}]
-    assert call_args['register_collators'] == [{'adnl_id': 'test_adnl'}, {'adnl_id': 'other_adnl'}]
+    assert call_args['collators'] == [{'adnl_id': OTHER_ADNL}]
+    assert call_args['register_collators'] == [{'adnl_id': TEST_ADNL}, {'adnl_id': OTHER_ADNL}]
 
     # only registered collators, nothing to delegate
     get_collators_mock.return_value = {
         'collators': [],
-        'register_collators': [{'adnl_id': 'test_adnl'}],
+        'register_collators': [{'adnl_id': TEST_ADNL}],
         'disable_self_collate': False,
     }
     set_collators_mock.reset_mock()
-    output = cli.execute("delete_collator test_adnl", no_color=True)
+    output = cli.execute(f"delete_collator {TEST_ADNL}", no_color=True)
     assert "No collators found" in output
     set_collators_mock.assert_not_called()
 
     # delete non-existent collator
     get_collators_mock.return_value = {
-        'collators': [{'adnl_id': 'other_adnl'}],
-        'register_collators': [{'adnl_id': 'other_adnl'}],
+        'collators': [{'adnl_id': OTHER_ADNL}],
+        'register_collators': [{'adnl_id': OTHER_ADNL}],
         'disable_self_collate': False,
     }
     set_collators_mock.reset_mock()
     get_collators_mock.reset_mock()
 
-    output = cli.execute("delete_collator abcd", no_color=True)
+    output = cli.execute(f"delete_collator {HEX_ADNL}", no_color=True)
     assert "delete_collator - OK" in output
     set_collators_mock.assert_not_called()
     get_collators_mock.assert_called_once()
@@ -317,7 +338,9 @@ def test_delete_collator(cli, ton, monkeypatch, mocker: MockerFixture):
 def test_delete_register_collator(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("delete_register_collator")
-    assert "Bad args" in output
+    assert "delete_register_collator: error: the following arguments are required: adnl" in output
+    output = cli.execute("delete_register_collator not_an_adnl", no_color=True)
+    assert f"delete_register_collator: error: {BAD_ADNL_ERROR}" in output
 
     get_collators_mock = mocker.Mock()
     set_collators_mock = mocker.Mock()
@@ -326,31 +349,31 @@ def test_delete_register_collator(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # no collators list
     get_collators_mock.return_value = {}
-    output = cli.execute("delete_register_collator test_adnl", no_color=True)
+    output = cli.execute(f"delete_register_collator {TEST_ADNL}", no_color=True)
     assert "No collators found" in output
     set_collators_mock.assert_not_called()
 
     # delete registered collator - delegation list is left alone
     get_collators_mock.return_value = {
-        'collators': [{'adnl_id': 'test_adnl'}],
-        'register_collators': [{'adnl_id': 'test_adnl'}, {'adnl_id': 'other_adnl'}],
+        'collators': [{'adnl_id': TEST_ADNL}],
+        'register_collators': [{'adnl_id': TEST_ADNL}, {'adnl_id': OTHER_ADNL}],
         'disable_self_collate': False,
     }
     set_collators_mock.reset_mock()
-    output = cli.execute("delete_register_collator test_adnl", no_color=True)
+    output = cli.execute(f"delete_register_collator {TEST_ADNL}", no_color=True)
     assert "delete_register_collator - OK" in output
     call_args = set_collators_mock.call_args[0][0]
-    assert call_args['collators'] == [{'adnl_id': 'test_adnl'}]
-    assert call_args['register_collators'] == [{'adnl_id': 'other_adnl'}]
+    assert call_args['collators'] == [{'adnl_id': TEST_ADNL}]
+    assert call_args['register_collators'] == [{'adnl_id': OTHER_ADNL}]
 
     # delete non-existent collator
     get_collators_mock.return_value = {
         'collators': [],
-        'register_collators': [{'adnl_id': 'other_adnl'}],
+        'register_collators': [{'adnl_id': OTHER_ADNL}],
         'disable_self_collate': False,
     }
     set_collators_mock.reset_mock()
-    output = cli.execute("delete_register_collator abcd", no_color=True)
+    output = cli.execute(f"delete_register_collator {HEX_ADNL}", no_color=True)
     assert "delete_register_collator - OK" in output
     set_collators_mock.assert_not_called()
 
@@ -363,12 +386,12 @@ def test_set_self_collate(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # Bad args
     output = cli.execute("set_self_collate", no_color=True)
-    assert "Bad args" in output
+    assert "usage: set_self_collate [-h] value" in output
+    assert "set_self_collate: error: the following arguments are required: value" in output
     set_collators_mock.assert_not_called()
 
     output = cli.execute("set_self_collate maybe", no_color=True)
-    assert "Bad args" in output
-    assert "Self collate must be one of" in output
+    assert "set_self_collate: error: argument value: expected true or false, got 'maybe'" in output
     set_collators_mock.assert_not_called()
 
     # disable self collate keeping the collators
@@ -507,9 +530,10 @@ def test_update_collators_list(cli, ton, monkeypatch, mocker: MockerFixture):
 
     # bad args
     output = cli.execute("update_collators_list --forse", no_color=True)
-    assert "Bad args" in output
+    assert "usage: update_collators_list [-h] [--force]" in output
+    assert "update_collators_list: error: unrecognized arguments: --forse" in output
     output = cli.execute("update_collators_list --force extra_arg", no_color=True)
-    assert "Bad args" in output
+    assert "update_collators_list: error: unrecognized arguments: extra_arg" in output
     get_default_mock.assert_not_called()
     set_collators_mock.assert_not_called()
 

@@ -6,10 +6,10 @@ import time
 from typing import Optional
 
 from modules.module import MtcModule
-from mytonctrl.console_cmd import add_command, check_usage_args_min_max_len
+from mypyconsole.command_parser import Annotated, Arg
 from mypylib.mypylib import color_print, ip2int, run_as_root, parse
 from mytoncore.utils import get_package_resource_path
-from mytonctrl.utils import get_current_user, pop_user_from_args
+from mytonctrl.utils import get_current_user
 from mytoninstaller.config import get_own_ip
 from mytoninstaller.settings import update_client_path_settings
 
@@ -54,13 +54,13 @@ class BackupModule(MtcModule):
                 return run_as_root(command)
             return subprocess.run(command, timeout=30).returncode
 
-    def create_backup(self, args):
-        if not check_usage_args_min_max_len("create_backup", args, 0, 4):
-            return
-        from_host = '--from-host' in args
-        if from_host:
-            args.remove('--from-host')
-        user = pop_user_from_args(args)
+    def create_backup(
+        self,
+        dest: Annotated[Optional[str], Arg(help="archive path, default: mytonctrl_backup_<hostname>_<timestamp>.tar.gz in the current directory")] = None,
+        *,
+        user: Annotated[Optional[str], Arg("-u", help="owner of the archive (default: current user)")] = None,
+        from_host: Annotated[bool, Arg(help="copy the node's db and keys from disk as root instead of exporting them through validator-console")] = False,
+    ) -> int:
         paths = self.ton.get_paths()
         if from_host:
             tmp_dir = None
@@ -69,8 +69,8 @@ class BackupModule(MtcModule):
             tmp_dir = self.create_tmp_ton_dir()
             source_args = ["-t", tmp_dir]
         command_args = ["-m", self.ton.local.my_work_dir] + source_args + ["-k", str(paths.ton_keys)]
-        if len(args) == 1:
-            command_args += ["-d", args[0]]
+        if dest is not None:
+            command_args += ["-d", dest]
         exit_code = self.run_create_backup(command_args, user=user, as_root=from_host)
 
         if exit_code == 0:
@@ -88,29 +88,29 @@ class BackupModule(MtcModule):
         with get_package_resource_path('mytonctrl', 'scripts/restore_backup.sh') as restore_script_path:
             return run_as_root(["bash", str(restore_script_path), "-u", user] + args)
 
-    def restore_backup(self, args):
-        if not check_usage_args_min_max_len('restore_backup', args, 1, 5):
-            return
-        user = pop_user_from_args(args)
-        if '-y' not in args:
+    def restore_backup(
+        self,
+        filename: str,
+        *,
+        yes: Annotated[bool, Arg("-y", help="do not ask for confirmation")] = False,
+        skip_create_backup: Annotated[bool, Arg("-s", help="skip creation of backup")] = False,
+        user: Annotated[Optional[str], Arg("-u", help="owner of the restored files (default: current user)")] = None,
+    ) -> None:
+        if not yes:
             res = input(
                 'This action will overwrite existing configuration with contents of backup archive, please make sure that donor node is not in operation prior to this action. Proceed [y/n]')
             if res.lower() != 'y':
                 print('aborted.')
                 return
-        else:
-            args.pop(args.index('-y'))
-        if '--skip-create-backup' in args:
-            args.pop(args.index('--skip-create-backup'))
-        else:
+        if not skip_create_backup:
             print('Before proceeding, mtc will create a backup of current configuration.')
             try:
-                self.create_backup([])
+                self.create_backup(dest=None, user=None, from_host=False)
             except Exception as e:
                 color_print(f"{{red}}Could not create backup: {e}{{endc}}")
 
         ip = str(ip2int(get_own_ip()))
-        command_args = ["-m", self.ton.local.my_work_dir, "-n", args[0], "-i", ip, "-t", str(self.ton.get_paths().ton_work)]
+        command_args = ["-m", self.ton.local.my_work_dir, "-n", filename, "-i", ip, "-t", str(self.ton.get_paths().ton_work)]
         paths = self.ton.local.db.get("paths")
 
         if self.run_restore_backup(command_args, user=user) == 0:
@@ -130,5 +130,5 @@ class BackupModule(MtcModule):
             color_print("restore_backup - {red}Error{endc}")
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "create_backup", self.create_backup)
-        add_command(self.local, console, "restore_backup", self.restore_backup)
+        console.add_command("create_backup", self.create_backup)
+        console.add_command("restore_backup", self.restore_backup)

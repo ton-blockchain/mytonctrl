@@ -217,21 +217,21 @@ def test_getwalletfromfile_requires_pk(ton: MyTonCore):
         ton.GetLocalWallet(name, version='v2')
 
 
-def test_gethighwalletfromfile(ton: MyTonCore):
-    name = 'hw1'
-    sub = 777
+def test_getlocalwallet_reads_the_same_files_for_every_version(ton: MyTonCore):
+    # there is no separate highload path any more: <name>.addr / <name>.pk, whatever the version label
+    name = 'w_any'
     addr_hex = 'EF' * 32
-    workchain = -1
     pk_path = os.path.join(ton.walletsDir, f'{name}.pk')
-    addr_path = os.path.join(ton.walletsDir, f'{name}{sub}.addr')
+    addr_path = os.path.join(ton.walletsDir, f'{name}.addr')
     open(pk_path, 'wb').close()
-    _write_addr_file(addr_path, addr_hex, workchain)
+    _write_addr_file(addr_path, addr_hex, -1)
 
-    w = ton.GetLocalWallet(name, version='hv1', subwallet=sub)
-    assert w.subwallet == sub and w.version == 'hv1'
-    assert w.addr.lower() == addr_hex.lower() and w.workchain == workchain
-    assert w.addrFilePath.endswith(f'{name}{sub}.addr')
-    assert w.bocFilePath.endswith(f'{name}{sub}-query.boc')
+    for version in ('v1', 'v3r2', 'hv1'):
+        w = ton.GetLocalWallet(name, version=version)
+        assert w.version == version
+        assert w.addr.lower() == addr_hex.lower() and w.workchain == -1
+        assert w.addrFilePath.endswith(f'{name}.addr')
+        assert w.bocFilePath.endswith(f'{name}-query.boc')
 
 
 def test_getlocalwallet_version(ton: MyTonCore, monkeypatch):
@@ -425,9 +425,10 @@ def test_sign_boc_with_wallet_bounceable_inactive_raises(ton: MyTonCore, monkeyp
     assert "non-bounceable" in str(e.value)
 
 
-def test_sign_boc_with_wallet_unsupported_version_raises(ton: MyTonCore, monkeypatch, tmp_path):
+@pytest.mark.parametrize("version", ["unknown", "hv1", None])
+def test_sign_boc_with_wallet_unsupported_version_raises(ton: MyTonCore, monkeypatch, tmp_path, version):
     wallet, dest_account = _setup_sign_boc_wallet(
-        ton, monkeypatch, tmp_path, version="unknown", bounceable=True, dest_status="active"
+        ton, monkeypatch, tmp_path, version=version, bounceable=True, dest_status="active"
     )
     monkeypatch.setattr(ton.fift, 'run', lambda args: "should not run")
     with pytest.raises(Exception) as e:
@@ -675,3 +676,48 @@ def test_getconfig36(ton: MyTonCore, monkeypatch):
     monkeypatch.setattr(ton.liteClient, 'run', lambda cmd, **kw: result)
     cfg = ton.get_config_36()
     assert cfg is None
+
+
+# --- get_destination_addr: how `mg` / `mgtp` resolve <destination> ------------
+
+_RAW_ADDR = '0:' + '55' * 32
+_B64_BOUNCEABLE = 'EQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUMv'
+_B64_NON_BOUNCEABLE = 'UQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVR7q'
+
+
+@pytest.mark.parametrize('addr', [_B64_BOUNCEABLE, _B64_NON_BOUNCEABLE])
+def test_get_destination_addr_returns_b64_address_unchanged(ton: MyTonCore, monkeypatch, addr):
+    monkeypatch.setattr(ton, 'GetWalletsNameList', lambda: pytest.fail('a b64 address is not a wallet name'))
+
+    assert ton.get_destination_addr(addr) == addr
+
+
+def test_get_destination_addr_converts_raw_address_to_bounceable_b64(ton: MyTonCore, monkeypatch):
+    monkeypatch.setattr(ton, 'GetWalletsNameList', lambda: pytest.fail('a raw address is not a wallet name'))
+
+    result = ton.get_destination_addr(_RAW_ADDR)
+
+    assert result == _B64_BOUNCEABLE
+    assert result == raw_addr_to_b64(_RAW_ADDR)
+    assert ton.IsBounceableAddrB64(result) is True
+
+
+def test_get_destination_addr_resolves_local_wallet_name(ton: MyTonCore, monkeypatch):
+    requested = []
+
+    def fake_get_local_wallet(name, version=None):
+        requested.append((name, version))
+        return types.SimpleNamespace(addrB64='ALICE_ADDR_B64')
+
+    monkeypatch.setattr(ton, 'GetWalletsNameList', lambda: ['alice', 'bob'])
+    monkeypatch.setattr(ton, 'GetLocalWallet', fake_get_local_wallet)
+
+    assert ton.get_destination_addr('alice') == 'ALICE_ADDR_B64'
+    assert requested == [('alice', None)]
+
+
+def test_get_destination_addr_returns_unknown_name_unchanged(ton: MyTonCore, monkeypatch):
+    monkeypatch.setattr(ton, 'GetWalletsNameList', lambda: ['alice', 'bob'])
+    monkeypatch.setattr(ton, 'GetLocalWallet', lambda *a, **kw: pytest.fail('carol is not a local wallet'))
+
+    assert ton.get_destination_addr('carol') == 'carol'

@@ -420,7 +420,7 @@ def test_get_pool_data_console_cmd_dispatches_v2(ton: MyTonCore, monkeypatch, ca
     monkeypatch.setattr(ton, "account_is_pool_v2", lambda acc: True)
     monkeypatch.setattr(ton, "GetPoolData",
                         lambda addr: pytest.fail("v1 parser called for a v2 pool"))
-    module.get_pool_data(["EQpool"])
+    module.get_pool_data("EQpool")
     printed = json.loads(capsys.readouterr().out)
     assert printed["pool_id"] == 42
     assert printed["round_index"] == 7

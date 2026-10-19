@@ -125,9 +125,9 @@ def _cli_setup(local, monkeypatch, caplog) -> tuple[TestMyPyConsole, MyTonCore]:
     console._caplog = caplog
     mtc = MyTonCtrl(local, ton, console)
     console.mtc = mtc
-    mtc._add_console_commands()
     with get_package_resource_path('mytonctrl', 'resources/translate.json') as translate_path:
         local.init_translator(str(translate_path))
+    mtc._add_console_commands()
     return console, ton
 
 

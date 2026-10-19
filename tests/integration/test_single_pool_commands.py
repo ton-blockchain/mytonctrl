@@ -5,16 +5,25 @@ import pytest
 from pytest_mock import MockerFixture
 from mypylib import Dict
 from mytoncore.mytoncore import MyTonCore
+from mytoncore.utils import raw_addr_to_b64
 from modules.single_pool import SingleNominatorModule
 from tests.helpers import create_pool_file
+
+
+OWNER_ADDR = raw_addr_to_b64("0:" + "44" * 32)
+POOL_ADDR = raw_addr_to_b64("-1:" + "3" * 64)
+BAD_ADDR = "expected a TON address (in user-friendly or raw form), got 'not_an_address'"
 
 
 def test_new_single_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("new_single_pool", no_color=True)
-    assert "Bad args" in output
+    assert "usage: new_single_pool [-h] pool_name owner_address" in output
+    assert "new_single_pool: error: the following arguments are required: pool_name, owner_address" in output
     output = cli.execute("new_single_pool test_pool", no_color=True)
-    assert "Bad args" in output
+    assert "new_single_pool: error: the following arguments are required: owner_address" in output
+    output = cli.execute("new_single_pool test_pool not_an_address", no_color=True)
+    assert f"new_single_pool: error: argument owner_address: {BAD_ADDR}" in output
 
     # happy path
     download_contract_mock = mocker.Mock()
@@ -33,7 +42,7 @@ def test_new_single_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     pool_name = "test_single_pool"
     pool_path = ton.poolsDir + pool_name
     addr_file = pool_path + ".addr"
-    owner_address = "owner_address"
+    owner_address = OWNER_ADDR
 
     assert not os.path.exists(addr_file)
 
@@ -57,7 +66,8 @@ def test_new_single_pool(cli, ton, monkeypatch, mocker: MockerFixture):
 def test_activate_single_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("activate_single_pool", no_color=True)
-    assert "Bad args" in output
+    assert "usage: activate_single_pool [-h] pool_name" in output
+    assert "activate_single_pool: error: the following arguments are required: pool_name" in output
 
     pool_name = "test_activate_single_pool"
     pool_path = ton.poolsDir + pool_name
@@ -115,14 +125,19 @@ def test_activate_single_pool(cli, ton, monkeypatch, mocker: MockerFixture):
 def test_withdraw_from_single_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("withdraw_from_single_pool", no_color=True)
-    assert "Bad args" in output
-    output = cli.execute("withdraw_from_single_pool test", no_color=True)
-    assert "Bad args" in output
+    assert "usage: withdraw_from_single_pool [-h] pool_addr amount" in output
+    assert "withdraw_from_single_pool: error: the following arguments are required: pool_addr, amount" in output
+    output = cli.execute(f"withdraw_from_single_pool {POOL_ADDR}", no_color=True)
+    assert "withdraw_from_single_pool: error: the following arguments are required: amount" in output
+    output = cli.execute(f"withdraw_from_single_pool {POOL_ADDR} abc", no_color=True)
+    assert "withdraw_from_single_pool: error: argument amount: invalid float value: 'abc'" in output
+    output = cli.execute("withdraw_from_single_pool not_an_address 10", no_color=True)
+    assert f"withdraw_from_single_pool: error: argument pool_addr: {BAD_ADDR}" in output
 
     # happy path
     withdraw_from_pool_process_mock = mocker.Mock()
     monkeypatch.setattr(MyTonCore, "WithdrawFromPoolProcess", withdraw_from_pool_process_mock)
-    pool_addr = "test_addr"
+    pool_addr = POOL_ADDR
     amount = 250.75
     output = cli.execute(f"withdraw_from_single_pool {pool_addr} {amount}", no_color=True)
 

@@ -7,16 +7,30 @@ from pytest_mock import MockerFixture
 from mypylib import Dict
 
 from mytoncore.mytoncore import MyTonCore
+from mytoncore.utils import raw_addr_to_b64
 
 from tests.helpers import create_pool_file
+
+
+POOL_ADDR = raw_addr_to_b64("-1:" + "3" * 64)
+BAD_ADDR_ERROR = "argument pool_addr: expected a TON address (in user-friendly or raw form), got 'not_an_address'"
 
 
 def test_new_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("new_pool", no_color=True)
-    assert "Bad args" in output
+    assert "usage: new_pool [-h]" in output
+    assert ("new_pool: error: the following arguments are required: pool_name, validator_reward_share_percent, "
+            "max_nominators_count, min_validator_stake, min_nominator_stake") in output
     output = cli.execute(f"new_pool pool 5.5", no_color=True)
-    assert "Bad args" in output
+    assert ("new_pool: error: the following arguments are required: "
+            "max_nominators_count, min_validator_stake, min_nominator_stake") in output
+    output = cli.execute("new_pool pool abc 10 10000 1000", no_color=True)
+    assert "new_pool: error: argument validator_reward_share_percent: invalid float value: 'abc'" in output
+    output = cli.execute("new_pool pool 5.5 10.5 10000 1000", no_color=True)
+    assert "new_pool: error: argument max_nominators_count: invalid int value: '10.5'" in output
+    output = cli.execute("new_pool pool 5.5 10 10000 1000 extra", no_color=True)
+    assert "new_pool: error: unrecognized arguments: extra" in output
 
     # happy path
     download_contract_mock = mocker.Mock()
@@ -57,7 +71,8 @@ def test_new_pool(cli, ton, monkeypatch, mocker: MockerFixture):
 def test_activate_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("activate_pool", no_color=True)
-    assert "Bad args" in output
+    assert "usage: activate_pool [-h] pool_name" in output
+    assert "activate_pool: error: the following arguments are required: pool_name" in output
 
     # happy path
     pool_name = "test_activate_pool"
@@ -109,26 +124,36 @@ def test_activate_pool(cli, ton, monkeypatch, mocker: MockerFixture):
 
 def test_update_validator_set(cli, ton, monkeypatch, mocker: MockerFixture):
     output = cli.execute("update_validator_set", no_color=True)
-    assert "Bad args" in output
+    assert "usage: update_validator_set [-h] pool_addr" in output
+    assert "update_validator_set: error: the following arguments are required: pool_addr" in output
 
     get_validator_wallet_mock = mocker.Mock()
     pool_update_validator_set_mock = mocker.Mock()
     monkeypatch.setattr(MyTonCore, "GetValidatorWallet", get_validator_wallet_mock)
     monkeypatch.setattr(MyTonCore, "PoolUpdateValidatorSet", pool_update_validator_set_mock)
 
-    output = cli.execute(f"update_validator_set test", no_color=True)
+    output = cli.execute("update_validator_set not_an_address", no_color=True)
+    assert f"update_validator_set: error: {BAD_ADDR_ERROR}" in output
+    pool_update_validator_set_mock.assert_not_called()
+
+    output = cli.execute(f"update_validator_set {POOL_ADDR}", no_color=True)
 
     # Verify the command succeeded
     assert "UpdateValidatorSet - OK" in output
     get_validator_wallet_mock.assert_called_once()
-    pool_update_validator_set_mock.assert_called_once_with('test', get_validator_wallet_mock.return_value)
+    pool_update_validator_set_mock.assert_called_once_with(POOL_ADDR, get_validator_wallet_mock.return_value)
 
 
 def test_withdraw_from_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     output = cli.execute("withdraw_from_pool", no_color=True)
-    assert "Bad args" in output
-    output = cli.execute("withdraw_from_pool test", no_color=True)
-    assert "Bad args" in output
+    assert "usage: withdraw_from_pool [-h] pool_addr amount" in output
+    assert "withdraw_from_pool: error: the following arguments are required: pool_addr, amount" in output
+    output = cli.execute(f"withdraw_from_pool {POOL_ADDR}", no_color=True)
+    assert "withdraw_from_pool: error: the following arguments are required: amount" in output
+    output = cli.execute(f"withdraw_from_pool {POOL_ADDR} abc", no_color=True)
+    assert "withdraw_from_pool: error: argument amount: invalid float value: 'abc'" in output
+    output = cli.execute("withdraw_from_pool not_an_address 10", no_color=True)
+    assert f"withdraw_from_pool: error: {BAD_ADDR_ERROR}" in output
 
     pool_data = Dict()
     pool_data.state = 0
@@ -139,7 +164,7 @@ def test_withdraw_from_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     monkeypatch.setattr(MyTonCore, "WithdrawFromPoolProcess", withdraw_from_pool_process_mock)
 
     # happy path
-    pool_addr = "test"
+    pool_addr = POOL_ADDR
     amount = 100.5
     output = cli.execute(f"withdraw_from_pool {pool_addr} {amount}", no_color=True)
 
@@ -162,9 +187,14 @@ def test_withdraw_from_pool(cli, ton, monkeypatch, mocker: MockerFixture):
 def test_deposit_to_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     # Bad args
     output = cli.execute("deposit_to_pool", no_color=True)
-    assert "Bad args" in output
-    output = cli.execute("deposit_to_pool test", no_color=True)
-    assert "Bad args" in output
+    assert "usage: deposit_to_pool [-h] pool_addr amount" in output
+    assert "deposit_to_pool: error: the following arguments are required: pool_addr, amount" in output
+    output = cli.execute(f"deposit_to_pool {POOL_ADDR}", no_color=True)
+    assert "deposit_to_pool: error: the following arguments are required: amount" in output
+    output = cli.execute(f"deposit_to_pool {POOL_ADDR} abc", no_color=True)
+    assert "deposit_to_pool: error: argument amount: invalid float value: 'abc'" in output
+    output = cli.execute("deposit_to_pool not_an_address 10", no_color=True)
+    assert f"deposit_to_pool: error: {BAD_ADDR_ERROR}" in output
 
     # happy path
     get_validator_wallet_mock = mocker.Mock()
@@ -179,7 +209,7 @@ def test_deposit_to_pool(cli, ton, monkeypatch, mocker: MockerFixture):
     send_file_mock = mocker.Mock()
     monkeypatch.setattr(MyTonCore, "SendFile", send_file_mock)
 
-    pool_addr = "test_addr"
+    pool_addr = POOL_ADDR
     amount = 500.0
     output = cli.execute(f"deposit_to_pool {pool_addr} {amount}", no_color=True)
 

@@ -2,7 +2,7 @@ import os
 
 from mypylib.mypylib import color_print, print_table
 from modules.module import MtcModule
-from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
+from mytonctrl.argtypes import TonAddress
 
 
 class PoolModule(MtcModule):
@@ -10,7 +10,7 @@ class PoolModule(MtcModule):
     description = 'Basic pools functions.'
     default_value = False
 
-    def print_pools_list(self, args):
+    def print_pools_list(self) -> None:
         table = list()
         table += [["Name", "Status", "Balance", "Version", "Address"]]
         data = self.ton.GetPools()
@@ -26,10 +26,7 @@ class PoolModule(MtcModule):
             table += [[pool.name, account.status, account.balance, version, addr]]
         print_table(table)
 
-    def delete_pool(self, args):
-        if not check_usage_one_arg("delete_pool", args):
-            return
-        pool_name = args[0]
+    def delete_pool(self, pool_name: str) -> None:
         pool = self.ton.GetLocalPool(pool_name)
         pool.delete()
         color_print("DeletePool - {green}OK{endc}")
@@ -42,11 +39,7 @@ class PoolModule(MtcModule):
         with open(pool_path + ".addr", 'wb') as file:
             file.write(addr_bytes)
 
-    def import_pool(self, args):
-        if not check_usage_two_args("import_pool", args):
-            return
-        pool_name = args[0]
-        pool_addr = args[1]
+    def import_pool(self, pool_name: str, pool_addr: TonAddress) -> None:
         self.do_import_pool(pool_name, pool_addr)
         color_print("import_pool - {green}OK{endc}")
 
@@ -56,6 +49,6 @@ class PoolModule(MtcModule):
             self.ton.DownloadContract("https://github.com/ton-blockchain/nominator-pool")
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "pools_list", self.print_pools_list)
-        add_command(self.local, console, "delete_pool", self.delete_pool)
-        add_command(self.local, console, "import_pool", self.import_pool)
+        console.add_command("pools_list", self.print_pools_list)
+        console.add_command("delete_pool", self.delete_pool)
+        console.add_command("import_pool", self.import_pool)

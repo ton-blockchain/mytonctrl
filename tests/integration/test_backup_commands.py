@@ -91,7 +91,32 @@ def test_create_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
 
     # too many args
     output = cli.execute("create_backup /to_dir/ --from-host -u yungwine extra", no_color=True)
-    assert "Bad args" in output
+    assert "usage: create_backup [-h] [-u USER] [--from-host] [dest]" in output
+    assert "create_backup: error: unrecognized arguments: extra" in output
+    output = cli.execute("create_backup -u", no_color=True)
+    assert "create_backup: error: argument -u/--user: expected one argument" in output
+
+
+def test_make_backup_passes_dest_and_current_user(ton, monkeypatch, tmp_path):
+    def create_tmp_ton_dir(_):
+        os.makedirs(tmp_path / "ton_backup")
+        return str(tmp_path / "ton_backup")
+
+    calls = []
+
+    def run_create_backup(_, args: list, user: str, as_root: bool = False) -> int:
+        calls.append((args, user, as_root))
+        return 0
+
+    monkeypatch.setattr(BackupModule, "create_tmp_ton_dir", create_tmp_ton_dir)
+    monkeypatch.setattr(BackupModule, "run_create_backup", run_create_backup)
+    ton.local.db["auto_backup"] = True
+    ton.local.db["auto_backup_path"] = str(tmp_path / "auto_backups")
+
+    ton.make_backup(123)
+
+    dest = str(tmp_path / "auto_backups") + "/mytonctrl_backup_elid123.zip"
+    assert calls == [(["-m", ton.local.my_work_dir, "-t", str(tmp_path / "ton_backup"), "-k", "/var/ton-work/keys", "-d", dest], None, False)]
 
 
 def test_run_create_backup_as_root(monkeypatch, mocker: MockerFixture):
@@ -172,7 +197,11 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
 
     # bad args
     output = cli.execute("restore_backup", no_color=True)
-    assert "Bad args" in output
+    assert "usage: restore_backup [-h] [-y] [-s] [-u USER] filename" in output
+    assert "restore_backup: error: the following arguments are required: filename" in output
+    output = cli.execute("restore_backup backup.tar.gz other.tar.gz", no_color=True)
+    assert "restore_backup: error: unrecognized arguments: other.tar.gz" in output
+    exit_mock.assert_not_called()
 
     # prompt: abort
     monkeypatch.setattr("builtins.input", lambda *_: "n")
@@ -212,6 +241,27 @@ def test_restore_backup(cli, ton, monkeypatch, tmp_path, mocker: MockerFixture):
     # Failed to restore backup
     return_code = 1
     output = cli.execute("restore_backup backup.tar.gz --skip-create-backup -y", no_color=True)
+    assert "restore_backup - Error" in output
+
+
+def test_restore_backup_pre_restore_backup_as_current_user(cli, ton, monkeypatch, tmp_path):
+    monkeypatch.setattr("builtins.input", lambda *_: "y")
+    monkeypatch.setattr("modules.backups.get_own_ip", lambda: "127.0.0.1")
+    monkeypatch.setattr(BackupModule, "create_tmp_ton_dir", lambda _: str(tmp_path / "ton_backup"))
+    os.makedirs(tmp_path / "ton_backup")
+    backup_calls = []
+
+    def run_create_backup(_, args: list, user: str, as_root: bool = False) -> int:
+        backup_calls.append((user, as_root))
+        return 0
+
+    monkeypatch.setattr(BackupModule, "run_create_backup", run_create_backup)
+    monkeypatch.setattr(BackupModule, "run_restore_backup", staticmethod(lambda args, user=None: 1))
+
+    output = cli.execute("restore_backup backup.tar.gz -u abc", no_color=True)
+    assert backup_calls == [(None, False)]
+    assert "Could not create backup" not in output
+    assert "create_backup - OK" in output
     assert "restore_backup - Error" in output
 
 

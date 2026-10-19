@@ -6,6 +6,7 @@ import json
 import random
 import subprocess
 import time
+from typing import Literal
 
 import requests
 
@@ -13,7 +14,8 @@ from mypylib.mypylib import color_print, print_table, color_text, bcolors
 from modules.module import MtcModule
 from mytoncore.utils import raw_addr_to_b64
 from mytoncore.output import tlb_to_json
-from mytonctrl.console_cmd import add_command, check_usage_one_arg, check_usage_two_args
+from mytonctrl.argtypes import TonAddress
+from mypyconsole.command_parser import Annotated, Arg
 
 
 class UtilitiesModule(MtcModule):
@@ -21,11 +23,10 @@ class UtilitiesModule(MtcModule):
     description = ''
     default_value = False
 
-    def view_account_status(self, args):
-        if not check_usage_one_arg("vas", args):
-            return
-        addrB64 = args[0]
-        addrB64 = self.ton.get_destination_addr(addrB64)
+    def view_account_status(
+        self, account_addr: Annotated[str, Arg(help="address or local wallet name")]
+    ) -> None:
+        addrB64 = self.ton.get_destination_addr(account_addr)
         account = self.ton.GetAccount(addrB64)
         version = self.ton.GetVersionFromCodeHash(account.codeHash)
         statusTable = list()
@@ -102,28 +103,22 @@ class UtilitiesModule(MtcModule):
             table += [[datetime, type, message.value, fromto]]
         return table
 
-    def view_account_history(self, args):
-        if not check_usage_two_args("vah", args):
-            return
-        addr = args[0]
-        limit = int(args[1])
-        table = self.get_history_table(addr, limit)
+    def view_account_history(
+        self,
+        account_addr: Annotated[str, Arg(help="address or local wallet name")],
+        limit: int,
+    ) -> None:
+        table = self.get_history_table(account_addr, limit)
         print_table(table)
 
-    def create_new_bookmark(self, args):
-        if not check_usage_two_args("nb", args):
-            return
-        name = args[0]
-        addr = args[1]
-        if not self.ton.IsAddr(addr):
-            raise Exception("Incorrect address")
+    def create_new_bookmark(self, bookmark_name: str, account_addr: TonAddress) -> None:
         bookmark = dict()
-        bookmark["name"] = name
-        bookmark["addr"] = addr
+        bookmark["name"] = bookmark_name
+        bookmark["addr"] = account_addr
         self.ton.AddBookmark(bookmark)
         color_print("CreatNewBookmark - {green}OK{endc}")
 
-    def print_bookmarks_list(self, args):
+    def print_bookmarks_list(self) -> None:
         data = self.ton.GetBookmarks()
         if data is None or len(data) == 0:
             print("No data")
@@ -137,11 +132,8 @@ class UtilitiesModule(MtcModule):
             table += [[name, addr, bookmark_data]]
         print_table(table)
 
-    def delete_bookmark(self, args):
-        if not check_usage_one_arg("db", args):
-            return
-        name = args[0]
-        self.ton.DeleteBookmark(name)
+    def delete_bookmark(self, bookmark_name: str) -> None:
+        self.ton.DeleteBookmark(bookmark_name)
         color_print("DeleteBookmark - {green}OK{endc}")
 
     @staticmethod
@@ -154,12 +146,14 @@ class UtilitiesModule(MtcModule):
             result = item[0:6] + "..." + item[end - 6:end]
         return result
 
-    def print_offers_list(self, args):
+    def print_offers_list(
+        self, *words: Literal["hash"], json_: bool = False
+    ) -> None:
         data = self.ton.GetOffers()
         if data is None or len(data) == 0:
             print("No data")
             return
-        if "--json" in args:
+        if json_:
             text = json.dumps(data, indent=2)
             print(text)
         else:
@@ -174,7 +168,7 @@ class UtilitiesModule(MtcModule):
                 approvedPercent = item.get("approvedPercent")
                 approvedPercent_text = "{0}%".format(approvedPercent)
                 isPassed = item.get("isPassed")
-                if "hash" not in args:
+                if "hash" not in words:
                     hash = self.reduct(hash)
                 if isPassed:
                     isPassed = bcolors.green_text("true")
@@ -267,19 +261,20 @@ class UtilitiesModule(MtcModule):
         args = ["diff", "--color", oldFileName, newFileName]
         subprocess.run(args)
 
-    def offer_diff(self, args):
-        if not check_usage_one_arg("od", args):
-            return
-        offer_hash = args[0]
+    def offer_diff(self, offer_hash: str) -> None:
         self.get_offer_diff(offer_hash)
 
-    def print_complaints_list(self, args):
-        past = "past" in args
+    def print_complaints_list(
+        self,
+        *words: Literal["past", "adnl"],
+        json_: bool = False,
+    ) -> None:
+        past = "past" in words
         data = self.ton.GetComplaints(past=past)
         if data is None or len(data) == 0:
             print("No data")
             return
-        if "--json" in args:
+        if json_:
             text = json.dumps(data, indent=2)
             print(text)
         else:
@@ -295,7 +290,7 @@ class UtilitiesModule(MtcModule):
                 approvedPercent = item.get("approvedPercent")
                 approvedPercent_text = "{0}%".format(approvedPercent)
                 isPassed = item.get("isPassed")
-                if "adnl" not in args:
+                if "adnl" not in words:
                     adnl = self.reduct(adnl)
                 if isPassed:
                     isPassed = bcolors.green_text("true")
@@ -304,13 +299,17 @@ class UtilitiesModule(MtcModule):
                 table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
             print_table(table)
 
-    def print_election_entries_list(self, args):
-        past = "past" in args
+    def print_election_entries_list(
+        self,
+        *words: Literal["past", "adnl", "pubkey", "wallet"],
+        json_: bool = False,
+    ) -> None:
+        past = "past" in words
         data = self.ton.GetElectionEntries(past=past)
         if data is None or len(data) == 0:
             print("No data")
             return
-        if "--json" in args:
+        if json_:
             text = json.dumps(data, indent=2)
             print(text)
         else:
@@ -322,23 +321,27 @@ class UtilitiesModule(MtcModule):
                 walletAddr = item.get("walletAddr")
                 stake = item.get("stake")
                 maxFactor = item.get("maxFactor")
-                if "adnl" not in args:
+                if "adnl" not in words:
                     adnl = self.reduct(adnl)
-                if "pubkey" not in args:
+                if "pubkey" not in words:
                     pubkey = self.reduct(pubkey)
-                if "wallet" not in args:
+                if "wallet" not in words:
                     walletAddr = self.reduct(walletAddr)
                 table += [[adnl, pubkey, walletAddr, stake, maxFactor]]
             print_table(table)
 
-    def print_validator_list(self, args):
-        past = "past" in args
-        fast = "fast" in args
+    def print_validator_list(
+        self,
+        *words: Literal["past", "fast", "offline", "adnl", "pubkey", "wallet"],
+        json_: bool = False,
+    ) -> None:
+        past = "past" in words
+        fast = "fast" in words
         data = self.ton.GetValidatorsList(past=past, fast=fast)
         if data is None or len(data) == 0:
             print("No data")
             return
-        if "--json" in args:
+        if json_:
             data = [asdict(item) for item in data]
             text = json.dumps(data, indent=2)
             print(text)
@@ -352,13 +355,13 @@ class UtilitiesModule(MtcModule):
                 efficiency = item.efficiency
                 online = item.online
                 stake = item.stake
-                if "adnl" not in args:
+                if "adnl" not in words:
                     adnl = self.reduct(adnl)
-                if "pubkey" not in args:
+                if "pubkey" not in words:
                     pubkey = self.reduct(pubkey)
-                if "wallet" not in args:
+                if "wallet" not in words:
                     walletAddr = self.reduct(walletAddr)
-                if "offline" in args and online:
+                if "offline" in words and online:
                     continue
                 if online:
                     online = bcolors.green_text("true")
@@ -395,10 +398,9 @@ class UtilitiesModule(MtcModule):
                 error = f'Failed to check ADNL connection to local node: {response.get("message")}'
         return ok, error
 
-    def get_pool_data(self, args):
-        if not check_usage_one_arg("get_pool_data", args):
-            return
-        pool_name = args[0]
+    def get_pool_data(
+        self, pool_name: Annotated[str, Arg(help="local pool name or pool address")]
+    ) -> None:
         if self.ton.IsAddr(pool_name):
             pool_addr = pool_name
         else:
@@ -412,14 +414,14 @@ class UtilitiesModule(MtcModule):
         print(json.dumps(pool_data, indent=4))
 
     def add_console_commands(self, console):
-        add_command(self.local, console, "vas", self.view_account_status)
-        add_command(self.local, console, "vah", self.view_account_history)
-        add_command(self.local, console, "nb", self.create_new_bookmark)
-        add_command(self.local, console, "bl", self.print_bookmarks_list)
-        add_command(self.local, console, "db", self.delete_bookmark)
-        add_command(self.local, console, "ol", self.print_offers_list)
-        add_command(self.local, console, "od", self.offer_diff)
-        add_command(self.local, console, "el", self.print_election_entries_list)
-        add_command(self.local, console, "vl", self.print_validator_list)
-        add_command(self.local, console, "cl", self.print_complaints_list)
-        add_command(self.local, console, "get_pool_data", self.get_pool_data)
+        console.add_command("vas", self.view_account_status)
+        console.add_command("vah", self.view_account_history)
+        console.add_command("nb", self.create_new_bookmark)
+        console.add_command("bl", self.print_bookmarks_list)
+        console.add_command("db", self.delete_bookmark)
+        console.add_command("ol", self.print_offers_list)
+        console.add_command("od", self.offer_diff)
+        console.add_command("el", self.print_election_entries_list)
+        console.add_command("vl", self.print_validator_list)
+        console.add_command("cl", self.print_complaints_list)
+        console.add_command("get_pool_data", self.get_pool_data)
