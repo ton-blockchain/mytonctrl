@@ -10,6 +10,7 @@ import pwd
 import shlex
 import shutil
 import sys
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -470,6 +471,26 @@ def _keyring_key(keyring: Path, key_hash: bytes) -> Path:
 	return matches[0] if matches else keyring / key_hash.hex().upper()
 
 
+def _copy_node_key(private: Path, target: Path):
+	# Keys may be on tmpfs while the validator keyring is on a persistent volume.
+	# Publish a complete destination-local copy without replacing an existing key.
+	key_data = private.read_bytes()
+	temporary = None
+	try:
+		with tempfile.NamedTemporaryFile(mode="wb", dir=target.parent, prefix=f".{target.name}.", delete=False) as destination:
+			temporary = Path(destination.name)
+			destination.write(key_data)
+			destination.flush()
+			os.fsync(destination.fileno())
+		if temporary.read_bytes() != key_data:
+			raise RuntimeError(f"Failed to copy node key to {target}; the original key was retained")
+		# Both paths are in the keyring, so this is atomic without replacing a key.
+		os.link(temporary, target)
+	finally:
+		if temporary is not None:
+			temporary.unlink(missing_ok=True)
+
+
 def _ensure_node_key(ctx: InstallerContext, name: str, records: list, port: int) -> tuple[str, Path]:
 	private = Path(ctx.paths.keys_dir) / name
 	public = private.with_name(name + ".pub")
@@ -503,9 +524,15 @@ def _ensure_node_key(ctx: InstallerContext, name: str, records: list, port: int)
 		if target.exists():
 			if private.read_bytes() != target.read_bytes():
 				raise RuntimeError(f"Refusing to replace existing node key: {target}")
-			private.unlink()
 		else:
-			private.rename(target)
+			_copy_node_key(private, target)
+		# Also sync on retry when an earlier attempt published the key but failed.
+		directory_fd = os.open(keyring, os.O_RDONLY | os.O_DIRECTORY)
+		try:
+			os.fsync(directory_fd)
+		finally:
+			os.close(directory_fd)
+		private.unlink()
 	if not target.is_file() or _public_key_from_private(target) != data:
 		raise RuntimeError(f"Missing or mismatched existing node key: {target}")
 	return base64.b64encode(key_hash).decode(), target

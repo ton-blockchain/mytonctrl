@@ -1,7 +1,12 @@
+import base64
+import errno
 import hashlib
 import json
+import os
 from pathlib import Path
+import stat
 import subprocess
+import tempfile
 from types import SimpleNamespace
 
 import pytest
@@ -185,6 +190,170 @@ def test_missing_existing_server_private_key_is_never_replaced(lifecycle):
     with pytest.raises(RuntimeError, match="Missing or mismatched existing node key"):
         settings.EnableValidatorConsole(local, ctx)
     assert sum(Path(args[0]).name == "generate-random-id" for args, _ in commands) == 2
+
+
+@pytest.mark.parametrize("name", ["server", "liteserver"])
+def test_node_key_moves_from_tmpfs_to_persistent_keyring(lifecycle, name):
+    ctx, _, commands = lifecycle
+    try:
+        temporary = tempfile.TemporaryDirectory(prefix="mytonctrl-key-test-", dir="/dev/shm")
+    except OSError:
+        pytest.skip("A writable /dev/shm is required for a cross-device key transfer")
+    with temporary as directory:
+        keys = Path(directory)
+        keyring = Path(ctx.paths.keyring_dir)
+        if keys.stat().st_dev == keyring.stat().st_dev:
+            pytest.skip("/dev/shm and the keyring must be on different filesystems")
+        ctx.paths = SimpleNamespace(
+            keys_dir=str(keys), keyring_dir=str(keyring), ton_bin_dir=ctx.paths.ton_bin_dir,
+        )
+        key_id, target = settings._ensure_node_key(ctx, name, [], 31000)
+        expected = bytes.fromhex("17236849") + hashlib.sha256(name.encode()).digest()
+        public = (keys / (name + ".pub")).read_bytes()
+        assert target.read_bytes() == expected
+        assert target.name == hashlib.sha256(public).hexdigest().upper()
+        assert key_id == base64.b64encode(hashlib.sha256(public).digest()).decode()
+        assert stat.S_IMODE(target.stat().st_mode) == 0o600
+        assert not (keys / name).exists()
+        assert list(keyring.iterdir()) == [target]
+        assert settings._ensure_node_key(ctx, name, [], 31000) == (key_id, target)
+        assert sum(Path(args[0]).name == "generate-random-id" for args, _ in commands) == 1
+
+
+@pytest.mark.parametrize("name", ["server", "liteserver"])
+@pytest.mark.parametrize("failure", ["copy", "verify", "fsync", "publish"])
+def test_node_key_transfer_failure_preserves_source_and_retries(lifecycle, monkeypatch, name, failure):
+    ctx, _, commands = lifecycle
+    private = Path(ctx.paths.keys_dir) / name
+    keyring = Path(ctx.paths.keyring_dir)
+    original_temporary = settings.tempfile.NamedTemporaryFile
+
+    def interrupted_copy(*args, **kwargs):
+        destination = original_temporary(*args, **kwargs)
+        write = destination.write
+
+        def incomplete_write(data):
+            written = write(data[:8])
+            if failure == "copy":
+                raise OSError(errno.ENOSPC, "injected copy failure")
+            return written
+
+        destination.write = incomplete_write
+        return destination
+
+    def fail(*args, **kwargs):
+        raise OSError(errno.EIO, "injected transfer failure")
+
+    with monkeypatch.context() as patch:
+        if failure in ("copy", "verify"):
+            patch.setattr(settings.tempfile, "NamedTemporaryFile", interrupted_copy)
+        elif failure == "fsync":
+            patch.setattr(settings.os, "fsync", fail)
+        else:
+            patch.setattr(settings.os, "link", fail)
+        with pytest.raises((OSError, RuntimeError), match="injected|Failed to copy node key"):
+            settings._ensure_node_key(ctx, name, [], 31000)
+    expected = private.read_bytes()
+    assert expected == bytes.fromhex("17236849") + hashlib.sha256(name.encode()).digest()
+    assert list(keyring.iterdir()) == []
+    _, target = settings._ensure_node_key(ctx, name, [], 31000)
+    assert target.read_bytes() == expected
+    assert not private.exists()
+    assert list(keyring.iterdir()) == [target]
+    assert sum(Path(args[0]).name == "generate-random-id" for args, _ in commands) == 1
+
+
+@pytest.mark.parametrize("name", ["server", "liteserver"])
+def test_node_key_retries_after_source_removal_failure(lifecycle, monkeypatch, name):
+    ctx, _, commands = lifecycle
+    private = Path(ctx.paths.keys_dir) / name
+    keyring = Path(ctx.paths.keyring_dir)
+    unlink = Path.unlink
+
+    def interrupted(path, *args, **kwargs):
+        if path == private:
+            raise OSError(errno.EIO, "injected source removal failure")
+        return unlink(path, *args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "unlink", interrupted)
+        with pytest.raises(OSError, match="injected source removal failure"):
+            settings._ensure_node_key(ctx, name, [], 31000)
+    expected = private.read_bytes()
+    target, = keyring.iterdir()
+    assert target.read_bytes() == expected
+    assert settings._ensure_node_key(ctx, name, [], 31000)[1] == target
+    assert target.read_bytes() == expected
+    assert not private.exists()
+    assert list(keyring.iterdir()) == [target]
+    assert sum(Path(args[0]).name == "generate-random-id" for args, _ in commands) == 1
+
+
+@pytest.mark.parametrize("name", ["server", "liteserver"])
+def test_node_key_retry_syncs_published_key_before_removing_source(lifecycle, monkeypatch, name):
+    ctx, _, commands = lifecycle
+    private = Path(ctx.paths.keys_dir) / name
+    expected = bytes.fromhex("17236849") + hashlib.sha256(name.encode()).digest()
+    fsync = os.fsync
+    directory_syncs = []
+
+    def interrupted(fd):
+        if stat.S_ISDIR(os.fstat(fd).st_mode):
+            directory_syncs.append(fd)
+            raise OSError(errno.EIO, "injected keyring sync failure")
+        return fsync(fd)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(settings.os, "fsync", interrupted)
+        for _ in range(2):
+            with pytest.raises(OSError, match="injected keyring sync failure"):
+                settings._ensure_node_key(ctx, name, [], 31000)
+            target, = Path(ctx.paths.keyring_dir).iterdir()
+            assert target.read_bytes() == expected
+            assert private.read_bytes() == expected
+    assert len(directory_syncs) == 2
+    assert settings._ensure_node_key(ctx, name, [], 31000)[1] == target
+    assert target.read_bytes() == expected
+    assert not private.exists()
+    assert sum(Path(args[0]).name == "generate-random-id" for args, _ in commands) == 1
+
+
+@pytest.mark.parametrize("name", ["server", "liteserver"])
+def test_node_key_transfer_never_replaces_existing_different_key(lifecycle, name):
+    ctx, _, commands = lifecycle
+    private = Path(ctx.paths.keys_dir) / name
+    expected = bytes.fromhex("17236849") + b"x" * 32
+    private.write_bytes(expected)
+    public = settings._public_key_from_private(private)
+    target = Path(ctx.paths.keyring_dir) / hashlib.sha256(public).hexdigest().upper()
+    existing = bytes.fromhex("17236849") + b"y" * 32
+    target.write_bytes(existing)
+    with pytest.raises(RuntimeError, match="Refusing to replace existing node key"):
+        settings._ensure_node_key(ctx, name, [], 31000)
+    assert target.read_bytes() == existing
+    assert private.read_bytes() == expected
+    assert commands == []
+
+
+@pytest.mark.parametrize("name", ["server", "liteserver"])
+def test_node_key_publication_does_not_overwrite_a_concurrent_key(lifecycle, monkeypatch, name):
+    ctx, _, commands = lifecycle
+    private = Path(ctx.paths.keys_dir) / name
+    existing = bytes.fromhex("17236849") + b"y" * 32
+    link = os.link
+
+    def concurrent_key(source, destination):
+        Path(destination).write_bytes(existing)
+        return link(source, destination)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(settings.os, "link", concurrent_key)
+        with pytest.raises(FileExistsError):
+            settings._ensure_node_key(ctx, name, [], 31000)
+    target, = Path(ctx.paths.keyring_dir).iterdir()
+    assert target.read_bytes() == existing
+    assert private.read_bytes() == bytes.fromhex("17236849") + hashlib.sha256(name.encode()).digest()
+    assert sum(Path(args[0]).name == "generate-random-id" for args, _ in commands) == 1
 
 
 def test_liteserver_retry_finishes_controller_config_without_rotating_key(lifecycle, monkeypatch):
