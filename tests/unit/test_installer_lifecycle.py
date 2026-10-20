@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shlex
 import stat
 import subprocess
 import tempfile
@@ -55,6 +56,30 @@ def lifecycle(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "_wait_validator_console", lambda local, ctx: None)
     monkeypatch.setattr(settings, "_run_as_installer_user", lambda *args: None)
     return ctx, local, commands
+
+
+def test_new_container_node_logs_to_standard_streams(lifecycle, monkeypatch):
+    ctx, local, commands = lifecycle
+    ctx.dump = False
+    Path(ctx.paths.vconfig_path).unlink()
+    units = []
+    monkeypatch.setattr(settings, "add2systemd", lambda **kwargs: units.append(kwargs))
+    original_run = settings.subprocess.run
+
+    def run(args, **kwargs):
+        result = original_run(args, **kwargs)
+        if args[0] == ctx.paths.validator_app_path:
+            Path(ctx.paths.vconfig_path).write_text('{"addrs": [{}], "control": [], "liteservers": []}')
+        return result
+
+    monkeypatch.setattr(settings.subprocess, "run", run)
+    settings.FirstNodeSettings(local, ctx)
+    service_args = shlex.split(units[0]["start"])
+    initial_args, _ = next(item for item in commands if item[0][0] == ctx.paths.validator_app_path)
+    for args in (service_args, initial_args):
+        assert "--logname" not in args
+        assert ctx.paths.ton_log_path not in args
+        assert args[args.index("--db") + 1] == ctx.paths.ton_db_dir
 
 
 def test_existing_node_resumes_dump_and_preserves_config_and_keys(lifecycle, monkeypatch):

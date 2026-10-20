@@ -274,7 +274,8 @@ The original native settings pass through unchanged: `VALIDATOR_PORT`,
 `STATE_TTL`, `ADD_SHARD`, `ARCHIVE_BLOCKS`, `DUMP_CACHE_DIR`, `DUMP_EXTRACT_THREADS`,
 and `DUMP_VALIDATE_BEFORE_EXTRACT`. `VERBOSITY` and `CUSTOM_PARAMETERS` append
 node arguments on first initialization. Custom parameters cannot replace the
-controller-managed binary, state/config/log paths, or foreground service behavior.
+controller-managed binary, state/config paths, log output, or foreground service
+behavior.
 
 Installation flags apply once. Subsequent starts keep the persisted service
 configuration and wallet settings. Use normal console commands to change mode,
@@ -327,6 +328,11 @@ Inspect installation progress with `docker compose logs mytonctrl` and
 initialization and dump stages, service state and local resources even before
 ValidatorConsole is configured. Full tracebacks remain in the persistent
 `/var/ton-work/controller/mytoncore/mytoncore.log`; stdout shows error summaries.
+
+Validator messages go directly to the container's stdout/stderr. Follow them with
+`docker compose logs -f mytonctrl` or `docker logs -f <container>`. Existing
+`/var/ton-work/log` and `log.threadN.log` files may contain historical messages
+from older images.
 
 "Previous initialization was interrupted" is an error from older images.
 Select an image with the recovery fixes and use the normal

@@ -195,6 +195,7 @@ def test_native_first_node_keeps_launch_options_and_unchecked_process_status(
     assert units[0]["user"] == "daemon"
     assert units[0]["pre"] == "/bin/sleep 2"
     assert "--threads 7 --daemonize" in command
+    assert f"--logname {ctx.paths.ton_log_path}" in command
     assert (
         "--permanent-celldb --state-ttl 1000000000 --archive-ttl 1000000000" in command
     )
@@ -205,6 +206,7 @@ def test_native_first_node_keeps_launch_options_and_unchecked_process_status(
         item for item in commands if item[0][0] == ctx.paths.validator_app_path
     )
     assert initial[initial.index("--ip") + 1] == "192.0.2.10:30000"
+    assert initial[initial.index("--logname") + 1] == ctx.paths.ton_log_path
     assert not kwargs.get("check", False)
     assert (["chown", "-R", "daemon:daemon", ctx.paths.ton_work_dir], {}) in commands
     assert starts == ["validator"]

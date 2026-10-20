@@ -86,6 +86,8 @@ def _validator_log_tail(path: Path) -> str:
 
 
 def _validator_failure(local: MyPyClass, message: str, log_path: Path) -> RuntimeError:
+	if is_container():
+		return RuntimeError(f"{message}. See container logs (docker logs or docker compose logs); node data and dump cache were retained")
 	tail = _validator_log_tail(log_path)
 	logger = getattr(local, "logger", None)
 	if tail and isinstance(logger, logging.Logger):
@@ -262,7 +264,8 @@ def FirstNodeSettings(local: MyPyClass, ctx: InstallerContext):
 	if state_ttl is not None:
 		ttl_cmd += f' --state-ttl {state_ttl}'
 	ttl_cmd += f' --archive-ttl {archive_ttl}'
-	cmd = f"{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir} --logname {tonLogPath} --verbosity 1"
+	log_arg = "" if container else f" --logname {tonLogPath}"
+	cmd = f"{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {ton_db_dir}{log_arg} --verbosity 1"
 	cmd += ttl_cmd
 	if ctx.add_shard is not None:
 		cmd += ' -M'
@@ -275,7 +278,9 @@ def FirstNodeSettings(local: MyPyClass, ctx: InstallerContext):
 		addr = f"{ip}:{vport}"
 		local.add_log("Use addr: " + addr, "debug")
 		local.add_log("First start validator - create config.json", "debug")
-		args = [validatorAppPath, "--global-config", globalConfigPath, "--db", ton_db_dir, "--ip", addr, "--logname", tonLogPath]
+		args = [validatorAppPath, "--global-config", globalConfigPath, "--db", ton_db_dir, "--ip", addr]
+		if not container:
+			args.extend(("--logname", tonLogPath))
 		subprocess.run(args, check=container)
 		if container and not os.path.isfile(vconfig_path):
 			raise RuntimeError("Validator initialization did not create config.json")

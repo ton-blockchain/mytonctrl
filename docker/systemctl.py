@@ -94,10 +94,20 @@ def read_unit(path):
     if len(commands) != 1:
         raise ValueError(f"Exactly one ExecStart is required in {path}")
     start = parse_command(commands[0])["argv"]
-    # Supervisor must own the validator PID, rather than the short-lived
-    # parent which the installer's --daemonize argument would create.
+    # Supervisor owns the validator PID and forwards its output to Docker.
+    # Normalize persisted units too, so upgrades do not keep file logging.
     if Path(start[0]).name == "validator-engine" or Path(path).stem == "validator":
-        start = [arg for arg in start if arg != "--daemonize"]
+        arguments = iter(start[1:])
+        start = [start[0]]
+        for arg in arguments:
+            if arg == "--daemonize":
+                continue
+            if arg in ("--logname", "-l"):
+                next(arguments, None)
+                continue
+            if arg.startswith(("--logname=", "-l=")):
+                continue
+            start.append(arg)
     environment = {}
     for value in values.get("Environment", []):
         for assignment in shlex.split(value):

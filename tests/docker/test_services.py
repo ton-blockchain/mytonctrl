@@ -53,13 +53,28 @@ Restart = always
 LimitNOFILE = infinity
 """)
         parsed = systemctl.read_unit(unit)
-        self.assertEqual(parsed["argv"], ["/opt/ton/validator-engine", "--db", "/var/ton db", "--logname", "/tmp/100%.log"])
+        self.assertEqual(parsed["argv"], ["/opt/ton/validator-engine", "--db", "/var/ton db"])
         self.assertEqual(parsed["user"], "validator")
         self.assertEqual(parsed["group"], "ton")
         self.assertEqual(parsed["directory"], "/var/ton-work")
         self.assertEqual(parsed["environment"], {"VALUE": "a b", "OTHER": "literal"})
         self.assertEqual(parsed["nofile"], "infinity")
         self.assertEqual(parsed["pre"][1], {"argv": ["/bin/false"], "ignore_failure": True})
+
+    def test_validator_file_logging_is_removed_from_persisted_units(self):
+        for service, executable in (("validator", "/opt/ton/engine"),
+                                    ("custom-validator", "/opt/ton/validator-engine")):
+            for logging_args in ("--logname '/var/ton-work/validator log'", "--logname=/var/ton-work/log",
+                                 "-l /var/ton-work/log", "-l=/var/ton-work/log"):
+                with self.subTest(service=service, logging_args=logging_args):
+                    unit = self.unit(service, f"ExecStart={executable} --threads 4 {logging_args} --verbosity 3 --daemonize\n")
+                    self.assertEqual(systemctl.read_unit(unit)["argv"],
+                                     [executable, "--threads", "4", "--verbosity", "3"])
+
+    def test_other_services_keep_their_log_arguments(self):
+        unit = self.unit("example", "ExecStart=/opt/example --logname /tmp/example.log --daemonize\n")
+        self.assertEqual(systemctl.read_unit(unit)["argv"],
+                         ["/opt/example", "--logname", "/tmp/example.log", "--daemonize"])
 
     def test_empty_directive_resets_pre_commands(self):
         unit = self.unit("example", "ExecStart=/bin/sleep 30\nExecStartPre=/bin/false\nExecStartPre=\nExecStartPre=/bin/true\n")
@@ -127,7 +142,10 @@ LimitNOFILE = infinity
         self.assertIn("startsecs=5", rendered)
         self.assertIn("stopasgroup=true", rendered)
         self.assertIn("killasgroup=true", rendered)
+        self.assertIn("stdout_logfile=/dev/fd/1", rendered)
         self.assertIn("stdout_logfile_maxbytes=0", rendered)
+        self.assertIn("stderr_logfile=/dev/fd/2", rendered)
+        self.assertIn("stderr_logfile_maxbytes=0", rendered)
 
     def test_monotonic_start_time_reads_process_not_supervisor_time(self):
         start = systemctl.process_start_monotonic(os.getpid())

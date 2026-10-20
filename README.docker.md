@@ -100,9 +100,9 @@ TON_WORK_VOLUME=mytonctrl-ton-work
 TON_WORK_HOST_DIR=
 ```
 
-To place the node database, keys, wallets, controller state, logs and dump cache
-on a separate disk, set `TON_WORK_HOST_DIR` to an absolute directory on the Docker
-host. For example, after mounting your data disk at `/mnt/ton`:
+To place the node database, keys, wallets, controller state, controller logs and
+dump cache on a separate disk, set `TON_WORK_HOST_DIR` to an absolute directory
+on the Docker host. For example, after mounting your data disk at `/mnt/ton`:
 
 ```sh
 findmnt --mountpoint /mnt/ton &&
@@ -942,10 +942,12 @@ During this stage, console status shows local data and service state without
 running validator-dependent startup checks. A service shown as `starting` or
 `running (initializing)` has not yet completed initialization.
 
-If the validator keeps restarting, inspect its own log and service exit status:
+The validator writes directly to the container's stdout/stderr, available through
+Docker logs. If it keeps restarting, inspect recent messages and service exit
+status:
 
 ```sh
-docker compose exec mytonctrl tail -n 80 /var/ton-work/log
+docker compose logs --since 30m --tail 300 mytonctrl
 docker compose exec mytonctrl systemctl show validator --property=SubState,ExecMainStatus
 ```
 
@@ -960,28 +962,25 @@ complete. Blockchain synchronization continues afterward. Docker status shows
 masterchain lag in seconds and shardchain lag in blocks separately; compare
 both over time rather than treating the shard block gap as elapsed seconds.
 
-Inspect the engine's own log and process state when it restarts:
+Inspect the engine's messages in Docker logs and process state when it restarts:
 
 ```sh
-docker compose exec mytonctrl tail -n 160 /var/ton-work/log
-docker compose exec mytonctrl systemctl show validator --property=SubState,MainPID,ExecMainStatus
 docker compose logs --since 30m --tail 300 mytonctrl
+docker compose exec mytonctrl systemctl show validator --property=SubState,MainPID,ExecMainStatus
 ```
 
-TON also writes worker diagnostics to `/var/ton-work/log.threadN.log`. Inspect
-those files when the main log contains only a fatal error and backtrace:
+Filter recent diagnostics for database or worker failures:
 
 ```sh
-docker compose exec mytonctrl sh -c '
-tail -n 80 /var/ton-work/log /var/ton-work/log.thread*.log |
-grep -E "==>|FATAL_ERROR|Unexpected Status|STATUS:|import-db-slice|apply-block|celldb"
-'
+docker compose logs --since 30m mytonctrl |
+  grep -E 'FATAL_ERROR|Unexpected Status|STATUS:|import-db-slice|apply-block|celldb'
 ```
 
-Compare the timestamps inside the messages. Persistent log files can contain
-crashes from before an image upgrade, and inactive worker files retain older
-entries. A running validator process can also be a replacement started by
-Supervisor after a crash; check block progress as well as process state.
+Compare the timestamps inside the messages. Existing `/var/ton-work/log` and
+`log.threadN.log` files may contain historical entries from older images; current
+validator messages go to Docker logs. A running validator process can also be a
+replacement started by Supervisor after a crash; check block progress as well as
+process state.
 
 For raw progress counters, run this twice about a minute apart. It reads the
 saved console settings, including the actual configured port:
@@ -1062,8 +1061,8 @@ use `installer set_node_argument --threads 127` if the previous value was 127.
 Changing `CUSTOM_PARAMETERS` in `.env` applies only during first installation;
 use the installer command to adjust an existing node.
 
-For a short diagnostic window, enable detailed engine logs, collect the worker
-messages, then restore normal verbosity to limit log traffic:
+For a short diagnostic window, enable detailed engine logs, collect messages
+with `docker compose logs`, then restore normal verbosity to limit log traffic:
 
 ```sh
 docker compose exec mytonctrl mytonctrl --cmd 'installer set_node_argument --verbosity 3'

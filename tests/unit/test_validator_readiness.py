@@ -120,15 +120,16 @@ def test_slow_start_runs_only_readonly_probes_before_event(readiness):
 
 
 @pytest.mark.parametrize("state", ["FATAL", "EXITED", "STOPPED"])
-def test_stopped_validator_aborts_with_log_reason_before_event(readiness, state):
+def test_stopped_validator_points_to_container_logs_and_ignores_stale_file(readiness, state):
     runtime = readiness
     runtime.states[:] = [f"SubState={state}\nMainPID=0\nExecMainStatus=1\n"]
     Path(runtime.ctx.paths.ton_log_path).write_text(
         "INFO opening DB\nFATAL RocksDB: manifest is corrupt\nINFO stopping\n"
     )
-    with pytest.raises(RuntimeError, match="manifest is corrupt") as error:
+    with pytest.raises(RuntimeError, match="container logs") as error:
         settings.EnableValidatorConsole(runtime.local, runtime.ctx)
     assert f"{state}, exit 1" in str(error.value)
+    assert "manifest is corrupt" not in str(error.value)
     assert runtime.probes == []
     assert runtime.events == []
 
@@ -150,7 +151,8 @@ def test_repeated_pid_changes_abort_a_restart_loop(readiness):
     runtime.console.run = unavailable
     with pytest.raises(RuntimeError, match="repeatedly restarted") as error:
         settings.EnableValidatorConsole(runtime.local, runtime.ctx)
-    assert "too many open files" in str(error.value)
+    assert "container logs" in str(error.value)
+    assert "too many open files" not in str(error.value)
     assert runtime.probes == []
     assert runtime.events == []
 
@@ -229,7 +231,8 @@ def test_waiting_status_is_periodic_during_slow_database_open(readiness, monkeyp
     assert len(runtime.events) == 1
 
 
-def test_failure_keeps_bounded_full_tail_in_file_only(readiness, tmp_path):
+def test_native_failure_keeps_bounded_full_tail_in_file_only(readiness, tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "is_container", lambda: False)
     runtime = readiness
     path = Path(runtime.ctx.paths.ton_log_path)
     path.write_text(
@@ -257,7 +260,7 @@ def test_failure_keeps_bounded_full_tail_in_file_only(readiness, tmp_path):
         console_handler.close()
 
 
-def test_start_failure_reports_ton_fatal_reason(monkeypatch, tmp_path):
+def test_start_failure_points_to_container_logs(monkeypatch, tmp_path):
     monkeypatch.setenv("MYTONCTRL_CONTAINER", "1")
     monkeypatch.setenv("TON_WORK_DIR", str(tmp_path))
     (tmp_path / "log").write_text("FATAL Database error: No space left on device\n")
@@ -268,8 +271,10 @@ def test_start_failure_reports_ton_fatal_reason(monkeypatch, tmp_path):
         raise subprocess.CalledProcessError(1, args)
 
     monkeypatch.setattr(settings.subprocess, "run", fail)
-    with pytest.raises(RuntimeError, match="No space left on device"):
+    with pytest.raises(RuntimeError, match="container logs") as error:
         settings._start_validator(local)
+    assert "exit 1" in str(error.value)
+    assert "No space left on device" not in str(error.value)
 
 
 def test_host_service_start_and_readiness_behavior_are_unchanged(monkeypatch):
