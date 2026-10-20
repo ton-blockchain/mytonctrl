@@ -554,6 +554,16 @@
 		"ru": "Версия валидатора: {0} ({1})",
 		"zh_TW": "驗證者版本: {0} ({1})"
 	},
+	"local_status_image_mtc": {
+		"en": "Version mytonctrl: {0}",
+		"ru": "Версия mytonctrl: {0}",
+		"zh_TW": "mytonctrl 版本: {0}"
+	},
+	"local_status_image_validator": {
+		"en": "Version validator: {0}",
+		"ru": "Версия валидатора: {0}",
+		"zh_TW": "驗證者版本: {0}"
+	},
 	"ton_config_head": {
 		"en": "{cyan}===[ TON network configuration ]==={endc}",
 		"ru": "{cyan}===[ Конфигурация сети TON ]==={endc}",

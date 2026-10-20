@@ -1,0 +1,71 @@
+name: Publish tagged Docker image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Docker image tag to publish (for example, v1.0.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate image tag
+        id: image
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
+          LC_ALL: C
+        run: |
+          if [[ ! "$IMAGE_TAG" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}$ ]]; then
+            echo '::error::Tag must be 1-128 characters, start with a letter, digit or underscore, and contain only letters, digits, underscores, dots or hyphens.'
+            exit 1
+          fi
+          printf 'name=ghcr.io/%s/mytonctrl\n' "${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+          printf 'tag=%s\n' "$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}
+          build-args: |
+            MYTONCTRL_COMMIT=${{ github.sha }}
+            MYTONCTRL_VERSION=${{ steps.image.outputs.tag }}
+            MYTONCTRL_IMAGE_REF=${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.image.outputs.tag }}
+          cache-from: type=gha,scope=mytonctrl-manual
+          cache-to: type=gha,mode=max,scope=mytonctrl-manual

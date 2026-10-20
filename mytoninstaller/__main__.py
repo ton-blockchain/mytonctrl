@@ -7,8 +7,8 @@ from pathlib import Path
 from mytoncore.utils import str2bool
 
 from mypylib.mypylib import MyPyClass
-from mypylib.logger import setup_logging
-from mytonctrl.utils import get_current_user
+from mypylib.logger import get_logger, setup_logging
+from mytonctrl.utils import get_current_user, is_container
 
 from mytoninstaller.context import InstallerContext, InstallerPaths, InstallerPorts
 from mytoninstaller.settings import (
@@ -20,8 +20,9 @@ from mytoninstaller.settings import (
     EnableMode, ConfigureFromBackup, ConfigureOnlyNode, SetInitialSync, SetupCollator, write_paths
 )
 from mytoninstaller.config import (
-    BackupMconfig,
+    BackupMconfig, GetConfig, SetConfig,
 )
+from mypylib.mypylib import Dict
 
 
 def _build_general_arg_parser():
@@ -98,6 +99,8 @@ def get_context(args) -> InstallerContext:
     state_ttl_env = os.getenv('STATE_TTL')
     state_ttl = int(state_ttl_env) if state_ttl_env else None
     public_ip = os.getenv('PUBLIC_IP')
+    if is_container():
+        public_ip = (public_ip or '').strip() or None
     add_shard = os.getenv('ADD_SHARD')
     archive_blocks = os.getenv('ARCHIVE_BLOCKS')
 
@@ -118,33 +121,98 @@ def get_context(args) -> InstallerContext:
                            archive_ttl, state_ttl, public_ip, add_shard, archive_blocks)
 
 
-def mytoninstaller():
-    local = MyPyClass(__file__)
-    local.db.config.logLevel = "debug"
+def _run_installation_stage(local, ctx, stage, callback):
+    if not is_container():
+        return callback(local, ctx)
+    path = Path(ctx.paths.ton_work_dir) / "controller/installer-progress.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    progress = GetConfig(str(path)) if path.exists() else Dict(version=1, completed=[])
+    if progress.get("version") != 1 or not isinstance(progress.get("completed"), list):
+        raise RuntimeError(f"Invalid installer progress checkpoint: {path}")
+    completed = progress["completed"]
+    if stage == "node_settings" and stage in completed and ctx.backup and "backup_restore" not in completed:
+        # An interrupted restore can temporarily remove the donor keyring.
+        # Reach the restore retry before attempting to activate the validator.
+        local.add_log("Deferring validator activation until backup restoration completes", "info")
+        return
+    # Revisit node setup to start the validator in a fresh supervisor process.
+    # Its own completion checkpoint prevents repeated downloads or key creation.
+    if stage in completed and stage != "node_settings":
+        local.add_log(f"Installation stage {stage} already completed; continuing", "info")
+        return
+    progress.update(stage=stage, status="running")
+    progress.pop("error", None)
+    SetConfig(str(path), progress)
+    path.chmod(0o644)
+    try:
+        result = callback(local, ctx)
+    except BaseException as error:
+        progress.update(status="failed", error=str(error))
+        SetConfig(str(path), progress)
+        path.chmod(0o644)
+        raise
+    if stage not in completed:
+        completed.append(stage)
+    progress.update(status="complete")
+    SetConfig(str(path), progress)
+    path.chmod(0o644)
+    return result
+
+
+def _configure_controller(local, ctx):
+    FirstMytoncoreSettings(local, ctx)
+    write_paths(local, ctx)
+
+
+def _setup_installer_logging(local):
     setup_logging(
         local.db.config.logLevel,
         local.log_file_name if local.db.config.isWritingLogFile else None,
         local.db.config.logFileSizeLines if local.db.config.isLimitLogFile else None,
     )
+
+
+def mytoninstaller():
+    local = MyPyClass(__file__)
+    local.db.config.logLevel = "debug"
+    container = is_container()
+    if not container:
+        _setup_installer_logging(local)
     args = _parse_general_args()
     ctx = get_context(args)
-    FirstMytoncoreSettings(local, ctx)
-    write_paths(local, ctx)
-    FirstNodeSettings(local, ctx)
-    EnableValidatorConsole(local, ctx)
+    if container:
+        log_path = Path(ctx.paths.ton_work_dir) / "controller/mytoninstaller.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        local.log_file_name = str(log_path)
+        _setup_installer_logging(local)
+    _run_installation_stage(local, ctx, "controller_settings", _configure_controller)
+    _run_installation_stage(local, ctx, "node_settings", FirstNodeSettings)
+    _run_installation_stage(local, ctx, "validator_console", EnableValidatorConsole)
     if not ctx.only_mtc:
-        EnableLiteServer(local, ctx)
-    BackupMconfig(local, ctx)
-    CreateSymlinks(local, ctx)
-    EnableMode(local, ctx)
-    ConfigureFromBackup(local, ctx)
-    ConfigureOnlyNode(local, ctx)
-    SetInitialSync(local, ctx)
-    SetupCollator(local, ctx)
+        _run_installation_stage(local, ctx, "liteserver", EnableLiteServer)
+    _run_installation_stage(local, ctx, "backup_config", BackupMconfig)
+    _run_installation_stage(local, ctx, "symlinks", CreateSymlinks)
+    _run_installation_stage(local, ctx, "mode", EnableMode)
+    _run_installation_stage(local, ctx, "backup_restore", ConfigureFromBackup)
+    _run_installation_stage(local, ctx, "only_node", ConfigureOnlyNode)
+    _run_installation_stage(local, ctx, "initial_sync", SetInitialSync)
+    _run_installation_stage(local, ctx, "collator", SetupCollator)
     local.exit()
 
 
-if __name__ == '__main__':
+def main():
     if len(sys.argv) == 1:
         raise Exception("No installation arguments provided")
-    mytoninstaller()
+    try:
+        mytoninstaller()
+    except Exception as error:
+        if not is_container():
+            raise
+        if not get_logger().handlers:
+            setup_logging()
+        get_logger("mytoninstaller").error("Initialization failed: %s", error, exc_info=True)
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()

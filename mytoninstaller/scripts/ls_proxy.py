@@ -7,9 +7,12 @@ import time
 from mytoninstaller.utils import add2systemd
 from mytoncore.utils import get_package_resource_path
 from mytoninstaller.config import GetConfig, SetConfig
+from mytonctrl.utils import is_container
 
 
 def enable_ls_proxy(user: str, mconfig_path: str, src_dir: str):
+    if is_container():
+        raise RuntimeError("Run the liteserver proxy in a separate container; this controller image does not clone or compile it.")
     ls_proxy_port = random.randint(2000, 65000)
     metrics_port = random.randint(2000, 65000)
     bin_name = "ls_proxy"

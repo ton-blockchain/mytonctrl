@@ -1,0 +1,53 @@
+services:
+  ton-exporter:
+    image: ${MYTONCTRL_IMAGE:-ghcr.io/ton-blockchain/mytonctrl:latest}
+    # Supply the export script from the controller image without starting it.
+    entrypoint: ["/bin/sh", "-eu", "-c"]
+    command:
+      - |
+        staged_script=$$(mktemp /scripts/.export-ton.sh.XXXXXX)
+        trap 'rm -f "$$staged_script"' EXIT
+        cp /usr/local/lib/mytonctrl/export-ton.sh "$$staged_script"
+        chmod 444 "$$staged_script"
+        mv -f "$$staged_script" /scripts/export-ton.sh
+    volumes:
+      - ton-scripts:/scripts
+    network_mode: none
+    restart: "no"
+
+  ton-binaries:
+    image: ${TON_IMAGE:-ghcr.io/ton-blockchain/ton:latest}
+    # Publish artifacts only. Never run TON's docker/init.sh.
+    entrypoint: ["/bin/sh", "/scripts/export-ton.sh"]
+    environment:
+      TON_IMAGE_REF: ${TON_IMAGE:-ghcr.io/ton-blockchain/ton:latest}
+    volumes:
+      - ton-artifacts:/ton-artifacts
+      - ton-scripts:/scripts:ro
+    depends_on:
+      ton-exporter:
+        condition: service_completed_successfully
+    restart: "no"
+
+  mytonctrl:
+    image: ${MYTONCTRL_IMAGE:-ghcr.io/ton-blockchain/mytonctrl:latest}
+    env_file: ${MYTONCTRL_ENV_FILE:-.env}
+    volumes:
+      - ton-artifacts:/ton-artifacts:ro
+      # An empty host path retains the original named volume.
+      - "${TON_WORK_HOST_DIR:-ton-work}:/var/ton-work"
+    depends_on:
+      ton-binaries:
+        condition: service_completed_successfully
+    # TON advertises PUBLIC_IP and listens on the ports selected in .env.
+    network_mode: host
+    stop_grace_period: 75s
+    restart: unless-stopped
+
+volumes:
+  ton-scripts:
+    name: ${TON_SCRIPTS_VOLUME:-mytonctrl-ton-scripts}
+  ton-artifacts:
+    name: ${TON_ARTIFACTS_VOLUME:-mytonctrl-ton-artifacts}
+  ton-work:
+    name: ${TON_WORK_VOLUME:-mytonctrl-ton-work}

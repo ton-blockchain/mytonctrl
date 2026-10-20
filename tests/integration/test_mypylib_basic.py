@@ -92,6 +92,57 @@ def test_mypyclass_file_logging_writes_and_rotates(local):
     assert "\033" in contents
 
 
+@pytest.mark.parametrize("log_limit_lines", [None, 1])
+@pytest.mark.parametrize("file_handler_first", [False, True])
+def test_cycle_keeps_tracebacks_in_file_only(local, capsys, log_limit_lines, file_handler_first):
+    logger = setup_logging(INFO, local.log_file_name, log_limit_lines)
+    if file_handler_first:
+        logger.handlers.reverse()
+    local.add_log("previous log entry")
+    capsys.readouterr()
+    calls = []
+
+    def _telemetry(argument):
+        calls.append(argument)
+        if len(calls) == 1:
+            raise RuntimeError("ValidatorConsole is not initialized")
+        local.working = False
+
+    local.cycle(_telemetry, sec=0, args=["validator"])
+
+    summary = "_telemetry error: ValidatorConsole is not initialized"
+    stdout = capsys.readouterr().out
+    assert len(stdout.splitlines()) == 1
+    assert stdout.rstrip().endswith(summary)
+    assert "Traceback" not in stdout
+    assert "RuntimeError:" not in stdout
+    assert calls == ["validator", "validator"]
+
+    contents = Path(local.log_file_name).read_text()
+    assert contents.count(summary) == 1
+    assert "Traceback (most recent call last):" in contents
+    assert "raise RuntimeError" in contents
+    assert "RuntimeError: ValidatorConsole is not initialized" in contents
+    if log_limit_lines is not None:
+        assert "previous log entry" in Path(local.log_file_name + ".1").read_text()
+
+
+def test_tracebacks_stay_off_stdout_without_a_log_file(local, capsys):
+    setup_logging(INFO)
+
+    def _telemetry():
+        raise RuntimeError("ValidatorConsole is not initialized")
+
+    assert local.try_function(_telemetry, log_traceback=True) is None
+
+    stdout = capsys.readouterr().out
+    assert len(stdout.splitlines()) == 1
+    assert stdout.rstrip().endswith("_telemetry error: ValidatorConsole is not initialized")
+    assert "Traceback" not in stdout
+    assert "RuntimeError:" not in stdout
+    assert not Path(local.log_file_name).exists()
+
+
 def test_mypyclass_exit_persists_state_and_cleans_up_pid_file(local, monkeypatch):
     db_path = Path(local.db_path)
     log_path = Path(local.log_file_name)

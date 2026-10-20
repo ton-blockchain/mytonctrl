@@ -18,6 +18,30 @@ do
 	esac
 done
 
+is_controller_container() {
+    [ "${MYTONCTRL_CONTAINER:-}" = "1" ] || [ -f /etc/mytonctrl-container ]
+}
+
+# Host installs keep their existing service behavior. Containers must stop on
+# failed extraction or copying before the entrypoint can mark them initialized.
+restore_step() {
+    "$@"
+    result=$?
+    if [ "$result" -ne 0 ] && is_controller_container; then
+        echo "Backup restoration failed during $1 (exit code $result)" >&2
+        exit "$result"
+    fi
+    return "$result"
+}
+
+if is_controller_container; then
+    mtc_dir=$(readlink -f -- "$mtc_dir") || exit 1
+    if [ -z "$mtc_dir" ] || [ ! -d "$mtc_dir" ]; then
+        echo "Controller data directory does not exist: $mtc_dir" >&2
+        exit 1
+    fi
+fi
+
 if [ ! -f "$name" ]; then
     echo "Backup file not found, aborting."
     exit 1
@@ -33,38 +57,48 @@ echo -e "${COLOR}[1/4]${ENDC} Stopped validator and mytoncore"
 
 
 tmp_dir="/tmp/mytoncore/backup"
-rm -rf $tmp_dir
-mkdir $tmp_dir
-tar -xvzf $name -C $tmp_dir
+restore_step rm -rf -- "$tmp_dir"
+restore_step mkdir -p -- "$tmp_dir"
+restore_step tar -xvzf "$name" -C "$tmp_dir"
 
-if [ ! -d ${tmp_dir}/db ]; then
+if [ ! -d "${tmp_dir}/db" ]; then
     echo "Old version of backup detected"
-    mkdir ${tmp_dir}/db
-    mv ${tmp_dir}/config.json ${tmp_dir}/db
-    mv ${tmp_dir}/keyring ${tmp_dir}/db
+    restore_step mkdir -- "${tmp_dir}/db"
+    restore_step mv -- "${tmp_dir}/config.json" "${tmp_dir}/db"
+    restore_step mv -- "${tmp_dir}/keyring" "${tmp_dir}/db"
 
 fi
 
-rm -rf ${ton_dir}/db/keyring
+restore_step rm -rf -- "${ton_dir}/db/keyring"
 
-chown -R $user:$user ${tmp_dir}/mytoncore
-chown -R $user:$user ${tmp_dir}/keys
-chown validator:validator ${tmp_dir}/keys
-chown -R validator:validator ${tmp_dir}/db
+restore_step chown -R "$user:$user" "${tmp_dir}/mytoncore"
+restore_step chown -R "$user:$user" "${tmp_dir}/keys"
+restore_step chown validator:validator "${tmp_dir}/keys"
+restore_step chown -R validator:validator "${tmp_dir}/db"
 
-cp -rfp ${tmp_dir}/db ${ton_dir}
-cp -rfp ${tmp_dir}/keys ${ton_dir}
-cp -rfpT ${tmp_dir}/mytoncore $mtc_dir
+restore_step cp -rfp -- "${tmp_dir}/db" "${ton_dir}"
+restore_step cp -rfp -- "${tmp_dir}/keys" "${ton_dir}"
+restore_step cp -rfpT -- "${tmp_dir}/mytoncore" "$mtc_dir"
 
-chown -R validator:validator ${ton_dir}/db/keyring
+restore_step chown -R validator:validator "${ton_dir}/db/keyring"
 
 echo -e "${COLOR}[2/4]${ENDC} Extracted files from archive"
 
-rm -r ${ton_dir}/db/dht-*
+rm -r "${ton_dir}"/db/dht-*
 
-if [ $ip -ne 0 ]; then
+if [ "$ip" -ne 0 ]; then
     echo "Replacing IP in node config"
-    python3 -c "import json;path='${ton_dir}/db/config.json';f=open(path);d=json.load(f);f.close();d['addrs'][0]['ip']=int($ip);f=open(path, 'w');f.write(json.dumps(d, indent=4));f.close()"
+    restore_step python3 - "${ton_dir}/db/config.json" "$ip" <<'PY'
+import json
+import sys
+
+path, ip = sys.argv[1:]
+with open(path) as source:
+    data = json.load(source)
+data['addrs'][0]['ip'] = int(ip)
+with open(path, 'w') as destination:
+    json.dump(data, destination, indent=4)
+PY
 else
     echo "IP is not provided, skipping IP replacement"
 fi
@@ -72,6 +106,8 @@ fi
 echo -e "${COLOR}[3/4]${ENDC} Deleted DHT files"
 
 systemctl start validator
-systemctl start mytoncore
+if ! is_controller_container; then
+    systemctl start mytoncore
+fi
 
 echo -e "${COLOR}[4/4]${ENDC} Started validator and mytoncore"

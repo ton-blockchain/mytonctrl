@@ -13,6 +13,31 @@ import psutil
 from mypylib.mypylib import bcolors, parse
 
 
+def is_container() -> bool:
+    """Identify the controller image even when a login shell drops its environment."""
+    return os.getenv("MYTONCTRL_CONTAINER") == "1" or os.path.isfile(
+        "/etc/mytonctrl-container"
+    )
+
+
+def container_initialization_complete(ton) -> bool:
+    """Console credentials can exist before the container finishes configuring its node."""
+    return (
+        not is_container()
+        or (ton.get_paths().ton_work / "controller/initialized.json").is_file()
+    )
+
+
+def get_service_state(name: str) -> str | None:
+    result = subprocess.run(
+        ["systemctl", "show", name, "--property=SubState", "--value"],
+        capture_output=True,
+        text=True,
+        timeout=3,
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
 def timestamp2utcdatetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
     if timestamp is None:
         return "n/a"
