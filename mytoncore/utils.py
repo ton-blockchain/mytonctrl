@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 from pathlib import Path
 import re
 import subprocess
 import sys
 from typing import TYPE_CHECKING, Any
-
-from fastcrc import crc16
 
 
 
@@ -220,7 +219,7 @@ def raw_addr_to_b64(addr_full: str, bounceable: bool = True, is_testnet: bool = 
     b[1] = workchain % 256
     b[2:34] = bytearray.fromhex(addr)
     buff = bytes(b[:34])
-    crc = crc16.xmodem(buff)
+    crc = binascii.crc_hqx(buff, 0)  # CRC-16/XMODEM
     b[34] = crc >> 8
     b[35] = crc & 0xff
     result = base64.b64encode(b)
@@ -248,7 +247,7 @@ def parse_addr_b64(addr_b64: str) -> tuple[int, str, bool]:
     crc_bytes = b[34:36]
     crc_data = bytes(b[:34])
     crc = int.from_bytes(crc_bytes, "big")
-    check_crc = crc16.xmodem(crc_data)
+    check_crc = binascii.crc_hqx(crc_data, 0)  # CRC-16/XMODEM
     if crc != check_crc:
         raise Exception("ParseAddrB64 error: crc do not match")
 
