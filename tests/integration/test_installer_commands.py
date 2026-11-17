@@ -303,10 +303,12 @@ def test_plsc(installer_cli):
 
 def test_print_ls_proxy_config(installer_cli, monkeypatch):
     config = {"ip": 1, "port": "2", "id": {"@type": "pub.ed25519", "key": "abc"}}
-    monkeypatch.setattr(installer_module, "get_ls_proxy_config", lambda: config)
+    calls = []
+    monkeypatch.setattr(installer_module, "get_ls_proxy_config", lambda ton_bin_dir: calls.append(ton_bin_dir) or config)
     output = installer_cli.execute("print_ls_proxy_config")
     assert installer_cli.status == 0
     assert json.loads(output.strip()) == config
+    assert calls == [str(installer_cli.paths.ton_bin)]
 
 
 def test_drvcf(installer_cli, root_calls):
