@@ -64,6 +64,8 @@ SETTINGS = {
     'customOverlaysUseQuic': Setting(None, True, 'Default for the `use_quic` field sent to validator-console for custom overlays that don\'t set it explicitly'),
     'useDefaultCollators': Setting('validator', True, 'Automatically add collators from the default collators list to the node'),
     'defaultCollatorsUrl': Setting('validator', 'https://ton-blockchain.github.io/[testnet-]collators-list.json', 'Default collators list config url'),
+    'useDefaultRegistryVoting': Setting('validator', False, 'Automatically vote in the validator registry for the nodes from the default registry voting config'),
+    'defaultRegistryVotingUrl': Setting('validator', 'https://ton-blockchain.github.io/[testnet-]registry-voting-config.json', 'Default registry voting config url'),
     'debug': Setting(None, False, 'Debug mtc console mode. Prints Traceback on errors'),
     'subscribe_tg_channel': Setting('validator', False, 'Disables warning about subscribing to the `TON STATUS` channel'),
     'auto_backup': Setting('validator', None, 'Make validator backup every election'),

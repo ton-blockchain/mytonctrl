@@ -2,6 +2,7 @@ from __future__ import annotations
 import base64
 from typing import List, Optional
 import json
+import os
 import time
 
 import requests
@@ -351,6 +352,26 @@ class ValidatorModule(MtcModule):
         self.local.add_log(f'update_collators_list: set {len(default_collators)} default collators: '
                            f'{default_collators}', 'info')
         color_print("update_collators_list - {green}OK{endc}")
+
+    def apply_default_registry_voting(self) -> None:
+        if not self.ton.using_validator():
+            return
+        if not self.ton.local.db.get('useDefaultRegistryVoting', False):
+            return
+        network = self.ton.GetNetworkName()
+        if network == 'unknown':
+            return
+        prefix = 'testnet-' if network == 'testnet' else ''
+        default_url = f'https://ton-blockchain.github.io/{prefix}registry-voting-config.json'
+        url = self.ton.local.db.get('defaultRegistryVotingUrl', default_url)
+        resp = requests.get(url, timeout=3)
+        resp.raise_for_status()
+        fname = os.path.join(self.ton.tempDir, 'registry_voting_config.json')
+        with open(fname, 'wb') as f:
+            f.write(resp.content)
+        result = self.ton.validatorConsole.run(f'set-registry-voting-config {fname}')
+        if 'success' not in result:
+            raise Exception(f'Failed to set registry voting config: {result}')
 
     def add_console_commands(self, console):
         console.add_command("vo", self.vote_offer)
