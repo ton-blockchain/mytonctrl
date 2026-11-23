@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 import stat
 import tempfile
@@ -745,7 +745,12 @@ class GeneralModule(MtcModule):
         )
 
     def set_quic_port(
-        self, port: Annotated[int, Arg(type=tcp_port)], category: int = 2
+        self,
+        port: Annotated[int, Arg(type=tcp_port)],
+        categories: Annotated[
+            List[int],
+            Arg(help="ADNL categories to add the QUIC port for; validator and collator ids are moved to the highest one"),
+        ] = [1, 2],
     ) -> None:
         vconfig = self.ton.GetValidatorConfig()
         ip = int2ip(vconfig["addrs"][0]["ip"])
@@ -753,6 +758,7 @@ class GeneralModule(MtcModule):
         if adnl_addr is None:
             raise Exception("ADNL address is not set")
 
+        category = max(categories)
         for addr in vconfig["addrs"]:
             if addr.get("@type") == "engine.addr" and category not in addr.get(
                 "categories", []
@@ -788,8 +794,9 @@ class GeneralModule(MtcModule):
                     adnl_addr=collator_adnl, category=category
                 )
 
+            cats = " ".join(map(str, categories))
             result = self.ton.validatorConsole.run(
-                f"add-quic-addr {ip}:{port} [ {category} ] [ ]"
+                f"add-quic-addr {ip}:{port} [ {cats} ] [ ]"
             )
             self.local.add_log(
                 f"Added quic addr {ip}:{port}: {result.splitlines()[-1].strip()}",

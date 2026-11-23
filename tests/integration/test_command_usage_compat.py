@@ -215,8 +215,9 @@ FORMS = [
     ("benchmark", {"tmp_dir": None, "forwarded": []}),
     ("benchmark --nodes 4", {"tmp_dir": None, "forwarded": ["--nodes", "4"]}),
     ("benchmark --tmp-dir /x --nodes 4 --tps 1000", {"tmp_dir": "/x", "forwarded": ["--nodes", "4", "--tps", "1000"]}),
-    ("set_quic_port 1234", {"port": 1234, "category": 2}),
-    ("set_quic_port 1234 3", {"port": 1234, "category": 3}),
+    ("set_quic_port 1234", {"port": 1234, "categories": [1, 2]}),
+    ("set_quic_port 1234 3", {"port": 1234, "categories": [3]}),
+    ("set_quic_port 1234 1 3", {"port": 1234, "categories": [1, 3]}),
 ]
 
 INSTALLER_FORMS = [
