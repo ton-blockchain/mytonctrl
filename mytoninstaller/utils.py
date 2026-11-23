@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import base64
+import hashlib
 import json
 import os
 import platform
 import time
 import subprocess
+import tempfile
 import typing
 
 import requests
-from nacl.signing import SigningKey
 
 from mypylib import MyPyClass
 
@@ -38,16 +38,30 @@ def StartValidator(local):
 def StartMytoncore(local):
 	start_service(local, "mytoncore")
 
-def get_ed25519_pubkey_text(privkey_text):
-	privkey = base64.b64decode(privkey_text)
-	pubkey = get_ed25519_pubkey(privkey)
-	pubkey_text = base64.b64encode(pubkey).decode("utf-8")
-	return pubkey_text
+def get_ed25519_pubkey_b64(generate_random_id: str, seed: bytes) -> str:
+	if len(seed) != 32:
+		raise ValueError(f"ed25519 seed must be 32 bytes, got {len(seed)}")
+	pk_ed25519_tl_tag = bytes.fromhex("17236849")
+	with tempfile.TemporaryDirectory() as tmp_dir:
+		key_path = os.path.join(tmp_dir, "key")
+		fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+		with os.fdopen(fd, 'wb') as file:
+			file.write(pk_ed25519_tl_tag + seed)
+		process = subprocess.run([generate_random_id, "--mode", "id", "--key", key_path],
+								 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+	if process.returncode != 0:
+		raise Exception(f"generate-random-id failed with code {process.returncode}: {process.stderr.strip()}")
+	for line in process.stdout.splitlines():
+		obj = json.loads(line)
+		if obj.get("@type") == "pub.ed25519":
+			return obj["key"]
+	raise Exception("generate-random-id did not print a pub.ed25519 key")
 
-def get_ed25519_pubkey(privkey):
-	privkey_obj = SigningKey(privkey)
-	pubkey = privkey_obj.verify_key.encode()
-	return pubkey
+
+def get_pubkey_file_short_id(pubkey_path: str) -> str:
+	with open(pubkey_path, 'rb') as file:
+		data = file.read()
+	return hashlib.sha256(data).hexdigest().upper()
 
 
 def is_testnet(global_config_path: str):

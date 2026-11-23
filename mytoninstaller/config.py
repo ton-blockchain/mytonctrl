@@ -1,4 +1,6 @@
+import base64
 import json
+import os
 import re
 import subprocess
 import requests
@@ -6,7 +8,7 @@ import requests
 from mypylib import MyPyClass
 from mytoninstaller.context import InstallerContext
 
-from mytoninstaller.utils import get_ed25519_pubkey_text
+from mytoninstaller.utils import get_ed25519_pubkey_b64
 from mypylib.mypylib import ip2int, Dict
 
 
@@ -47,17 +49,18 @@ def get_own_ip():
 	return ip
 
 
-def get_ls_proxy_config():
+def get_ls_proxy_config(ton_bin_dir: str):
 	ls_proxy_config_path = "/var/ls_proxy/ls-proxy-config.json"
 	ls_proxy_config = GetConfig(path=ls_proxy_config_path)
 	ip = get_own_ip()
 	port = ls_proxy_config.ListenAddr.split(':')[1]
-	privkey_text = ls_proxy_config.Clients[0].PrivateKey
+	seed =base64.b64decode(ls_proxy_config.Clients[0].PrivateKey)
+	generate_random_id = os.path.join(ton_bin_dir, "utils", "generate-random-id")
 
 	result = Dict()
 	result.ip = ip2int(ip)
 	result.port = port
 	result.id = Dict()
 	result.id["@type"]= "pub.ed25519"
-	result.id.key= get_ed25519_pubkey_text(privkey_text)
+	result.id.key= get_ed25519_pubkey_b64(generate_random_id, seed)
 	return result

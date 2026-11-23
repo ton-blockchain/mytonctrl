@@ -229,7 +229,7 @@ class InstallerCtrl:
 		print(json.dumps(self._get_ls_config(), indent=4))
 
 	def _print_ls_proxy_config(self) -> None:
-		print(json.dumps(get_ls_proxy_config(), indent=4))
+		print(json.dumps(get_ls_proxy_config(str(self._paths.ton_bin)), indent=4))
 
 	@classmethod
 	def from_ton(cls, ton: MyTonCore):
