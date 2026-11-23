@@ -24,7 +24,13 @@ class CollatorModule(MtcModule):
     def setup_collator(self, *, adnl: Optional[AdnlAddress] = None) -> None:
         if adnl is None:
             adnl = self.ton.CreateNewKey()
-        self.ton.add_adnl_addr(adnl)
+        quic_categories = [
+            cat
+            for addr in self.ton.GetValidatorConfig()["addrs"]
+            if addr["@type"] == "engine.quicAddr"
+            for cat in addr["categories"]
+        ]
+        self.ton.add_adnl_addr(adnl, max(quic_categories, default=0))
         res = self.add_collator_to_vc(adnl)
         if 'successfully' not in res:
             raise Exception(f'Failed to enable collator: add-collator query failed: {res}')
