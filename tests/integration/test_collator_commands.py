@@ -55,7 +55,7 @@ def test_collator_commands_registered(cli):
     assert set(COLLATOR_COMMANDS) <= registered
 
 
-def test_setup_collator(cli, vc, mocker: MockerFixture):
+def test_setup_collator(cli, vc, monkeypatch, mocker: MockerFixture):
     # validator-console replies, keyed by the console command name
     responses = {
         "newkey": f"created new key {NEW_KEY}\n",
@@ -63,6 +63,8 @@ def test_setup_collator(cli, vc, mocker: MockerFixture):
         "add-collator": "successfully added collator",
     }
     vc.run.side_effect = lambda cmd: responses[cmd.split()[0]]
+    addrs = [{"@type": "engine.addr", "ip": 2130706433, "port": 30000, "categories": [0, 1, 2, 3]}]
+    monkeypatch.setattr(MyTonCore, "GetValidatorConfig", lambda self: Dict({"addrs": addrs}))
 
     # Bad args
     output = cli.execute("setup_collator --adnl", no_color=True)
@@ -97,6 +99,18 @@ def test_setup_collator(cli, vc, mocker: MockerFixture):
         mocker.call(f"add-collator {ADNL_1}"),
     ]
     assert "setup_collator - OK" in output
+
+    # with a QUIC address the ADNL is added to its highest category
+    vc.run.reset_mock()
+    quic_addr = {"@type": "engine.quicAddr", "ip": 2130706433, "port": 31000, "categories": [1, 2], "priority_categories": []}
+    addrs.append(quic_addr)
+    output = cli.execute(f"setup_collator --adnl {ADNL_1}", no_color=True)
+    assert vc.run.call_args_list == [
+        mocker.call(f"addadnl {ADNL_1} 2"),
+        mocker.call(f"add-collator {ADNL_1}"),
+    ]
+    assert "setup_collator - OK" in output
+    addrs.remove(quic_addr)
 
     # the addadnl result is not checked
     vc.run.reset_mock()
