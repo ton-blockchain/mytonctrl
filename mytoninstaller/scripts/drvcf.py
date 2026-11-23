@@ -8,7 +8,15 @@ import sys
 import json
 
 from mytoninstaller.config import get_own_ip, GetConfig
-from mytoninstaller.utils import get_ed25519_pubkey
+from mytoninstaller.utils import get_pubkey_file_short_id
+
+
+def find_keyring_id(keyring: list[str], pubkey_path: str) -> str | None:
+	short_id = get_pubkey_file_short_id(pubkey_path)
+	for item in keyring:
+		if item.upper() == short_id:
+			return hex2b64(item)
+	return None
 
 
 def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str, ton_db_dir: str):
@@ -38,24 +46,10 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 	lkey = mconfig.liteClient.liteServer.pubkeyPath
 	lport = mconfig.liteClient.liteServer.port
 
-	# Read lite server pubkey
-	file = open(lkey, 'rb')
-	data = file.read()
-	file.close()
-	ls_pubkey = data[4:]
-
 	# Search lite server priv key
-	ls_id = None
-	for item in keyring:
-		path = os.path.join(keyring_dir, item)
-		file = open(path, 'rb')
-		data = file.read()
-		file.close()
-		privkey = data[4:]
-		pubkey = get_ed25519_pubkey(privkey)
-		if pubkey == ls_pubkey:
-			ls_id = hex2b64(item)
-			keys.remove(ls_id)
+	ls_id = find_keyring_id(keyring, lkey)
+	if ls_id is not None:
+		keys.remove(ls_id)
 
 	# Create LS object
 	buff = Dict()
@@ -70,24 +64,10 @@ def dangerous_recovery_validator_config_file(keyring_dir: str, mconfig_path: str
 	buff = addr.split(':')
 	cport = int(buff[1])
 
-	# Read validator-console pubkey
-	file = open(ckey, 'rb')
-	data = file.read()
-	file.close()
-	vPubkey = data[4:]
-
 	# Search validator-console priv key
-	vcId = None
-	for item in keyring:
-		path = os.path.join(keyring_dir, item)
-		file = open(path, 'rb')
-		data = file.read()
-		file.close()
-		privkey = data[4:]
-		pubkey = get_ed25519_pubkey(privkey)
-		if pubkey == vPubkey:
-			vcId = hex2b64(item)
-			keys.remove(vcId)
+	vcId = find_keyring_id(keyring, ckey)
+	if vcId is not None:
+		keys.remove(vcId)
 
 	# Create VC object
 	buff = Dict()

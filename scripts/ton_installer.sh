@@ -155,7 +155,7 @@ else
 fi
 
 echo -e "${COLOR}[3/5]${ENDC} Source compilation, use ${cpu_number} cpus"
-ninja -j ${cpu_number} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson rldp-http-proxy create-state
+ninja -j ${cpu_number} fift validator-engine lite-client validator-engine-console generate-random-id dht-server func tonlibjson create-state
 
 echo -e "${COLOR}[4/5]${ENDC} Downloading config files"
 wget ${config} -O global.config.json

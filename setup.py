@@ -29,8 +29,6 @@ setup(
     install_requires=[
         "requests==2.32.4",
         "psutil==6.1.0",
-        "fastcrc==0.3.2",
-        "pynacl==1.5.0",
         "importlib_resources==6.4.5; python_version < '3.9'",
         "typing_extensions==4.13.2; python_version < '3.9'",
     ],

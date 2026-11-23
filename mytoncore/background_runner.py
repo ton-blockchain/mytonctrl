@@ -263,6 +263,7 @@ class BackgroundRunner:
         self._local.start_cycle(self._stats_collector.save_node_statistics, sec=60)
         self._local.start_cycle(self._custom_overlay_module.custom_overlays, sec=60)
         self._local.start_cycle(self._validator_module.apply_default_collators, sec=600)
+        self._local.start_cycle(self._validator_module.apply_default_registry_voting, sec=1800)
         self._local.start_cycle(self._alert_bot_module.check_status, sec=60)
         self._local.start_cycle(self._prometheus_module.push_metrics, sec=30)
 
