@@ -803,6 +803,10 @@ class GeneralModule(MtcModule):
                 "info",
             )
 
+        color_print(
+            "{yellow}Restart the node to apply the QUIC port: `systemctl restart validator`{endc}"
+        )
+
     def Update(
         self,
         target: Annotated[Optional[str], Arg(help="branch, tag or commit, or a github url (optionally .../tree/<branch>)")] = None,

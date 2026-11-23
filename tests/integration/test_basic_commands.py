@@ -756,6 +756,7 @@ def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
     output = cli.execute("set_quic_port 1234", no_color=True)
     update_adnl_mock.assert_called_once_with(adnl_addr="TEST_ADNL_ADDR", category=2)
     validator_console_mock.run.assert_called_once_with("add-quic-addr 127.0.0.1:1234 [ 1 2 ] [ ]")
+    assert "Restart the node to apply the QUIC port: `systemctl restart validator`" in output
 
     # Happy path - with custom category
     update_adnl_mock.reset_mock()
@@ -806,6 +807,7 @@ def test_set_quic_port(cli, ton, monkeypatch, mocker: MockerFixture):
     output = cli.execute("set_quic_port 0", no_color=True)
     update_adnl_mock.assert_not_called()
     validator_console_mock.run.assert_called_once_with("del-quic-addr 127.0.0.1:9999 [ 1 ] [  ]")
+    assert "Restart the node to apply the QUIC port" in output
 
     # Category not set for address - should raise
     update_adnl_mock.reset_mock()
