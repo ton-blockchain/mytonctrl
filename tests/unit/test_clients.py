@@ -132,6 +132,63 @@ def test_liteclient_run_raises_on_stderr(ton, mocker: MockerFixture):
         ton.liteClient.run("getconfig", index=0)
 
 
+@pytest.mark.parametrize("returncode", [1, -9])
+@pytest.mark.parametrize("stdout", [b"", b"zerostate set to -1:hash\n"])
+def test_liteclient_rejects_quiet_nonzero_exit(ton, mocker: MockerFixture, returncode, stdout):
+    mocker.patch(
+        "mytoncore.clients.subprocess.run",
+        return_value=_completed(stdout=stdout, returncode=returncode),
+    )
+
+    with pytest.raises(RuntimeError) as failure:
+        ton.liteClient.run("getconfig 34", index=0)
+
+    message = str(failure.value)
+    assert "command 'getconfig 34'" in message
+    assert f"exit code {returncode}" in message
+    assert "--verbosity 1" in message
+    assert (stdout.decode().strip() or "<empty>") in message
+
+
+def test_liteclient_quiet_failure_output_is_bounded(ton, mocker: MockerFixture):
+    mocker.patch(
+        "mytoncore.clients.subprocess.run",
+        return_value=_completed(stdout=b"x" * 5000, returncode=1),
+    )
+
+    with pytest.raises(RuntimeError) as failure:
+        ton.liteClient.run("checkloadall 1 2", index=0)
+
+    message = str(failure.value)
+    assert "command 'checkloadall 1 2'" in message
+    assert len(message) < 700
+    assert message.endswith("...")
+
+
+@pytest.mark.parametrize("stdout", [b"", b"zerostate banner\nConfigParam(34) = data\n"])
+def test_liteclient_success_still_returns_exact_stdout(ton, mocker: MockerFixture, stdout):
+    mocker.patch(
+        "mytoncore.clients.subprocess.run", return_value=_completed(stdout=stdout),
+    )
+
+    assert ton.liteClient.run("getconfig 34", index=0) == stdout.decode()
+
+
+@pytest.mark.parametrize("tool", ["fift", "console"])
+def test_other_tools_keep_quiet_nonzero_exit_behavior(ton, mocker: MockerFixture, tool):
+    mocker.patch(
+        "mytoncore.clients.subprocess.run",
+        return_value=_completed(stdout=b"legacy output", returncode=1),
+    )
+
+    if tool == "fift":
+        output = ton.fift.run(["x.fif"])
+    else:
+        output = ton.validatorConsole.run("getstats")
+
+    assert output == "legacy output"
+
+
 # ---------- ValidatorConsole ----------
 
 def test_validator_console_run_builds_args_and_returns_stdout(ton, mocker: MockerFixture):

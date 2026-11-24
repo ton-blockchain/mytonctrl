@@ -1,3 +1,4 @@
+import os
 import random
 import subprocess
 import sys
@@ -6,6 +7,8 @@ import time
 from mypylib.mypylib import Dict
 from mytoninstaller.utils import add2systemd
 from mytoncore.utils import get_package_resource_path
+from mytoncore.models import Paths
+from mytonctrl.utils import is_container
 from mytoninstaller.config import GetConfig, get_own_ip, SetConfig
 
 
@@ -18,10 +21,21 @@ def enable_ton_storage(user: str, mconfig_path: str, global_config_path: str, sr
     config_path = f"{db_path}/tonutils-storage-db/config.json"
     network_config = global_config_path
 
-    with get_package_resource_path('mytoninstaller.scripts', 'ton_storage_installer.sh') as installer_path:
-        process = subprocess.run(["bash", str(installer_path), "-u", user, "-s", src_dir], capture_output=True)
-    if process.returncode != 0:
-        raise Exception(f"Failed to run ton_storage installer: {process.stdout.decode()} {process.stderr.decode()}")
+    if is_container():
+        paths = Paths.from_dict(GetConfig(mconfig_path).get("paths", {}))
+        bin_path = str(paths.ton_bin / "tonutils-storage" / "tonutils-storage")
+        if not os.path.isfile(bin_path) or not os.access(bin_path, os.X_OK):
+            raise RuntimeError(
+                f"TON Storage requires a prebuilt tonutils-storage executable at {bin_path}. "
+                "Supply it in the mounted binaries; the controller container does not clone or compile it."
+            )
+        os.makedirs(db_path, exist_ok=True)
+        subprocess.run(["chown", "-R", f"{user}:{user}", db_path], check=True)
+    else:
+        with get_package_resource_path('mytoninstaller.scripts', 'ton_storage_installer.sh') as installer_path:
+            process = subprocess.run(["bash", str(installer_path), "-u", user, "-s", src_dir], capture_output=True)
+        if process.returncode != 0:
+            raise Exception(f"Failed to run ton_storage installer: {process.stdout.decode()} {process.stderr.decode()}")
 
     start_cmd = f"{bin_path} -network-config {network_config} -daemon -api 127.0.0.1:{api_port}"
     add2systemd(name=bin_name, user=user, start=start_cmd, workdir=db_path, force=True)

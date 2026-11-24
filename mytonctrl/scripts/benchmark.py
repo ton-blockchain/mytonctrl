@@ -166,7 +166,24 @@ class Stats:
             or len(self.shards_per_second[seconds[0]]) < shards
         ):
             seconds.pop(0)
-        assert seconds, "No meaningful data after skipping warmup."
+        if not seconds:
+            # Short runs can collect substantial workload without observing all
+            # shards in any single second. Keep those results, but make it clear
+            # that the full-network warmup criterion was not reached.
+            seconds = sorted(self.reported_seconds)
+            while seconds and self.txs_per_second[seconds[0]] <= shards:
+                seconds.pop(0)
+            if not seconds:
+                print(
+                    "No meaningful workload data collected after warmup. "
+                    "Increase --duration and retry."
+                )
+                return
+            print(
+                "Warning: full-shard warmup was not observed; summarizing "
+                "available workload data. Increase --duration for a steadier "
+                "measurement."
+            )
         duration = seconds[-1] - seconds[0] + 1
         total_blocks = sum(self.blocks_per_second[t] for t in seconds)
         total_txs = sum(self.txs_per_second[t] for t in seconds)

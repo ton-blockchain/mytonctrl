@@ -15,6 +15,7 @@ from mytoncore.utils import parse_db_stats
 from mytoninstaller.node_args import get_node_args
 from mypylib.mypylib import MyPyClass, parse
 from mytonctrl.git import fix_git_config, get_git_hash
+from mytonctrl.utils import is_container
 
 
 def build_overlay_telemetry_payload(ton: MyTonCore) -> dict[str, Any]:
@@ -50,11 +51,17 @@ def build_telemetry_payload(local: MyPyClass, ton: MyTonCore):
         "pythonVersion": sys.version,
     }
 
-    mtc_path = paths.mtc_src
-    local.try_function(fix_git_config, args=[mtc_path])
+    if is_container():
+        from mytonctrl import __commit__
+
+        mtc_commit = __commit__
+    else:
+        mtc_path = paths.mtc_src
+        local.try_function(fix_git_config, args=[mtc_path])
+        mtc_commit = get_git_hash(mtc_path)
 
     data["gitHashes"] = {
-        "mytonctrl": get_git_hash(mtc_path),
+        "mytonctrl": mtc_commit,
         "validator": get_bin_git_hash(paths.ton_bin / "validator-engine" / "validator-engine"),
     }
     data["stake"] = local.db.get("stake")

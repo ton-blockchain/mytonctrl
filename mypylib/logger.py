@@ -36,9 +36,10 @@ class LogFormatter(logging.Formatter):
         logging.ERROR: bcolors.ERROR,
     }
 
-    def __init__(self, colored: bool) -> None:
+    def __init__(self, colored: bool, include_traceback: bool = True) -> None:
         super().__init__()
         self.colored: bool = colored
+        self.include_traceback: bool = include_traceback
 
     def format(self, record: logging.LogRecord) -> str:
         mode = record.levelname.lower()
@@ -50,7 +51,7 @@ class LogFormatter(logging.Formatter):
         mode_field = f"[{mode}]".ljust(10, " ")
         thread_field = f"<{record.threadName}>".ljust(14, " ")
         message = record.getMessage()
-        if record.exc_info:
+        if self.include_traceback and record.exc_info:
             message = message + "\n" + self.formatException(record.exc_info)
         if not self.colored:
             return mode_field + time_text + thread_field + message
@@ -82,7 +83,7 @@ def setup_logging(
         logger.removeHandler(handler)
         handler.close()
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(LogFormatter(colored=True))
+    console_handler.setFormatter(LogFormatter(colored=True, include_traceback=False))
     logger.addHandler(console_handler)
     if log_file_name is not None:
         if log_limit_lines is not None:

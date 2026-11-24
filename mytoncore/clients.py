@@ -32,6 +32,19 @@ class CliTool:
         )
         output = process.stdout.decode("utf-8", errors="backslashreplace")
         err = process.stderr.decode("utf-8", errors="backslashreplace")
+        if self.tool_name == "liteclient" and process.returncode != 0 and not err:
+            # Lite-client suppresses LOG(ERROR) at verbosity 0, so failed
+            # queries can return only startup banners with an empty stderr.
+            self.local.add_log(f"{self.tool_name} args: {args}", "error")
+            command = args[args.index("--cmd") + 1]
+            details = output.strip() or "<empty>"
+            if len(details) > 500:
+                details = details[:500] + "..."
+            raise RuntimeError(
+                f"liteclient error: command {command!r} failed with exit code "
+                f"{process.returncode}. Retry with --verbosity 1 for details. "
+                f"Output: {details}"
+            )
         if err and (process.returncode != 0 or self.tool_name != "fift"):  # consider returncode only for fift for backward compatibility
             self.local.add_log(f"{self.tool_name} args: {args}", "error")
             raise Exception(f"{self.tool_name} error: {err}")
